@@ -1,0 +1,92 @@
+@rendermode InteractiveServer
+@implements IDisposable
+@inject NotificationService Notify
+@inject IJSRuntime JS
+
+<div class="notif-wrap">
+    <button class="notif-bell-btn" @onclick="Toggle" title="Notifications">
+        🔔
+        @if (_unread > 0)
+        {
+            <span class="notif-badge">@_unread</span>
+        }
+    </button>
+
+    @if (_open)
+    {
+        <div class="notif-panel">
+            <div class="notif-head">
+                <strong>Alerts</strong>
+                <button class="btn btn-sm btn-link p-0" @onclick="MarkRead">Mark all read</button>
+            </div>
+            @if (Notify.Recent.Count == 0)
+            {
+                <div class="notif-empty">No alerts yet. Big releases and watchlist hits show up here.</div>
+            }
+            else
+            {
+                @foreach (var a in Notify.Recent)
+                {
+                    <a class="notif-item @(a.Read ? "" : "unread")" href="@a.Link" target="_blank" rel="noopener">
+                        <span class="notif-kind kind-@a.Kind.ToLower()">@a.Kind</span>
+                        <span class="notif-title">@a.Title</span>
+                        <span class="notif-meta">@a.SourceName · @a.CreatedAt.ToLocalTime().ToString("t")</span>
+                    </a>
+                }
+            }
+        </div>
+    }
+</div>
+
+@code {
+    private bool _open;
+    private int _unread;
+    private bool _subscribed;
+    private readonly HashSet<Guid> _shown = new();
+
+    protected override void OnInitialized() => _unread = Notify.UnreadCount;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender) return;
+        // Subscribe only in the live circuit (not during prerender) to avoid leaks/dead calls.
+        if (!_subscribed)
+        {
+            Notify.OnChange += HandleChange;
+            _subscribed = true;
+        }
+        try { await JS.InvokeAsync<string>("aipulseNotify.requestPermission"); } catch { /* ignore */ }
+    }
+
+    private async void HandleChange(IReadOnlyList<Alert> newAlerts)
+    {
+        try
+        {
+            await InvokeAsync(async () =>
+            {
+                foreach (var a in newAlerts)
+                {
+                    if (_shown.Add(a.Id))
+                        await JS.InvokeVoidAsync("aipulseNotify.show", $"{a.Kind} · {a.SourceName}", a.Title, a.Link);
+                }
+                _unread = Notify.UnreadCount;
+                StateHasChanged();
+            });
+        }
+        catch { /* circuit may be gone */ }
+    }
+
+    private void Toggle() => _open = !_open;
+
+    private void MarkRead()
+    {
+        Notify.MarkAllRead();
+        _unread = 0;
+        _open = false;
+    }
+
+    public void Dispose()
+    {
+        if (_subscribed) Notify.OnChange -= HandleChange;
+    }
+}

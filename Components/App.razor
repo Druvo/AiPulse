@@ -1,0 +1,33 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <base href="/" />
+    <link rel="stylesheet" href="bootstrap/bootstrap.min.css" />
+    <link rel="stylesheet" href="app.css" />
+    <link rel="stylesheet" href="AiPulse.styles.css" />
+    <link rel="icon" type="image/png" href="favicon.png" />
+    <HeadOutlet />
+    <script>
+        // Apply saved theme immediately to avoid a flash of the wrong theme.
+        (function () {
+            var t = localStorage.getItem('aipulse-theme') || 'light';
+            document.documentElement.setAttribute('data-theme', t);
+        })();
+        function toggleTheme() {
+            var cur = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+            document.documentElement.setAttribute('data-theme', cur);
+            localStorage.setItem('aipulse-theme', cur);
+        }
+    </script>
+</head>
+
+<body>
+    <Routes />
+    <script src="_framework/blazor.web.js"></script>
+    <script src="js/notify.js"></script>
+</body>
+
+</html>

@@ -1,0 +1,109 @@
+@page "/settings"
+@attribute [Authorize]
+@rendermode InteractiveServer
+@inject ReadingStateService Reading
+@inject ObsidianExportService Export
+@inject IJSRuntime JS
+
+<PageTitle>AiPulse · Settings</PageTitle>
+
+<h1>⚙️ Settings</h1>
+
+<div class="row g-4">
+    <div class="col-lg-6">
+        <h4>⭐ Keyword watchlist</h4>
+        <p class="text-muted">Topics you care about. Matching feed items get a ⭐ and trigger a desktop notification.</p>
+
+        <div class="input-group mb-3">
+            <input class="form-control" placeholder="e.g. MCP, Blazor, RAG" @bind="_newKeyword" @bind:event="oninput"
+                   @onkeydown="@(e => { if (e.Key == "Enter") AddKeyword(); })" />
+            <button class="btn btn-primary" @onclick="AddKeyword">Add</button>
+        </div>
+
+        @if (Reading.Watchlist.Count == 0)
+        {
+            <p class="text-muted">No keywords yet.</p>
+        }
+        else
+        {
+            <div class="d-flex flex-wrap gap-2">
+                @foreach (var k in Reading.Watchlist)
+                {
+                    <span class="badge bg-warning text-dark p-2">
+                        @k
+                        <button class="btn-close btn-close-sm ms-1" style="font-size:.6rem;"
+                                @onclick="() => Remove(k)" aria-label="remove"></button>
+                    </span>
+                }
+            </div>
+        }
+    </div>
+
+    <div class="col-lg-6">
+        <h4>🔔 Desktop notifications</h4>
+        <p class="text-muted">Get notified about new tool/model releases and watchlist hits while a tab is open.</p>
+        <p>Browser permission: <strong>@_permission</strong></p>
+        <button class="btn btn-outline-primary me-2" @onclick="RequestPermission">Enable notifications</button>
+        <button class="btn btn-outline-secondary" @onclick="TestNotification">Send test</button>
+        <p class="text-muted small mt-2">Polling interval is set in <code>appsettings.json</code> (<code>Notifications:PollMinutes</code>).</p>
+
+        <hr class="my-4" />
+
+        <h4>📝 Export to Obsidian</h4>
+        <p class="text-muted">Folder to write <code>AiPulse Reading List.md</code> into. Leave blank to use the app's local <code>App_Data/exports</code> folder.</p>
+        <div class="input-group mb-2">
+            <input class="form-control" placeholder="e.g. D:\Obsidian\Notes\claude\NewsFeed" @bind="_exportPath" />
+            <button class="btn btn-primary" @onclick="SavePath">Save</button>
+        </div>
+        <button class="btn btn-success" @onclick="ExportNow">Export reading list now</button>
+        @if (_exportMsg is not null)
+        {
+            <div class="alert alert-success mt-2 py-2 small">@_exportMsg</div>
+        }
+    </div>
+</div>
+
+@code {
+    private string _newKeyword = "";
+    private string? _exportPath;
+    private string _permission = "unknown";
+    private string? _exportMsg;
+
+    protected override void OnInitialized() => _exportPath = Reading.ObsidianExportPath;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender) return;
+        try { _permission = await JS.InvokeAsync<string>("aipulseNotify.permission"); StateHasChanged(); } catch { }
+    }
+
+    private void AddKeyword()
+    {
+        Reading.AddKeyword(_newKeyword);
+        _newKeyword = "";
+    }
+
+    private void Remove(string k) => Reading.RemoveKeyword(k);
+
+    private async Task RequestPermission()
+    {
+        try { _permission = await JS.InvokeAsync<string>("aipulseNotify.requestPermission"); } catch { }
+    }
+
+    private async Task TestNotification()
+    {
+        try { await JS.InvokeVoidAsync("aipulseNotify.show", "AiPulse", "Notifications are working ✅", ""); } catch { }
+    }
+
+    private void SavePath()
+    {
+        Reading.SetObsidianExportPath(_exportPath);
+        _exportMsg = "Export folder saved.";
+    }
+
+    private void ExportNow()
+    {
+        var path = Export.ExportReadingList();
+        _exportMsg = $"Exported {Reading.Bookmarks.Count} item(s) to {path}";
+    }
+}

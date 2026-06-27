@@ -1,0 +1,145 @@
+[
+  {
+    "Name": "Claude Code",
+    "Category": "Coding Agent",
+    "OneLiner": "Terminal/IDE agentic coder that plans, edits files, runs commands and iterates in a loop.",
+    "BestFor": [
+      "Multi-file changes and refactors across a real repo",
+      "Tasks where the agent must run tests and fix until green",
+      "Using MCP servers and subagents for larger jobs"
+    ],
+    "NotIdealFor": [
+      "Tiny single-line completions while typing",
+      "Working with zero oversight on critical code"
+    ],
+    "TokenTips": [
+      "Use /clear or compaction between unrelated tasks to drop stale context",
+      "Add a CLAUDE.md so it stops re-discovering project facts each run",
+      "Point it at specific files instead of letting it scan the whole tree"
+    ],
+    "Url": "https://docs.anthropic.com/en/docs/claude-code"
+  },
+  {
+    "Name": "GitHub Copilot",
+    "Category": "IDE Assistant",
+    "OneLiner": "Inline autocomplete and chat inside your editor, strongest at in-the-moment suggestions.",
+    "BestFor": [
+      "Fast inline completions as you type",
+      "Boilerplate, tests and small functions",
+      "Quick chat about the file you're in"
+    ],
+    "NotIdealFor": [
+      "Autonomous multi-step tasks across many files",
+      "Long-running agent loops with tool use"
+    ],
+    "TokenTips": [
+      "Keep only relevant files open - Copilot uses open tabs as context",
+      "Accept partial suggestions and guide rather than regenerating repeatedly"
+    ],
+    "Url": "https://github.com/features/copilot"
+  },
+  {
+    "Name": "OpenAI Codex / CLI",
+    "Category": "Coding Agent",
+    "OneLiner": "OpenAI's agentic coding tool/CLI for delegating coding tasks to a model.",
+    "BestFor": [
+      "Delegating a scoped task and reviewing the diff",
+      "Teams standardized on OpenAI models"
+    ],
+    "NotIdealFor": [
+      "Inline as-you-type completion (use an IDE assistant)"
+    ],
+    "TokenTips": [
+      "Give a tight task scope and target files to avoid broad exploration",
+      "Reuse a stable system/setup prompt to benefit from caching"
+    ],
+    "Url": "https://openai.com/codex"
+  },
+  {
+    "Name": "Cline",
+    "Category": "Coding Agent",
+    "OneLiner": "Open-source VS Code agent extension; bring your own API key and model.",
+    "BestFor": [
+      "Open, model-agnostic agentic coding inside VS Code",
+      "Using your own keys (Claude, GPT, local models)"
+    ],
+    "NotIdealFor": [
+      "Zero-config out-of-the-box experience"
+    ],
+    "TokenTips": [
+      "Pick a cheaper model for planning, a stronger one for hard edits",
+      "Prune the conversation when switching tasks"
+    ],
+    "Url": "https://github.com/cline/cline"
+  },
+  {
+    "Name": "Aider",
+    "Category": "Coding Agent",
+    "OneLiner": "Terminal pair-programmer that edits your git repo and commits changes.",
+    "BestFor": [
+      "Git-centric workflows with automatic commits",
+      "Targeted edits from the command line"
+    ],
+    "NotIdealFor": [
+      "GUI-first users who don't live in the terminal"
+    ],
+    "TokenTips": [
+      "Use /add to include only the files you need in the chat context",
+      "Use the repo map instead of dumping whole files"
+    ],
+    "Url": "https://aider.chat"
+  },
+  {
+    "Name": "Ollama",
+    "Category": "Local Runtime",
+    "OneLiner": "Run open-weight models locally with one command; private and offline.",
+    "BestFor": [
+      "Private/offline inference on your own machine",
+      "Cheap high-volume calls and experimentation",
+      "Serving local models to other tools (Cline, scripts)"
+    ],
+    "NotIdealFor": [
+      "Frontier-level reasoning/coding quality",
+      "Machines with little RAM/VRAM (use small quantized models)"
+    ],
+    "TokenTips": [
+      "Choose a quantized (e.g. 4-bit GGUF) model to fit your hardware",
+      "Smaller models = larger effective throughput for simple tasks"
+    ],
+    "Url": "https://ollama.com"
+  },
+  {
+    "Name": "LangChain / LlamaIndex",
+    "Category": "Framework",
+    "OneLiner": "Libraries for wiring up RAG pipelines, agents and tool use in your own app.",
+    "BestFor": [
+      "Building custom RAG or agent apps in code",
+      "Swapping models/vector stores behind one interface"
+    ],
+    "NotIdealFor": [
+      "Simple one-off scripts (often raw SDK is simpler)"
+    ],
+    "TokenTips": [
+      "Retrieve top-k tightly and rerank - don't stuff the whole corpus",
+      "Cache embeddings; only re-embed changed documents"
+    ],
+    "Url": "https://python.langchain.com"
+  },
+  {
+    "Name": "LiteLLM",
+    "Category": "Framework",
+    "OneLiner": "One API gateway in front of 100+ model providers, with cost/usage tracking.",
+    "BestFor": [
+      "Switching providers without rewriting code",
+      "Central budgeting, rate-limiting and logging of token spend"
+    ],
+    "NotIdealFor": [
+      "Single-provider apps that don't need a proxy"
+    ],
+    "TokenTips": [
+      "Use its spend tracking to find your most expensive prompts",
+      "Route cheap tasks to cheap models automatically"
+    ],
+    "Url": "https://github.com/BerriAI/litellm"
+  }
+]

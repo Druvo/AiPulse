@@ -1,0 +1,264 @@
+[
+  {
+    "Term": "RAG",
+    "Aliases": ["Retrieval-Augmented Generation"],
+    "Category": "Architecture",
+    "ShortDef": "Fetch relevant documents from your own data and paste them into the prompt so the model answers from facts instead of memory.",
+    "Details": "A retriever (usually vector search over embeddings) finds the most relevant chunks of your knowledge base, and those chunks are injected into the model's context before it answers. Reduces hallucination and lets the model use private/up-to-date data without retraining.",
+    "WhenToUse": "When the model must answer over your docs, codebase, or knowledge that isn't in its training data and changes often.",
+    "Related": ["Embeddings", "Vector Database", "Context Window", "MCP"],
+    "LearnMoreUrl": "https://www.anthropic.com/news/contextual-retrieval"
+  },
+  {
+    "Term": "MCP",
+    "Aliases": ["Model Context Protocol"],
+    "Category": "Tooling",
+    "ShortDef": "An open standard that lets AI apps connect to tools and data sources through a common plug-in interface.",
+    "Details": "Instead of writing bespoke integrations for every app, you run an MCP 'server' (for GitHub, a database, your filesystem, etc.) and any MCP-aware client (Claude, IDEs, agents) can call it. Think 'USB-C for AI tools'.",
+    "WhenToUse": "When you want your agent/assistant to read or act on external systems in a reusable, standardized way.",
+    "Related": ["Agent", "Tool Use", "RAG"],
+    "LearnMoreUrl": "https://modelcontextprotocol.io"
+  },
+  {
+    "Term": "Agent",
+    "Aliases": ["AI agent", "Autonomous agent"],
+    "Category": "Architecture",
+    "ShortDef": "An LLM placed in a loop where it can call tools, observe results, and decide its next step toward a goal.",
+    "Details": "Unlike a single prompt-and-response, an agent plans, acts (calls tools/APIs), reads the outcome, and repeats until the task is done. Coding agents like Claude Code are the most mature example.",
+    "WhenToUse": "Multi-step tasks where the steps aren't known up front and depend on intermediate results.",
+    "Related": ["Agentic Loop", "Tool Use", "Multi-Agent", "Subagent"],
+    "LearnMoreUrl": "https://www.anthropic.com/research/building-effective-agents"
+  },
+  {
+    "Term": "Agentic Loop",
+    "Aliases": ["Agent loop", "ReAct loop", "loops instead of prompts"],
+    "Category": "Technique",
+    "ShortDef": "The repeating cycle of think -> act (call a tool) -> observe -> repeat that turns a one-shot model into an agent.",
+    "Details": "This is what people mean by 'using loops instead of prompts': rather than crafting one perfect prompt, you let the model iterate, calling tools and reacting to outputs until a stopping condition is met. ReAct (Reason+Act) is the classic pattern.",
+    "WhenToUse": "Whenever a task needs several dependent steps, retries, or verification before it's truly done.",
+    "Related": ["Agent", "Tool Use", "ReAct"],
+    "LearnMoreUrl": "https://www.anthropic.com/research/building-effective-agents"
+  },
+  {
+    "Term": "Tool Use",
+    "Aliases": ["Function calling", "Tool calling"],
+    "Category": "Technique",
+    "ShortDef": "Giving the model a set of functions it can request to call; you run them and feed results back.",
+    "Details": "You describe tools (name, params, schema). The model emits a structured call; your code executes it and returns the result, which the model uses to continue. This is the mechanism underneath agents and MCP.",
+    "WhenToUse": "Any time the model needs real data or to cause real-world effects (search, DB query, send email, run code).",
+    "Related": ["Agent", "MCP", "Agentic Loop"],
+    "LearnMoreUrl": "https://docs.anthropic.com/en/docs/build-with-claude/tool-use"
+  },
+  {
+    "Term": "Context Window",
+    "Aliases": ["Context length"],
+    "Category": "Concept",
+    "ShortDef": "The maximum amount of text (measured in tokens) a model can consider at once.",
+    "Details": "Everything counts toward it: system prompt, conversation history, retrieved docs, and the model's own output. Exceed it and older content is dropped or the call fails.",
+    "WhenToUse": "Plan your prompts, RAG chunks, and history trimming around the limit. Bigger isn't always better - more context can dilute focus and cost more.",
+    "Related": ["Token", "Headroom", "Context Engineering"],
+    "LearnMoreUrl": "https://docs.anthropic.com/en/docs/build-with-claude/context-windows"
+  },
+  {
+    "Term": "Headroom",
+    "Aliases": ["Token headroom", "Context headroom", "hedroom"],
+    "Category": "Concept",
+    "ShortDef": "How much of the context window you still have free after the input, before you hit the limit.",
+    "Details": "If a model has a 200K window and your prompt + history is 150K tokens, you have ~50K of headroom for the model's response and any further tool results. Running low forces summarization or trimming.",
+    "WhenToUse": "Watch it in long agent sessions and big-document tasks; leave room for the answer and tool outputs.",
+    "Related": ["Context Window", "Token", "Context Engineering"]
+  },
+  {
+    "Term": "Token",
+    "Aliases": ["Tokens", "Tokenization"],
+    "Category": "Concept",
+    "ShortDef": "The chunks of text models read and bill by - roughly 3-4 characters or about 0.75 words in English.",
+    "Details": "Models don't see words, they see tokens. Cost and context limits are both measured in tokens (input + output). Code and non-English text often tokenize less efficiently.",
+    "WhenToUse": "Estimate cost and fit. ~750 words is about 1,000 tokens as a rough rule.",
+    "Related": ["Context Window", "Headroom", "Prompt Caching"],
+    "LearnMoreUrl": "https://platform.openai.com/tokenizer"
+  },
+  {
+    "Term": "Prompt Caching",
+    "Aliases": ["Context caching"],
+    "Category": "Technique",
+    "ShortDef": "Reusing a previously processed prompt prefix so repeated large contexts are far cheaper and faster.",
+    "Details": "If you send the same big system prompt or document repeatedly, caching lets the provider skip re-processing it, often cutting cost on the cached portion by ~90% and reducing latency.",
+    "WhenToUse": "Long, stable system prompts; repeated questions over the same large document; agent sessions reusing the same context.",
+    "Related": ["Token", "Context Window"],
+    "LearnMoreUrl": "https://docs.anthropic.com/en/docs/build-with-claude/prompt-caching"
+  },
+  {
+    "Term": "Context Engineering",
+    "Aliases": ["Context management"],
+    "Category": "Technique",
+    "ShortDef": "Deliberately deciding what goes into the context window and what stays out, to get better, cheaper answers.",
+    "Details": "The successor idea to 'prompt engineering' for agents: curate history, retrieve only what's needed, summarize old turns, and structure information so the model focuses on what matters.",
+    "WhenToUse": "Long-running agents and RAG systems where naive 'stuff everything in' degrades quality and cost.",
+    "Related": ["RAG", "Context Window", "Headroom", "Prompt Engineering"]
+  },
+  {
+    "Term": "Prompt Engineering",
+    "Aliases": ["Prompting"],
+    "Category": "Technique",
+    "ShortDef": "Crafting the instructions and examples you give a model to steer its output reliably.",
+    "Details": "Techniques include clear role/task framing, few-shot examples, step-by-step instructions, and output format specs. Increasingly paired with or replaced by context engineering and agentic loops.",
+    "WhenToUse": "Always relevant, but highest leverage for single-shot tasks and as the backbone of system prompts.",
+    "Related": ["Few-Shot", "Chain-of-Thought", "Caveman Prompting", "Context Engineering"]
+  },
+  {
+    "Term": "Caveman Prompting",
+    "Aliases": ["Caveman speak", "caveman"],
+    "Category": "Technique",
+    "ShortDef": "Writing prompts in blunt, simple, imperative phrases - dropping politeness and filler.",
+    "Details": "Slang for stripping a prompt down to terse commands ('Read file. Find bug. Fix. No explanation.'). Often as effective as verbose prompts and uses fewer tokens; works because models key off the instruction content, not the courtesy.",
+    "WhenToUse": "When you want concise, deterministic behavior and to save tokens; great for repeated automation prompts.",
+    "Related": ["Prompt Engineering", "Token"]
+  },
+  {
+    "Term": "Few-Shot",
+    "Aliases": ["Few-shot prompting", "In-context learning"],
+    "Category": "Technique",
+    "ShortDef": "Showing the model a handful of input/output examples in the prompt so it copies the pattern.",
+    "Details": "Zero-shot = no examples; few-shot = a few. Examples teach format and style without any fine-tuning.",
+    "WhenToUse": "When output format matters or the task is fuzzy and examples pin it down.",
+    "Related": ["Prompt Engineering", "Chain-of-Thought"]
+  },
+  {
+    "Term": "Chain-of-Thought",
+    "Aliases": ["CoT", "Reasoning"],
+    "Category": "Technique",
+    "ShortDef": "Prompting the model to reason step by step before giving a final answer.",
+    "Details": "Improves accuracy on math, logic and multi-step tasks. Modern 'reasoning models' do this internally and are tuned to think before answering.",
+    "WhenToUse": "Hard reasoning, math, planning. For reasoning models it's automatic; for others, ask for steps.",
+    "Related": ["Reasoning Model", "Few-Shot"]
+  },
+  {
+    "Term": "ReAct",
+    "Aliases": ["Reason + Act"],
+    "Category": "Technique",
+    "ShortDef": "A pattern where the model alternates reasoning steps with tool actions in a loop.",
+    "Details": "The conceptual basis for most agents: Thought -> Action -> Observation, repeated. It's the 'loop' people contrast with one-shot prompting.",
+    "WhenToUse": "Building agents that must investigate and act before concluding.",
+    "Related": ["Agentic Loop", "Agent", "Tool Use"]
+  },
+  {
+    "Term": "Embeddings",
+    "Aliases": ["Vector embeddings"],
+    "Category": "Concept",
+    "ShortDef": "Numeric vectors that capture the meaning of text so similar meanings sit close together.",
+    "Details": "An embedding model turns a chunk of text into a list of numbers. Searching by vector similarity finds semantically related content - the retrieval half of RAG.",
+    "WhenToUse": "Semantic search, RAG, clustering, deduplication, recommendation.",
+    "Related": ["RAG", "Vector Database"]
+  },
+  {
+    "Term": "Vector Database",
+    "Aliases": ["Vector store", "Vector DB"],
+    "Category": "Tooling",
+    "ShortDef": "A database optimized for storing embeddings and finding the nearest ones fast.",
+    "Details": "Examples: pgvector, Qdrant, Pinecone, Weaviate, Milvus, Chroma. Powers the retrieval step in RAG.",
+    "WhenToUse": "When you need similarity search over many embedded documents.",
+    "Related": ["Embeddings", "RAG"]
+  },
+  {
+    "Term": "Second Brain",
+    "Aliases": ["PKM", "Personal Knowledge Management", "Obsidian"],
+    "Category": "Concept",
+    "ShortDef": "A personal note system (often Obsidian) that stores linked notes you can later search or feed to AI.",
+    "Details": "Obsidian is a markdown notes app with backlinks and a graph view. 'Second brain' is the workflow of capturing everything in linked notes. Increasingly paired with AI: index your vault with RAG so an assistant can answer over your own notes.",
+    "WhenToUse": "Capturing knowledge over time; as a private corpus for RAG.",
+    "Related": ["RAG", "Embeddings"],
+    "LearnMoreUrl": "https://obsidian.md"
+  },
+  {
+    "Term": "Reasoning Model",
+    "Aliases": ["Thinking model", "Extended thinking"],
+    "Category": "Concept",
+    "ShortDef": "A model tuned to spend extra compute 'thinking' before answering, trading latency/cost for accuracy.",
+    "Details": "These produce internal reasoning (sometimes hidden) and excel at math, coding and planning. Examples include OpenAI o-series and Claude's extended thinking mode.",
+    "WhenToUse": "Hard problems where correctness beats speed; overkill for simple lookups.",
+    "Related": ["Chain-of-Thought", "Token"]
+  },
+  {
+    "Term": "Mixture of Experts",
+    "Aliases": ["MoE"],
+    "Category": "Concept",
+    "ShortDef": "A model architecture that routes each token to a few specialized sub-networks instead of using the whole model.",
+    "Details": "Gives large total capacity while only activating a fraction per token, so it's cheaper to run than a dense model of the same size. Common in recent open models.",
+    "WhenToUse": "Mostly a model-design detail; relevant when comparing efficiency of open models.",
+    "Related": ["Quantization", "Open-Weight Model"]
+  },
+  {
+    "Term": "Quantization",
+    "Aliases": ["Quant", "GGUF", "4-bit"],
+    "Category": "Technique",
+    "ShortDef": "Shrinking a model's numeric precision (e.g. 16-bit -> 4-bit) so it runs on less memory/hardware.",
+    "Details": "Lets big open models run on a laptop or single GPU with a small quality hit. GGUF is a popular quantized format used by Ollama and llama.cpp.",
+    "WhenToUse": "Running models locally on limited VRAM/RAM.",
+    "Related": ["Open-Weight Model", "Mixture of Experts"]
+  },
+  {
+    "Term": "Open-Weight Model",
+    "Aliases": ["Open model", "Local model"],
+    "Category": "Concept",
+    "ShortDef": "A model whose weights you can download and run yourself (e.g. Llama, Mistral, Qwen, Hermes).",
+    "Details": "Distinct from API-only models. You control privacy, cost and customization, at the price of hosting and usually lower peak capability than frontier APIs.",
+    "WhenToUse": "Privacy-sensitive data, offline use, high-volume cheap inference, fine-tuning.",
+    "Related": ["Hermes", "Quantization", "Fine-Tuning"]
+  },
+  {
+    "Term": "Hermes",
+    "Aliases": ["Nous Hermes"],
+    "Category": "Concept",
+    "ShortDef": "A family of fine-tuned open-weight models from Nous Research, known for strong instruction-following and tool use.",
+    "Details": "Built on top of base open models (e.g. Llama/Qwen) and tuned for steerability, function calling and assistant behavior. A common pick when you want a capable local/open model.",
+    "WhenToUse": "When you want a well-behaved open model to run locally or self-host.",
+    "Related": ["Open-Weight Model", "Fine-Tuning"]
+  },
+  {
+    "Term": "Fine-Tuning",
+    "Aliases": ["LoRA", "PEFT"],
+    "Category": "Technique",
+    "ShortDef": "Further-training a model on your own examples so it specializes in your task or style.",
+    "Details": "Full fine-tuning updates all weights; LoRA/PEFT updates a small add-on, which is far cheaper. Use only when prompting + RAG aren't enough.",
+    "WhenToUse": "Consistent specialized style/format at scale, or domain skills prompting can't reach. Try RAG first.",
+    "Related": ["RAG", "Open-Weight Model"]
+  },
+  {
+    "Term": "Multi-Agent",
+    "Aliases": ["Agent orchestration", "Subagent"],
+    "Category": "Architecture",
+    "ShortDef": "Splitting work across multiple specialized agents (e.g. a planner plus workers) that coordinate.",
+    "Details": "A lead agent delegates subtasks to subagents, each with its own context and tools, then combines results. Improves focus and parallelism but adds coordination cost.",
+    "WhenToUse": "Large tasks decomposable into independent parts, or when separate contexts/tools help.",
+    "Related": ["Agent", "Agentic Loop"]
+  },
+  {
+    "Term": "Eval",
+    "Aliases": ["Evaluation", "Evals"],
+    "Category": "Technique",
+    "ShortDef": "A repeatable test set that measures whether your prompts/agents actually perform well.",
+    "Details": "Without evals you're tuning blind. Define example inputs and expected outcomes (or an LLM judge) and score changes against them before shipping.",
+    "WhenToUse": "Any time you iterate on prompts, models or agents and need to know if a change helped.",
+    "Related": ["Prompt Engineering", "Hallucination"]
+  },
+  {
+    "Term": "Hallucination",
+    "Aliases": ["Confabulation"],
+    "Category": "Concept",
+    "ShortDef": "When a model states something false but plausible-sounding with confidence.",
+    "Details": "A core failure mode. Mitigations: RAG with citations, lower temperature, asking for sources, and verifying with tools/evals.",
+    "WhenToUse": "Always design for it when answers must be factual.",
+    "Related": ["RAG", "Eval", "Guardrails"]
+  },
+  {
+    "Term": "Open Coding Agents",
+    "Aliases": ["Cline", "OpenHands", "Aider", "open clow"],
+    "Category": "Tooling",
+    "ShortDef": "Open-source coding agents you run yourself, often bring-your-own-API-key (Cline, OpenHands, Aider).",
+    "Details": "If you heard something like 'open clow', it's most likely one of these. Cline is a VS Code agent extension; OpenHands (formerly OpenDevin) is an autonomous dev agent; Aider is a terminal pair-programmer. All are alternatives/complements to Claude Code and Copilot.",
+    "WhenToUse": "When you want an open, model-agnostic coding agent or to use your own keys/models.",
+    "Related": ["Agent", "Tool Use"],
+    "LearnMoreUrl": "https://github.com/cline/cline"
+  }
+]

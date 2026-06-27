@@ -1,0 +1,47 @@
+@page "/sources"
+@attribute [Authorize]
+@inject KnowledgeBaseService Kb
+
+<PageTitle>AiPulse · Sources</PageTitle>
+
+<h1>Sources</h1>
+<p class="text-muted">
+    Where your updates come from. To add, remove or disable a feed, edit
+    <code>Data/sources.json</code> and restart the app — no code changes needed.
+</p>
+
+<table class="table table-sm align-middle">
+    <thead>
+        <tr><th>Source</th><th>Category</th><th>Status</th><th>What it gives you</th></tr>
+    </thead>
+    <tbody>
+        @foreach (var group in Kb.Sources.GroupBy(s => s.Category).OrderBy(g => g.Key))
+        {
+            @foreach (var s in group)
+            {
+                <tr>
+                    <td><a href="@s.Url" target="_blank" rel="noopener">@s.Name</a></td>
+                    <td><span class="badge bg-secondary">@s.Category</span></td>
+                    <td>
+                        @if (s.Enabled)
+                        {
+                            <span class="text-success">● enabled</span>
+                        }
+                        else
+                        {
+                            <span class="text-muted">○ disabled</span>
+                        }
+                    </td>
+                    <td class="small text-muted">@s.Note</td>
+                </tr>
+            }
+        }
+    </tbody>
+</table>
+
+<div class="alert alert-light border small">
+    <strong>Add your own:</strong> any RSS/Atom URL works. Handy ones:
+    a GitHub project's releases feed is <code>https://github.com/&lt;owner&gt;/&lt;repo&gt;/releases.atom</code>;
+    a subreddit is <code>https://www.reddit.com/r/&lt;name&gt;/.rss</code>;
+    most blogs expose <code>/feed</code> or <code>/rss.xml</code>.
+</div>

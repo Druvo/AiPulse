@@ -1,0 +1,23 @@
+# Build output
+bin/
+obj/
+publish/
+out/
+
+# User data (bookmarks, watchlist, last-visit) — personal, not for source control
+App_Data/
+
+# Local/secret config (put your password hash & Obsidian path here)
+appsettings.Development.json
+appsettings.Local.json
+
+# Logs
+*.log
+
+# IDE / OS
+.vs/
+.vscode/
+.idea/
+*.user
+Thumbs.db
+.DS_Store

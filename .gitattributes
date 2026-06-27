@@ -1,0 +1,10 @@
+# Normalize line endings on commit; let Git manage the working tree.
+* text=auto
+
+*.cs text diff=csharp
+*.razor text
+*.json text
+*.css text
+*.js text
+*.md text
+*.png binary

@@ -1,0 +1,52 @@
+[
+  {
+    "Title": "Right-size the model to the task",
+    "Category": "Token Optimization",
+    "Body": "Don't send every request to your most expensive model. Route simple classification/extraction to a small/cheap (or local) model and reserve frontier models for hard reasoning and coding. This is the single biggest cost lever."
+  },
+  {
+    "Title": "Cache stable prefixes",
+    "Category": "Token Optimization",
+    "Body": "If a large system prompt or document repeats across calls, use prompt caching. The cached portion is processed once and re-billed at a steep discount, cutting both cost and latency on long contexts."
+  },
+  {
+    "Title": "Retrieve, don't stuff",
+    "Category": "Context",
+    "Body": "Instead of pasting an entire codebase or knowledge base, use RAG to pull only the few most relevant chunks. Smaller, focused context is cheaper AND usually produces better answers than a giant dump."
+  },
+  {
+    "Title": "Trim and summarize history",
+    "Category": "Context",
+    "Body": "In long chats/agents, old turns silently eat your context window and money. Periodically summarize or drop stale history. In Claude Code, /clear or compaction between unrelated tasks keeps headroom high."
+  },
+  {
+    "Title": "Cap the output",
+    "Category": "Token Optimization",
+    "Body": "Output tokens often cost more than input tokens. Ask for concise answers, set max_tokens, and request only the format you need (e.g. 'JSON only, no prose') to avoid paying for filler."
+  },
+  {
+    "Title": "Caveman prompts save tokens",
+    "Category": "Prompting",
+    "Body": "Terse, imperative instructions ('Read file. Find bug. Patch. Output diff only.') often match polite, verbose prompts in quality while using fewer tokens - especially for repeated automation prompts."
+  },
+  {
+    "Title": "Prefer loops over one perfect prompt",
+    "Category": "Workflow",
+    "Body": "For multi-step work, an agentic loop (act -> observe -> retry) beats agonizing over a single mega-prompt. Let the model run tests and self-correct rather than trying to specify everything up front."
+  },
+  {
+    "Title": "Give agents project memory",
+    "Category": "Workflow",
+    "Body": "A CLAUDE.md / rules file (or equivalent) stops an agent from re-discovering the same project facts every session - saving tokens and avoiding mistakes. Capture conventions, commands and gotchas once."
+  },
+  {
+    "Title": "Measure before optimizing",
+    "Category": "Token Optimization",
+    "Body": "Use usage logs (or a gateway like LiteLLM) to find which prompts actually burn the most tokens. Optimize those first instead of guessing - most spend usually concentrates in a few hot paths."
+  },
+  {
+    "Title": "Lower temperature for facts",
+    "Category": "Prompting",
+    "Body": "For factual/deterministic tasks, set a low temperature and ask for sources to reduce hallucination. Save higher temperature for brainstorming and creative work."
+  }
+]

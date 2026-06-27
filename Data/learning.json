@@ -1,0 +1,112 @@
+[
+  {
+    "Title": "Foundations: how LLMs and tokens actually work",
+    "Level": "Beginner",
+    "Why": "Everything else — cost, context limits, prompting — makes sense once you understand tokens and how a model predicts text.",
+    "Steps": [
+      { "Text": "Read a plain-English intro to how LLMs predict the next token." },
+      { "Text": "Play with a tokenizer to see how text becomes tokens.", "Url": "https://platform.openai.com/tokenizer" },
+      { "Text": "Understand context windows and why long chats cost more.", "Url": "https://docs.anthropic.com/en/docs/build-with-claude/context-windows" }
+    ],
+    "RelatedTerms": ["Token", "Context Window", "Headroom"]
+  },
+  {
+    "Title": "Prompting well",
+    "Level": "Beginner",
+    "Why": "A clear prompt is the cheapest, fastest quality win you have. Most 'the AI is dumb' moments are prompt problems.",
+    "Steps": [
+      { "Text": "Learn role/task framing, step-by-step instructions and output formatting.", "Url": "https://docs.anthropic.com/en/docs/build-with-claude/prompt-engineering/overview" },
+      { "Text": "Practice few-shot examples to lock in a format." },
+      { "Text": "Try terse 'caveman' prompts and compare quality vs token cost." }
+    ],
+    "RelatedTerms": ["Prompt Engineering", "Few-Shot", "Caveman Prompting", "Chain-of-Thought"]
+  },
+  {
+    "Title": "Context engineering & token optimization",
+    "Level": "Intermediate",
+    "Why": "As soon as you build something real, cost and context limits bite. Knowing what to put in (and leave out) is the core skill.",
+    "Steps": [
+      { "Text": "Learn prompt caching to cut cost on repeated large contexts.", "Url": "https://docs.anthropic.com/en/docs/build-with-claude/prompt-caching" },
+      { "Text": "Practice trimming/summarizing history in long sessions." },
+      { "Text": "Route cheap tasks to small models, hard tasks to frontier models." }
+    ],
+    "RelatedTerms": ["Context Engineering", "Prompt Caching", "Token", "Headroom"]
+  },
+  {
+    "Title": "RAG: answer over your own data",
+    "Level": "Intermediate",
+    "Why": "The standard way to make a model use your private/up-to-date knowledge without retraining it.",
+    "Steps": [
+      { "Text": "Understand embeddings and vector similarity search." },
+      { "Text": "Build a minimal RAG pipeline: chunk -> embed -> retrieve -> answer." },
+      { "Text": "Improve retrieval quality with reranking and contextual retrieval.", "Url": "https://www.anthropic.com/news/contextual-retrieval" }
+    ],
+    "RelatedTerms": ["RAG", "Embeddings", "Vector Database", "Context Engineering"]
+  },
+  {
+    "Title": "Tool use & function calling",
+    "Level": "Intermediate",
+    "Why": "The mechanism that lets a model do things — search, query a DB, run code — instead of just talking.",
+    "Steps": [
+      { "Text": "Learn how to define tools and handle tool-call results.", "Url": "https://docs.anthropic.com/en/docs/build-with-claude/tool-use" },
+      { "Text": "Wire one real tool (e.g. a web search or DB query) end to end." },
+      { "Text": "Handle errors and retries so a bad tool call doesn't break the run." }
+    ],
+    "RelatedTerms": ["Tool Use", "Agent", "MCP"]
+  },
+  {
+    "Title": "Building agents & agentic loops",
+    "Level": "Advanced",
+    "Why": "Going from one-shot prompts to a loop that plans, acts and self-corrects is what unlocks real automation.",
+    "Steps": [
+      { "Text": "Read Anthropic's guide to building effective agents.", "Url": "https://www.anthropic.com/research/building-effective-agents" },
+      { "Text": "Implement a ReAct-style loop: think -> act -> observe -> repeat." },
+      { "Text": "Add a stopping condition and verification so the loop ends well." }
+    ],
+    "RelatedTerms": ["Agent", "Agentic Loop", "ReAct", "Multi-Agent"]
+  },
+  {
+    "Title": "MCP: connect your agent to tools",
+    "Level": "Advanced",
+    "Why": "The emerging standard for plugging AI into your systems in a reusable way instead of one-off integrations.",
+    "Steps": [
+      { "Text": "Read the Model Context Protocol intro.", "Url": "https://modelcontextprotocol.io" },
+      { "Text": "Connect an existing MCP server (filesystem, GitHub) to a client." },
+      { "Text": "Write a tiny MCP server exposing one of your own tools." }
+    ],
+    "RelatedTerms": ["MCP", "Tool Use", "Agent"]
+  },
+  {
+    "Title": "Run local & open-weight models",
+    "Level": "Intermediate",
+    "Why": "For privacy, offline use, cheap high-volume calls and experimentation, running your own model is a superpower.",
+    "Steps": [
+      { "Text": "Install Ollama and run a small model locally.", "Url": "https://ollama.com" },
+      { "Text": "Learn quantization (e.g. 4-bit GGUF) to fit your hardware." },
+      { "Text": "Point a tool (Cline, a script) at your local model via its API." }
+    ],
+    "RelatedTerms": ["Open-Weight Model", "Quantization", "Hermes", "Mixture of Experts"]
+  },
+  {
+    "Title": "Evals: measure quality before you ship",
+    "Level": "Advanced",
+    "Why": "Without a test set you're tuning blind. Evals tell you whether a prompt/model change actually helped.",
+    "Steps": [
+      { "Text": "Collect 10-20 real examples with expected outcomes." },
+      { "Text": "Score model output automatically (exact match, rules, or an LLM judge)." },
+      { "Text": "Re-run evals on every prompt/model change to catch regressions." }
+    ],
+    "RelatedTerms": ["Eval", "Hallucination", "Prompt Engineering"]
+  },
+  {
+    "Title": "Pick the right coding tool & workflow",
+    "Level": "Beginner",
+    "Why": "Using Copilot where you needed an agent (or vice-versa) wastes time and tokens. Match the tool to the task.",
+    "Steps": [
+      { "Text": "Use an IDE assistant (Copilot) for inline completions while typing." },
+      { "Text": "Use a coding agent (Claude Code, Codex, Cline) for multi-file tasks that need to run tests." },
+      { "Text": "Give agents project memory (a CLAUDE.md / rules file) so they stop re-learning your repo." }
+    ],
+    "RelatedTerms": ["Agent", "Agentic Loop", "Open Coding Agents"]
+  }
+]

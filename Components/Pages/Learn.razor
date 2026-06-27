@@ -1,0 +1,63 @@
+@page "/learn"
+@attribute [Authorize]
+@rendermode InteractiveServer
+@inject KnowledgeBaseService Kb
+
+<PageTitle>AiPulse · Learning Hub</PageTitle>
+
+<h1>🎓 Learning Hub</h1>
+<p class="text-muted">A roadmap from fundamentals to agents. Work top to bottom, or jump to what you need. Each module says <em>why</em> it matters and gives concrete steps.</p>
+
+<div class="btn-group mb-4 flex-wrap" role="group">
+    @foreach (var lvl in _levels)
+    {
+        <button class="btn btn-sm @(_level == lvl ? "btn-dark" : "btn-outline-dark")"
+                @onclick="() => _level = lvl">@lvl</button>
+    }
+</div>
+
+@{
+    var modules = Kb.Learning.Where(m => _level == "All" || m.Level == _level).ToList();
+    var i = 0;
+}
+
+@foreach (var m in modules)
+{
+    i++;
+    <div class="card mb-3 learn-card">
+        <div class="card-body">
+            <div class="d-flex justify-content-between align-items-start gap-2">
+                <h4 class="card-title mb-1"><span class="text-muted">@i.</span> @m.Title</h4>
+                <span class="badge level-@m.Level.ToLower()">@m.Level</span>
+            </div>
+            <p class="text-muted mb-3"><strong>Why:</strong> @m.Why</p>
+            <ol class="mb-2">
+                @foreach (var step in m.Steps)
+                {
+                    <li class="mb-1">
+                        @step.Text
+                        @if (!string.IsNullOrWhiteSpace(step.Url))
+                        {
+                            <a href="@step.Url" target="_blank" rel="noopener" class="ms-1 small">↗ open</a>
+                        }
+                    </li>
+                }
+            </ol>
+            @if (m.RelatedTerms.Length > 0)
+            {
+                <div class="small">
+                    <span class="text-muted">Key terms:</span>
+                    @foreach (var t in m.RelatedTerms)
+                    {
+                        <a class="badge bg-info text-dark text-decoration-none me-1" href="glossary">@t</a>
+                    }
+                </div>
+            }
+        </div>
+    </div>
+}
+
+@code {
+    private string _level = "All";
+    private readonly string[] _levels = { "All", "Beginner", "Intermediate", "Advanced" };
+}

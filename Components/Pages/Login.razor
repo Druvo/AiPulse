@@ -1,0 +1,71 @@
+@page "/login"
+@layout AiPulse.Components.Layout.EmptyLayout
+@using Microsoft.AspNetCore.Authentication
+@using Microsoft.AspNetCore.Authentication.Cookies
+@inject AuthService Auth
+@inject IHttpContextAccessor Http
+@inject NavigationManager Nav
+
+<PageTitle>AiPulse · Sign in</PageTitle>
+
+<div class="login-card">
+    <div class="login-brand">⚡ AiPulse</div>
+    <p class="text-muted mb-4">Your AI reading &amp; learning station</p>
+
+    @if (!Auth.IsConfigured)
+    {
+        <div class="alert alert-danger">No credentials are configured. Set <code>Auth:Username</code> and a password in <code>appsettings.json</code>.</div>
+    }
+
+    <EditForm Model="Input" OnValidSubmit="SignIn" FormName="login" method="post">
+        <DataAnnotationsValidator />
+        @if (_error is not null)
+        {
+            <div class="alert alert-danger py-2">@_error</div>
+        }
+        <div class="mb-3">
+            <label class="form-label">Username</label>
+            <InputText class="form-control" @bind-Value="Input.Username" autocomplete="username" />
+        </div>
+        <div class="mb-3">
+            <label class="form-label">Password</label>
+            <InputText type="password" class="form-control" @bind-Value="Input.Password" autocomplete="current-password" />
+        </div>
+        <div class="form-check mb-3">
+            <InputCheckbox class="form-check-input" id="remember" @bind-Value="Input.Remember" />
+            <label class="form-check-label" for="remember">Keep me signed in</label>
+        </div>
+        <button type="submit" class="btn btn-primary w-100">Sign in</button>
+    </EditForm>
+</div>
+
+@code {
+    [SupplyParameterFromForm] private LoginInput Input { get; set; } = new();
+    [SupplyParameterFromQuery] private string? ReturnUrl { get; set; }
+    private string? _error;
+
+    private async Task SignIn()
+    {
+        var principal = Auth.Validate(Input.Username, Input.Password);
+        if (principal is null)
+        {
+            _error = "Invalid username or password.";
+            return;
+        }
+
+        var http = Http.HttpContext!;
+        await http.SignInAsync(
+            CookieAuthenticationDefaults.AuthenticationScheme,
+            principal,
+            new AuthenticationProperties { IsPersistent = Input.Remember });
+
+        Nav.NavigateTo(string.IsNullOrWhiteSpace(ReturnUrl) ? "/" : ReturnUrl);
+    }
+
+    public sealed class LoginInput
+    {
+        public string Username { get; set; } = "";
+        public string Password { get; set; } = "";
+        public bool Remember { get; set; } = true;
+    }
+}

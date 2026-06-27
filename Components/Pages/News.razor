@@ -1,0 +1,154 @@
+@page "/news"
+@attribute [Authorize]
+@rendermode InteractiveServer
+@inject FeedAggregatorService Feeds
+@inject ReadingStateService Reading
+
+<PageTitle>AiPulse · News Feed</PageTitle>
+
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+    <h1 class="mb-0">News Feed</h1>
+    <div class="d-flex align-items-center gap-2">
+        @if (_result is not null)
+        {
+            <span class="text-muted small">Updated @_result.FetchedAt.ToLocalTime().ToString("g")</span>
+        }
+        <button class="btn btn-primary" @onclick="() => Load(true)" disabled="@_loading">
+            @(_loading ? "Refreshing…" : "↻ Refresh")
+        </button>
+    </div>
+</div>
+
+<input class="form-control mb-3" placeholder="Search the feed…" @bind="_search" @bind:event="oninput" />
+
+<div class="btn-group mb-3 flex-wrap" role="group">
+    @foreach (var f in _filters)
+    {
+        <button class="btn btn-sm @(_filter == f ? "btn-dark" : "btn-outline-dark")"
+                @onclick="() => _filter = f">
+            @f
+            @if (f == "✨ New" && _newCount > 0)
+            {
+                <span class="badge bg-danger ms-1">@_newCount</span>
+            }
+        </button>
+    }
+</div>
+
+@if (_loading && _result is null)
+{
+    <p><em>Fetching the latest from across the AI world…</em></p>
+}
+else if (_result is null)
+{
+    <p>No data yet.</p>
+}
+else
+{
+    var items = Filtered();
+
+    @if (_result.Errors.Count > 0)
+    {
+        <details class="mb-3">
+            <summary class="text-warning">@_result.Errors.Count source(s) couldn't be reached</summary>
+            <ul class="small text-muted mt-2">
+                @foreach (var err in _result.Errors) { <li>@err</li> }
+            </ul>
+        </details>
+    }
+
+    <p class="text-muted small">@items.Count items</p>
+
+    @foreach (var item in items)
+    {
+        var isNew = item.Published > _sinceVisit;
+        var saved = Reading.IsBookmarked(item.Link);
+        var watched = Reading.MatchWatchlist(item.Title + " " + item.Summary);
+        <div class="card mb-2 @(isNew ? "border-start border-danger border-3" : "") @(watched is not null ? "watched-item" : "")">
+            <div class="card-body py-2">
+                <div class="d-flex justify-content-between align-items-start gap-2">
+                    <a href="@item.Link" target="_blank" rel="noopener" class="h6 mb-1 text-decoration-none">
+                        @if (isNew) { <span class="badge bg-danger me-1">NEW</span> }
+                        @if (watched is not null) { <span class="badge bg-warning text-dark me-1" title="Watchlist: @watched">⭐</span> }
+                        @item.Title
+                    </a>
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="badge bg-secondary text-nowrap">@item.Category</span>
+                        <button class="btn btn-sm btn-link p-0 bookmark-btn @(saved ? "saved" : "")"
+                                title="@(saved ? "Remove bookmark" : "Save to read later")"
+                                @onclick="() => Toggle(item)">@(saved ? "🔖" : "🏷️")</button>
+                    </div>
+                </div>
+                @if (!string.IsNullOrWhiteSpace(item.Summary))
+                {
+                    <p class="card-text small text-muted mb-1">@item.Summary</p>
+                }
+                <div class="x-small text-muted">@item.SourceName · @item.Published.ToLocalTime().ToString("g")</div>
+            </div>
+        </div>
+    }
+
+    @if (items.Count == 0)
+    {
+        <p class="text-muted">Nothing matches the current filter/search.</p>
+    }
+}
+
+@code {
+    private FeedResult? _result;
+    private bool _loading;
+    private string _filter = "All";
+    private string _search = "";
+    private DateTimeOffset _sinceVisit = DateTimeOffset.MinValue;
+    private int _newCount;
+
+    private readonly string[] _filters = { "All", "✨ New", "Today", "News", "Research", "Tools", "Community" };
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Record the visit and remember the previous time so we can flag what's new.
+        _sinceVisit = Reading.TouchNewsVisit();
+        await Load(false);
+    }
+
+    private async Task Load(bool force)
+    {
+        _loading = true;
+        try
+        {
+            _result = await Feeds.GetAsync(force);
+            _newCount = _result.Items.Count(i => i.Published > _sinceVisit);
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private List<FeedItem> Filtered()
+    {
+        if (_result is null) return new();
+        IEnumerable<FeedItem> q = _result.Items;
+
+        q = _filter switch
+        {
+            "✨ New" => q.Where(i => i.Published > _sinceVisit),
+            "Today" => q.Where(i => i.Published.LocalDateTime.Date == DateTime.Today),
+            "All" => q,
+            _ => q.Where(i => i.Category == _filter)
+        };
+
+        if (!string.IsNullOrWhiteSpace(_search))
+        {
+            var s = _search.Trim();
+            q = q.Where(i =>
+                i.Title.Contains(s, StringComparison.OrdinalIgnoreCase) ||
+                i.Summary.Contains(s, StringComparison.OrdinalIgnoreCase) ||
+                i.SourceName.Contains(s, StringComparison.OrdinalIgnoreCase));
+        }
+
+        return q.ToList();
+    }
+
+    private void Toggle(FeedItem item) => Reading.ToggleBookmark(item);
+}

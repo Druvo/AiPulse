@@ -1,0 +1,96 @@
+@page "/glossary"
+@attribute [Authorize]
+@rendermode InteractiveServer
+@inject KnowledgeBaseService Kb
+@inject ISummarizer Ai
+
+<PageTitle>AiPulse · Glossary</PageTitle>
+
+<h1>Glossary</h1>
+<p class="text-muted">Every buzzword your coworkers throw around — decoded for a developer, with when to actually use it.</p>
+
+<input class="form-control mb-2" placeholder="Search a term (e.g. RAG, MCP, loops, headroom, caveman)…"
+       @bind="_search" @bind:event="oninput" />
+
+<div class="btn-group mb-3 flex-wrap" role="group">
+    @foreach (var cat in _categories)
+    {
+        <button class="btn btn-sm @(_filter == cat ? "btn-dark" : "btn-outline-dark")"
+                @onclick="() => _filter = cat">@cat</button>
+    }
+</div>
+
+@{
+    var matches = Kb.Glossary
+        .Where(t => _filter == "All" || t.Category == _filter)
+        .Where(t => string.IsNullOrWhiteSpace(_search)
+            || t.Term.Contains(_search, StringComparison.OrdinalIgnoreCase)
+            || t.Aliases.Any(a => a.Contains(_search, StringComparison.OrdinalIgnoreCase))
+            || t.ShortDef.Contains(_search, StringComparison.OrdinalIgnoreCase))
+        .OrderBy(t => t.Term)
+        .ToList();
+}
+
+<p class="text-muted small">@matches.Count of @Kb.Glossary.Count terms</p>
+
+@foreach (var term in matches)
+{
+    <div class="card mb-2">
+        <div class="card-body">
+            <div class="d-flex justify-content-between align-items-start gap-2">
+                <h5 class="card-title mb-1">@term.Term</h5>
+                <span class="badge bg-info text-dark">@term.Category</span>
+            </div>
+            @if (term.Aliases.Length > 0)
+            {
+                <p class="small text-muted mb-2">also: @string.Join(", ", term.Aliases)</p>
+            }
+            <p class="mb-2"><strong>@term.ShortDef</strong></p>
+            @if (!string.IsNullOrWhiteSpace(term.Details))
+            {
+                <p class="mb-2">@term.Details</p>
+            }
+            @if (!string.IsNullOrWhiteSpace(term.WhenToUse))
+            {
+                <p class="mb-2"><span class="text-success">When to use:</span> @term.WhenToUse</p>
+            }
+            @if (term.Related.Length > 0)
+            {
+                <p class="small mb-1">Related: @string.Join(" · ", term.Related)</p>
+            }
+            <div class="d-flex gap-3 align-items-center">
+                @if (!string.IsNullOrWhiteSpace(term.LearnMoreUrl))
+                {
+                    <a href="@term.LearnMoreUrl" target="_blank" rel="noopener" class="small">Learn more ↗</a>
+                }
+                @if (Ai.Enabled)
+                {
+                    <button class="btn btn-sm btn-outline-primary" @onclick="() => Explain(term.Term)">Explain with AI</button>
+                }
+            </div>
+            @if (_explanations.TryGetValue(term.Term, out var ex))
+            {
+                <div class="alert alert-light border mt-2 mb-0 small">@ex</div>
+            }
+        </div>
+    </div>
+}
+
+@if (matches.Count == 0)
+{
+    <p>No term matches "<strong>@_search</strong>". Add it to <code>Data/glossary.json</code> and it'll show up here.</p>
+}
+
+@code {
+    private string _search = "";
+    private string _filter = "All";
+    private readonly string[] _categories = { "All", "Concept", "Technique", "Architecture", "Tooling" };
+    private readonly Dictionary<string, string> _explanations = new();
+
+    private async Task Explain(string term)
+    {
+        var text = await Ai.ExplainTermAsync(term);
+        if (text is not null)
+            _explanations[term] = text;
+    }
+}
