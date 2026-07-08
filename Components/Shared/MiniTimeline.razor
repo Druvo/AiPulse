@@ -1,0 +1,13 @@
+@* Activity heatmap for the Dashboard; click a day to jump into News filtered to it. *@
+
+<div class="card mb-2">
+    <div class="card-body">
+        <h6 class="section-title mb-2"><Icon Name="calendar" Size="16" /> Activity timeline</h6>
+        <ActivityHeatmap Items="Items" MaxDays="90" />
+    </div>
+</div>
+
+@code {
+    [Parameter, EditorRequired]
+    public IReadOnlyList<FeedItem> Items { get; set; } = Array.Empty<FeedItem>();
+}

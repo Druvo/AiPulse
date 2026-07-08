@@ -3,37 +3,97 @@
 @rendermode InteractiveServer
 @inject FeedAggregatorService Feeds
 @inject ReadingStateService Reading
+@inject NavigationManager Nav
 
 <PageTitle>AiPulse · News Feed</PageTitle>
 
 <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
-    <h1 class="mb-0">News Feed</h1>
+    <h1 class="mb-0"><Icon Name="rss" Size="22" /> News Feed</h1>
     <div class="d-flex align-items-center gap-2">
         @if (_result is not null)
         {
             <span class="text-muted small">Updated @_result.FetchedAt.ToLocalTime().ToString("g")</span>
         }
+        <div class="btn-group view-toggle" role="group">
+            <button class="btn btn-sm @(_view == "List" ? "btn-dark" : "btn-outline-dark")" @onclick='() => SetView("List")'><Icon Name="list" Size="15" /> List</button>
+            <button class="btn btn-sm @(_view == "Grid" ? "btn-dark" : "btn-outline-dark")" @onclick='() => SetView("Grid")'><Icon Name="grid" Size="15" /> Grid</button>
+        </div>
         <button class="btn btn-primary" @onclick="() => Load(true)" disabled="@_loading">
-            @(_loading ? "Refreshing…" : "↻ Refresh")
+            @if (_loading)
+            {
+                <span class="spinner"></span>
+            }
+            else
+            {
+                <Icon Name="refresh" Size="15" />
+            }
+            @(_loading ? "Refreshing…" : "Refresh")
         </button>
     </div>
 </div>
 
 <input class="form-control mb-3" placeholder="Search the feed…" @bind="_search" @bind:event="oninput" />
 
-<div class="btn-group mb-3 flex-wrap" role="group">
-    @foreach (var f in _filters)
+<div class="d-flex flex-wrap align-items-center gap-2 mb-2">
+    <div class="btn-group flex-wrap" role="group">
+        @foreach (var f in _filters)
+        {
+            <button class="btn btn-sm @(_filter == f ? "btn-dark" : "btn-outline-dark")"
+                    @onclick="() => SetFilter(f)">
+                @f
+                @if (f == "New" && _newCount > 0)
+                {
+                    <span class="badge bg-danger ms-1">@_newCount</span>
+                }
+            </button>
+        }
+    </div>
+    <button class="btn btn-sm btn-outline-dark" @onclick="() => _showFilters = !_showFilters">
+        <Icon Name="tool" Size="14" /> Filters
+        @if (ActiveFilterCount() > 0)
+        {
+            <span class="badge bg-info ms-1">@ActiveFilterCount()</span>
+        }
+    </button>
+    @if (!string.IsNullOrEmpty(_tag))
     {
-        <button class="btn btn-sm @(_filter == f ? "btn-dark" : "btn-outline-dark")"
-                @onclick="() => _filter = f">
-            @f
-            @if (f == "✨ New" && _newCount > 0)
-            {
-                <span class="badge bg-danger ms-1">@_newCount</span>
-            }
-        </button>
+        <button class="btn btn-sm btn-warning" @onclick='() => SetTag("")'>Tag: @_tag ✕</button>
+    }
+    @if (_date is not null)
+    {
+        <button class="btn btn-sm btn-warning" @onclick="ClearDate">Day: @_date.Value.ToString("MMM d") ✕</button>
     }
 </div>
+
+@if (_showFilters)
+{
+    <div class="d-flex flex-wrap gap-2 mb-2">
+        <select class="form-select form-select-sm w-auto" @bind="_contentType" @bind:after="SyncUrl">
+            <option value="">All content types</option>
+            @foreach (var ct in _contentTypes)
+            {
+                <option value="@ct">@ct</option>
+            }
+        </select>
+        <select class="form-select form-select-sm w-auto" @bind="_level" @bind:after="SyncUrl">
+            <option value="">All levels</option>
+            @foreach (var lvl in _levels)
+            {
+                <option value="@lvl">@lvl</option>
+            }
+        </select>
+    </div>
+
+    @if (_result is not null && AvailableTags().Count > 0)
+    {
+        <div class="d-flex flex-wrap gap-1 mb-3">
+            @foreach (var t in AvailableTags().Take(20))
+            {
+                <button class="btn btn-sm tag-chip @(_tag == t ? "active" : "")" @onclick='() => SetTag(_tag == t ? "" : t)'>@t</button>
+            }
+        </div>
+    }
+}
 
 @if (_loading && _result is null)
 {
@@ -59,33 +119,104 @@ else
 
     <p class="text-muted small">@items.Count items</p>
 
-    @foreach (var item in items)
+    @if (_view == "Grid")
     {
-        var isNew = item.Published > _sinceVisit;
-        var saved = Reading.IsBookmarked(item.Link);
-        var watched = Reading.MatchWatchlist(item.Title + " " + item.Summary);
-        <div class="card mb-2 @(isNew ? "border-start border-danger border-3" : "") @(watched is not null ? "watched-item" : "")">
-            <div class="card-body py-2">
-                <div class="d-flex justify-content-between align-items-start gap-2">
-                    <a href="@item.Link" target="_blank" rel="noopener" class="h6 mb-1 text-decoration-none">
-                        @if (isNew) { <span class="badge bg-danger me-1">NEW</span> }
-                        @if (watched is not null) { <span class="badge bg-warning text-dark me-1" title="Watchlist: @watched">⭐</span> }
-                        @item.Title
-                    </a>
-                    <div class="d-flex align-items-center gap-2">
-                        <span class="badge bg-secondary text-nowrap">@item.Category</span>
-                        <button class="btn btn-sm btn-link p-0 bookmark-btn @(saved ? "saved" : "")"
-                                title="@(saved ? "Remove bookmark" : "Save to read later")"
-                                @onclick="() => Toggle(item)">@(saved ? "🔖" : "🏷️")</button>
+        <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-3">
+            @foreach (var item in items)
+            {
+                var isNew = item.Published > _sinceVisit;
+                var saved = Reading.IsBookmarked(item.Link);
+                var read = Reading.IsRead(item.Link);
+                var watched = Reading.MatchWatchlist(item.Title + " " + item.Summary);
+                <div class="col">
+                    <div class="card h-100 feed-grid-card @(isNew ? "border-start border-danger border-3" : "") @(watched is not null ? "watched-item" : "") @(read ? "read-item" : "")">
+                        <div class="card-body d-flex flex-column">
+                            <div class="d-flex justify-content-between align-items-start gap-2 mb-1">
+                                <span class="badge ctype-@item.ContentType.ToLower()">@item.ContentType</span>
+                                <div class="d-flex align-items-center gap-2">
+                                    <button class="btn btn-sm btn-link p-0 read-btn"
+                                            title="@(read ? "Mark unread" : "Mark read")"
+                                            @onclick="() => ToggleRead(item)"><Icon Name="@(read ? "check" : "eye")" Size="16" /></button>
+                                    <button class="btn btn-sm btn-link p-0 bookmark-btn @(saved ? "saved" : "")"
+                                            title="@(saved ? "Remove bookmark" : "Save to read later")"
+                                            @onclick="() => Toggle(item)"><Icon Name="bookmark" Size="16" Filled="@saved" /></button>
+                                </div>
+                            </div>
+                            <a href="@item.Link" target="_blank" rel="noopener" class="h6 text-decoration-none mb-1">
+                                @if (isNew) { <span class="badge bg-danger me-1">NEW</span> }
+                                @if (watched is not null) { <span class="badge bg-warning me-1" title="Watchlist: @watched"><Icon Name="star" Size="11" Filled="true" /></span> }
+                                @item.Title
+                            </a>
+                            @if (!string.IsNullOrWhiteSpace(item.Summary))
+                            {
+                                <p class="card-text small text-muted mb-2">@item.Summary</p>
+                            }
+                            <div class="mt-auto">
+                                @if (item.Tags.Length > 0)
+                                {
+                                    <div class="d-flex flex-wrap gap-1 mb-1">
+                                        @foreach (var t in item.Tags.Take(4))
+                                        {
+                                            <span class="tag-chip small">@t</span>
+                                        }
+                                    </div>
+                                }
+                                <div class="x-small text-muted d-flex justify-content-between align-items-center">
+                                    <span><span class="tag-chip small">@item.SourceName</span> · @item.Published.ToLocalTime().ToString("g")</span>
+                                    <span class="badge level-@item.Level.ToLower()">@item.Level</span>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
-                @if (!string.IsNullOrWhiteSpace(item.Summary))
-                {
-                    <p class="card-text small text-muted mb-1">@item.Summary</p>
-                }
-                <div class="x-small text-muted">@item.SourceName · @item.Published.ToLocalTime().ToString("g")</div>
-            </div>
+            }
         </div>
+    }
+    else
+    {
+        @foreach (var item in items)
+        {
+            var isNew = item.Published > _sinceVisit;
+            var saved = Reading.IsBookmarked(item.Link);
+            var read = Reading.IsRead(item.Link);
+            var watched = Reading.MatchWatchlist(item.Title + " " + item.Summary);
+            <div class="card mb-2 @(isNew ? "border-start border-danger border-3" : "") @(watched is not null ? "watched-item" : "") @(read ? "read-item" : "")">
+                <div class="card-body py-2">
+                    <div class="d-flex justify-content-between align-items-start gap-2">
+                        <a href="@item.Link" target="_blank" rel="noopener" class="h6 mb-1 text-decoration-none">
+                            @if (isNew) { <span class="badge bg-danger me-1">NEW</span> }
+                            @if (watched is not null) { <span class="badge bg-warning me-1" title="Watchlist: @watched"><Icon Name="star" Size="11" Filled="true" /></span> }
+                            @item.Title
+                        </a>
+                        <div class="d-flex align-items-center gap-2">
+                            <span class="badge level-@item.Level.ToLower()">@item.Level</span>
+                            <span class="badge ctype-@item.ContentType.ToLower()">@item.ContentType</span>
+                            <span class="badge bg-secondary text-nowrap">@item.Category</span>
+                            <button class="btn btn-sm btn-link p-0 read-btn"
+                                    title="@(read ? "Mark unread" : "Mark read")"
+                                    @onclick="() => ToggleRead(item)"><Icon Name="@(read ? "check" : "eye")" Size="16" /></button>
+                            <button class="btn btn-sm btn-link p-0 bookmark-btn @(saved ? "saved" : "")"
+                                    title="@(saved ? "Remove bookmark" : "Save to read later")"
+                                    @onclick="() => Toggle(item)"><Icon Name="bookmark" Size="16" Filled="@saved" /></button>
+                        </div>
+                    </div>
+                    @if (!string.IsNullOrWhiteSpace(item.Summary))
+                    {
+                        <p class="card-text small text-muted mb-1">@item.Summary</p>
+                    }
+                    @if (item.Tags.Length > 0)
+                    {
+                        <div class="d-flex flex-wrap gap-1 mb-1">
+                            @foreach (var t in item.Tags.Take(6))
+                            {
+                                <span class="tag-chip small">@t</span>
+                            }
+                        </div>
+                    }
+                    <div class="x-small text-muted"><span class="tag-chip small">@item.SourceName</span> · @item.Published.ToLocalTime().ToString("g")</div>
+                </div>
+            </div>
+        }
     }
 
     @if (items.Count == 0)
@@ -95,20 +226,78 @@ else
 }
 
 @code {
+    [SupplyParameterFromQuery(Name = "tag")]
+    public string? TagParam { get; set; }
+
+    [SupplyParameterFromQuery(Name = "date")]
+    public string? DateParam { get; set; }
+
+    [SupplyParameterFromQuery(Name = "view")]
+    public string? ViewParam { get; set; }
+
+    [SupplyParameterFromQuery(Name = "filter")]
+    public string? FilterParam { get; set; }
+
+    [SupplyParameterFromQuery(Name = "contentType")]
+    public string? ContentTypeParam { get; set; }
+
+    [SupplyParameterFromQuery(Name = "level")]
+    public string? LevelParam { get; set; }
+
     private FeedResult? _result;
     private bool _loading;
     private string _filter = "All";
     private string _search = "";
+    private string _contentType = "";
+    private string _level = "";
+    private string _tag = "";
+    private DateOnly? _date;
+    private string _view = "List";
+    private bool _showFilters;
     private DateTimeOffset _sinceVisit = DateTimeOffset.MinValue;
     private int _newCount;
 
-    private readonly string[] _filters = { "All", "✨ New", "Today", "News", "Research", "Tools", "Community" };
+    private readonly string[] _filters = { "All", "New", "Unread", "Today", "News", "Research", "Tools", "Community" };
+    private readonly string[] _contentTypes = { "News", "Tutorial", "Release", "Paper", "Discussion", "Video" };
+    private readonly string[] _levels = { "Beginner", "Intermediate", "Advanced" };
 
     protected override async Task OnInitializedAsync()
     {
+        if (!string.IsNullOrWhiteSpace(TagParam))
+            _tag = TagParam;
+        if (DateOnly.TryParse(DateParam, out var d))
+            _date = d;
+        if (ViewParam is "List" or "Grid")
+            _view = ViewParam;
+        if (!string.IsNullOrWhiteSpace(FilterParam) && _filters.Contains(FilterParam))
+            _filter = FilterParam;
+        if (!string.IsNullOrWhiteSpace(ContentTypeParam) && _contentTypes.Contains(ContentTypeParam))
+            _contentType = ContentTypeParam;
+        if (!string.IsNullOrWhiteSpace(LevelParam) && _levels.Contains(LevelParam))
+            _level = LevelParam;
+
         // Record the visit and remember the previous time so we can flag what's new.
         _sinceVisit = Reading.TouchNewsVisit();
         await Load(false);
+    }
+
+    private void SetView(string view) { _view = view; SyncUrl(); }
+    private void SetFilter(string filter) { _filter = filter; SyncUrl(); }
+    private void SetTag(string tag) { _tag = tag; SyncUrl(); }
+    private void ClearDate() { _date = null; SyncUrl(); }
+
+    /// <summary>Reflects the current filter/view state into the URL so a refresh (or a shared link) lands back in the same place.</summary>
+    private void SyncUrl()
+    {
+        var query = new List<string>();
+        if (_view != "List") query.Add($"view={_view}");
+        if (_filter != "All") query.Add($"filter={Uri.EscapeDataString(_filter)}");
+        if (!string.IsNullOrEmpty(_tag)) query.Add($"tag={Uri.EscapeDataString(_tag)}");
+        if (_date is not null) query.Add($"date={_date:yyyy-MM-dd}");
+        if (!string.IsNullOrEmpty(_contentType)) query.Add($"contentType={Uri.EscapeDataString(_contentType)}");
+        if (!string.IsNullOrEmpty(_level)) query.Add($"level={Uri.EscapeDataString(_level)}");
+        var qs = query.Count > 0 ? "?" + string.Join("&", query) : "";
+        Nav.NavigateTo($"news{qs}", replace: true);
     }
 
     private async Task Load(bool force)
@@ -125,6 +314,12 @@ else
         }
     }
 
+    private int ActiveFilterCount() =>
+        (string.IsNullOrEmpty(_contentType) ? 0 : 1) + (string.IsNullOrEmpty(_level) ? 0 : 1);
+
+    private List<string> AvailableTags() =>
+        _result?.Items.SelectMany(i => i.Tags).Distinct(StringComparer.OrdinalIgnoreCase).OrderBy(t => t).ToList() ?? new();
+
     private List<FeedItem> Filtered()
     {
         if (_result is null) return new();
@@ -132,11 +327,24 @@ else
 
         q = _filter switch
         {
-            "✨ New" => q.Where(i => i.Published > _sinceVisit),
+            "New" => q.Where(i => i.Published > _sinceVisit),
+            "Unread" => q.Where(i => !Reading.IsRead(i.Link)),
             "Today" => q.Where(i => i.Published.LocalDateTime.Date == DateTime.Today),
             "All" => q,
             _ => q.Where(i => i.Category == _filter)
         };
+
+        if (!string.IsNullOrEmpty(_contentType))
+            q = q.Where(i => i.ContentType == _contentType);
+
+        if (!string.IsNullOrEmpty(_level))
+            q = q.Where(i => i.Level == _level);
+
+        if (!string.IsNullOrEmpty(_tag))
+            q = q.Where(i => i.Tags.Contains(_tag, StringComparer.OrdinalIgnoreCase));
+
+        if (_date is not null)
+            q = q.Where(i => DateOnly.FromDateTime(i.Published.LocalDateTime) == _date.Value);
 
         if (!string.IsNullOrWhiteSpace(_search))
         {
@@ -151,4 +359,6 @@ else
     }
 
     private void Toggle(FeedItem item) => Reading.ToggleBookmark(item);
+
+    private void ToggleRead(FeedItem item) => Reading.ToggleRead(item.Link);
 }

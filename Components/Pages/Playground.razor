@@ -1,0 +1,587 @@
+@page "/playground"
+@attribute [Authorize]
+@rendermode InteractiveServer
+@using Markdig
+@using System.Text.RegularExpressions
+@inject OllamaService Ollama
+@inject ChatHistoryService ChatHistory
+@inject ModelUsageService ModelUsage
+@inject KnowledgeBaseService Kb
+@inject SystemInfoService SystemInfo
+@inject IJSRuntime JS
+@implements IDisposable
+
+<PageTitle>AiPulse · Playground</PageTitle>
+
+<div class="page-header">
+    <h1><Icon Name="message" Size="22" /> Playground</h1>
+    <p class="lead">Chat with your local models — full conversation history, multiple sessions, all stored on this PC.</p>
+</div>
+
+@if (!_ollamaChecked)
+{
+    <p class="text-muted"><span class="spinner"></span> Checking for a local Ollama instance…</p>
+}
+else if (!_ollamaRunning)
+{
+    <div class="alert alert-warning">
+        <strong>Ollama isn't running.</strong> Install it from <a href="https://ollama.com/download" target="_blank" rel="noopener">ollama.com</a>,
+        make sure it's running (listens on <code>localhost:11434</code>), then check again.
+    </div>
+    <button class="btn btn-sm btn-outline-primary" @onclick="CheckOllama"><Icon Name="refresh" Size="14" /> Check again</button>
+}
+else if (_installedModels.Count == 0)
+{
+    <div class="alert alert-light border">
+        No models installed yet. Pull one below to start chatting — or visit
+        <a href="explore?tab=try">Explore → Try a Model</a> for the full directory with PC-compatibility badges.
+    </div>
+    <div class="alert @(StorageIsTight() ? "alert-warning" : "alert-light border") py-2 small mb-3 d-flex align-items-center gap-2">
+        <Icon Name="database" Size="14" />
+        <span>
+            Models download to <code>@_storagePath</code>
+            @if (_storageFreeGb is not null)
+            {
+                <span> · <strong>@_storageFreeGb.Value.ToString("0.#") GB free</strong> there</span>
+            }
+            @if (StorageIsTight())
+            {
+                <span> — large pulls (Llama 3.3/4, Command R+) may fail here. Set <code>OLLAMA_MODELS</code> to a drive with more room and restart Ollama to fix this.</span>
+            }
+        </span>
+    </div>
+    @foreach (var group in Kb.ModelDirectory.GroupBy(m => m.Category))
+    {
+        <h6 class="section-title mt-3 mb-2">@group.Key</h6>
+        <div class="row g-3 mb-2">
+            @foreach (var m in group)
+            {
+                var slug = OllamaSlug(m.OllamaUrl);
+                <div class="col-md-6">
+                    <div class="card h-100">
+                        <div class="card-body">
+                            <div class="fw-bold">@m.Name <span class="text-muted small">· @m.Publisher</span></div>
+                            <p class="x-small text-muted mb-1">@m.SizeGb.ToString("0.#") GB download @(m.SizeGb > (_storageFreeGb ?? double.MaxValue) ? "⚠ won't fit in free space" : "")</p>
+                            <p class="small text-muted mb-2">@m.OneLiner</p>
+                            @if (slug is not null)
+                            {
+                                <button class="btn btn-sm btn-success" disabled="@(_pullingModel is not null)" @onclick="() => PullModel(slug)">
+                                    <Icon Name="download" Size="13" /> Pull model
+                                </button>
+                            }
+                            @if (_pullingModel == slug)
+                            {
+                                <div class="mt-2">
+                                    <div class="progress" style="height: 6px;">
+                                        <div class="progress-bar" style="width: @(_pullProgress?.PercentComplete ?? 0)%"></div>
+                                    </div>
+                                    <div class="x-small text-muted mt-1">@(_pullProgress?.Status ?? "starting…")</div>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+}
+else
+{
+    <div class="row g-3">
+        <div class="col-md-3">
+            <div class="d-flex gap-2 mb-2">
+                <select class="form-select form-select-sm" @bind="_selectedModel">
+                    @foreach (var m in _installedModels)
+                    {
+                        <option value="@m.Name">@m.Name</option>
+                    }
+                </select>
+                <button class="btn btn-sm btn-outline-secondary" title="System prompt" @onclick="() => _showNewChatOptions = !_showNewChatOptions">
+                    <Icon Name="settings" Size="13" />
+                </button>
+                <button class="btn btn-sm btn-primary text-nowrap" @onclick="NewChat"><Icon Name="sparkle" Size="13" /> New</button>
+            </div>
+            @if (_showNewChatOptions)
+            {
+                <textarea class="form-control form-control-sm mb-2" rows="2"
+                          placeholder="System prompt for the next new chat (optional) — e.g. 'You are a terse code reviewer.'"
+                          @bind="_newChatSystemPrompt"></textarea>
+            }
+            <div class="chat-transcript" style="max-height: 65vh;">
+                @if (_sessions.Count == 0)
+                {
+                    <p class="text-muted small">No chats yet — start one above.</p>
+                }
+                @foreach (var s in _sessions)
+                {
+                    <div class="chat-session-item @(s.Id == _currentSessionId ? "active" : "")">
+                        @if (_renamingSessionId == s.Id)
+                        {
+                            <input class="form-control form-control-sm" @bind="_renameDraft" @bind:event="oninput"
+                                   @onkeydown="@(async e => { if (e.Key == "Enter") await ConfirmRename(s.Id); else if (e.Key == "Escape") _renamingSessionId = null; })"
+                                   @onblur="() => ConfirmRename(s.Id)" autofocus />
+                        }
+                        else
+                        {
+                            <div @onclick="() => LoadSession(s.Id)" style="cursor:pointer;">
+                                <div class="small fw-bold text-truncate">@s.Title</div>
+                            </div>
+                            <div class="x-small text-muted d-flex justify-content-between align-items-center">
+                                <span>@s.ModelName</span>
+                                <span class="d-flex gap-2">
+                                    <span @onclick="() => StartRename(s)" title="Rename" style="cursor:pointer;">✎</span>
+                                    <span @onclick="() => DeleteSession(s.Id)" title="Delete chat" style="cursor:pointer;">✕</span>
+                                </span>
+                            </div>
+                        }
+                    </div>
+                }
+            </div>
+        </div>
+        <div class="col-md-9">
+            <div class="btn-group btn-group-sm mb-3" role="group">
+                <button class="btn @(!_compareMode ? "btn-dark" : "btn-outline-dark")" @onclick="() => _compareMode = false">Chat</button>
+                <button class="btn @(_compareMode ? "btn-dark" : "btn-outline-dark")" @onclick="() => _compareMode = true">
+                    <Icon Name="grid" Size="13" /> Compare models
+                </button>
+            </div>
+
+            @if (_compareMode)
+            {
+                <p class="text-muted small">Send one prompt to several models at once and compare answers side by side. Not saved to chat history.</p>
+                <div class="d-flex flex-wrap gap-3 mb-2">
+                    @foreach (var m in _installedModels)
+                    {
+                        <label class="d-flex align-items-center gap-1 small">
+                            <input type="checkbox" checked="@_compareSelected.Contains(m.Name)"
+                                   @onchange="@(e => ToggleCompareModel(m.Name, (bool)e.Value!))" />
+                            @m.Name
+                        </label>
+                    }
+                </div>
+                <div class="d-flex gap-2 mb-3">
+                    <textarea class="form-control" rows="2" placeholder="Prompt to send to all selected models…"
+                              @bind="_compareDraft" @bind:event="oninput"></textarea>
+                    @if (_compareRunning)
+                    {
+                        <button class="btn btn-danger" @onclick="StopCompare" title="Stop all"><Icon Name="stop" Size="14" /></button>
+                    }
+                    else
+                    {
+                        <button class="btn btn-primary" disabled="@(_compareSelected.Count == 0 || string.IsNullOrWhiteSpace(_compareDraft))" @onclick="RunCompare">
+                            <Icon Name="play" Size="14" /> Run
+                        </button>
+                    }
+                </div>
+                <div class="row g-2">
+                    @foreach (var modelName in _compareSelected)
+                    {
+                        <div class="@CompareColClass()">
+                            <div class="card h-100">
+                                <div class="card-body">
+                                    <h6 class="section-title mb-2">@modelName</h6>
+                                    <div class="chat-transcript" style="max-height: 50vh;">
+                                        <div class="chat-bubble-content">@RenderMarkdown(_compareResults.GetValueOrDefault(modelName, _compareRunning ? "…" : ""))</div>
+                                    </div>
+                                    @if (_compareStats.TryGetValue(modelName, out var cstat))
+                                    {
+                                        <div class="x-small text-muted mt-1">@FormatStats(cstat)</div>
+                                    }
+                                </div>
+                            </div>
+                        </div>
+                    }
+                </div>
+            }
+            else if (_currentSessionId is null)
+            {
+                <div class="text-muted text-center py-5">Select a chat on the left, or start a new one.</div>
+            }
+            else
+            {
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <span class="badge bg-info">@_currentModel</span>
+                    @if (!string.IsNullOrWhiteSpace(_currentSystemPrompt))
+                    {
+                        <span class="x-small text-muted text-truncate ms-2" title="@_currentSystemPrompt">System: @_currentSystemPrompt</span>
+                    }
+                </div>
+                <div class="chat-transcript mb-2" id="chat-transcript">
+                    @foreach (var m in _messages)
+                    {
+                        <div class="chat-bubble @(m.Role == "user" ? "chat-bubble-user" : "chat-bubble-assistant")">
+                            <span class="copy-msg-btn" title="Copy" @onclick="() => CopyMessage(m.Content)"><Icon Name="copy" Size="12" /></span>
+                            <div class="chat-bubble-content">@RenderMarkdown(m.Content)</div>
+                            @if (m.Role == "assistant" && _stats.TryGetValue(m.Id, out var stat))
+                            {
+                                <div class="x-small text-muted mt-1">@FormatStats(stat)</div>
+                            }
+                        </div>
+                    }
+                    @if (_sending)
+                    {
+                        <div class="chat-bubble chat-bubble-assistant" style="white-space: pre-wrap;">@(_streamingText.Length == 0 ? "…" : _streamingText)</div>
+                    }
+                </div>
+                @if (!_sending && _messages.Count > 0 && _messages[^1].Role == "assistant")
+                {
+                    <button class="btn btn-sm btn-outline-secondary mb-2" @onclick="RegenerateLastResponse">
+                        <Icon Name="refresh" Size="13" /> Regenerate
+                    </button>
+                }
+                <div class="d-flex gap-2">
+                    <textarea class="form-control" rows="2" placeholder="Message @_currentModel…" @bind="_draft" @bind:event="oninput"
+                              @onkeydown="@(async e => { if (e.Key == "Enter" && !e.ShiftKey) await SendMessage(); })"></textarea>
+                    @if (_sending)
+                    {
+                        <button class="btn btn-danger" @onclick="StopGeneration" title="Stop generating"><Icon Name="stop" Size="14" /></button>
+                    }
+                    else
+                    {
+                        <button class="btn btn-primary" disabled="@string.IsNullOrWhiteSpace(_draft)" @onclick="SendMessage">
+                            <Icon Name="play" Size="14" />
+                        </button>
+                    }
+                </div>
+            }
+        </div>
+    </div>
+}
+
+@code {
+    [SupplyParameterFromQuery(Name = "model")]
+    public string? ModelParam { get; set; }
+
+    private static readonly MarkdownPipeline MdPipeline = new MarkdownPipelineBuilder().UseAdvancedExtensions().DisableHtml().Build();
+    private static readonly Regex CodeBlockOpen = new(@"<pre><code([^>]*)>", RegexOptions.Compiled);
+
+    private bool _ollamaChecked;
+    private bool _ollamaRunning;
+    private List<OllamaModel> _installedModels = new();
+    private List<ChatSessionRecord> _sessions = new();
+    private List<ChatMessageRecord> _messages = new();
+    private readonly Dictionary<int, OllamaChatStats> _stats = new();
+    private int? _currentSessionId;
+    private string _currentModel = "";
+    private string? _currentSystemPrompt;
+    private string _selectedModel = "";
+    private bool _showNewChatOptions;
+    private string _newChatSystemPrompt = "";
+    private int? _renamingSessionId;
+    private string _renameDraft = "";
+    private string _draft = "";
+    private bool _sending;
+    private string _streamingText = "";
+    private string? _pullingModel;
+    private OllamaPullProgress? _pullProgress;
+    private string _storagePath = "";
+    private double? _storageFreeGb;
+    private readonly CancellationTokenSource _cts = new();
+    private CancellationTokenSource? _genCts;
+
+    private bool _compareMode;
+    private readonly HashSet<string> _compareSelected = new();
+    private string _compareDraft = "";
+    private bool _compareRunning;
+    private readonly Dictionary<string, string> _compareResults = new();
+    private readonly Dictionary<string, OllamaChatStats> _compareStats = new();
+    private CancellationTokenSource? _compareCts;
+
+    private bool StorageIsTight() => _storageFreeGb is not null && _storageFreeGb.Value < 45;
+
+    private string CompareColClass() => _compareSelected.Count switch
+    {
+        <= 1 => "col-12",
+        2 => "col-md-6",
+        3 => "col-md-4",
+        _ => "col-md-3"
+    };
+
+    private void ToggleCompareModel(string name, bool isChecked)
+    {
+        if (isChecked) _compareSelected.Add(name);
+        else _compareSelected.Remove(name);
+    }
+
+    private void StopCompare() => _compareCts?.Cancel();
+
+    private async Task RunCompare()
+    {
+        if (_compareSelected.Count == 0 || string.IsNullOrWhiteSpace(_compareDraft) || _compareRunning) return;
+
+        var prompt = _compareDraft.Trim();
+        _compareResults.Clear();
+        _compareStats.Clear();
+        _compareRunning = true;
+        _compareCts = CancellationTokenSource.CreateLinkedTokenSource(_cts.Token);
+        StateHasChanged();
+
+        var models = _compareSelected.ToList();
+        var tasks = models.Select(async modelName =>
+        {
+            try
+            {
+                var history = new List<(string Role, string Content)> { ("user", prompt) };
+                var result = await Ollama.ChatStreamAsync(modelName, history, chunk =>
+                {
+                    _compareResults[modelName] = _compareResults.GetValueOrDefault(modelName, "") + chunk;
+                    StateHasChanged();
+                    return Task.CompletedTask;
+                }, _compareCts.Token);
+
+                _compareResults[modelName] = result.Text;
+                if (result.Stats is not null) _compareStats[modelName] = result.Stats;
+                await ModelUsage.RecordUsageAsync(modelName);
+            }
+            catch (OperationCanceledException)
+            {
+                // leave whatever partial text streamed in as the final state
+            }
+            catch (Exception ex)
+            {
+                _compareResults[modelName] = "Error: " + ex.Message;
+            }
+        }).ToList();
+
+        await Task.WhenAll(tasks);
+
+        _compareRunning = false;
+        _compareCts = null;
+        StateHasChanged();
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        (_storagePath, _storageFreeGb) = SystemInfo.DetectOllamaStorage();
+        await CheckOllama();
+        if (_ollamaRunning)
+        {
+            _sessions = await ChatHistory.GetSessionsAsync();
+            if (_installedModels.Count > 0)
+                _selectedModel = _installedModels[0].Name;
+
+            if (!string.IsNullOrWhiteSpace(ModelParam) && _installedModels.Any(m => m.Name.Equals(ModelParam, StringComparison.OrdinalIgnoreCase)))
+            {
+                _selectedModel = ModelParam;
+                await NewChat();
+            }
+        }
+    }
+
+    private async Task CheckOllama()
+    {
+        _ollamaRunning = await Ollama.IsRunningAsync();
+        _ollamaChecked = true;
+        if (_ollamaRunning)
+            _installedModels = await Ollama.GetInstalledModelsAsync();
+    }
+
+    private async Task NewChat()
+    {
+        if (string.IsNullOrWhiteSpace(_selectedModel)) return;
+        var session = await ChatHistory.CreateSessionAsync(_selectedModel, _newChatSystemPrompt);
+        _newChatSystemPrompt = "";
+        _showNewChatOptions = false;
+        _sessions = await ChatHistory.GetSessionsAsync();
+        await LoadSession(session.Id);
+    }
+
+    private async Task LoadSession(int sessionId)
+    {
+        _currentSessionId = sessionId;
+        var session = _sessions.FirstOrDefault(s => s.Id == sessionId);
+        _currentModel = session?.ModelName ?? "";
+        _currentSystemPrompt = session?.SystemPrompt;
+        _messages = await ChatHistory.GetMessagesAsync(sessionId);
+        _stats.Clear();
+        _streamingText = "";
+        StateHasChanged();
+        await ScrollToBottom();
+    }
+
+    private void StartRename(ChatSessionRecord s)
+    {
+        _renamingSessionId = s.Id;
+        _renameDraft = s.Title;
+    }
+
+    private async Task ConfirmRename(int sessionId)
+    {
+        if (_renamingSessionId != sessionId) return;
+        _renamingSessionId = null;
+        if (!string.IsNullOrWhiteSpace(_renameDraft))
+        {
+            await ChatHistory.RenameSessionAsync(sessionId, _renameDraft.Trim());
+            _sessions = await ChatHistory.GetSessionsAsync();
+        }
+    }
+
+    private async Task DeleteSession(int sessionId)
+    {
+        await ChatHistory.DeleteSessionAsync(sessionId);
+        _sessions = await ChatHistory.GetSessionsAsync();
+        if (_currentSessionId == sessionId)
+        {
+            _currentSessionId = null;
+            _messages = new();
+        }
+    }
+
+    private async Task SendMessage()
+    {
+        if (_currentSessionId is null || string.IsNullOrWhiteSpace(_draft) || _sending) return;
+
+        var sessionId = _currentSessionId.Value;
+        var userText = _draft.Trim();
+        _draft = "";
+        var saved = await ChatHistory.AddMessageAsync(sessionId, "user", userText);
+        _messages.Add(saved);
+        StateHasChanged();
+        await ScrollToBottom();
+
+        await GenerateAssistantReplyAsync();
+    }
+
+    private async Task RegenerateLastResponse()
+    {
+        if (_currentSessionId is null || _sending || _messages.Count == 0 || _messages[^1].Role != "assistant") return;
+
+        var last = _messages[^1];
+        _messages.RemoveAt(_messages.Count - 1);
+        _stats.Remove(last.Id);
+        await ChatHistory.DeleteMessageAsync(last.Id);
+
+        await GenerateAssistantReplyAsync();
+    }
+
+    private void StopGeneration() => _genCts?.Cancel();
+
+    private async Task GenerateAssistantReplyAsync()
+    {
+        if (_currentSessionId is null) return;
+        var sessionId = _currentSessionId.Value;
+
+        _sending = true;
+        _streamingText = "";
+        _genCts = CancellationTokenSource.CreateLinkedTokenSource(_cts.Token);
+        StateHasChanged();
+        await ScrollToBottom();
+
+        try
+        {
+            var history = BuildHistoryForModel();
+            var result = await Ollama.ChatStreamAsync(_currentModel, history, async chunk =>
+            {
+                _streamingText += chunk;
+                StateHasChanged();
+                await ScrollToBottom();
+            }, _genCts.Token);
+
+            if (!string.IsNullOrEmpty(result.Text))
+            {
+                var saved = await ChatHistory.AddMessageAsync(sessionId, "assistant", result.Text);
+                _messages.Add(saved);
+                if (result.Stats is not null) _stats[saved.Id] = result.Stats;
+                await ModelUsage.RecordUsageAsync(_currentModel);
+                _sessions = await ChatHistory.GetSessionsAsync();
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            if (!string.IsNullOrEmpty(_streamingText))
+            {
+                var saved = await ChatHistory.AddMessageAsync(sessionId, "assistant", _streamingText + "\n\n*(stopped)*");
+                _messages.Add(saved);
+            }
+        }
+        catch (Exception ex)
+        {
+            var saved = await ChatHistory.AddMessageAsync(sessionId, "assistant", "Error talking to Ollama: " + ex.Message);
+            _messages.Add(saved);
+        }
+        finally
+        {
+            _streamingText = "";
+            _sending = false;
+            _genCts = null;
+            StateHasChanged();
+            await ScrollToBottom();
+        }
+    }
+
+    private IEnumerable<(string Role, string Content)> BuildHistoryForModel()
+    {
+        var history = new List<(string, string)>();
+        if (!string.IsNullOrWhiteSpace(_currentSystemPrompt))
+            history.Add(("system", _currentSystemPrompt));
+        history.AddRange(_messages.Select(m => (m.Role, m.Content)));
+        return history;
+    }
+
+    private async Task CopyMessage(string content) => await JS.InvokeVoidAsync("copyText", content);
+
+    private static string FormatStats(OllamaChatStats stat)
+    {
+        var parts = new List<string>();
+
+        if (stat.PromptEvalCount is not null || stat.EvalCount is not null)
+            parts.Add($"{stat.PromptEvalCount ?? 0} in / {stat.EvalCount ?? 0} out tokens");
+
+        if (stat.TokensPerSecond is not null)
+            parts.Add($"{stat.TokensPerSecond.Value:0.#} tok/s");
+
+        if (stat.TotalSeconds is not null)
+        {
+            parts.Add(stat.LoadSeconds is > 0.1
+                ? $"{stat.TotalSeconds.Value:0.#}s ({stat.LoadSeconds.Value:0.#}s load + {stat.GenerateSeconds ?? 0:0.#}s generate)"
+                : $"{stat.TotalSeconds.Value:0.#}s");
+        }
+
+        parts.Add("$0 (local, no API cost)");
+        return string.Join(" · ", parts);
+    }
+
+    private static MarkupString RenderMarkdown(string text)
+    {
+        var html = Markdown.ToHtml(text ?? "", MdPipeline);
+        html = CodeBlockOpen.Replace(html, m =>
+            $"<div class=\"code-block-wrap\"><button type=\"button\" class=\"copy-code-btn\" onclick=\"copyCodeBlock(this)\">Copy</button><pre><code{m.Groups[1].Value}>");
+        html = html.Replace("</code></pre>", "</code></pre></div>");
+        return (MarkupString)html;
+    }
+
+    private async Task PullModel(string slug)
+    {
+        _pullingModel = slug;
+        _pullProgress = null;
+        StateHasChanged();
+        try
+        {
+            await Ollama.PullModelAsync(slug, progress =>
+            {
+                _pullProgress = progress;
+                StateHasChanged();
+                return Task.CompletedTask;
+            }, _cts.Token);
+            _installedModels = await Ollama.GetInstalledModelsAsync();
+            if (_installedModels.Count > 0 && string.IsNullOrWhiteSpace(_selectedModel))
+                _selectedModel = _installedModels[0].Name;
+            await ModelUsage.RecordUsageAsync(slug);
+        }
+        finally
+        {
+            _pullingModel = null;
+            StateHasChanged();
+        }
+    }
+
+    private static string? OllamaSlug(string? ollamaUrl) =>
+        string.IsNullOrWhiteSpace(ollamaUrl) ? null : ollamaUrl.TrimEnd('/').Split('/').LastOrDefault();
+
+    private async Task ScrollToBottom()
+    {
+        try { await JS.InvokeVoidAsync("scrollToBottom", "chat-transcript"); } catch { }
+    }
+
+    public void Dispose() => _cts.Cancel();
+}

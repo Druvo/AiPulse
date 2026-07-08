@@ -51,6 +51,9 @@ public sealed class ReadingStateService
                 Link = item.Link,
                 SourceName = item.SourceName,
                 Category = item.Category,
+                ContentType = item.ContentType,
+                Level = item.Level,
+                Tags = item.Tags,
                 SavedAt = DateTimeOffset.Now
             });
             Save();
@@ -78,6 +81,49 @@ public sealed class ReadingStateService
         {
             var changed = read ? _state.ReadLinks.Add(link) : _state.ReadLinks.Remove(link);
             if (changed) Save();
+        }
+    }
+
+    /// <summary>Toggles read state and returns the new value.</summary>
+    public bool ToggleRead(string link)
+    {
+        lock (_lock)
+        {
+            var nowRead = !_state.ReadLinks.Contains(link);
+            MarkReadInternal(link, nowRead);
+            return nowRead;
+        }
+    }
+
+    private void MarkReadInternal(string link, bool read)
+    {
+        // Caller holds _lock.
+        var changed = read ? _state.ReadLinks.Add(link) : _state.ReadLinks.Remove(link);
+        if (changed) Save();
+    }
+
+    // --- Learning Hub progress ---
+
+    public bool IsModuleComplete(string title)
+    {
+        lock (_lock) return _state.CompletedModules.Contains(title);
+    }
+
+    public int CompletedModuleCount
+    {
+        get { lock (_lock) return _state.CompletedModules.Count; }
+    }
+
+    /// <summary>Toggles a module's completed state and returns the new value.</summary>
+    public bool ToggleModuleComplete(string title)
+    {
+        lock (_lock)
+        {
+            var nowComplete = !_state.CompletedModules.Contains(title);
+            if (nowComplete) _state.CompletedModules.Add(title);
+            else _state.CompletedModules.Remove(title);
+            Save();
+            return nowComplete;
         }
     }
 

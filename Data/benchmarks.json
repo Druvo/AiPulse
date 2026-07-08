@@ -1,0 +1,50 @@
+[
+  {
+    "Name": "LMArena (Chatbot Arena)",
+    "Category": "Chat/Arena",
+    "Description": "Crowdsourced head-to-head model comparisons rated with an Elo-style score — the closest thing to a real-world 'which model feels better' leaderboard.",
+    "Url": "https://lmarena.ai/leaderboard"
+  },
+  {
+    "Name": "Open LLM Leaderboard",
+    "Category": "Knowledge",
+    "Description": "Hugging Face's leaderboard for open-weight models across a standard suite of academic benchmarks.",
+    "Url": "https://huggingface.co/spaces/open-llm-leaderboard/open_llm_leaderboard"
+  },
+  {
+    "Name": "MMLU / MMLU-Pro",
+    "Category": "Knowledge",
+    "Description": "Multiple-choice questions spanning 57+ subjects (law, medicine, math, history…) — the standard 'general knowledge' benchmark.",
+    "Url": "https://paperswithcode.com/sota/multi-task-language-understanding-on-mmlu"
+  },
+  {
+    "Name": "SWE-bench",
+    "Category": "Coding",
+    "Description": "Can the model resolve real GitHub issues end-to-end? The benchmark coding agents actually care about.",
+    "Url": "https://www.swebench.com/"
+  },
+  {
+    "Name": "HumanEval / MBPP",
+    "Category": "Coding",
+    "Description": "Function-level code generation correctness — older but still widely reported.",
+    "Url": "https://paperswithcode.com/sota/code-generation-on-humaneval"
+  },
+  {
+    "Name": "GPQA Diamond",
+    "Category": "Reasoning",
+    "Description": "Graduate-level science questions written to be 'Google-proof' — a harder reasoning bar than MMLU.",
+    "Url": "https://paperswithcode.com/sota/multiple-choice-question-answering-mcqa-on-1"
+  },
+  {
+    "Name": "Papers with Code — SOTA",
+    "Category": "Reasoning",
+    "Description": "State-of-the-art tracker across hundreds of ML tasks, linked to the paper and code for each result.",
+    "Url": "https://paperswithcode.com/sota"
+  },
+  {
+    "Name": "LMArena Vision leaderboard",
+    "Category": "Multimodal",
+    "Description": "Same Arena methodology, for image-input models.",
+    "Url": "https://lmarena.ai/leaderboard/vision"
+  }
+]

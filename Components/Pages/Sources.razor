@@ -1,47 +1,252 @@
 @page "/sources"
 @attribute [Authorize]
+@rendermode InteractiveServer
 @inject KnowledgeBaseService Kb
+@inject FeedAggregatorService Feeds
+@inject IJSRuntime JS
 
 <PageTitle>AiPulse · Sources</PageTitle>
 
-<h1>Sources</h1>
-<p class="text-muted">
-    Where your updates come from. To add, remove or disable a feed, edit
-    <code>Data/sources.json</code> and restart the app — no code changes needed.
-</p>
+<div class="page-header">
+    <h1><Icon Name="database" Size="22" /> Sources</h1>
+    <p class="lead">
+        Where your updates come from. Add, edit, or disable feeds right here — changes apply immediately, no restart needed.
+    </p>
+</div>
 
-<table class="table table-sm align-middle">
-    <thead>
-        <tr><th>Source</th><th>Category</th><th>Status</th><th>What it gives you</th></tr>
-    </thead>
-    <tbody>
-        @foreach (var group in Kb.Sources.GroupBy(s => s.Category).OrderBy(g => g.Key))
-        {
-            @foreach (var s in group)
+<button class="btn btn-primary mb-3" @onclick="ToggleAddForm">
+    <Icon Name="@(_showAddForm ? "check" : "database")" Size="15" /> @(_showAddForm ? "Close" : "Add source")
+</button>
+
+@if (_showAddForm)
+{
+    <div class="card mb-3">
+        <div class="card-body">
+            <EditForm Model="_form" OnValidSubmit="AddSource">
+                <div class="row g-2">
+                    <div class="col-md-4"><input class="form-control" placeholder="Name" @bind="_form.Name" /></div>
+                    <div class="col-md-8"><input class="form-control" placeholder="Feed URL (RSS/Atom)" @bind="_form.Url" /></div>
+                    <div class="col-md-3">
+                        <select class="form-select" @bind="_form.Category">
+                            @foreach (var c in _categories) { <option value="@c">@c</option> }
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <select class="form-select" @bind="_form.ContentType">
+                            @foreach (var c in _contentTypes) { <option value="@c">@c</option> }
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <select class="form-select" @bind="_form.Level">
+                            @foreach (var l in _levels) { <option value="@l">@l</option> }
+                        </select>
+                    </div>
+                    <div class="col-md-3"><input class="form-control" placeholder="Tags (comma-separated)" @bind="_form.TagsCsv" /></div>
+                    <div class="col-md-9"><input class="form-control" placeholder="Note (what it gives you)" @bind="_form.Note" /></div>
+                    <div class="col-md-3 d-flex align-items-center">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="newEnabled" @bind="_form.Enabled" />
+                            <label class="form-check-label" for="newEnabled">Enabled</label>
+                        </div>
+                    </div>
+                </div>
+                @if (_error is not null)
+                {
+                    <div class="alert alert-danger mt-2 py-2 small mb-0">@_error</div>
+                }
+                <button type="submit" class="btn btn-success mt-3">Save source</button>
+            </EditForm>
+        </div>
+    </div>
+}
+
+<div class="table-responsive">
+    <table class="table table-sm align-middle">
+        <thead>
+            <tr><th>Source</th><th>Category</th><th>Type</th><th>Level</th><th>Tags</th><th>Status</th><th>What it gives you</th><th></th></tr>
+        </thead>
+        <tbody>
+            @foreach (var s in Kb.SourceRecords)
             {
-                <tr>
-                    <td><a href="@s.Url" target="_blank" rel="noopener">@s.Name</a></td>
-                    <td><span class="badge bg-secondary">@s.Category</span></td>
-                    <td>
-                        @if (s.Enabled)
-                        {
-                            <span class="text-success">● enabled</span>
-                        }
-                        else
-                        {
-                            <span class="text-muted">○ disabled</span>
-                        }
-                    </td>
-                    <td class="small text-muted">@s.Note</td>
-                </tr>
+                @if (_editingId == s.Id)
+                {
+                    <tr>
+                        <td colspan="8">
+                            <div class="row g-2">
+                                <div class="col-md-4"><input class="form-control form-control-sm" @bind="_form.Name" /></div>
+                                <div class="col-md-8"><input class="form-control form-control-sm" @bind="_form.Url" /></div>
+                                <div class="col-md-3">
+                                    <select class="form-select form-select-sm" @bind="_form.Category">
+                                        @foreach (var c in _categories) { <option value="@c">@c</option> }
+                                    </select>
+                                </div>
+                                <div class="col-md-3">
+                                    <select class="form-select form-select-sm" @bind="_form.ContentType">
+                                        @foreach (var c in _contentTypes) { <option value="@c">@c</option> }
+                                    </select>
+                                </div>
+                                <div class="col-md-3">
+                                    <select class="form-select form-select-sm" @bind="_form.Level">
+                                        @foreach (var l in _levels) { <option value="@l">@l</option> }
+                                    </select>
+                                </div>
+                                <div class="col-md-3"><input class="form-control form-control-sm" placeholder="Tags" @bind="_form.TagsCsv" /></div>
+                                <div class="col-md-9"><input class="form-control form-control-sm" placeholder="Note" @bind="_form.Note" /></div>
+                                <div class="col-md-3 d-flex align-items-center">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="editEnabled" @bind="_form.Enabled" />
+                                        <label class="form-check-label" for="editEnabled">Enabled</label>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="mt-2">
+                                <button class="btn btn-sm btn-success" @onclick="SaveEdit">Save</button>
+                                <button class="btn btn-sm btn-outline-secondary" @onclick="CancelEdit">Cancel</button>
+                            </div>
+                        </td>
+                    </tr>
+                }
+                else
+                {
+                    <tr>
+                        <td><a href="@s.Url" target="_blank" rel="noopener">@s.Name</a></td>
+                        <td><span class="badge bg-secondary">@s.Category</span></td>
+                        <td><span class="badge ctype-@s.ContentType.ToLower()">@s.ContentType</span></td>
+                        <td><span class="badge level-@s.Level.ToLower()">@s.Level</span></td>
+                        <td>
+                            @foreach (var t in s.Tags)
+                            {
+                                <span class="tag-chip small">@t</span>
+                            }
+                        </td>
+                        <td>
+                            @if (s.Enabled)
+                            {
+                                <span class="text-success">● enabled</span>
+                            }
+                            else
+                            {
+                                <span class="text-muted">○ disabled</span>
+                            }
+                            @{
+                                var streak = Feeds.GetFailureStreak(s.Name);
+                            }
+                            @if (streak > 0)
+                            {
+                                <span class="badge bg-warning ms-1" title="@streak consecutive failed fetch(es)">@streak failed</span>
+                            }
+                        </td>
+                        <td class="small text-muted">@s.Note</td>
+                        <td class="text-nowrap">
+                            <button class="btn btn-sm btn-link p-0 me-2" title="Edit" @onclick="() => StartEdit(s)"><Icon Name="settings" Size="15" /></button>
+                            <button class="btn btn-sm btn-link p-0 text-danger" title="Delete" @onclick="() => DeleteSource(s.Id)"><Icon Name="trash" Size="15" /></button>
+                        </td>
+                    </tr>
+                }
             }
-        }
-    </tbody>
-</table>
+        </tbody>
+    </table>
+</div>
 
 <div class="alert alert-light border small">
-    <strong>Add your own:</strong> any RSS/Atom URL works. Handy ones:
+    <strong>Tip:</strong> any RSS/Atom URL works. Handy ones:
     a GitHub project's releases feed is <code>https://github.com/&lt;owner&gt;/&lt;repo&gt;/releases.atom</code>;
     a subreddit is <code>https://www.reddit.com/r/&lt;name&gt;/.rss</code>;
     most blogs expose <code>/feed</code> or <code>/rss.xml</code>.
 </div>
+
+@code {
+    private bool _showAddForm;
+    private int? _editingId;
+    private string? _error;
+    private SourceForm _form = new();
+
+    private readonly string[] _categories = { "News", "Research", "Tools", "Community" };
+    private readonly string[] _contentTypes = { "News", "Tutorial", "Release", "Paper", "Discussion", "Video" };
+    private readonly string[] _levels = { "Beginner", "Intermediate", "Advanced" };
+
+    private void ToggleAddForm()
+    {
+        _showAddForm = !_showAddForm;
+        _editingId = null;
+        if (_showAddForm) _form = new SourceForm { Enabled = true, Category = "News", ContentType = "News", Level = "Intermediate" };
+    }
+
+    private void StartEdit(SourceRecord s)
+    {
+        _showAddForm = false;
+        _editingId = s.Id;
+        _form = new SourceForm
+        {
+            Name = s.Name,
+            Url = s.Url,
+            Category = s.Category,
+            ContentType = s.ContentType,
+            Level = s.Level,
+            TagsCsv = s.TagsCsv,
+            Note = s.Note ?? "",
+            Enabled = s.Enabled
+        };
+    }
+
+    private void CancelEdit() => _editingId = null;
+
+    private async Task AddSource()
+    {
+        if (string.IsNullOrWhiteSpace(_form.Name) || string.IsNullOrWhiteSpace(_form.Url))
+        {
+            _error = "Name and URL are required.";
+            return;
+        }
+        _error = null;
+        await Kb.AddSourceAsync(new SourceRecord
+        {
+            Name = _form.Name.Trim(),
+            Url = _form.Url.Trim(),
+            Category = _form.Category,
+            ContentType = _form.ContentType,
+            Level = _form.Level,
+            TagsCsv = _form.TagsCsv.Trim(),
+            Note = string.IsNullOrWhiteSpace(_form.Note) ? null : _form.Note.Trim(),
+            Enabled = _form.Enabled
+        });
+        _showAddForm = false;
+    }
+
+    private async Task SaveEdit()
+    {
+        if (_editingId is null) return;
+        await Kb.UpdateSourceAsync(new SourceRecord
+        {
+            Id = _editingId.Value,
+            Name = _form.Name.Trim(),
+            Url = _form.Url.Trim(),
+            Category = _form.Category,
+            ContentType = _form.ContentType,
+            Level = _form.Level,
+            TagsCsv = _form.TagsCsv.Trim(),
+            Note = string.IsNullOrWhiteSpace(_form.Note) ? null : _form.Note.Trim(),
+            Enabled = _form.Enabled
+        });
+        _editingId = null;
+    }
+
+    private async Task DeleteSource(int id)
+    {
+        var confirmed = await JS.InvokeAsync<bool>("confirm", "Remove this source? This can't be undone.");
+        if (confirmed)
+            await Kb.DeleteSourceAsync(id);
+    }
+
+    private sealed class SourceForm
+    {
+        public string Name { get; set; } = "";
+        public string Url { get; set; } = "";
+        public string Category { get; set; } = "News";
+        public string ContentType { get; set; } = "News";
+        public string Level { get; set; } = "Intermediate";
+        public string TagsCsv { get; set; } = "";
+        public string Note { get; set; } = "";
+        public bool Enabled { get; set; } = true;
+    }
+}

@@ -9,10 +9,16 @@ public sealed class FeedSource
     public bool Enabled { get; init; } = true;
     /// <summary>Optional note shown in the Sources page.</summary>
     public string? Note { get; init; }
+    /// <summary>Kind of content this source produces: News, Tutorial, Release, Paper, Discussion, Video.</summary>
+    public string ContentType { get; init; } = "News";
+    /// <summary>How advanced the content typically is: Beginner, Intermediate, Advanced.</summary>
+    public string Level { get; init; } = "Intermediate";
+    /// <summary>Base topic tags applied to every item from this source (e.g. RAG, agents).</summary>
+    public string[] Tags { get; init; } = Array.Empty<string>();
 }
 
 /// <summary>A single normalized item pulled from any feed.</summary>
-public sealed class FeedItem
+public sealed record FeedItem
 {
     public required string Title { get; init; }
     public required string Link { get; init; }
@@ -20,6 +26,9 @@ public sealed class FeedItem
     public DateTimeOffset Published { get; init; }
     public required string SourceName { get; init; }
     public required string Category { get; init; }
+    public string ContentType { get; init; } = "News";
+    public string Level { get; init; } = "Intermediate";
+    public string[] Tags { get; init; } = Array.Empty<string>();
 }
 
 /// <summary>Result of one aggregation run, including any sources that failed.</summary>

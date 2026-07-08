@@ -1,0 +1,142 @@
+[
+  {
+    "Name": "Elements of AI",
+    "Provider": "University of Helsinki / MinnaLearn",
+    "Url": "https://www.elementsofai.com/",
+    "Level": "Beginner",
+    "OneLiner": "The best-known completely free intro to AI concepts for non-programmers — no math background assumed.",
+    "HasFreeCertificate": true,
+    "CertificateNote": "Free downloadable certificate on completion.",
+    "Topics": ["Concepts", "Ethics"]
+  },
+  {
+    "Name": "Building AI",
+    "Provider": "University of Helsinki / MinnaLearn",
+    "Url": "https://buildingai.elementsofai.com/",
+    "Level": "Intermediate",
+    "OneLiner": "The follow-up to Elements of AI — the math and code behind AI methods, still fully free.",
+    "HasFreeCertificate": true,
+    "CertificateNote": "Free downloadable certificate on completion.",
+    "Topics": ["Machine Learning", "Algorithms"]
+  },
+  {
+    "Name": "Machine Learning with Python",
+    "Provider": "freeCodeCamp",
+    "Url": "https://www.freecodecamp.org/learn/machine-learning-with-python/",
+    "Level": "Beginner",
+    "OneLiner": "Project-based ML fundamentals using TensorFlow, from freeCodeCamp's curriculum.",
+    "HasFreeCertificate": true,
+    "CertificateNote": "freeCodeCamp certifications are always free.",
+    "Topics": ["Machine Learning", "Python"]
+  },
+  {
+    "Name": "Kaggle Learn: Intro to Machine Learning",
+    "Provider": "Kaggle",
+    "Url": "https://www.kaggle.com/learn/intro-to-machine-learning",
+    "Level": "Beginner",
+    "OneLiner": "Short, hands-on micro-course with real notebooks and datasets.",
+    "HasFreeCertificate": true,
+    "CertificateNote": "Free completion certificate.",
+    "Topics": ["Machine Learning"]
+  },
+  {
+    "Name": "Kaggle Learn: Intro to Deep Learning",
+    "Provider": "Kaggle",
+    "Url": "https://www.kaggle.com/learn/intro-to-deep-learning",
+    "Level": "Intermediate",
+    "OneLiner": "Neural networks fundamentals via Kaggle's notebook-based micro-courses.",
+    "HasFreeCertificate": true,
+    "CertificateNote": "Free completion certificate.",
+    "Topics": ["Deep Learning", "Neural Networks"]
+  },
+  {
+    "Name": "Practical Deep Learning for Coders",
+    "Provider": "fast.ai",
+    "Url": "https://course.fast.ai/",
+    "Level": "Intermediate",
+    "OneLiner": "Code-first deep learning course, widely respected in the ML community — top-down, not theory-first.",
+    "HasFreeCertificate": false,
+    "CertificateNote": "No formal certificate, but among the most highly regarded free deep learning courses available.",
+    "Topics": ["Deep Learning", "Neural Networks"]
+  },
+  {
+    "Name": "ChatGPT Prompt Engineering for Developers",
+    "Provider": "DeepLearning.AI",
+    "Url": "https://www.deeplearning.ai/short-courses/chatgpt-prompt-engineering-for-developers/",
+    "Level": "Beginner",
+    "OneLiner": "Short, hands-on course on writing effective prompts, taught with OpenAI's own API.",
+    "HasFreeCertificate": true,
+    "CertificateNote": "Free shareable certificate of completion.",
+    "Topics": ["Prompting", "LLM Internals"]
+  },
+  {
+    "Name": "LangChain for LLM Application Development",
+    "Provider": "DeepLearning.AI",
+    "Url": "https://www.deeplearning.ai/short-courses/langchain-for-llm-application-development/",
+    "Level": "Intermediate",
+    "OneLiner": "Build real LLM-backed apps with LangChain — free short course, code-along notebooks.",
+    "HasFreeCertificate": true,
+    "CertificateNote": "Free shareable certificate of completion.",
+    "Topics": ["Agents", "RAG", "Tools"]
+  },
+  {
+    "Name": "AI Agents for Beginners",
+    "Provider": "Microsoft (GitHub)",
+    "Url": "https://github.com/microsoft/ai-agents-for-beginners",
+    "Level": "Intermediate",
+    "OneLiner": "Free, open-source 12-lesson curriculum on building AI agents, maintained on GitHub.",
+    "HasFreeCertificate": false,
+    "CertificateNote": "No certificate — self-paced open curriculum with code samples.",
+    "Topics": ["Agents", "Coding Agent"]
+  },
+  {
+    "Name": "Generative AI for Everyone",
+    "Provider": "DeepLearning.AI (Coursera)",
+    "Url": "https://www.coursera.org/learn/generative-ai-for-everyone",
+    "Level": "Beginner",
+    "OneLiner": "Andrew Ng's non-technical explainer on what generative AI can and can't do.",
+    "HasFreeCertificate": false,
+    "CertificateNote": "Free to audit; Coursera's certificate requires payment or financial aid approval.",
+    "Topics": ["Concepts"]
+  },
+  {
+    "Name": "Introduction to Generative AI",
+    "Provider": "Google Cloud Skills Boost",
+    "Url": "https://www.cloudskillsboost.google/course_templates/536",
+    "Level": "Beginner",
+    "OneLiner": "Google's own short intro course, free with a Cloud Skills Boost account.",
+    "HasFreeCertificate": true,
+    "CertificateNote": "Free shareable skill badge via Credly.",
+    "Topics": ["Concepts"]
+  },
+  {
+    "Name": "AI Fundamentals",
+    "Provider": "IBM SkillsBuild",
+    "Url": "https://skillsbuild.org/",
+    "Level": "Beginner",
+    "OneLiner": "Free self-paced AI/tech courses aimed at career switchers, with completion badges.",
+    "HasFreeCertificate": true,
+    "CertificateNote": "Free digital credential/badge on completion.",
+    "Topics": ["Concepts", "Machine Learning"]
+  },
+  {
+    "Name": "CS50's Introduction to Artificial Intelligence with Python",
+    "Provider": "Harvard (edX)",
+    "Url": "https://cs50.harvard.edu/ai/",
+    "Level": "Advanced",
+    "OneLiner": "Harvard's rigorous AI course covering search, knowledge, uncertainty, ML and neural networks.",
+    "HasFreeCertificate": false,
+    "CertificateNote": "Free to audit in full; edX's verified certificate is paid.",
+    "Topics": ["Machine Learning", "Neural Networks", "Algorithms"]
+  },
+  {
+    "Name": "MIT 6.034 Artificial Intelligence (OpenCourseWare)",
+    "Provider": "MIT OpenCourseWare",
+    "Url": "https://ocw.mit.edu/courses/6-034-artificial-intelligence-fall-2010/",
+    "Level": "Advanced",
+    "OneLiner": "Full MIT lecture series, notes and assignments, completely free — OCW never issues certificates.",
+    "HasFreeCertificate": false,
+    "CertificateNote": "MIT OCW doesn't issue certificates for any course.",
+    "Topics": ["Algorithms", "Machine Learning"]
+  }
+]

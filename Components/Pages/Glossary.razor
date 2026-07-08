@@ -3,11 +3,34 @@
 @rendermode InteractiveServer
 @inject KnowledgeBaseService Kb
 @inject ISummarizer Ai
+@inject FeedAggregatorService Feeds
+@inject NavigationManager Nav
 
 <PageTitle>AiPulse · Glossary</PageTitle>
 
-<h1>Glossary</h1>
-<p class="text-muted">Every buzzword your coworkers throw around — decoded for a developer, with when to actually use it.</p>
+<div class="page-header">
+    <h1><Icon Name="book" Size="22" /> Glossary</h1>
+    <p class="lead">Every buzzword your coworkers throw around — decoded for a developer, with when to actually use it.</p>
+</div>
+
+@{
+    var emerging = EmergingTerms();
+}
+@if (emerging.Count > 0)
+{
+    <div class="card mb-3">
+        <div class="card-body">
+            <h6 class="section-title mb-2"><Icon Name="sparkle" Size="16" /> Trending in the news, not yet defined here</h6>
+            <p class="text-muted small mb-2">Terms showing up often in your News feed that aren't in the glossary yet — add the ones worth keeping to <code>Data/glossary.json</code>.</p>
+            <div class="d-flex flex-wrap gap-1">
+                @foreach (var (term, count) in emerging)
+                {
+                    <a class="badge bg-warning text-dark text-decoration-none" href="@($"news?tag={Uri.EscapeDataString(term)}")">@term (@count)</a>
+                }
+            </div>
+        </div>
+    </div>
+}
 
 <input class="form-control mb-2" placeholder="Search a term (e.g. RAG, MCP, loops, headroom, caveman)…"
        @bind="_search" @bind:event="oninput" />
@@ -16,7 +39,7 @@
     @foreach (var cat in _categories)
     {
         <button class="btn btn-sm @(_filter == cat ? "btn-dark" : "btn-outline-dark")"
-                @onclick="() => _filter = cat">@cat</button>
+                @onclick="() => SetCategory(cat)">@cat</button>
     }
 </div>
 
@@ -39,7 +62,7 @@
         <div class="card-body">
             <div class="d-flex justify-content-between align-items-start gap-2">
                 <h5 class="card-title mb-1">@term.Term</h5>
-                <span class="badge bg-info text-dark">@term.Category</span>
+                <span class="badge bg-info">@term.Category</span>
             </div>
             @if (term.Aliases.Length > 0)
             {
@@ -57,6 +80,23 @@
             @if (term.Related.Length > 0)
             {
                 <p class="small mb-1">Related: @string.Join(" · ", term.Related)</p>
+            }
+            @{
+                var mentions = RecentMentions(term.Term);
+            }
+            @if (mentions.Count > 0)
+            {
+                <div class="mt-2 mb-2">
+                    <p class="x-small text-muted text-uppercase mb-1">Recent mentions</p>
+                    @foreach (var m in mentions)
+                    {
+                        <div class="small">
+                            <a href="@m.Link" target="_blank" rel="noopener" class="text-decoration-none">@m.Title</a>
+                            <span class="text-muted"> · @m.SourceName</span>
+                        </div>
+                    }
+                    <a href="@($"news?tag={Uri.EscapeDataString(term.Term)}")" class="small">See all in News →</a>
+                </div>
             }
             <div class="d-flex gap-3 align-items-center">
                 @if (!string.IsNullOrWhiteSpace(term.LearnMoreUrl))
@@ -82,10 +122,63 @@
 }
 
 @code {
+    [SupplyParameterFromQuery(Name = "q")]
+    public string? QueryParam { get; set; }
+
+    [SupplyParameterFromQuery(Name = "category")]
+    public string? CategoryParam { get; set; }
+
     private string _search = "";
     private string _filter = "All";
     private readonly string[] _categories = { "All", "Concept", "Technique", "Architecture", "Tooling" };
     private readonly Dictionary<string, string> _explanations = new();
+    private IReadOnlyList<FeedItem> _feedItems = Array.Empty<FeedItem>();
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (!string.IsNullOrWhiteSpace(QueryParam))
+            _search = QueryParam;
+        if (!string.IsNullOrWhiteSpace(CategoryParam) && _categories.Contains(CategoryParam))
+            _filter = CategoryParam;
+
+        var result = await Feeds.GetAsync();
+        _feedItems = result.Items;
+    }
+
+    private void SetCategory(string cat)
+    {
+        _filter = cat;
+        var qs = cat == "All" ? "" : $"?category={Uri.EscapeDataString(cat)}";
+        Nav.NavigateTo($"glossary{qs}", replace: true);
+    }
+
+    private List<(string Term, int Count)> EmergingTerms()
+    {
+        var known = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var t in Kb.Glossary)
+        {
+            known.Add(t.Term);
+            foreach (var a in t.Aliases) known.Add(a);
+        }
+
+        return _feedItems
+            .Where(i => i.Published >= DateTimeOffset.UtcNow.AddDays(-14))
+            .SelectMany(i => i.Tags)
+            .Where(tag => !string.IsNullOrWhiteSpace(tag) && !known.Contains(tag))
+            .GroupBy(tag => tag, StringComparer.OrdinalIgnoreCase)
+            .Where(g => g.Count() >= 2)
+            .OrderByDescending(g => g.Count())
+            .Take(10)
+            .Select(g => (g.Key, g.Count()))
+            .ToList();
+    }
+
+    private List<FeedItem> RecentMentions(string term) =>
+        _feedItems
+            .Where(i => i.Tags.Contains(term, StringComparer.OrdinalIgnoreCase))
+            .OrderByDescending(i => i.Published)
+            .Take(3)
+            .ToList();
 
     private async Task Explain(string term)
     {

@@ -5,7 +5,7 @@
 
 <div class="notif-wrap">
     <button class="notif-bell-btn" @onclick="Toggle" title="Notifications">
-        🔔
+        <Icon Name="bell" Size="20" />
         @if (_unread > 0)
         {
             <span class="notif-badge">@_unread</span>

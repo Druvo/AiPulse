@@ -4,6 +4,12 @@
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="AiPulse — a standalone, self-hosted dashboard to keep developers current on the AI world: news, jargon, the right tool for the right task, and a structured learning roadmap. Runs with zero AI and no API keys." />
+    <meta name="theme-color" content="#0891b2" />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="AiPulse — self-hosted AI news & learning dashboard" />
+    <meta property="og:description" content="Aggregates ~39 AI/dev RSS sources with a curated glossary, tools matrix, and learning roadmap. Standalone, self-hosted, no API keys required." />
+    <meta property="og:image" content="favicon.png" />
     <base href="/" />
     <link rel="stylesheet" href="bootstrap/bootstrap.min.css" />
     <link rel="stylesheet" href="app.css" />
@@ -11,11 +17,12 @@
     <link rel="icon" type="image/png" href="favicon.png" />
     <HeadOutlet />
     <script>
-        // Apply saved theme immediately to avoid a flash of the wrong theme.
-        (function () {
+        // Apply the saved theme immediately (avoids a flash of the wrong theme).
+        function applyTheme() {
             var t = localStorage.getItem('aipulse-theme') || 'light';
             document.documentElement.setAttribute('data-theme', t);
-        })();
+        }
+        applyTheme();
         function toggleTheme() {
             var cur = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
             document.documentElement.setAttribute('data-theme', cur);
@@ -25,9 +32,77 @@
 </head>
 
 <body>
+    <div id="nav-progress"></div>
     <Routes />
     <script src="_framework/blazor.web.js"></script>
+    <script>
+        // Blazor's enhanced navigation re-syncs the document to the server's rendered HTML on every
+        // internal link click, and the server never renders data-theme (it's client-only state) - so
+        // without reapplying it on 'enhancedload', the theme resets on every navigation. This must be
+        // registered via Blazor.addEventListener (not document.addEventListener - that's a different,
+        // never-fired event), and only after blazor.web.js has defined the global Blazor object.
+        Blazor.addEventListener('enhancedload', applyTheme);
+
+        // Enhanced navigation swaps the DOM in place with no browser tab spinner, so a multi-second
+        // navigation (e.g. Explore's live API fetches) can look frozen. Fake an nprogress-style bar:
+        // start creeping toward 90% the instant an internal link/nav-item is clicked, snap to 100% and
+        // fade out on 'enhancedload'. Falls back gracefully if a click doesn't trigger a navigation.
+        (function () {
+            var bar = document.getElementById('nav-progress');
+            var creepTimer = null;
+            var hideTimer = null;
+
+            function start() {
+                clearTimeout(hideTimer);
+                clearInterval(creepTimer);
+                bar.style.transition = 'none';
+                bar.style.opacity = '1';
+                bar.style.width = '0%';
+                // force reflow so the width:0 takes effect before animating
+                void bar.offsetWidth;
+                bar.style.transition = 'width 0.4s ease-out';
+                bar.style.width = '30%';
+                var pct = 30;
+                creepTimer = setInterval(function () {
+                    pct += (90 - pct) * 0.1;
+                    bar.style.width = Math.min(pct, 90) + '%';
+                }, 300);
+            }
+
+            function done() {
+                clearInterval(creepTimer);
+                bar.style.transition = 'width 0.2s ease-out';
+                bar.style.width = '100%';
+                hideTimer = setTimeout(function () {
+                    bar.style.transition = 'opacity 0.3s ease-out';
+                    bar.style.opacity = '0';
+                }, 200);
+            }
+
+            document.addEventListener('click', function (e) {
+                var a = e.target.closest('a[href]');
+                if (!a) return;
+                if (a.target === '_blank' || a.hasAttribute('download')) return;
+                if (a.origin !== location.origin) return;
+                if (a.getAttribute('href')?.startsWith('#')) return;
+                start();
+            }, true);
+
+            window.addEventListener('popstate', start);
+            Blazor.addEventListener('enhancedload', done);
+        })();
+    </script>
+    <script>
+        // Ctrl/Cmd+K opens the global search - just forward to its trigger button, no JS interop needed.
+        document.addEventListener('keydown', function (e) {
+            if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+                var btn = document.getElementById('global-search-trigger');
+                if (btn) { e.preventDefault(); btn.click(); }
+            }
+        });
+    </script>
     <script src="js/notify.js"></script>
+    <script src="js/playground.js"></script>
 </body>
 
 </html>

@@ -56,7 +56,11 @@ public sealed class ObsidianExportService
             foreach (var b in group.OrderByDescending(b => b.SavedAt))
             {
                 var src = string.IsNullOrWhiteSpace(b.SourceName) ? "" : $" — _{b.SourceName}_";
-                sb.AppendLine($"- [ ] [{EscapeMd(b.Title)}]({b.Link}){src} · saved {b.SavedAt:yyyy-MM-dd}");
+                var tags = string.Join(' ', new[] { b.ContentType, b.Level }.Concat(b.Tags)
+                    .Where(t => !string.IsNullOrWhiteSpace(t))
+                    .Select(t => $"#{ToObsidianTag(t)}"));
+                var tagSuffix = tags.Length > 0 ? $" {tags}" : "";
+                sb.AppendLine($"- [ ] [{EscapeMd(b.Title)}]({b.Link}){src} · saved {b.SavedAt:yyyy-MM-dd}{tagSuffix}");
             }
             sb.AppendLine();
         }
@@ -64,4 +68,8 @@ public sealed class ObsidianExportService
     }
 
     private static string EscapeMd(string s) => s.Replace("[", "(").Replace("]", ")");
+
+    /// <summary>Obsidian tags can't contain spaces or most punctuation; collapse to kebab-case.</summary>
+    private static string ToObsidianTag(string s) =>
+        string.Join('-', s.Split(' ', StringSplitOptions.RemoveEmptyEntries)).ToLowerInvariant();
 }

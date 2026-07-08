@@ -1,0 +1,189 @@
+[
+  {
+    "Name": "Llama 3.3 / 4",
+    "Publisher": "Meta",
+    "OneLiner": "The most widely self-hosted open-weight family — broad tool support, from 8B to 400B+ MoE variants.",
+    "OllamaUrl": "https://ollama.com/library/llama3.3",
+    "HuggingFaceUrl": "https://huggingface.co/meta-llama",
+    "License": "Llama Community License",
+    "MinRamGb": 48,
+    "SizeGb": 42.5,
+    "Category": "General"
+  },
+  {
+    "Name": "Qwen 2.5 / 3",
+    "Publisher": "Alibaba",
+    "OneLiner": "Strong coding and multilingual performance across a very wide size range, including small edge-friendly models.",
+    "OllamaUrl": "https://ollama.com/library/qwen2.5",
+    "HuggingFaceUrl": "https://huggingface.co/Qwen",
+    "License": "Apache 2.0 (most sizes)",
+    "MinRamGb": 8,
+    "SizeGb": 4.7,
+    "Category": "General"
+  },
+  {
+    "Name": "DeepSeek-V3 / R1",
+    "Publisher": "DeepSeek",
+    "OneLiner": "Frontier-level reasoning (R1) and general chat (V3) at a fraction of the usual training/serving cost. The default pull here is the 7B distilled R1 model, not the full 671B.",
+    "OllamaUrl": "https://ollama.com/library/deepseek-r1",
+    "HuggingFaceUrl": "https://huggingface.co/deepseek-ai",
+    "License": "MIT",
+    "MinRamGb": 8,
+    "SizeGb": 5.2,
+    "Category": "General"
+  },
+  {
+    "Name": "Mistral / Mixtral",
+    "Publisher": "Mistral AI",
+    "OneLiner": "Efficient dense and mixture-of-experts models, popular for self-hosting on modest hardware.",
+    "OllamaUrl": "https://ollama.com/library/mistral",
+    "HuggingFaceUrl": "https://huggingface.co/mistralai",
+    "License": "Apache 2.0",
+    "MinRamGb": 8,
+    "SizeGb": 4.4,
+    "Category": "General"
+  },
+  {
+    "Name": "Gemma 2 / 3",
+    "Publisher": "Google DeepMind",
+    "OneLiner": "Small, well-behaved models tuned to run comfortably on a single consumer GPU.",
+    "OllamaUrl": "https://ollama.com/library/gemma3",
+    "HuggingFaceUrl": "https://huggingface.co/google",
+    "License": "Gemma Terms of Use",
+    "MinRamGb": 8,
+    "SizeGb": 3.3,
+    "Category": "General"
+  },
+  {
+    "Name": "Phi-4",
+    "Publisher": "Microsoft",
+    "OneLiner": "Small model trained on heavily-curated synthetic data — punches well above its parameter count.",
+    "OllamaUrl": "https://ollama.com/library/phi4",
+    "HuggingFaceUrl": "https://huggingface.co/microsoft/phi-4",
+    "License": "MIT",
+    "MinRamGb": 12,
+    "SizeGb": 9.1,
+    "Category": "General"
+  },
+  {
+    "Name": "Command R+",
+    "Publisher": "Cohere",
+    "OneLiner": "Built specifically for RAG and tool use, with strong citation/grounding behavior.",
+    "OllamaUrl": "https://ollama.com/library/command-r-plus",
+    "HuggingFaceUrl": "https://huggingface.co/CohereForAI",
+    "License": "CC-BY-NC (research)",
+    "MinRamGb": 64,
+    "SizeGb": 59.2,
+    "Category": "General"
+  },
+  {
+    "Name": "Zephyr",
+    "Publisher": "Hugging Face H4",
+    "OneLiner": "A Mistral fine-tune tuned specifically to be helpful and conversational — a favorite in the self-hosted chatbot community.",
+    "OllamaUrl": "https://ollama.com/library/zephyr",
+    "HuggingFaceUrl": "https://huggingface.co/HuggingFaceH4",
+    "License": "MIT",
+    "MinRamGb": 8,
+    "SizeGb": 4.1,
+    "Category": "General"
+  },
+  {
+    "Name": "Llama 3.2",
+    "Publisher": "Meta",
+    "OneLiner": "The small end of the Llama family — fast, low-RAM, and still genuinely useful for everyday chat.",
+    "OllamaUrl": "https://ollama.com/library/llama3.2",
+    "HuggingFaceUrl": "https://huggingface.co/meta-llama",
+    "License": "Llama Community License",
+    "MinRamGb": 4,
+    "SizeGb": 2.0,
+    "Category": "Small & Fast"
+  },
+  {
+    "Name": "TinyLlama",
+    "Publisher": "TinyLlama project",
+    "OneLiner": "A 1.1B model that runs on almost anything — good for testing the plumbing before committing to a bigger download.",
+    "OllamaUrl": "https://ollama.com/library/tinyllama",
+    "HuggingFaceUrl": "https://huggingface.co/TinyLlama",
+    "License": "Apache 2.0",
+    "MinRamGb": 2,
+    "SizeGb": 0.64,
+    "Category": "Small & Fast"
+  },
+  {
+    "Name": "StarCoder2",
+    "Publisher": "BigCode",
+    "OneLiner": "Code-specialized model trained on The Stack — a solid fully-open (data included) coding option.",
+    "OllamaUrl": "https://ollama.com/library/starcoder2",
+    "HuggingFaceUrl": "https://huggingface.co/bigcode",
+    "License": "BigCode OpenRAIL-M",
+    "MinRamGb": 8,
+    "SizeGb": 1.7,
+    "Category": "Coding"
+  },
+  {
+    "Name": "Qwen 2.5 Coder",
+    "Publisher": "Alibaba",
+    "OneLiner": "A coding-specialized fine-tune of Qwen 2.5 — strong at code completion, review, and multi-language tasks.",
+    "OllamaUrl": "https://ollama.com/library/qwen2.5-coder",
+    "HuggingFaceUrl": "https://huggingface.co/Qwen",
+    "License": "Apache 2.0",
+    "MinRamGb": 8,
+    "SizeGb": 4.7,
+    "Category": "Coding"
+  },
+  {
+    "Name": "CodeGemma",
+    "Publisher": "Google",
+    "OneLiner": "Google's code-focused Gemma variant — code completion and generation, a different lineage from the Qwen/BigCode options.",
+    "OllamaUrl": "https://ollama.com/library/codegemma",
+    "HuggingFaceUrl": "https://huggingface.co/google",
+    "License": "Gemma Terms of Use",
+    "MinRamGb": 8,
+    "SizeGb": 5.0,
+    "Category": "Coding"
+  },
+  {
+    "Name": "LLaVA",
+    "Publisher": "LLaVA project",
+    "OneLiner": "Vision-language model — describe images, answer questions about screenshots/photos, right from your own PC.",
+    "OllamaUrl": "https://ollama.com/library/llava",
+    "HuggingFaceUrl": "https://huggingface.co/llava-hf",
+    "License": "Apache 2.0",
+    "MinRamGb": 8,
+    "SizeGb": 4.1,
+    "Category": "Vision"
+  },
+  {
+    "Name": "Moondream",
+    "Publisher": "vikhyatk",
+    "OneLiner": "A tiny (~1.9B) vision-language model — much lighter than LLaVA, still useful for basic image Q&A.",
+    "OllamaUrl": "https://ollama.com/library/moondream",
+    "HuggingFaceUrl": "https://huggingface.co/vikhyatk/moondream2",
+    "License": "Apache 2.0",
+    "MinRamGb": 3,
+    "SizeGb": 0.83,
+    "Category": "Vision"
+  },
+  {
+    "Name": "Nomic Embed Text",
+    "Publisher": "Nomic AI",
+    "OneLiner": "Not a chat model — an embedding model for semantic search/RAG pipelines. Pairs with any chat model above.",
+    "OllamaUrl": "https://ollama.com/library/nomic-embed-text",
+    "HuggingFaceUrl": "https://huggingface.co/nomic-ai",
+    "License": "Apache 2.0",
+    "MinRamGb": 2,
+    "SizeGb": 0.27,
+    "Category": "Embeddings"
+  },
+  {
+    "Name": "Aya",
+    "Publisher": "Cohere For AI",
+    "OneLiner": "Built specifically for multilingual coverage (100+ languages) — a good pick if you're not working primarily in English.",
+    "OllamaUrl": "https://ollama.com/library/aya",
+    "HuggingFaceUrl": "https://huggingface.co/CohereForAI",
+    "License": "CC-BY-NC (research)",
+    "MinRamGb": 8,
+    "SizeGb": 4.8,
+    "Category": "Multilingual"
+  }
+]

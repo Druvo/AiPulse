@@ -1,0 +1,4 @@
+# AiPulse is a self-hosted, authenticated dashboard - every page except /login requires sign-in,
+# so there's nothing here for a crawler to usefully index. This file is just standard practice.
+User-agent: *
+Disallow: /

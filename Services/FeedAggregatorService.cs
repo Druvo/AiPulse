@@ -29,7 +29,13 @@ public sealed class FeedAggregatorService
         _log = log;
     }
 
+    private Dictionary<string, string>? _tagVocab; // matched word/phrase (lowercase) -> canonical tag
+    private readonly ConcurrentDictionary<string, int> _failureStreaks = new();
+
     public DateTimeOffset? LastFetched => _cache?.FetchedAt;
+
+    /// <summary>Consecutive failed fetches for a source since its last success (0 = healthy or unknown).</summary>
+    public int GetFailureStreak(string sourceName) => _failureStreaks.GetValueOrDefault(sourceName);
 
     /// <summary>Returns cached results if fresh; otherwise fetches. Pass force=true to bypass the cache.</summary>
     public async Task<FeedResult> GetAsync(bool force = false, CancellationToken ct = default)
@@ -69,11 +75,13 @@ public sealed class FeedAggregatorService
             {
                 foreach (var item in await FetchOneAsync(source, ct))
                     items.Add(item);
+                _failureStreaks[source.Name] = 0;
             }
             catch (Exception ex)
             {
                 _log.LogWarning(ex, "Feed failed: {Source}", source.Name);
                 errors.Add($"{source.Name}: {ex.Message}");
+                _failureStreaks.AddOrUpdate(source.Name, 1, (_, n) => n + 1);
             }
             finally
             {
@@ -100,14 +108,52 @@ public sealed class FeedAggregatorService
 
         // Primary: strict RSS/Atom parsing. Fallback: lenient XDocument parse for feeds
         // that don't fit the strict schema (some blogs emit mixed content the strict reader rejects).
+        List<FeedItem> items;
         try
         {
-            return ParseWithSyndication(xml, source);
+            items = ParseWithSyndication(xml, source);
         }
         catch (Exception)
         {
-            return ParseLenient(xml, source);
+            items = ParseLenient(xml, source);
         }
+
+        var vocab = GetTagVocab();
+        for (var i = 0; i < items.Count; i++)
+            items[i] = items[i] with { Tags = TagFor(items[i], vocab) };
+
+        return items;
+    }
+
+    /// <summary>Builds a lowercase term/alias -> canonical tag lookup from the curated glossary, once.</summary>
+    private Dictionary<string, string> GetTagVocab()
+    {
+        if (_tagVocab is not null)
+            return _tagVocab;
+
+        var vocab = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var term in _kb.Glossary)
+        {
+            vocab.TryAdd(term.Term, term.Term);
+            foreach (var alias in term.Aliases)
+                vocab.TryAdd(alias, term.Term);
+        }
+        return _tagVocab = vocab;
+    }
+
+    /// <summary>Union of the source's base tags plus any glossary terms/aliases matched in the item's title+summary.</summary>
+    private static string[] TagFor(FeedItem item, Dictionary<string, string> vocab)
+    {
+        var text = item.Title + " " + item.Summary;
+        var tags = new HashSet<string>(item.Tags, StringComparer.OrdinalIgnoreCase);
+
+        foreach (var (needle, canonical) in vocab)
+        {
+            if (Regex.IsMatch(text, $@"\b{Regex.Escape(needle)}\b", RegexOptions.IgnoreCase))
+                tags.Add(canonical);
+        }
+
+        return tags.ToArray();
     }
 
     private static List<FeedItem> ParseWithSyndication(string xml, FeedSource source)
@@ -133,7 +179,10 @@ public sealed class FeedAggregatorService
                 Summary = CleanText(ExtractSummary(item), 320),
                 Published = published,
                 SourceName = source.Name,
-                Category = source.Category
+                Category = source.Category,
+                ContentType = source.ContentType,
+                Level = source.Level,
+                Tags = source.Tags
             });
         }
         return result;
@@ -169,7 +218,10 @@ public sealed class FeedAggregatorService
                 Summary = CleanText(summary, 320),
                 Published = published == default ? DateTimeOffset.Now : published,
                 SourceName = source.Name,
-                Category = source.Category
+                Category = source.Category,
+                ContentType = source.ContentType,
+                Level = source.Level,
+                Tags = source.Tags
             });
         }
         return result;

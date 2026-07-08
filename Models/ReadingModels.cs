@@ -7,6 +7,9 @@ public sealed class BookmarkItem
     public required string Link { get; init; }
     public string SourceName { get; init; } = "";
     public string Category { get; init; } = "";
+    public string ContentType { get; init; } = "News";
+    public string Level { get; init; } = "Intermediate";
+    public string[] Tags { get; init; } = Array.Empty<string>();
     public DateTimeOffset SavedAt { get; init; } = DateTimeOffset.Now;
 }
 
@@ -15,6 +18,7 @@ public sealed class ReadingState
 {
     public List<BookmarkItem> Bookmarks { get; set; } = new();
     public HashSet<string> ReadLinks { get; set; } = new();
+    public HashSet<string> CompletedModules { get; set; } = new();
     public DateTimeOffset LastNewsVisit { get; set; } = DateTimeOffset.MinValue;
 
     /// <summary>Keywords to highlight and to fire notifications for.</summary>

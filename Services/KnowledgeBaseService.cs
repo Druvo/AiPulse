@@ -1,9 +1,15 @@
 using System.Text.Json;
 using AiPulse.Models;
+using Microsoft.EntityFrameworkCore;
 
 namespace AiPulse.Services;
 
-/// <summary>Loads the curated, standalone knowledge base from the Data/*.json files.</summary>
+/// <summary>
+/// Loads the curated, standalone knowledge base from the Data/*.json files, plus the dynamically
+/// managed Sources list, which lives in SQLite (App_Data/aipulse.db) so it can be added/edited/removed
+/// from the Sources page without restarting. Data/sources.json is only read once, to seed the DB on
+/// first run - after that the DB is the source of truth.
+/// </summary>
 public sealed class KnowledgeBaseService
 {
     private static readonly JsonSerializerOptions JsonOpts = new()
@@ -12,23 +18,163 @@ public sealed class KnowledgeBaseService
     };
 
     private readonly string _dataDir;
+    private readonly IDbContextFactory<AiPulseDbContext> _dbFactory;
+    private readonly object _sourcesLock = new();
+    private List<SourceRecord> _sourceRecords = new();
 
-    public KnowledgeBaseService(IWebHostEnvironment env)
+    public KnowledgeBaseService(IWebHostEnvironment env, IDbContextFactory<AiPulseDbContext> dbFactory)
     {
         _dataDir = Path.Combine(env.ContentRootPath, "Data");
+        _dbFactory = dbFactory;
     }
 
     public IReadOnlyList<GlossaryTerm> Glossary => _glossary ??= Load<GlossaryTerm>("glossary.json");
     public IReadOnlyList<ToolEntry> Tools => _tools ??= Load<ToolEntry>("tools.json");
     public IReadOnlyList<PracticeTip> Practices => _practices ??= Load<PracticeTip>("practices.json");
-    public IReadOnlyList<FeedSource> Sources => _sources ??= Load<FeedSource>("sources.json");
     public IReadOnlyList<LearningModule> Learning => _learning ??= Load<LearningModule>("learning.json");
+    public IReadOnlyList<BenchmarkEntry> Benchmarks => _benchmarks ??= Load<BenchmarkEntry>("benchmarks.json");
+    public IReadOnlyList<ModelDirectoryEntry> ModelDirectory => _modelDirectory ??= Load<ModelDirectoryEntry>("model-directory.json");
+    public IReadOnlyList<CourseEntry> Courses => _courses ??= Load<CourseEntry>("courses.json");
 
     private List<GlossaryTerm>? _glossary;
     private List<ToolEntry>? _tools;
     private List<PracticeTip>? _practices;
-    private List<FeedSource>? _sources;
     private List<LearningModule>? _learning;
+    private List<BenchmarkEntry>? _benchmarks;
+    private List<ModelDirectoryEntry>? _modelDirectory;
+    private List<CourseEntry>? _courses;
+
+    /// <summary>Sources mapped to the plain DTO used everywhere else (FeedAggregatorService, News, etc.).</summary>
+    public IReadOnlyList<FeedSource> Sources
+    {
+        get { lock (_sourcesLock) return _sourceRecords.Select(s => s.ToFeedSource()).ToList(); }
+    }
+
+    /// <summary>Sources with their DB Id, for the Sources page's edit/delete UI.</summary>
+    public IReadOnlyList<SourceRecord> SourceRecords
+    {
+        get { lock (_sourcesLock) return _sourceRecords.ToList(); }
+    }
+
+    /// <summary>Call once at startup: ensures the DB exists and seeds it from Data/sources.json if empty.</summary>
+    public async Task InitializeSourcesAsync()
+    {
+        await using var db = await _dbFactory.CreateDbContextAsync();
+        await db.Database.EnsureCreatedAsync();
+
+        if (!await db.Sources.AnyAsync())
+        {
+            var seed = Load<FeedSource>("sources.json");
+            db.Sources.AddRange(seed.Select(s => new SourceRecord
+            {
+                Name = s.Name,
+                Url = s.Url,
+                Category = s.Category,
+                Enabled = s.Enabled,
+                Note = s.Note,
+                ContentType = s.ContentType,
+                Level = s.Level,
+                Tags = s.Tags
+            }));
+            await db.SaveChangesAsync();
+        }
+        else
+        {
+            await ReconcileSeedUpdatesAsync(db);
+        }
+
+        await RefreshSourcesAsync(db);
+    }
+
+    /// <summary>
+    /// One-off fixups for installs that already seeded their DB before a source was added/corrected in
+    /// Data/sources.json - since the DB is only auto-seeded when empty, these apply the delta directly.
+    /// </summary>
+    private async Task ReconcileSeedUpdatesAsync(AiPulseDbContext db)
+    {
+        var existingNames = await db.Sources.Select(s => s.Name).ToListAsync();
+        var changed = false;
+
+        if (!existingNames.Contains("OpenAI News", StringComparer.OrdinalIgnoreCase))
+        {
+            db.Sources.Add(new SourceRecord
+            {
+                Name = "OpenAI News",
+                Url = "https://openai.com/news/rss.xml",
+                Category = "News",
+                Enabled = true,
+                Note = "Official OpenAI announcements and product news.",
+                ContentType = "News",
+                Level = "Beginner",
+                Tags = new[] { "Product Launches" }
+            });
+            changed = true;
+        }
+
+        var googleAi = await db.Sources.FirstOrDefaultAsync(s => s.Name == "Google · AI");
+        if (googleAi is not null && googleAi.Url == "https://blog.google/technology/ai/rss/")
+        {
+            googleAi.Url = "https://blog.google/innovation-and-ai/technology/ai/rss/";
+            changed = true;
+        }
+
+        if (changed)
+            await db.SaveChangesAsync();
+    }
+
+    public async Task AddSourceAsync(SourceRecord record)
+    {
+        await using var db = await _dbFactory.CreateDbContextAsync();
+        db.Sources.Add(record);
+        await db.SaveChangesAsync();
+        await RefreshSourcesAsync();
+    }
+
+    public async Task UpdateSourceAsync(SourceRecord record)
+    {
+        await using var db = await _dbFactory.CreateDbContextAsync();
+        db.Sources.Update(record);
+        await db.SaveChangesAsync();
+        await RefreshSourcesAsync();
+    }
+
+    public async Task DeleteSourceAsync(int id)
+    {
+        await using var db = await _dbFactory.CreateDbContextAsync();
+        var entity = await db.Sources.FindAsync(id);
+        if (entity is not null)
+        {
+            db.Sources.Remove(entity);
+            await db.SaveChangesAsync();
+        }
+        await RefreshSourcesAsync();
+    }
+
+    public async Task ToggleSourceAsync(int id)
+    {
+        await using var db = await _dbFactory.CreateDbContextAsync();
+        var entity = await db.Sources.FindAsync(id);
+        if (entity is not null)
+        {
+            entity.Enabled = !entity.Enabled;
+            await db.SaveChangesAsync();
+        }
+        await RefreshSourcesAsync();
+    }
+
+    private async Task RefreshSourcesAsync(AiPulseDbContext? existing = null)
+    {
+        var db = existing ?? await _dbFactory.CreateDbContextAsync();
+        try
+        {
+            var list = await db.Sources.OrderBy(s => s.Category).ThenBy(s => s.Name).ToListAsync();
+            lock (_sourcesLock) _sourceRecords = list;
+        }
+        finally
+        {
+            if (existing is null) await db.DisposeAsync();
+        }
+    }
 
     private List<T> Load<T>(string file)
     {

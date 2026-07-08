@@ -1,0 +1,668 @@
+@page "/explore"
+@attribute [Authorize]
+@rendermode InteractiveServer
+@inject KnowledgeBaseService Kb
+@inject HuggingFaceService HuggingFace
+@inject GitHubTrendingService GitHubTrending
+@inject OllamaService Ollama
+@inject SystemInfoService SystemInfo
+@inject ModelUsageService ModelUsage
+@inject NavigationManager Nav
+
+<PageTitle>AiPulse · Explore</PageTitle>
+
+<div class="page-header">
+    <h1><Icon Name="trending-up" Size="22" /> Explore</h1>
+    <p class="lead">What's trending across models, datasets, benchmarks, and the open-source AI ecosystem right now.</p>
+</div>
+
+<div class="btn-group mb-4 flex-wrap" role="group">
+    <button class="btn btn-sm @(_section == "models" ? "btn-dark" : "btn-outline-dark")" @onclick='() => SetSection("models")'>
+        <Icon Name="sparkle" Size="14" /> Models &amp; Datasets
+    </button>
+    <button class="btn btn-sm @(_section == "benchmarks" ? "btn-dark" : "btn-outline-dark")" @onclick='() => SetSection("benchmarks")'>
+        <Icon Name="trending-up" Size="14" /> Benchmarks
+    </button>
+    <button class="btn btn-sm @(_section == "repos" ? "btn-dark" : "btn-outline-dark")" @onclick='() => SetSection("repos")'>
+        <Icon Name="code" Size="14" /> GitHub Repos
+    </button>
+    <button class="btn btn-sm @(_section == "try" ? "btn-dark" : "btn-outline-dark")" @onclick='() => SetSection("try")'>
+        <Icon Name="play" Size="14" /> Try a Model
+    </button>
+</div>
+
+@if (_loading)
+{
+    <p class="text-muted"><span class="spinner"></span> Loading live data…</p>
+}
+else if (_section == "models")
+{
+    <div class="input-group mb-3" style="max-width: 420px;">
+        <input class="form-control" placeholder="Search Hugging Face by keyword…" @bind="_hfQuery"
+               @onkeydown="@(async e => { if (e.Key == "Enter") await SearchHuggingFace(); })" />
+        <button class="btn btn-primary" disabled="@_hfSearching" @onclick="SearchHuggingFace">
+            @if (_hfSearching) { <span class="spinner"></span> }
+            <Icon Name="search" Size="14" />
+        </button>
+        @if (!string.IsNullOrWhiteSpace(_hfActiveQuery))
+        {
+            <button class="btn btn-outline-secondary" @onclick="ClearHuggingFaceSearch">✕ Clear</button>
+        }
+    </div>
+    @if (!string.IsNullOrWhiteSpace(_hfActiveQuery))
+    {
+        <p class="text-muted small">Results for "@_hfActiveQuery" — @_models.Count model(s), @_datasets.Count dataset(s).</p>
+    }
+    <div class="row g-4">
+        <div class="col-lg-6">
+            <h6 class="section-title mb-2">@(string.IsNullOrWhiteSpace(_hfActiveQuery) ? "Trending models" : "Models")</h6>
+            @foreach (var m in _models)
+            {
+                <a href="@m.Url" target="_blank" rel="noopener" class="card mb-2 text-decoration-none">
+                    <div class="card-body py-2">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <span class="fw-bold small">@m.Id</span>
+                            @if (!string.IsNullOrWhiteSpace(m.PipelineTag))
+                            {
+                                <span class="tag-chip small">@m.PipelineTag</span>
+                            }
+                        </div>
+                        <div class="x-small text-muted">@m.Likes.ToString("N0") likes · @m.Downloads.ToString("N0") downloads/mo</div>
+                        <span class="tag-chip small mt-1">via Hugging Face</span>
+                    </div>
+                </a>
+            }
+            @if (_models.Count == 0)
+            {
+                <p class="text-muted small">@(string.IsNullOrWhiteSpace(_hfActiveQuery) ? "Couldn't reach Hugging Face right now — try refreshing shortly." : "No matches.")</p>
+            }
+        </div>
+        <div class="col-lg-6">
+            <h6 class="section-title mb-2">@(string.IsNullOrWhiteSpace(_hfActiveQuery) ? "Trending datasets" : "Datasets")</h6>
+            @foreach (var d in _datasets)
+            {
+                <a href="@d.Url" target="_blank" rel="noopener" class="card mb-2 text-decoration-none">
+                    <div class="card-body py-2">
+                        <span class="fw-bold small">@d.Id</span>
+                        <div class="x-small text-muted">@d.Likes.ToString("N0") likes</div>
+                        <span class="tag-chip small mt-1">via Hugging Face</span>
+                    </div>
+                </a>
+            }
+            @if (_datasets.Count == 0)
+            {
+                <p class="text-muted small">@(string.IsNullOrWhiteSpace(_hfActiveQuery) ? "Couldn't reach Hugging Face right now — try refreshing shortly." : "No matches.")</p>
+            }
+        </div>
+    </div>
+    <p class="text-muted x-small mt-2">Live from the Hugging Face Hub API — trending view refreshes every 30 minutes, searches are always live.</p>
+}
+else if (_section == "benchmarks")
+{
+    <div class="row g-3">
+        @foreach (var group in Kb.Benchmarks.GroupBy(b => b.Category))
+        {
+            <div class="col-12">
+                <h6 class="section-title mb-2">@group.Key</h6>
+            </div>
+            @foreach (var b in group)
+            {
+                <div class="col-md-6">
+                    <a href="@b.Url" target="_blank" rel="noopener" class="card h-100 text-decoration-none">
+                        <div class="card-body py-2">
+                            <div class="fw-bold small">@b.Name <span class="x-small">↗</span></div>
+                            <div class="x-small text-muted">@b.Description</div>
+                        </div>
+                    </a>
+                </div>
+            }
+        }
+    </div>
+}
+else if (_section == "repos")
+{
+    <p class="text-muted small">
+        Recently-created AI repos sorted by stars, via GitHub's official Search API — GitHub doesn't publish
+        an API for its unofficial Trending page, so this is the closest legitimate substitute.
+    </p>
+    <div class="input-group mb-3" style="max-width: 420px;">
+        <input class="form-control" placeholder="Search GitHub repos by keyword…" @bind="_repoQuery"
+               @onkeydown="@(async e => { if (e.Key == "Enter") await SearchRepos(); })" />
+        <button class="btn btn-primary" disabled="@_repoSearching" @onclick="SearchRepos">
+            @if (_repoSearching) { <span class="spinner"></span> }
+            <Icon Name="search" Size="14" />
+        </button>
+        @if (!string.IsNullOrWhiteSpace(_repoActiveQuery))
+        {
+            <button class="btn btn-outline-secondary" @onclick="ClearRepoSearch">✕ Clear</button>
+        }
+    </div>
+    @if (!string.IsNullOrWhiteSpace(_repoActiveQuery))
+    {
+        <p class="text-muted small">Results for "@_repoActiveQuery" — @_repos.Count repo(s).</p>
+    }
+    @foreach (var r in _repos)
+    {
+        <a href="@r.Url" target="_blank" rel="noopener" class="card mb-2 text-decoration-none">
+            <div class="card-body py-2">
+                <div class="d-flex justify-content-between align-items-center">
+                    <span class="fw-bold small">@r.FullName</span>
+                    <span class="x-small text-muted">★ @r.Stars.ToString("N0")</span>
+                </div>
+                @if (!string.IsNullOrWhiteSpace(r.Description))
+                {
+                    <div class="x-small text-muted">@r.Description</div>
+                }
+                <div class="d-flex gap-1 mt-1">
+                    @if (!string.IsNullOrWhiteSpace(r.Language))
+                    {
+                        <span class="tag-chip small">@r.Language</span>
+                    }
+                    <span class="tag-chip small">via GitHub</span>
+                </div>
+            </div>
+        </a>
+    }
+    @if (_repos.Count == 0)
+    {
+        <p class="text-muted small">@(string.IsNullOrWhiteSpace(_repoActiveQuery) ? "Couldn't reach GitHub's Search API right now — try refreshing shortly." : "No matches.")</p>
+    }
+}
+else if (_section == "try")
+{
+    @SystemBanner()
+
+    @if (!_ollamaChecked)
+    {
+        <p class="text-muted small"><span class="spinner"></span> Checking for a local Ollama instance…</p>
+    }
+    else if (!_ollamaRunning)
+    {
+        <div class="alert alert-warning">
+            <strong>Ollama isn't running.</strong> To actually run models on your PC from here, install it from
+            <a href="https://ollama.com/download" target="_blank" rel="noopener">ollama.com</a>, make sure it's running
+            (it listens on <code>localhost:11434</code>), then check again. Until then, the links below still take you
+            straight to each model on Ollama's site or Hugging Face.
+        </div>
+        <button class="btn btn-sm btn-outline-primary mb-3" @onclick="CheckOllama"><Icon Name="refresh" Size="14" /> Check again</button>
+        @DirectoryFallback()
+    }
+    else
+    {
+        <div class="alert alert-success py-2 small mb-3">
+            <Icon Name="check" Size="14" /> Ollama is running — @_installedModels.Count model(s) installed locally.
+        </div>
+
+        <div class="d-flex justify-content-between align-items-center mb-2">
+            <h6 class="section-title mb-0">Installed on this PC</h6>
+            <button class="btn btn-sm btn-outline-secondary" disabled="@_refreshingInstalled" @onclick="RefreshInstalled">
+                @if (_refreshingInstalled) { <span class="spinner"></span> }
+                <Icon Name="refresh" Size="13" /> Refresh
+            </button>
+        </div>
+        @if (_installedModels.Count > 0)
+        {
+            <p class="text-muted x-small mb-2">@_installedModels.Count model(s) · @TotalInstalledSize() GB on disk</p>
+            <div class="row g-2 mb-3">
+                @foreach (var im in _installedModels)
+                {
+                    <div class="col-md-6">
+                        <div class="card">
+                            <div class="card-body py-2 d-flex justify-content-between align-items-center">
+                                <div>
+                                    <span class="fw-bold small">@im.Name</span>
+                                    <span class="x-small text-muted"> · @im.SizeDisplay @im.QuantizationLevel</span>
+                                    <div class="x-small text-muted">
+                                        @if (!string.IsNullOrWhiteSpace(im.Family)) { <span>@im.Family</span> }
+                                        @if (im.ContextLength is not null) { <span> · @((im.ContextLength.Value / 1000.0).ToString("0.#"))K context</span> }
+                                        @if (im.ModifiedAt is not null) { <span> · pulled @im.ModifiedAt.Value.ToLocalTime().ToString("MMM d")</span> }
+                                    </div>
+                                </div>
+                                <div class="d-flex gap-2">
+                                    <a class="btn btn-sm btn-outline-primary" href="@($"playground?model={Uri.EscapeDataString(im.Name)}")"><Icon Name="play" Size="13" /> Chat</a>
+                                    <button class="btn btn-sm btn-outline-danger" @onclick="() => RemoveModel(im.Name)"><Icon Name="trash" Size="13" /></button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+        else
+        {
+            <p class="text-muted small mb-3">No models installed yet — pull one from the directory below to get started.</p>
+        }
+
+        @if (PreviouslyUsed().Count > 0)
+        {
+            <h6 class="section-title mb-2">Previously used</h6>
+            <p class="text-muted x-small mb-2">Models you've pulled before but removed locally — pull again in one click.</p>
+            <div class="d-flex flex-wrap gap-2 mb-4">
+                @foreach (var u in PreviouslyUsed())
+                {
+                    <button class="btn btn-sm btn-outline-secondary" disabled="@(_pullingModel is not null)" @onclick="() => PullModel(u.Slug)">
+                        <Icon Name="download" Size="13" /> @u.Slug
+                    </button>
+                }
+            </div>
+        }
+
+        <h6 class="section-title mb-2">Model directory</h6>
+        <p class="text-muted x-small mb-2">
+            Compatibility is a rough estimate (RAM needed for the default Ollama pull at typical quantization) — not a guarantee.
+        </p>
+        @foreach (var group in Kb.ModelDirectory.GroupBy(m => m.Category))
+        {
+            <h6 class="section-title mt-3 mb-2">@group.Key</h6>
+            <div class="row g-3 mb-2">
+                @foreach (var m in group)
+                {
+                    var slug = OllamaSlug(m.OllamaUrl);
+                    var installedMatch = slug is null ? null : _installedModels.FirstOrDefault(im => im.Name.StartsWith(slug, StringComparison.OrdinalIgnoreCase));
+                    <div class="col-md-6">
+                        <div class="card h-100">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between align-items-start">
+                                    <div class="fw-bold">@m.Name <span class="text-muted small">· @m.Publisher</span></div>
+                                    @CompatBadge(m.MinRamGb)
+                                </div>
+                                <p class="x-small text-muted mb-1">@m.SizeGb.ToString("0.#") GB download @(m.SizeGb > (_storageFreeGb ?? double.MaxValue) ? "⚠ won't fit in free space" : "")</p>
+                                <p class="small text-muted mb-2">@m.OneLiner</p>
+                                <div class="d-flex gap-2 flex-wrap align-items-center">
+                                    @if (installedMatch is not null)
+                                    {
+                                        <a class="btn btn-sm btn-outline-primary" href="@($"playground?model={Uri.EscapeDataString(installedMatch.Name)}")"><Icon Name="play" Size="13" /> Chat</a>
+                                    }
+                                    else if (slug is not null)
+                                    {
+                                        <button class="btn btn-sm btn-success" disabled="@(_pullingModel is not null)" @onclick="() => PullModel(slug)">
+                                            <Icon Name="download" Size="13" /> Pull model
+                                        </button>
+                                    }
+                                    @if (!string.IsNullOrWhiteSpace(m.HuggingFaceUrl))
+                                    {
+                                        <a href="@m.HuggingFaceUrl" target="_blank" rel="noopener" class="btn btn-sm btn-outline-secondary">View on Hugging Face ↗</a>
+                                    }
+                                </div>
+                                @if (_pullingModel == slug)
+                                {
+                                    <div class="mt-2">
+                                        <div class="progress" style="height: 6px;">
+                                            <div class="progress-bar" style="width: @(_pullProgress?.PercentComplete ?? 0)%"></div>
+                                        </div>
+                                        <div class="x-small text-muted mt-1">@(_pullProgress?.Status ?? "starting…")</div>
+                                    </div>
+                                }
+                                <div class="x-small text-muted mt-2">License: @m.License</div>
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+
+        <h6 class="section-title mt-4 mb-2"><Icon Name="sparkle" Size="16" /> Discover more models</h6>
+        <p class="text-muted x-small mb-2">
+            Live from Hugging Face, filtered to GGUF-packaged models — the format Ollama can actually run — sorted by downloads.
+            These include official releases and community re-quantizations (bartowski, unsloth, mradermacher…),
+            pulled directly via <code>hf.co/&lt;repo&gt;</code> without needing to be in Ollama's own curated library.
+            Ollama picks a sensible default quantization automatically. This is a different (and often larger) catalog
+            than Ollama's own library — Ollama doesn't publish an API or sitemap for their full list, so it can't be
+            mirrored exactly here; browse <a href="https://ollama.com/search" target="_blank" rel="noopener">ollama.com/search ↗</a>
+            directly if you're looking for a model that isn't turning up below.
+        </p>
+        <div class="input-group mb-3" style="max-width: 420px;">
+            <input class="form-control" placeholder="Search GGUF models by keyword…" @bind="_ggufQuery"
+                   @onkeydown="@(async e => { if (e.Key == "Enter") await SearchGguf(); })" />
+            <button class="btn btn-primary" disabled="@_ggufSearching" @onclick="SearchGguf">
+                @if (_ggufSearching) { <span class="spinner"></span> }
+                <Icon Name="search" Size="14" />
+            </button>
+            @if (!string.IsNullOrWhiteSpace(_ggufActiveQuery))
+            {
+                <button class="btn btn-outline-secondary" @onclick="ClearGgufSearch">✕ Clear</button>
+            }
+        </div>
+        @if (!string.IsNullOrWhiteSpace(_ggufActiveQuery))
+        {
+            <p class="text-muted small">Results for "@_ggufActiveQuery" — @_ggufModels.Count model(s).</p>
+        }
+        <div class="row g-2">
+            @foreach (var m in _ggufModels)
+            {
+                var hfSlug = $"hf.co/{m.Id}";
+                var installedMatch = _installedModels.FirstOrDefault(im => im.Name.StartsWith(hfSlug, StringComparison.OrdinalIgnoreCase));
+                <div class="col-md-6">
+                    <div class="card h-100">
+                        <div class="card-body py-2">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <span class="fw-bold small">@m.Id</span>
+                                @if (!string.IsNullOrWhiteSpace(m.PipelineTag))
+                                {
+                                    <span class="tag-chip small">@m.PipelineTag</span>
+                                }
+                            </div>
+                            <div class="x-small text-muted">@m.Likes.ToString("N0") likes · @m.Downloads.ToString("N0") downloads/mo</div>
+                            <div class="d-flex gap-2 flex-wrap align-items-center mt-2">
+                                @if (installedMatch is not null)
+                                {
+                                    <a class="btn btn-sm btn-outline-primary" href="@($"playground?model={Uri.EscapeDataString(installedMatch.Name)}")"><Icon Name="play" Size="13" /> Chat</a>
+                                }
+                                else
+                                {
+                                    <button class="btn btn-sm btn-success" disabled="@(_pullingModel is not null)" @onclick="() => PullModel(hfSlug)">
+                                        <Icon Name="download" Size="13" /> Pull
+                                    </button>
+                                }
+                                <a href="@m.Url" target="_blank" rel="noopener" class="btn btn-sm btn-outline-secondary">View on Hugging Face ↗</a>
+                            </div>
+                            @if (_pullingModel == hfSlug)
+                            {
+                                <div class="mt-2">
+                                    <div class="progress" style="height: 6px;">
+                                        <div class="progress-bar" style="width: @(_pullProgress?.PercentComplete ?? 0)%"></div>
+                                    </div>
+                                    <div class="x-small text-muted mt-1">@(_pullProgress?.Status ?? "starting…")</div>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+        @if (_ggufModels.Count == 0)
+        {
+            <p class="text-muted small">@(string.IsNullOrWhiteSpace(_ggufActiveQuery) ? "Couldn't reach Hugging Face right now — try refreshing shortly." : "No matches.")</p>
+        }
+    }
+}
+
+@code {
+    [SupplyParameterFromQuery(Name = "tab")]
+    public string? TabParam { get; set; }
+
+    private static readonly HashSet<string> ValidSections = new() { "models", "benchmarks", "repos", "try" };
+
+    private string _section = "models";
+    private bool _loading = true;
+    private List<TrendingModel> _models = new();
+    private List<TrendingDataset> _datasets = new();
+    private List<TrendingRepo> _repos = new();
+
+    private string _hfQuery = "";
+    private string _hfActiveQuery = "";
+    private bool _hfSearching;
+    private string _repoQuery = "";
+    private string _repoActiveQuery = "";
+    private bool _repoSearching;
+
+    private bool _ollamaChecked;
+    private bool _ollamaRunning;
+    private bool _refreshingInstalled;
+    private List<OllamaModel> _installedModels = new();
+    private List<ModelUsageRecord> _recentlyUsed = new();
+    private string? _pullingModel;
+    private OllamaPullProgress? _pullProgress;
+
+    private List<TrendingModel> _ggufModels = new();
+    private string _ggufQuery = "";
+    private string _ggufActiveQuery = "";
+    private bool _ggufSearching;
+
+    private double? _ramGb;
+    private double? _vramGb;
+    private string? _gpuName;
+    private string _storagePath = "";
+    private double? _storageFreeGb;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (TabParam is not null && ValidSections.Contains(TabParam))
+            _section = TabParam;
+
+        (_ramGb, _vramGb, _gpuName) = SystemInfo.Detect();
+        (_storagePath, _storageFreeGb) = SystemInfo.DetectOllamaStorage();
+
+        var hf = HuggingFace.GetTrendingAsync();
+        var repos = GitHubTrending.GetTrendingReposAsync();
+        var gguf = HuggingFace.GetTrendingGgufAsync();
+        var ollamaCheck = CheckOllama();
+        await Task.WhenAll(hf, repos, gguf, ollamaCheck);
+        (_models, _datasets) = hf.Result;
+        _repos = repos.Result;
+        _ggufModels = gguf.Result;
+        _loading = false;
+    }
+
+    private RenderFragment SystemBanner() => @<div>
+        <div class="alert alert-light border py-2 small mb-2 d-flex align-items-center gap-2">
+            <Icon Name="settings" Size="14" />
+            @if (_ramGb is null)
+            {
+                <span class="text-muted">Couldn't detect your system's RAM — compatibility badges below are unavailable.</span>
+            }
+            else
+            {
+                <span>
+                    Your system: <strong>@_ramGb.Value.ToString("0.#") GB RAM</strong>
+                    @if (_gpuName is not null && _vramGb is not null)
+                    {
+                        <span> · <strong>@_gpuName</strong> (@_vramGb.Value.ToString("0.#") GB VRAM)</span>
+                    }
+                </span>
+            }
+        </div>
+        <div class="alert @(StorageIsTight() ? "alert-warning" : "alert-light border") py-2 small mb-3 d-flex align-items-center gap-2">
+            <Icon Name="database" Size="14" />
+            <span>
+                Models download to <code>@_storagePath</code>
+                @if (_storageFreeGb is not null)
+                {
+                    <span> · <strong>@_storageFreeGb.Value.ToString("0.#") GB free</strong> there</span>
+                }
+                @if (StorageIsTight())
+                {
+                    <span> — this is why larger pulls below (Llama 3.3/4, Command R+) may fail. Set the <code>OLLAMA_MODELS</code> environment variable to a drive with more room and restart Ollama to fix this.</span>
+                }
+            </span>
+        </div>
+    </div>;
+
+    private bool StorageIsTight() => _storageFreeGb is not null && _storageFreeGb.Value < 45;
+
+    /// <summary>
+    /// Rough compatibility signal: compares the model's estimated RAM need (default Ollama pull, Q4
+    /// quantization) against detected system RAM. This is guidance, not a guarantee - actual usage
+    /// depends on quantization, context length, and what else is running.
+    /// </summary>
+    private RenderFragment CompatBadge(double minRamGb)
+    {
+        if (_ramGb is null)
+            return @<span class="badge bg-secondary" title="Couldn't detect your RAM">Compatibility unknown</span>;
+
+        var ram = _ramGb.Value;
+        if (ram >= minRamGb * 1.3)
+            return @<span class="badge level-beginner" title="Estimated need: ~@(minRamGb) GB RAM">✓ Should run well</span>;
+        if (ram >= minRamGb)
+            return @<span class="badge level-intermediate" title="Estimated need: ~@(minRamGb) GB RAM">⚠ Might be tight</span>;
+        return @<span class="badge level-advanced" title="Estimated need: ~@(minRamGb) GB RAM">✗ Likely too much for your system</span>;
+    }
+
+    private void SetSection(string section)
+    {
+        _section = section;
+        Nav.NavigateTo($"explore?tab={section}", replace: true);
+    }
+
+    private async Task SearchHuggingFace()
+    {
+        if (string.IsNullOrWhiteSpace(_hfQuery)) return;
+        _hfSearching = true;
+        StateHasChanged();
+        try
+        {
+            _hfActiveQuery = _hfQuery.Trim();
+            (_models, _datasets) = await HuggingFace.SearchAsync(_hfActiveQuery);
+        }
+        finally
+        {
+            _hfSearching = false;
+        }
+    }
+
+    private async Task ClearHuggingFaceSearch()
+    {
+        _hfQuery = "";
+        _hfActiveQuery = "";
+        (_models, _datasets) = await HuggingFace.GetTrendingAsync();
+    }
+
+    private async Task SearchRepos()
+    {
+        if (string.IsNullOrWhiteSpace(_repoQuery)) return;
+        _repoSearching = true;
+        StateHasChanged();
+        try
+        {
+            _repoActiveQuery = _repoQuery.Trim();
+            _repos = await GitHubTrending.SearchAsync(_repoActiveQuery);
+        }
+        finally
+        {
+            _repoSearching = false;
+        }
+    }
+
+    private async Task ClearRepoSearch()
+    {
+        _repoQuery = "";
+        _repoActiveQuery = "";
+        _repos = await GitHubTrending.GetTrendingReposAsync();
+    }
+
+    private async Task SearchGguf()
+    {
+        if (string.IsNullOrWhiteSpace(_ggufQuery)) return;
+        _ggufSearching = true;
+        StateHasChanged();
+        try
+        {
+            _ggufActiveQuery = _ggufQuery.Trim();
+            _ggufModels = await HuggingFace.SearchGgufAsync(_ggufActiveQuery);
+        }
+        finally
+        {
+            _ggufSearching = false;
+        }
+    }
+
+    private async Task ClearGgufSearch()
+    {
+        _ggufQuery = "";
+        _ggufActiveQuery = "";
+        _ggufModels = await HuggingFace.GetTrendingGgufAsync();
+    }
+
+    private async Task CheckOllama()
+    {
+        _ollamaRunning = await Ollama.IsRunningAsync();
+        _ollamaChecked = true;
+        if (_ollamaRunning)
+        {
+            _installedModels = await Ollama.GetInstalledModelsAsync();
+            _recentlyUsed = await ModelUsage.GetRecentAsync();
+        }
+        StateHasChanged();
+    }
+
+    private async Task RefreshInstalled()
+    {
+        _refreshingInstalled = true;
+        StateHasChanged();
+        try
+        {
+            _installedModels = await Ollama.GetInstalledModelsAsync();
+        }
+        finally
+        {
+            _refreshingInstalled = false;
+        }
+    }
+
+    private string TotalInstalledSize() =>
+        (_installedModels.Sum(m => m.SizeBytes) / 1_000_000_000.0).ToString("0.#");
+
+    private List<ModelUsageRecord> PreviouslyUsed() =>
+        _recentlyUsed
+            .Where(u => !_installedModels.Any(im =>
+                im.Name.Equals(u.Slug, StringComparison.OrdinalIgnoreCase) ||
+                im.Name.StartsWith(u.Slug + ":", StringComparison.OrdinalIgnoreCase)))
+            .ToList();
+
+    /// <summary>Ollama's pull name from a model-directory entry's Ollama library URL, e.g. ".../library/llama3.3" -> "llama3.3".</summary>
+    private static string? OllamaSlug(string? ollamaUrl) =>
+        string.IsNullOrWhiteSpace(ollamaUrl) ? null : ollamaUrl.TrimEnd('/').Split('/').LastOrDefault();
+
+    private async Task PullModel(string slug)
+    {
+        _pullingModel = slug;
+        _pullProgress = null;
+        StateHasChanged();
+        try
+        {
+            await Ollama.PullModelAsync(slug, progress =>
+            {
+                _pullProgress = progress;
+                StateHasChanged();
+                return Task.CompletedTask;
+            });
+            _installedModels = await Ollama.GetInstalledModelsAsync();
+            await ModelUsage.RecordUsageAsync(slug);
+            _recentlyUsed = await ModelUsage.GetRecentAsync();
+        }
+        finally
+        {
+            _pullingModel = null;
+            StateHasChanged();
+        }
+    }
+
+    private async Task RemoveModel(string name)
+    {
+        await Ollama.DeleteModelAsync(name);
+        _installedModels = await Ollama.GetInstalledModelsAsync();
+    }
+
+    private RenderFragment DirectoryFallback() => @<div class="row g-3">
+        @foreach (var m in Kb.ModelDirectory)
+        {
+            <div class="col-md-6">
+                <div class="card h-100">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div class="fw-bold">@m.Name <span class="text-muted small">· @m.Publisher</span></div>
+                            @CompatBadge(m.MinRamGb)
+                        </div>
+                        <p class="x-small text-muted mb-1">@m.SizeGb.ToString("0.#") GB download</p>
+                        <p class="small text-muted mb-2">@m.OneLiner</p>
+                        <div class="d-flex gap-2 flex-wrap">
+                            @if (!string.IsNullOrWhiteSpace(m.OllamaUrl))
+                            {
+                                <a href="@m.OllamaUrl" target="_blank" rel="noopener" class="btn btn-sm btn-outline-primary">
+                                    <Icon Name="play" Size="13" /> View on Ollama
+                                </a>
+                            }
+                            @if (!string.IsNullOrWhiteSpace(m.HuggingFaceUrl))
+                            {
+                                <a href="@m.HuggingFaceUrl" target="_blank" rel="noopener" class="btn btn-sm btn-outline-secondary">
+                                    View on Hugging Face ↗
+                                </a>
+                            }
+                        </div>
+                        <div class="x-small text-muted mt-2">License: @m.License</div>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>;
+}

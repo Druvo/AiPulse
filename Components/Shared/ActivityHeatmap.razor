@@ -1,0 +1,77 @@
+@* GitHub-style contribution heatmap over persisted feed history. Click a day to jump into News filtered to it. *@
+
+@{
+    var counts = Items
+        .GroupBy(i => DateOnly.FromDateTime(i.Published.LocalDateTime))
+        .ToDictionary(g => g.Key, g => g.Count());
+
+    var today = DateOnly.FromDateTime(DateTime.Today);
+    var oldest = counts.Count > 0 ? counts.Keys.Min() : today;
+    var spanDays = Math.Min(MaxDays, (today.DayNumber - oldest.DayNumber) + 1);
+    var startDay = today.AddDays(-(spanDays - 1));
+    // Align the grid so columns are full weeks (Sunday-start), like a GitHub contribution graph.
+    startDay = startDay.AddDays(-(int)startDay.DayOfWeek);
+
+    var totalDays = (today.DayNumber - startDay.DayNumber) + 1;
+    var weeks = (int)Math.Ceiling(totalDays / 7.0);
+    var max = counts.Count > 0 ? counts.Values.Max() : 0;
+}
+
+@if (Items.Count == 0)
+{
+    <p class="text-muted small mb-0">No history recorded yet — check back after the feed watcher's first poll.</p>
+}
+else
+{
+    <div class="heatmap-scroll">
+        <div class="heatmap-grid" style="grid-template-columns: repeat(@weeks, minmax(11px, 1fr));">
+            @for (var w = 0; w < weeks; w++)
+            {
+                <div class="d-flex flex-column gap-1">
+                    @for (var d = 0; d < 7; d++)
+                    {
+                        var day = startDay.AddDays(w * 7 + d);
+                        if (day > today)
+                        {
+                            <div class="heatmap-cell heatmap-empty"></div>
+                        }
+                        else
+                        {
+                            var count = counts.GetValueOrDefault(day);
+                            var level = Level(count, max);
+                            <a class="heatmap-cell heatmap-@level" href="@($"news?date={day:yyyy-MM-dd}")" title="@day.ToString("MMM d, yyyy"): @count item(s)"></a>
+                        }
+                    }
+                </div>
+            }
+        </div>
+    </div>
+    @if (ShowSummary)
+    {
+        <p class="text-muted small mb-0 mt-2">@Items.Count items tracked since @oldest.ToString("MMM d, yyyy").</p>
+    }
+}
+
+@code {
+    [Parameter, EditorRequired]
+    public IReadOnlyList<FeedItem> Items { get; set; } = Array.Empty<FeedItem>();
+
+    [Parameter]
+    public int MaxDays { get; set; } = 90;
+
+    [Parameter]
+    public bool ShowSummary { get; set; } = true;
+
+    private static int Level(int count, int max)
+    {
+        if (count == 0 || max == 0) return 0;
+        var ratio = (double)count / max;
+        return ratio switch
+        {
+            <= 0.25 => 1,
+            <= 0.5 => 2,
+            <= 0.75 => 3,
+            _ => 4
+        };
+    }
+}

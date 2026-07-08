@@ -2,17 +2,126 @@
 @attribute [Authorize]
 @rendermode InteractiveServer
 @inject KnowledgeBaseService Kb
+@inject ReadingStateService Reading
+@inject FeedHistoryService History
+@inject NavigationManager Nav
+@inject HuggingFaceService HuggingFace
+@inject GitHubTrendingService GitHub
 
 <PageTitle>AiPulse · Learning Hub</PageTitle>
 
-<h1>🎓 Learning Hub</h1>
-<p class="text-muted">A roadmap from fundamentals to agents. Work top to bottom, or jump to what you need. Each module says <em>why</em> it matters and gives concrete steps.</p>
+<div class="page-header">
+    <h1><Icon Name="graduation-cap" Size="22" /> Learning Hub</h1>
+    <p class="lead">A roadmap from fundamentals to agents. Work top to bottom, or jump to what you need. Each module says <em>why</em> it matters and gives concrete steps.</p>
+</div>
+
+@{
+    var freshTutorials = History.Items
+        .Where(i => i.ContentType == "Tutorial")
+        .OrderByDescending(i => i.Published)
+        .Take(8)
+        .ToList();
+}
+@if (freshTutorials.Count > 0)
+{
+    <div class="card mb-4">
+        <div class="card-body">
+            <h6 class="section-title mb-2"><Icon Name="sparkle" Size="16" /> Fresh tutorials</h6>
+            <p class="text-muted small mb-2">Recently published, pulled live from your News sources — the roadmap below covers the fundamentals; this keeps you current on what's new.</p>
+            <div class="row g-2">
+                @foreach (var t in freshTutorials)
+                {
+                    <div class="col-md-6">
+                        <a href="@t.Link" target="_blank" rel="noopener" class="d-block small text-decoration-none border-bottom py-1">
+                            @t.Title
+                            <span class="text-muted"> · @t.SourceName</span>
+                        </a>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+}
+
+@if (_trendingModels.Count > 0 || _trendingRepos.Count > 0)
+{
+    <div class="card mb-4">
+        <div class="card-body">
+            <h6 class="section-title mb-2"><Icon Name="sparkle" Size="16" /> Trending in the ecosystem right now</h6>
+            <p class="text-muted small mb-2">The models and projects getting the most attention this week — via Hugging Face and GitHub. Good candidates for what to learn next.</p>
+            <div class="row g-2">
+                <div class="col-md-6">
+                    <p class="x-small text-muted text-uppercase mb-1">Trending models</p>
+                    @foreach (var m in _trendingModels.Take(5))
+                    {
+                        <a href="@m.Url" target="_blank" rel="noopener" class="d-block small text-decoration-none border-bottom py-1">@m.Id</a>
+                    }
+                </div>
+                <div class="col-md-6">
+                    <p class="x-small text-muted text-uppercase mb-1">Trending repos</p>
+                    @foreach (var r in _trendingRepos.Take(5))
+                    {
+                        <a href="@r.Url" target="_blank" rel="noopener" class="d-block small text-decoration-none border-bottom py-1">@r.FullName</a>
+                    }
+                </div>
+            </div>
+            <a href="explore" class="small">Explore models, benchmarks &amp; datasets →</a>
+        </div>
+    </div>
+}
+
+@{
+    var trendingTags = TrendingTags();
+    var courses = Kb.Courses
+        .Where(c => _level == "All" || c.Level == _level)
+        .OrderByDescending(c => c.Topics.Any(t => trendingTags.Contains(t)))
+        .ThenBy(c => c.Name)
+        .ToList();
+}
+@if (courses.Count > 0)
+{
+    <div class="card mb-4">
+        <div class="card-body">
+            <h6 class="section-title mb-2"><Icon Name="graduation-cap" Size="16" /> Free courses &amp; certifications</h6>
+            <p class="text-muted small mb-2">Curated, genuinely free courses — each one notes honestly whether the certificate itself is free or just the course content. Filtered by the level buttons below.</p>
+            <div class="row g-2">
+                @foreach (var c in courses)
+                {
+                    var trending = c.Topics.Any(t => trendingTags.Contains(t));
+                    <div class="col-md-6">
+                        <div class="card h-100">
+                            <div class="card-body py-2">
+                                <div class="d-flex justify-content-between align-items-start gap-2">
+                                    <a href="@c.Url" target="_blank" rel="noopener" class="fw-bold small text-decoration-none">@c.Name ↗</a>
+                                    @if (trending)
+                                    {
+                                        <span class="badge bg-warning text-dark">🔥 Trending</span>
+                                    }
+                                </div>
+                                <div class="x-small text-muted mb-1">@c.Provider · <span class="badge level-@c.Level.ToLower()">@c.Level</span></div>
+                                <p class="small mb-1">@c.OneLiner</p>
+                                <div class="x-small @(c.HasFreeCertificate ? "text-success" : "text-muted")">
+                                    @(c.HasFreeCertificate ? "✓ Free certificate" : "ⓘ") @c.CertificateNote
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+}
+
+<p class="text-muted small">@Reading.CompletedModuleCount of @Kb.Learning.Count modules complete</p>
+<div class="progress mb-3" style="height: 6px;">
+    <div class="progress-bar" style="width: @(ProgressPct())%"></div>
+</div>
 
 <div class="btn-group mb-4 flex-wrap" role="group">
     @foreach (var lvl in _levels)
     {
         <button class="btn btn-sm @(_level == lvl ? "btn-dark" : "btn-outline-dark")"
-                @onclick="() => _level = lvl">@lvl</button>
+                @onclick="() => SetLevel(lvl)">@lvl</button>
     }
 </div>
 
@@ -24,11 +133,18 @@
 @foreach (var m in modules)
 {
     i++;
-    <div class="card mb-3 learn-card">
+    var complete = Reading.IsModuleComplete(m.Title);
+    <div class="card mb-3 learn-card @(complete ? "module-complete" : "")">
         <div class="card-body">
             <div class="d-flex justify-content-between align-items-start gap-2">
-                <h4 class="card-title mb-1"><span class="text-muted">@i.</span> @m.Title</h4>
-                <span class="badge level-@m.Level.ToLower()">@m.Level</span>
+                <h4 class="card-title mb-1"><span class="text-muted">@i.</span> @m.Title @if (complete) { <span class="text-success">✓</span> }</h4>
+                <div class="d-flex align-items-center gap-2">
+                    <span class="badge level-@m.Level.ToLower()">@m.Level</span>
+                    <button class="btn btn-sm @(complete ? "btn-success" : "btn-outline-success")"
+                            @onclick="() => Reading.ToggleModuleComplete(m.Title)">
+                        @(complete ? "✓ Complete" : "Mark complete")
+                    </button>
+                </div>
             </div>
             <p class="text-muted mb-3"><strong>Why:</strong> @m.Why</p>
             <ol class="mb-2">
@@ -49,7 +165,7 @@
                     <span class="text-muted">Key terms:</span>
                     @foreach (var t in m.RelatedTerms)
                     {
-                        <a class="badge bg-info text-dark text-decoration-none me-1" href="glossary">@t</a>
+                        <a class="badge bg-info text-decoration-none me-1" href="glossary">@t</a>
                     }
                 </div>
             }
@@ -58,6 +174,39 @@
 }
 
 @code {
+    [SupplyParameterFromQuery(Name = "level")]
+    public string? LevelParam { get; set; }
+
     private string _level = "All";
     private readonly string[] _levels = { "All", "Beginner", "Intermediate", "Advanced" };
+    private List<TrendingModel> _trendingModels = new();
+    private List<TrendingRepo> _trendingRepos = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (!string.IsNullOrWhiteSpace(LevelParam) && _levels.Contains(LevelParam))
+            _level = LevelParam;
+
+        var (models, _) = await HuggingFace.GetTrendingAsync();
+        _trendingModels = models;
+        _trendingRepos = await GitHub.GetTrendingReposAsync();
+    }
+
+    private void SetLevel(string level)
+    {
+        _level = level;
+        Nav.NavigateTo(level == "All" ? "learn" : $"learn?level={level}", replace: true);
+    }
+
+    private double ProgressPct() =>
+        Kb.Learning.Count == 0 ? 0 : 100.0 * Reading.CompletedModuleCount / Kb.Learning.Count;
+
+    private HashSet<string> TrendingTags() =>
+        History.Items
+            .Where(i => i.Published >= DateTimeOffset.UtcNow.AddDays(-14))
+            .SelectMany(i => i.Tags)
+            .GroupBy(t => t, StringComparer.OrdinalIgnoreCase)
+            .Where(g => g.Count() >= 3)
+            .Select(g => g.Key)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
 }

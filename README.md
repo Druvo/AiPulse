@@ -1,26 +1,43 @@
 # ⚡ AiPulse
 
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![.NET 8](https://img.shields.io/badge/.NET-8.0-512BD4?logo=dotnet)](https://dotnet.microsoft.com/download)
+[![Self-hosted](https://img.shields.io/badge/self--hosted-%E2%9C%93-brightgreen)](#-quick-start)
+[![No API keys required](https://img.shields.io/badge/API%20keys-none%20required-informational)](#-security)
+
 **A standalone, self-hosted dashboard to keep developers current on the AI world** — news, jargon, the right tool for the right task, token-optimization tips, and a structured learning roadmap.
 
-It aggregates ~30 RSS/Atom sources (blogs, news outlets, arXiv, Hacker News, Reddit, and GitHub release feeds) and pairs them with a curated, editable knowledge base. **It runs with zero AI and no API keys** — the optional AI layer is stubbed behind an interface for when you want it.
+It aggregates ~39 RSS/Atom sources (blogs, news outlets, arXiv, Hacker News, Reddit, YouTube channels, dev.to, Product Hunt, Mastodon, and GitHub release feeds) and pairs them with a curated, editable knowledge base. **It runs with zero AI and no API keys** — the optional AI layer is stubbed behind an interface for when you want it.
 
 > Built with ASP.NET Core + Blazor (Server interactivity), targeting .NET 8. MIT licensed.
+
+<!--
+  Screenshots: drop 2-3 PNGs into docs/screenshots/ (dark mode looks best) and reference them here, e.g.:
+  ![Dashboard](docs/screenshots/dashboard.png)
+  ![News Feed - Grid view](docs/screenshots/news-grid.png)
+  ![Timeline heatmap](docs/screenshots/timeline.png)
+  A repo with real screenshots converts far better on GitHub/socials than one without.
+-->
 
 ---
 
 ## ✨ Features
 
-- **📡 Live news feed** from ~30 sources, with search and filters (✨ New / Today / News / Research / Tools / Community). Items newer than your last visit are badged **NEW**. Resilient parser with a lenient fallback for awkward feeds.
-- **🔔 Desktop notifications** for big tool/model releases and your keyword watchlist (a background watcher polls feeds and raises browser notifications).
+- **📡 Live news feed** from ~39 sources, with search and filters (✨ New / Unread / Today / News / Research / Tools / Community), plus richer **content-type** (News/Tutorial/Release/Paper/Discussion/Video), **level** (Beginner/Intermediate/Advanced) and **topic tag** filters, and a **List/Grid** view toggle. Items newer than your last visit are badged **NEW**. Resilient parser with a lenient fallback for awkward feeds.
+- **🏷️ Auto-tagging** — every item is tagged against the curated glossary (RAG, MCP, agents…) by matching its title/summary against each term and its aliases, so tags stay consistent with the Glossary page for free.
+- **🔥 Trending panel & 📅 Activity heatmap** — the Dashboard shows top tags/sources over the last 7 days and a GitHub-style contribution heatmap backed by a small persisted history log (`App_Data/feed-history.json`) that grows the longer AiPulse runs. Click any tag or day to jump into a pre-filtered News Feed.
+- **🔭 Explore** — trending models & datasets (live from the Hugging Face Hub API), curated benchmark/leaderboard links, recently-popular AI repos (via GitHub's Search API), and a "try a model" directory with Ollama/Hugging Face deep-links.
+- **🔔 Desktop notifications** for big tool/model releases (`ContentType: Release`) and your keyword watchlist (a background watcher polls feeds and raises browser notifications).
 - **⭐ Keyword watchlist** — flag topics you care about (e.g. `MCP`, `Blazor`, `RAG`); matching items get highlighted and notify you.
-- **🎓 Learning Hub** — a 10-module roadmap from tokens → prompting → context engineering → RAG → tool use → agents → MCP → local models → evals → tool selection. Each module: *why it matters* + concrete steps + key terms.
-- **📖 Glossary** — 28 developer-focused definitions, searchable, with aliases so mis-heard terms still resolve (RAG, MCP, agents, agentic loops, headroom, caveman prompting, quantization…).
+- **🎓 Learning Hub** — a 10-module roadmap from tokens → prompting → context engineering → RAG → tool use → agents → MCP → local models → evals → tool selection, **plus a live "Fresh tutorials" feed** pulled from your News sources so it never goes stale. Each module: *why it matters* + concrete steps + key terms.
+- **📖 Glossary** — 28 developer-focused definitions, searchable, with aliases so mis-heard terms still resolve (RAG, MCP, agents, agentic loops, headroom, caveman prompting, quantization…), each showing **recent live mentions** pulled straight from the News feed.
 - **🧰 Tools & Tips** — a "right tool for the right task" matrix (Claude Code vs Copilot vs Codex vs Cline/Aider/Ollama…) plus token-optimization tips.
-- **🔖 Reading List** — bookmark articles; persists to disk; one-click **export to an Obsidian-ready Markdown note**.
+- **🔖 Reading List** — bookmark articles (filterable by content-type/level/tag, same as News); persists to disk; one-click **export to an Obsidian-ready Markdown note** with tags carried through as `#hashtags`.
 - **🔐 Login** — cookie auth with a single configured user (plaintext for quick start, or PBKDF2 hash for real security).
-- **🌗 Light/Dark theme**, remembered in the browser.
+- **🌗 Light/Dark theme**, remembered in the browser across every navigation.
+- **🔎 Global search** (`Ctrl`/`Cmd`+`K`) — instantly search across the Glossary, Tools & Tips, and Learning Hub from anywhere in the app.
 
-Everything except the news fetch is driven by **editable JSON files in `Data/`** — no code needed to grow it.
+Sources are managed dynamically from the **Sources page** (add/edit/remove feeds, no restart needed) — see [below](#customize-the-content). Glossary, Tools, Practices, and Learning Hub content stays as **editable JSON files in `Data/`** — no code needed to grow it.
 
 ---
 
@@ -61,16 +78,23 @@ Open the printed URL (default **http://localhost:5257**) and sign in:
 
 Keep personal overrides (your password hash, etc.) out of source control by putting them in `appsettings.Development.json` (git-ignored).
 
-### Customize the content — just edit JSON in `Data/`
+### Customize the content
+**Sources are dynamic** — add, edit, or disable feeds from the **Sources page** in the app; changes apply immediately, no restart needed. They're stored in SQLite (`App_Data/aipulse.db`). `Data/sources.json` is only read once, to **seed** the database the first time you run AiPulse — after that it's not read again, so editing it later has no effect (edit through the UI instead).
+
+Everything else is still just editable JSON in `Data/`:
+
 | File | Adds to |
 |------|---------|
-| `sources.json` | the news feeds (any RSS/Atom URL) |
 | `glossary.json` | glossary terms |
 | `tools.json` | the tools matrix |
 | `practices.json` | best-practice / token tips |
 | `learning.json` | Learning Hub modules |
+| `benchmarks.json` | Explore page's benchmark/leaderboard links |
+| `model-directory.json` | Explore page's "Try a model" directory |
 
-Handy feed URL patterns: GitHub releases `https://github.com/<owner>/<repo>/releases.atom`, subreddit `https://www.reddit.com/r/<name>/.rss`, most blogs `/feed` or `/rss.xml`, Substack `https://<name>.substack.com/feed`.
+Handy feed URL patterns (for adding sources via the Sources page): GitHub releases `https://github.com/<owner>/<repo>/releases.atom`, subreddit `https://www.reddit.com/r/<name>/.rss`, most blogs `/feed` or `/rss.xml`, Substack `https://<name>.substack.com/feed`, YouTube channel `https://www.youtube.com/feeds/videos.xml?channel_id=<id>`, dev.to tag `https://dev.to/feed/tag/<tag>`, Mastodon tag `https://<instance>/tags/<tag>.rss`.
+
+Each source also carries `ContentType` (News/Tutorial/Release/Paper/Discussion/Video), `Level` (Beginner/Intermediate/Advanced), and base `Tags` — shown on the Sources page and inherited by every item it produces (further enriched per-item by matching against the glossary).
 
 ### Watchlist & Obsidian export
 Set these in the in-app **Settings** page (stored in `App_Data/`, not source control):
@@ -91,19 +115,25 @@ Set these in the in-app **Settings** page (stored in `App_Data/`, not source con
 ## 🏗️ How it works
 
 ```
-Data/                 Curated JSON (feeds + glossary + tools + tips + learning)
-App_Data/             reading-state.json (bookmarks, watchlist, last visit) — auto-created, git-ignored
-Models/               FeedItem, GlossaryTerm, ToolEntry, LearningModule, BookmarkItem, Alert…
+Data/                 Curated JSON (glossary + tools + tips + learning + benchmarks + model directory);
+                      sources.json is a one-time DB seed only, see above
+App_Data/             aipulse.db (sources), reading-state.json, feed-history.json — auto-created, git-ignored
+Models/               FeedItem, GlossaryTerm, ToolEntry, LearningModule, BookmarkItem, SourceRecord, Alert…
 Services/
-  FeedAggregatorService   Fetches + normalizes all feeds (HTTP/XML only — no AI)
-  FeedWatcherService      Background poller that raises release/watchlist alerts
+  FeedAggregatorService   Fetches + normalizes all feeds, auto-tags items from the glossary (HTTP/XML only — no AI)
+  FeedWatcherService      Background poller that raises release/watchlist alerts + feeds FeedHistoryService
+  FeedHistoryService      Deduped, rolling (90-day) history of items, backing the activity heatmap
   NotificationService     In-memory alert hub the UI bell subscribes to
-  KnowledgeBaseService    Loads the Data/*.json files
-  ReadingStateService     Bookmarks / watchlist / read / last-visit persistence
-  ObsidianExportService   Writes the reading list to a Markdown note
+  KnowledgeBaseService    Loads Data/*.json + the DB-backed, dynamically managed Sources list
+  AiPulseDbContext        EF Core / SQLite context for Sources (App_Data/aipulse.db)
+  HuggingFaceService      Trending models/datasets from the public HF Hub API (Explore page)
+  GitHubTrendingService   Recently-popular AI repos via GitHub's Search API (Explore page)
+  ReadingStateService     Bookmarks / watchlist / read / last-visit / learning-module-progress persistence
+  ObsidianExportService   Writes the reading list to a Markdown note (tags included as #hashtags)
   AuthService             Validates login (PBKDF2 or plaintext)
   ISummarizer             Optional AI hook (NullSummarizer = off)
-Components/Pages/     Home, News, Learn, Glossary, Tools, Bookmarks, Settings, Sources, Login
+Components/Pages/     Home, News, Explore, Learn, Glossary, Tools, Bookmarks, Settings, Sources, Login
+Components/Shared/    Icon, GlobalSearch, ActivityHeatmap, TrendingPanel, MiniTimeline
 ```
 
 ### Enabling the optional AI layer

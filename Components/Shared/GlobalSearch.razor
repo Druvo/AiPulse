@@ -1,0 +1,93 @@
+@* Global search across the Glossary, Tools, and Learning Hub. Trigger button + Ctrl+K (see App.razor). *@
+@rendermode InteractiveServer
+@inject KnowledgeBaseService Kb
+@inject NavigationManager Nav
+
+<button id="global-search-trigger" class="search-trigger" type="button" @onclick="Open" title="Search (Ctrl+K)">
+    <Icon Name="search" Size="15" />
+    <span>Search…</span>
+    <span class="search-kbd">Ctrl K</span>
+</button>
+
+@if (_open)
+{
+    <div class="search-overlay" @onclick="Close">
+        <div class="search-panel" @onclick:stopPropagation="true">
+            <div class="search-input-row">
+                <Icon Name="search" Size="16" />
+                <input class="search-input" placeholder="Search glossary, tools, learning modules…"
+                       @bind="_query" @bind:event="oninput" @ref="_inputRef"
+                       @onkeydown="@(e => { if (e.Key == "Escape") Close(); })" />
+            </div>
+            @{
+                var results = Results();
+            }
+            @if (string.IsNullOrWhiteSpace(_query))
+            {
+                <p class="search-hint">Type to search across the Glossary, Tools &amp; Tips, and Learning Hub.</p>
+            }
+            else if (results.Count == 0)
+            {
+                <p class="search-hint">No matches for "@_query".</p>
+            }
+            else
+            {
+                <div class="search-results">
+                    @foreach (var group in results.GroupBy(r => r.Category))
+                    {
+                        <div class="search-group-label">@group.Key</div>
+                        @foreach (var r in group)
+                        {
+                            <a class="search-result" href="@r.Url" @onclick="Close">
+                                <span class="search-result-title">@r.Title</span>
+                                <span class="search-result-sub">@r.Subtitle</span>
+                            </a>
+                        }
+                    }
+                </div>
+            }
+        </div>
+    </div>
+}
+
+@code {
+    private bool _open;
+    private bool _focusPending;
+    private string _query = "";
+    private ElementReference _inputRef;
+    private List<SearchItem>? _index;
+
+    private void Open() { _open = true; _focusPending = true; }
+    private void Close() { _open = false; _query = ""; }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (_focusPending)
+        {
+            _focusPending = false;
+            await _inputRef.FocusAsync();
+        }
+    }
+
+    private List<SearchItem> Results()
+    {
+        _index ??= BuildIndex();
+        var q = _query.Trim();
+        if (q.Length == 0) return new();
+        return _index.Where(i => i.Title.Contains(q, StringComparison.OrdinalIgnoreCase)
+                               || i.Subtitle.Contains(q, StringComparison.OrdinalIgnoreCase))
+                      .Take(20)
+                      .ToList();
+    }
+
+    private List<SearchItem> BuildIndex()
+    {
+        var items = new List<SearchItem>();
+        items.AddRange(Kb.Glossary.Select(t => new SearchItem(t.Term, t.ShortDef, "Glossary", $"glossary?q={Uri.EscapeDataString(t.Term)}")));
+        items.AddRange(Kb.Tools.Select(t => new SearchItem(t.Name, t.OneLiner, "Tools & Tips", "tools")));
+        items.AddRange(Kb.Learning.Select(m => new SearchItem(m.Title, m.Why, "Learning Hub", "learn")));
+        return items;
+    }
+
+    private sealed record SearchItem(string Title, string Subtitle, string Category, string Url);
+}

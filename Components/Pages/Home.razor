@@ -1,64 +1,89 @@
 @page "/"
 @attribute [Authorize]
+@rendermode InteractiveServer
 @inject KnowledgeBaseService Kb
 @inject ReadingStateService Reading
 @inject ISummarizer Ai
+@inject FeedAggregatorService Feeds
+@inject FeedHistoryService History
 
 <PageTitle>AiPulse · Dashboard</PageTitle>
 
-<div class="hero mb-4">
-    <h1 class="mb-1">⚡ AI Pulse</h1>
-    <p class="lead mb-0">Your everyday station to read the AI world and level up as a developer — news, jargon, tools, and a learning roadmap. Runs standalone, no AI required.</p>
+<div class="page-header">
+    <h1><Icon Name="zap" Size="22" /> Dashboard</h1>
+    <p class="lead">Your everyday station to read the AI world and level up as a developer — news, jargon, tools, and a learning roadmap. Runs standalone, no AI required.</p>
 </div>
 
 <div class="row g-3 mb-4">
     <div class="col-6 col-lg-3">
         <a class="stat-card" href="news">
             <div class="stat-num">@Kb.Sources.Count(s => s.Enabled)</div>
-            <div class="stat-label">📡 Live sources</div>
+            <div class="stat-label"><Icon Name="rss" Size="14" /> Live sources</div>
         </a>
     </div>
     <div class="col-6 col-lg-3">
         <a class="stat-card" href="glossary">
             <div class="stat-num">@Kb.Glossary.Count</div>
-            <div class="stat-label">📖 Glossary terms</div>
+            <div class="stat-label"><Icon Name="book" Size="14" /> Glossary terms</div>
         </a>
     </div>
     <div class="col-6 col-lg-3">
         <a class="stat-card" href="learn">
             <div class="stat-num">@Kb.Learning.Count</div>
-            <div class="stat-label">🎓 Learning modules</div>
+            <div class="stat-label"><Icon Name="graduation-cap" Size="14" /> Learning modules</div>
         </a>
     </div>
     <div class="col-6 col-lg-3">
         <a class="stat-card" href="bookmarks">
             <div class="stat-num">@Reading.Bookmarks.Count</div>
-            <div class="stat-label">🔖 Saved to read</div>
+            <div class="stat-label"><Icon Name="bookmark" Size="14" /> Saved to read</div>
         </a>
     </div>
 </div>
 
+@if (_historyItems is not null)
+{
+    <div class="row g-4 mb-4">
+        <div class="col-lg-6">
+            <TrendingPanel Items="_historyItems" />
+        </div>
+        <div class="col-lg-6">
+            <MiniTimeline Items="_historyItems" />
+        </div>
+    </div>
+}
+
 <div class="row g-4">
     <div class="col-lg-7">
-        <h4>🎓 Continue learning</h4>
-        <p class="text-muted">Pick a module and work through it. This is your roadmap from basics to agents.</p>
-        @foreach (var m in Kb.Learning.Take(4))
+        <h4 class="section-title"><Icon Name="graduation-cap" /> Continue learning</h4>
+        <p class="text-muted">@Reading.CompletedModuleCount of @Kb.Learning.Count modules complete. Pick up where you left off.</p>
+        @{
+            var next = Kb.Learning.Where(m => !Reading.IsModuleComplete(m.Title)).Take(4).ToList();
+        }
+        @if (next.Count == 0)
         {
-            <a class="card mb-2 text-decoration-none" href="learn">
-                <div class="card-body py-2 d-flex justify-content-between align-items-center">
-                    <span>@m.Title</span>
-                    <span class="badge level-@m.Level.ToLower()">@m.Level</span>
-                </div>
-            </a>
+            <p class="text-success">All modules complete.</p>
+        }
+        else
+        {
+            @foreach (var m in next)
+            {
+                <a class="card mb-2 text-decoration-none" href="learn">
+                    <div class="card-body py-2 d-flex justify-content-between align-items-center">
+                        <span>@m.Title</span>
+                        <span class="badge level-@m.Level.ToLower()">@m.Level</span>
+                    </div>
+                </a>
+            }
         }
         <a href="learn" class="btn btn-sm btn-outline-primary mt-1">See all @Kb.Learning.Count modules →</a>
     </div>
 
     <div class="col-lg-5">
-        <h4>🔖 Read later</h4>
+        <h4 class="section-title"><Icon Name="bookmark" /> Read later</h4>
         @if (Reading.Bookmarks.Count == 0)
         {
-            <p class="text-muted">Nothing saved yet. On the <a href="news">News Feed</a>, click 🔖 on any article to save it here.</p>
+            <p class="text-muted">Nothing saved yet. On the <a href="news">News Feed</a>, click the tag icon on any article to save it here.</p>
         }
         else
         {
@@ -80,3 +105,13 @@
         </div>
     </div>
 </div>
+
+@code {
+    private IReadOnlyList<FeedItem>? _historyItems;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await Feeds.GetAsync(); // warms the shared cache other pages read from
+        _historyItems = History.Items;
+    }
+}

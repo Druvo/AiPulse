@@ -3,12 +3,13 @@
 @rendermode InteractiveServer
 @inject ReadingStateService Reading
 @inject ObsidianExportService Export
+@inject NavigationManager Nav
 
 <PageTitle>AiPulse · Reading List</PageTitle>
 
 <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2">
-    <h1 class="mb-0">🔖 Reading List</h1>
-    <button class="btn btn-success" @onclick="ExportNow">📝 Export to Obsidian</button>
+    <h1 class="mb-0"><Icon Name="bookmark" Size="22" /> Reading List</h1>
+    <button class="btn btn-success" @onclick="ExportNow"><Icon Name="download" Size="15" /> Export to Obsidian</button>
 </div>
 <p class="text-muted">Articles you saved from the News Feed. They persist across restarts.</p>
 @if (_exportMsg is not null)
@@ -17,24 +18,70 @@
 }
 
 @{
-    var items = Reading.Bookmarks;
+    var all = Reading.Bookmarks;
+    var items = Filtered(all);
+    var availableTags = all.SelectMany(b => b.Tags).Distinct(StringComparer.OrdinalIgnoreCase).OrderBy(t => t).ToList();
 }
 
-@if (items.Count == 0)
+@if (all.Count == 0)
 {
-    <p>Nothing saved yet. Open the <a href="news">News Feed</a> and click the 🏷️ button on any article to save it here.</p>
+    <p>Nothing saved yet. Open the <a href="news">News Feed</a> and click the bookmark icon on any article to save it here.</p>
 }
 else
 {
-    <p class="text-muted small">@items.Count saved</p>
+    <div class="d-flex flex-wrap gap-2 mb-2">
+        <select class="form-select form-select-sm w-auto" @bind="_contentType" @bind:after="SyncUrl">
+            <option value="">All content types</option>
+            @foreach (var ct in all.Select(b => b.ContentType).Distinct().OrderBy(c => c))
+            {
+                <option value="@ct">@ct</option>
+            }
+        </select>
+        <select class="form-select form-select-sm w-auto" @bind="_level" @bind:after="SyncUrl">
+            <option value="">All levels</option>
+            @foreach (var lvl in all.Select(b => b.Level).Distinct().OrderBy(l => l))
+            {
+                <option value="@lvl">@lvl</option>
+            }
+        </select>
+        @if (!string.IsNullOrEmpty(_tag))
+        {
+            <button class="btn btn-sm btn-warning" @onclick="() => SetTag(string.Empty)">Tag: @_tag ✕</button>
+        }
+    </div>
+
+    @if (availableTags.Count > 0)
+    {
+        <div class="d-flex flex-wrap gap-1 mb-3">
+            @foreach (var t in availableTags.Take(20))
+            {
+                <button class="btn btn-sm tag-chip @(_tag == t ? "active" : "")" @onclick="() => SetTag(_tag == t ? string.Empty : t)">@t</button>
+            }
+        </div>
+    }
+
+    <p class="text-muted small">@items.Count of @all.Count saved</p>
     @foreach (var b in items)
     {
         <div class="card mb-2">
             <div class="card-body py-2">
                 <div class="d-flex justify-content-between align-items-start gap-2">
                     <a href="@b.Link" target="_blank" rel="noopener" class="h6 mb-1 text-decoration-none">@b.Title</a>
-                    <button class="btn btn-sm btn-outline-danger" @onclick="() => Remove(b.Link)">Remove</button>
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="badge level-@b.Level.ToLower()">@b.Level</span>
+                        <span class="badge ctype-@b.ContentType.ToLower()">@b.ContentType</span>
+                        <button class="btn btn-sm btn-outline-danger" @onclick="() => Remove(b.Link)">Remove</button>
+                    </div>
                 </div>
+                @if (b.Tags.Length > 0)
+                {
+                    <div class="d-flex flex-wrap gap-1 mb-1">
+                        @foreach (var t in b.Tags.Take(6))
+                        {
+                            <span class="tag-chip small">@t</span>
+                        }
+                    </div>
+                }
                 <div class="x-small text-muted">
                     @b.SourceName
                     @if (!string.IsNullOrWhiteSpace(b.Category)) { <span>· @b.Category</span> }
@@ -43,10 +90,66 @@ else
             </div>
         </div>
     }
+
+    @if (items.Count == 0)
+    {
+        <p class="text-muted">Nothing matches the current filter.</p>
+    }
 }
 
 @code {
+    [SupplyParameterFromQuery(Name = "contentType")]
+    public string? ContentTypeParam { get; set; }
+
+    [SupplyParameterFromQuery(Name = "level")]
+    public string? LevelParam { get; set; }
+
+    [SupplyParameterFromQuery(Name = "tag")]
+    public string? TagParam { get; set; }
+
     private string? _exportMsg;
+    private string _contentType = "";
+    private string _level = "";
+    private string _tag = "";
+
+    protected override void OnInitialized()
+    {
+        if (!string.IsNullOrWhiteSpace(ContentTypeParam)) _contentType = ContentTypeParam;
+        if (!string.IsNullOrWhiteSpace(LevelParam)) _level = LevelParam;
+        if (!string.IsNullOrWhiteSpace(TagParam)) _tag = TagParam;
+    }
+
+    private void SetTag(string tag)
+    {
+        _tag = tag;
+        SyncUrl();
+    }
+
+    private void SyncUrl()
+    {
+        var parts = new List<string>();
+        if (!string.IsNullOrEmpty(_contentType)) parts.Add($"contentType={Uri.EscapeDataString(_contentType)}");
+        if (!string.IsNullOrEmpty(_level)) parts.Add($"level={Uri.EscapeDataString(_level)}");
+        if (!string.IsNullOrEmpty(_tag)) parts.Add($"tag={Uri.EscapeDataString(_tag)}");
+        var qs = parts.Count > 0 ? "?" + string.Join("&", parts) : "";
+        Nav.NavigateTo($"bookmarks{qs}", replace: true);
+    }
+
+    private List<BookmarkItem> Filtered(IReadOnlyList<BookmarkItem> all)
+    {
+        IEnumerable<BookmarkItem> q = all;
+
+        if (!string.IsNullOrEmpty(_contentType))
+            q = q.Where(b => b.ContentType == _contentType);
+
+        if (!string.IsNullOrEmpty(_level))
+            q = q.Where(b => b.Level == _level);
+
+        if (!string.IsNullOrEmpty(_tag))
+            q = q.Where(b => b.Tags.Contains(_tag, StringComparer.OrdinalIgnoreCase));
+
+        return q.ToList();
+    }
 
     private void Remove(string link) => Reading.RemoveBookmark(link);
 

@@ -7,12 +7,14 @@
 
 <PageTitle>AiPulse · Settings</PageTitle>
 
-<h1>⚙️ Settings</h1>
+<div class="page-header">
+    <h1><Icon Name="settings" Size="22" /> Settings</h1>
+</div>
 
 <div class="row g-4">
     <div class="col-lg-6">
-        <h4>⭐ Keyword watchlist</h4>
-        <p class="text-muted">Topics you care about. Matching feed items get a ⭐ and trigger a desktop notification.</p>
+        <h4 class="section-title"><Icon Name="star" /> Keyword watchlist</h4>
+        <p class="text-muted">Topics you care about. Matching feed items get a star badge and trigger a desktop notification.</p>
 
         <div class="input-group mb-3">
             <input class="form-control" placeholder="e.g. MCP, Blazor, RAG" @bind="_newKeyword" @bind:event="oninput"
@@ -29,7 +31,7 @@
             <div class="d-flex flex-wrap gap-2">
                 @foreach (var k in Reading.Watchlist)
                 {
-                    <span class="badge bg-warning text-dark p-2">
+                    <span class="badge bg-warning p-2">
                         @k
                         <button class="btn-close btn-close-sm ms-1" style="font-size:.6rem;"
                                 @onclick="() => Remove(k)" aria-label="remove"></button>
@@ -40,19 +42,35 @@
     </div>
 
     <div class="col-lg-6">
-        <h4>🔔 Desktop notifications</h4>
+        <h4 class="section-title"><Icon Name="bell" /> Desktop notifications</h4>
         <p class="text-muted">Get notified about new tool/model releases and watchlist hits while a tab is open.</p>
         <p>Browser permission: <strong>@_permission</strong></p>
+        @if (_permission == "denied")
+        {
+            <div class="alert alert-warning py-2 small">
+                Notifications are <strong>blocked</strong> for this site. Once blocked, no website can re-prompt you —
+                you have to allow it manually: click the padlock/site-info icon next to the address bar →
+                <strong>Notifications</strong> → <strong>Allow</strong>, then reload this page.
+            </div>
+        }
         <button class="btn btn-outline-primary me-2" @onclick="RequestPermission">Enable notifications</button>
         <button class="btn btn-outline-secondary" @onclick="TestNotification">Send test</button>
-        <p class="text-muted small mt-2">Polling interval is set in <code>appsettings.json</code> (<code>Notifications:PollMinutes</code>).</p>
+        @if (_testResult is not null)
+        {
+            <div class="alert @(_testResult == "shown" ? "alert-success" : "alert-warning") py-2 mt-2 small">@TestResultMessage()</div>
+        }
+        <p class="text-muted small mt-2">
+            Background alerts (releases/watchlist) only fire for items published <em>after</em> the app's first poll on startup,
+            and re-check every <code>Notifications:PollMinutes</code> (default 15 min, in <code>appsettings.json</code>) —
+            so nothing shows in the first few minutes after a restart even when everything's working correctly.
+        </p>
 
         <hr class="my-4" />
 
-        <h4>📝 Export to Obsidian</h4>
-        <p class="text-muted">Folder to write <code>AiPulse Reading List.md</code> into. Leave blank to use the app's local <code>App_Data/exports</code> folder.</p>
+        <h4 class="section-title"><Icon Name="download" /> Export to Obsidian</h4>
+        <p class="text-muted">Folder to write <code>AiPulse Reading List.md</code> into. Point this at your Obsidian vault to export there instead.</p>
         <div class="input-group mb-2">
-            <input class="form-control" placeholder="e.g. D:\Obsidian\Notes\claude\NewsFeed" @bind="_exportPath" />
+            <input class="form-control" placeholder="@Export.TargetDir" @bind="_exportPath" />
             <button class="btn btn-primary" @onclick="SavePath">Save</button>
         </div>
         <button class="btn btn-success" @onclick="ExportNow">Export reading list now</button>
@@ -60,16 +78,42 @@
         {
             <div class="alert alert-success mt-2 py-2 small">@_exportMsg</div>
         }
+
+        <hr class="my-4" />
+
+        <h4 class="section-title"><Icon Name="database" /> Backup &amp; restore</h4>
+        <p class="text-muted">
+            Your sources, bookmarks, watchlist, Playground chat history, and feed history all live in <code>App_Data/</code>.
+            Back it up before upgrading or migrating to a new machine.
+        </p>
+        <a href="/backup/download" class="btn btn-outline-primary mb-3"><Icon Name="download" Size="14" /> Download backup (.zip)</a>
+
+        <form method="post" action="/backup/restore" enctype="multipart/form-data"
+              onsubmit="return confirm('This overwrites ALL current sources, bookmarks, chat history and feed history with the contents of this backup. Continue?');">
+            <div class="input-group">
+                <input type="file" name="file" accept=".zip" class="form-control" required />
+                <button type="submit" class="btn btn-warning">Restore from backup</button>
+            </div>
+            <p class="text-muted small mt-1">Restart AiPulse after restoring so every page picks up the restored data.</p>
+        </form>
+        @if (RestoredParam == "true")
+        {
+            <div class="alert alert-success mt-2 py-2 small">Backup restored. Please restart AiPulse now.</div>
+        }
     </div>
 </div>
 
 @code {
+    [SupplyParameterFromQuery(Name = "restored")]
+    public string? RestoredParam { get; set; }
+
     private string _newKeyword = "";
     private string? _exportPath;
     private string _permission = "unknown";
     private string? _exportMsg;
+    private string? _testResult;
 
-    protected override void OnInitialized() => _exportPath = Reading.ObsidianExportPath;
+    protected override void OnInitialized() => _exportPath = Reading.ObsidianExportPath ?? Export.TargetDir;
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -92,8 +136,17 @@
 
     private async Task TestNotification()
     {
-        try { await JS.InvokeVoidAsync("aipulseNotify.show", "AiPulse", "Notifications are working ✅", ""); } catch { }
+        try { _testResult = await JS.InvokeAsync<string>("aipulseNotify.show", "AiPulse", "Notifications are working.", ""); }
+        catch (Exception ex) { _testResult = "error: " + ex.Message; }
     }
+
+    private string TestResultMessage() => _testResult switch
+    {
+        "shown" => "Test notification sent — check your OS notification area if you didn't see it pop up.",
+        "denied" => "Blocked by the browser. See the message above for how to unblock it.",
+        "unsupported" => "This browser doesn't support desktop notifications.",
+        _ => $"Couldn't show a notification ({_testResult})."
+    };
 
     private void SavePath()
     {

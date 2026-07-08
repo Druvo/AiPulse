@@ -14,13 +14,14 @@ public sealed class NotificationOptions
 
 /// <summary>
 /// Background loop that periodically refreshes feeds and raises alerts for big releases
-/// (new items in the Tools category = GitHub release feeds) and watchlist keyword hits.
+/// (new items with ContentType == "Release") and watchlist keyword hits.
 /// </summary>
 public sealed class FeedWatcherService : BackgroundService
 {
     private readonly FeedAggregatorService _feeds;
     private readonly ReadingStateService _reading;
     private readonly NotificationService _notify;
+    private readonly FeedHistoryService _history;
     private readonly NotificationOptions _opt;
     private readonly ILogger<FeedWatcherService> _log;
     private readonly HashSet<string> _seen = new();
@@ -30,12 +31,14 @@ public sealed class FeedWatcherService : BackgroundService
         FeedAggregatorService feeds,
         ReadingStateService reading,
         NotificationService notify,
+        FeedHistoryService history,
         Microsoft.Extensions.Options.IOptions<NotificationOptions> opt,
         ILogger<FeedWatcherService> log)
     {
         _feeds = feeds;
         _reading = reading;
         _notify = notify;
+        _history = history;
         _opt = opt.Value;
         _log = log;
     }
@@ -66,6 +69,7 @@ public sealed class FeedWatcherService : BackgroundService
     private async Task PollAsync(CancellationToken ct)
     {
         var result = await _feeds.GetAsync(force: true, ct);
+        _history.Record(result.Items);
 
         // First pass just records what's already there so we don't alert on the whole backlog.
         if (!_seeded)
@@ -90,7 +94,7 @@ public sealed class FeedWatcherService : BackgroundService
             {
                 newAlerts.Add(new Alert { Title = item.Title, Link = item.Link, SourceName = item.SourceName, Kind = "Watchlist" });
             }
-            else if (_opt.NotifyReleases && item.Category == "Tools")
+            else if (_opt.NotifyReleases && item.ContentType == "Release")
             {
                 newAlerts.Add(new Alert { Title = item.Title, Link = item.Link, SourceName = item.SourceName, Kind = "Release" });
             }

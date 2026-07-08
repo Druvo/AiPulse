@@ -1,6 +1,9 @@
 <div class="top-row ps-3 navbar navbar-dark">
     <div class="container-fluid">
-        <a class="navbar-brand" href="">⚡ AiPulse</a>
+        <a class="navbar-brand" href="">
+            <Icon Name="zap" Size="20" />
+            AiPulse
+        </a>
     </div>
 </div>
 
@@ -8,51 +11,85 @@
 
 <div class="nav-scrollable" onclick="document.querySelector('.navbar-toggler').click()">
     <nav class="flex-column">
+        <div class="nav-section-label px-3">Overview</div>
         <div class="nav-item px-3">
             <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
-                <span class="bi bi-house-door-fill-nav-menu" aria-hidden="true"></span> Dashboard
+                <Icon Name="home" />
+                <span>Dashboard</span>
             </NavLink>
         </div>
         <div class="nav-item px-3">
             <NavLink class="nav-link" href="news">
-                <span class="bi bi-list-nested-nav-menu" aria-hidden="true"></span> News Feed
+                <Icon Name="rss" />
+                <span>News Feed</span>
             </NavLink>
         </div>
         <div class="nav-item px-3">
+            <NavLink class="nav-link" href="explore">
+                <Icon Name="trending-up" />
+                <span>Explore</span>
+            </NavLink>
+        </div>
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="playground">
+                <Icon Name="message" />
+                <span>Playground</span>
+            </NavLink>
+        </div>
+
+        <div class="nav-section-label px-3">Learn</div>
+        <div class="nav-item px-3">
             <NavLink class="nav-link" href="learn">
-                <span class="bi bi-plus-square-fill-nav-menu" aria-hidden="true"></span> Learning Hub
+                <Icon Name="graduation-cap" />
+                <span>Learning Hub</span>
             </NavLink>
         </div>
         <div class="nav-item px-3">
             <NavLink class="nav-link" href="glossary">
-                <span class="bi bi-house-door-fill-nav-menu" aria-hidden="true"></span> Glossary
+                <Icon Name="book" />
+                <span>Glossary</span>
             </NavLink>
         </div>
         <div class="nav-item px-3">
             <NavLink class="nav-link" href="tools">
-                <span class="bi bi-plus-square-fill-nav-menu" aria-hidden="true"></span> Tools &amp; Tips
+                <Icon Name="tool" />
+                <span>Tools &amp; Tips</span>
             </NavLink>
         </div>
+
+        <div class="nav-section-label px-3">Library</div>
         <div class="nav-item px-3">
             <NavLink class="nav-link" href="bookmarks">
-                <span class="bi bi-list-nested-nav-menu" aria-hidden="true"></span> Reading List
+                <Icon Name="bookmark" />
+                <span>Reading List</span>
             </NavLink>
         </div>
         <div class="nav-item px-3">
             <NavLink class="nav-link" href="sources">
-                <span class="bi bi-list-nested-nav-menu" aria-hidden="true"></span> Sources
+                <Icon Name="database" />
+                <span>Sources</span>
             </NavLink>
         </div>
     </nav>
 </div>
 
 <div class="nav-footer px-3">
-    <button class="theme-toggle" type="button" onclick="toggleTheme()" title="Toggle light/dark">🌓 Theme</button>
+    <button class="theme-toggle" type="button" onclick="toggleTheme()" title="Toggle light/dark">
+        <Icon Name="sun" Size="16" CssClass="icon-light" />
+        <Icon Name="moon" Size="16" CssClass="icon-dark" />
+        <span>Theme</span>
+    </button>
     <AuthorizeView>
         <Authorized>
-            <div class="nav-user">Signed in as <strong>@context.User.Identity?.Name</strong></div>
+            <div class="nav-user">
+                <Icon Name="user" Size="14" />
+                <span>Signed in as <strong>@context.User.Identity?.Name</strong></span>
+            </div>
             <form method="post" action="/auth/logout">
-                <button type="submit" class="logout-btn">Sign out</button>
+                <button type="submit" class="logout-btn">
+                    <Icon Name="logout" Size="16" />
+                    <span>Sign out</span>
+                </button>
             </form>
         </Authorized>
     </AuthorizeView>

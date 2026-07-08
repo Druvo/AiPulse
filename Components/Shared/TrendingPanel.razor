@@ -1,0 +1,52 @@
+@* Top tags and active sources over the last 7 days, as clickable links into the News feed. *@
+
+<div class="card mb-3">
+    <div class="card-body">
+        <h6 class="section-title mb-2"><Icon Name="trending-up" Size="16" /> Trending this week</h6>
+        @if (TopTags.Count == 0)
+        {
+            <p class="text-muted small mb-0">Not enough data yet.</p>
+        }
+        else
+        {
+            <div class="d-flex flex-wrap gap-1 mb-3">
+                @foreach (var (tag, count) in TopTags)
+                {
+                    <a class="tag-chip small" href="@($"news?tag={Uri.EscapeDataString(tag)}")">@tag <span class="text-muted">@count</span></a>
+                }
+            </div>
+            <h6 class="mb-2 x-small text-muted text-uppercase">Most active sources</h6>
+            <ul class="list-unstyled mb-0 small">
+                @foreach (var (source, count) in TopSources)
+                {
+                    <li class="d-flex justify-content-between border-bottom py-1">
+                        <span>@source</span>
+                        <span class="text-muted">@count</span>
+                    </li>
+                }
+            </ul>
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter, EditorRequired]
+    public IReadOnlyList<FeedItem> Items { get; set; } = Array.Empty<FeedItem>();
+
+    private List<(string Tag, int Count)> TopTags => Items
+        .Where(i => i.Published >= DateTimeOffset.Now.AddDays(-7))
+        .SelectMany(i => i.Tags)
+        .GroupBy(t => t, StringComparer.OrdinalIgnoreCase)
+        .OrderByDescending(g => g.Count())
+        .Take(8)
+        .Select(g => (g.Key, g.Count()))
+        .ToList();
+
+    private List<(string Source, int Count)> TopSources => Items
+        .Where(i => i.Published >= DateTimeOffset.Now.AddDays(-7))
+        .GroupBy(i => i.SourceName)
+        .OrderByDescending(g => g.Count())
+        .Take(5)
+        .Select(g => (g.Key, g.Count()))
+        .ToList();
+}

@@ -3,186 +3,360 @@
     "Name": "Simon Willison's Weblog",
     "Url": "https://simonwillison.net/atom/everything/",
     "Category": "News",
-    "Note": "Practical, developer-focused coverage of new models, tools and techniques."
+    "Note": "Practical, developer-focused coverage of new models, tools and techniques.",
+    "ContentType": "Tutorial",
+    "Level": "Intermediate",
+    "Tags": ["Prompting", "Tools"]
   },
   {
     "Name": "Hugging Face Blog",
     "Url": "https://huggingface.co/blog/feed.xml",
     "Category": "News",
-    "Note": "New open models, libraries and how-to posts."
+    "Note": "New open models, libraries and how-to posts.",
+    "ContentType": "Tutorial",
+    "Level": "Intermediate",
+    "Tags": ["Open Models"]
   },
   {
     "Name": "Import AI (Jack Clark)",
     "Url": "https://importai.substack.com/feed",
     "Category": "News",
-    "Note": "Weekly digest of important AI research and policy."
+    "Note": "Weekly digest of important AI research and policy.",
+    "ContentType": "News",
+    "Level": "Advanced",
+    "Tags": ["Policy"]
   },
   {
     "Name": "Latent Space",
     "Url": "https://www.latent.space/feed",
     "Category": "News",
-    "Note": "AI engineering: agents, RAG, evals, tooling."
+    "Note": "AI engineering: agents, RAG, evals, tooling.",
+    "ContentType": "Tutorial",
+    "Level": "Intermediate",
+    "Tags": ["Agents", "RAG", "Evals"]
   },
   {
     "Name": "Ahead of AI (Sebastian Raschka)",
     "Url": "https://magazine.sebastianraschka.com/feed",
     "Category": "News",
-    "Note": "Deep, clear explainers on LLM internals and training."
+    "Note": "Deep, clear explainers on LLM internals and training.",
+    "ContentType": "Tutorial",
+    "Level": "Advanced",
+    "Tags": ["LLM Internals"]
   },
   {
     "Name": "The Gradient",
     "Url": "https://thegradient.pub/rss/",
     "Category": "News",
-    "Note": "Thoughtful long-form AI research writing."
+    "Note": "Thoughtful long-form AI research writing.",
+    "ContentType": "News",
+    "Level": "Advanced",
+    "Tags": []
   },
   {
     "Name": "Google · AI",
-    "Url": "https://blog.google/technology/ai/rss/",
+    "Url": "https://blog.google/innovation-and-ai/technology/ai/rss/",
     "Category": "News",
-    "Note": "Official Google AI announcements."
+    "Note": "Official Google AI announcements.",
+    "ContentType": "News",
+    "Level": "Intermediate",
+    "Tags": []
+  },
+  {
+    "Name": "OpenAI News",
+    "Url": "https://openai.com/news/rss.xml",
+    "Category": "News",
+    "Note": "Official OpenAI announcements and product news.",
+    "ContentType": "News",
+    "Level": "Beginner",
+    "Tags": ["Product Launches"]
   },
   {
     "Name": "The Verge · AI",
     "Url": "https://www.theverge.com/rss/ai-artificial-intelligence/index.xml",
     "Category": "News",
-    "Note": "Mainstream AI news and product launches."
+    "Note": "Mainstream AI news and product launches.",
+    "ContentType": "News",
+    "Level": "Beginner",
+    "Tags": []
   },
   {
     "Name": "VentureBeat · AI",
     "Url": "https://venturebeat.com/category/ai/feed/",
     "Category": "News",
-    "Note": "Enterprise AI news and analysis."
+    "Note": "Enterprise AI news and analysis.",
+    "ContentType": "News",
+    "Level": "Intermediate",
+    "Tags": []
   },
   {
     "Name": "TechCrunch · AI",
     "Url": "https://techcrunch.com/category/artificial-intelligence/feed/",
     "Category": "News",
-    "Note": "Startup and industry AI news."
+    "Note": "Startup and industry AI news.",
+    "ContentType": "News",
+    "Level": "Beginner",
+    "Tags": []
   },
   {
     "Name": "MIT Technology Review",
     "Url": "https://www.technologyreview.com/feed/",
     "Category": "News",
-    "Note": "Research-grounded technology journalism."
+    "Note": "Research-grounded technology journalism.",
+    "ContentType": "News",
+    "Level": "Intermediate",
+    "Tags": []
   },
   {
     "Name": "arXiv cs.CL (NLP)",
     "Url": "http://export.arxiv.org/rss/cs.CL",
     "Category": "Research",
-    "Note": "Newest computational linguistics / LLM papers."
+    "Note": "Newest computational linguistics / LLM papers.",
+    "ContentType": "Paper",
+    "Level": "Advanced",
+    "Tags": ["NLP"]
   },
   {
     "Name": "arXiv cs.AI",
     "Url": "http://export.arxiv.org/rss/cs.AI",
     "Category": "Research",
-    "Note": "Newest general AI papers."
+    "Note": "Newest general AI papers.",
+    "ContentType": "Paper",
+    "Level": "Advanced",
+    "Tags": []
   },
   {
     "Name": "arXiv cs.LG (Machine Learning)",
     "Url": "http://export.arxiv.org/rss/cs.LG",
     "Category": "Research",
-    "Note": "Newest machine-learning papers."
+    "Note": "Newest machine-learning papers.",
+    "ContentType": "Paper",
+    "Level": "Advanced",
+    "Tags": ["Machine Learning"]
   },
   {
     "Name": "Claude Code releases",
     "Url": "https://github.com/anthropics/claude-code/releases.atom",
     "Category": "Tools",
-    "Note": "What changed in each Claude Code release."
+    "Note": "What changed in each Claude Code release.",
+    "ContentType": "Release",
+    "Level": "Intermediate",
+    "Tags": ["Coding Agent"]
   },
   {
     "Name": "Ollama releases",
     "Url": "https://github.com/ollama/ollama/releases.atom",
     "Category": "Tools",
-    "Note": "Local model runtime updates."
+    "Note": "Local model runtime updates.",
+    "ContentType": "Release",
+    "Level": "Intermediate",
+    "Tags": ["Local Models"]
   },
   {
     "Name": "MCP servers releases",
     "Url": "https://github.com/modelcontextprotocol/servers/releases.atom",
     "Category": "Tools",
-    "Note": "Model Context Protocol reference servers."
+    "Note": "Model Context Protocol reference servers.",
+    "ContentType": "Release",
+    "Level": "Intermediate",
+    "Tags": ["MCP"]
   },
   {
     "Name": "LiteLLM releases",
     "Url": "https://github.com/BerriAI/litellm/releases.atom",
     "Category": "Tools",
-    "Note": "Unified gateway for 100+ LLM APIs."
+    "Note": "Unified gateway for 100+ LLM APIs.",
+    "ContentType": "Release",
+    "Level": "Intermediate",
+    "Tags": []
   },
   {
     "Name": "LangChain releases",
     "Url": "https://github.com/langchain-ai/langchain/releases.atom",
     "Category": "Tools",
-    "Note": "Popular agent/RAG framework."
+    "Note": "Popular agent/RAG framework.",
+    "ContentType": "Release",
+    "Level": "Intermediate",
+    "Tags": ["Agents", "RAG"]
   },
   {
     "Name": "LlamaIndex releases",
     "Url": "https://github.com/run-llama/llama_index/releases.atom",
     "Category": "Tools",
-    "Note": "Data framework for RAG apps."
+    "Note": "Data framework for RAG apps.",
+    "ContentType": "Release",
+    "Level": "Intermediate",
+    "Tags": ["RAG"]
   },
   {
     "Name": "Cline releases",
     "Url": "https://github.com/cline/cline/releases.atom",
     "Category": "Tools",
-    "Note": "Open-source VS Code coding agent."
+    "Note": "Open-source VS Code coding agent.",
+    "ContentType": "Release",
+    "Level": "Intermediate",
+    "Tags": ["Coding Agent"]
   },
   {
     "Name": "Aider releases",
     "Url": "https://github.com/Aider-AI/aider/releases.atom",
     "Category": "Tools",
-    "Note": "Terminal pair-programming agent."
+    "Note": "Terminal pair-programming agent.",
+    "ContentType": "Release",
+    "Level": "Intermediate",
+    "Tags": ["Coding Agent"]
   },
   {
     "Name": "Open WebUI releases",
     "Url": "https://github.com/open-webui/open-webui/releases.atom",
     "Category": "Tools",
-    "Note": "Self-hosted chat UI for local models."
+    "Note": "Self-hosted chat UI for local models.",
+    "ContentType": "Release",
+    "Level": "Beginner",
+    "Tags": ["Local Models"]
   },
   {
     "Name": "vLLM releases",
     "Url": "https://github.com/vllm-project/vllm/releases.atom",
     "Category": "Tools",
-    "Note": "High-throughput LLM serving engine."
+    "Note": "High-throughput LLM serving engine.",
+    "ContentType": "Release",
+    "Level": "Advanced",
+    "Tags": []
   },
   {
     "Name": "Transformers releases",
     "Url": "https://github.com/huggingface/transformers/releases.atom",
     "Category": "Tools",
-    "Note": "The core Hugging Face model library."
+    "Note": "The core Hugging Face model library.",
+    "ContentType": "Release",
+    "Level": "Intermediate",
+    "Tags": []
   },
   {
     "Name": "OpenAI Python SDK releases",
     "Url": "https://github.com/openai/openai-python/releases.atom",
     "Category": "Tools",
-    "Note": "Track new API capabilities as they ship in the SDK."
+    "Note": "Track new API capabilities as they ship in the SDK.",
+    "ContentType": "Release",
+    "Level": "Intermediate",
+    "Tags": []
   },
   {
     "Name": "Hacker News · LLM",
     "Url": "https://hnrss.org/newest?q=LLM&count=25",
     "Category": "Community",
-    "Note": "Fresh HN posts mentioning LLMs."
+    "Note": "Fresh HN posts mentioning LLMs.",
+    "ContentType": "Discussion",
+    "Level": "Intermediate",
+    "Tags": []
   },
   {
     "Name": "Hacker News · AI agents",
     "Url": "https://hnrss.org/newest?q=AI+agent&count=25",
     "Category": "Community",
-    "Note": "Fresh HN posts about agents."
+    "Note": "Fresh HN posts about agents.",
+    "ContentType": "Discussion",
+    "Level": "Intermediate",
+    "Tags": ["Agents"]
   },
   {
     "Name": "Hacker News · MCP",
     "Url": "https://hnrss.org/newest?q=MCP&count=20",
     "Category": "Community",
-    "Note": "Fresh HN posts about Model Context Protocol."
+    "Note": "Fresh HN posts about Model Context Protocol.",
+    "ContentType": "Discussion",
+    "Level": "Intermediate",
+    "Tags": ["MCP"]
   },
   {
     "Name": "r/LocalLLaMA",
     "Url": "https://www.reddit.com/r/LocalLLaMA/.rss",
     "Category": "Community",
-    "Note": "Local model releases, quantization, hardware, optimization."
+    "Note": "Local model releases, quantization, hardware, optimization.",
+    "ContentType": "Discussion",
+    "Level": "Advanced",
+    "Tags": ["Local Models", "Quantization"]
   },
   {
     "Name": "r/MachineLearning",
     "Url": "https://www.reddit.com/r/MachineLearning/.rss",
     "Category": "Community",
-    "Note": "Research discussion and project releases."
+    "Note": "Research discussion and project releases.",
+    "ContentType": "Discussion",
+    "Level": "Advanced",
+    "Tags": []
+  },
+  {
+    "Name": "Two Minute Papers (YouTube)",
+    "Url": "https://www.youtube.com/feeds/videos.xml?channel_id=UCbfYPyITQ-7l4upoX8nvctg",
+    "Category": "News",
+    "Note": "Short, visual explainers on new AI research papers.",
+    "ContentType": "Video",
+    "Level": "Beginner",
+    "Tags": ["Research Explainers"]
+  },
+  {
+    "Name": "AI Explained (YouTube)",
+    "Url": "https://www.youtube.com/feeds/videos.xml?channel_id=UCNJ1Ymd5yFuUPtn21xtRbbw",
+    "Category": "News",
+    "Note": "Deep-dive video analysis of frontier model releases and benchmarks.",
+    "ContentType": "Video",
+    "Level": "Intermediate",
+    "Tags": []
+  },
+  {
+    "Name": "Fireship (YouTube)",
+    "Url": "https://www.youtube.com/feeds/videos.xml?channel_id=UCsBjURrPoezykLs9EqgamOA",
+    "Category": "Tools",
+    "Note": "Fast-paced dev tool and framework overviews, including AI coding tools.",
+    "ContentType": "Video",
+    "Level": "Beginner",
+    "Tags": ["Coding"]
+  },
+  {
+    "Name": "dev.to · AI tag",
+    "Url": "https://dev.to/feed/tag/ai",
+    "Category": "News",
+    "Note": "Practical, hands-on AI posts and tutorials from working developers.",
+    "ContentType": "Tutorial",
+    "Level": "Beginner",
+    "Tags": []
+  },
+  {
+    "Name": "freeCodeCamp · AI",
+    "Url": "https://www.freecodecamp.org/news/tag/ai/rss/",
+    "Category": "News",
+    "Note": "Step-by-step AI tutorials aimed at learners.",
+    "ContentType": "Tutorial",
+    "Level": "Beginner",
+    "Tags": []
+  },
+  {
+    "Name": "Stack Overflow Blog",
+    "Url": "https://stackoverflow.blog/feed/",
+    "Category": "News",
+    "Note": "Developer-workflow-focused writing, increasingly AI-tooling heavy.",
+    "ContentType": "Tutorial",
+    "Level": "Intermediate",
+    "Tags": []
+  },
+  {
+    "Name": "Product Hunt",
+    "Url": "https://www.producthunt.com/feed",
+    "Category": "Tools",
+    "Note": "New product launches, including a steady stream of AI tools.",
+    "ContentType": "Release",
+    "Level": "Beginner",
+    "Tags": ["Product Launches"]
+  },
+  {
+    "Name": "Mastodon · #AI",
+    "Url": "https://mastodon.social/tags/ai.rss",
+    "Category": "Community",
+    "Note": "Live public posts tagged #AI on the largest Mastodon instance.",
+    "ContentType": "Discussion",
+    "Level": "Beginner",
+    "Tags": []
   }
 ]
