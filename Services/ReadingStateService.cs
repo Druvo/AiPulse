@@ -204,6 +204,58 @@ public sealed class ReadingStateService
         }
     }
 
+    // --- Exclude filters ---
+
+    public IReadOnlyList<ExcludeFilter> ExcludeFilters
+    {
+        get { EnsureLoaded(); lock (_lock) return _state!.ExcludeFilters.ToList(); }
+    }
+
+    public void AddExcludeFilter(string pattern, bool isRegex)
+    {
+        EnsureLoaded();
+        pattern = pattern.Trim();
+        if (string.IsNullOrWhiteSpace(pattern)) return;
+        lock (_lock)
+        {
+            _state!.ExcludeFilters.Add(new ExcludeFilter { Pattern = pattern, IsRegex = isRegex });
+            Save();
+        }
+    }
+
+    public void RemoveExcludeFilter(Guid id)
+    {
+        EnsureLoaded();
+        lock (_lock)
+        {
+            var existing = _state!.ExcludeFilters.FirstOrDefault(f => f.Id == id);
+            if (existing is not null) { _state.ExcludeFilters.Remove(existing); Save(); }
+        }
+    }
+
+    /// <summary>True if any exclude filter matches the text. Invalid regexes are treated as non-matching, never throw.</summary>
+    public bool IsExcluded(string text)
+    {
+        EnsureLoaded();
+        if (string.IsNullOrEmpty(text)) return false;
+        lock (_lock)
+        {
+            foreach (var f in _state!.ExcludeFilters)
+            {
+                if (f.IsRegex)
+                {
+                    try { if (System.Text.RegularExpressions.Regex.IsMatch(text, f.Pattern, System.Text.RegularExpressions.RegexOptions.IgnoreCase)) return true; }
+                    catch (ArgumentException) { /* bad user-entered regex - skip it rather than error the page */ }
+                }
+                else if (text.Contains(f.Pattern, StringComparison.OrdinalIgnoreCase))
+                {
+                    return true;
+                }
+            }
+            return false;
+        }
+    }
+
     // --- Export path ---
 
     public string? ObsidianExportPath

@@ -62,6 +62,7 @@ builder.Services.AddSingleton<ModelUsageService>();
 builder.Services.AddScoped<ChatHistoryService>();
 builder.Services.AddSingleton<BackupService>();
 builder.Services.AddSingleton<OpmlService>();
+builder.Services.AddSingleton<SourceHealthService>();
 builder.Services.AddHttpContextAccessor();
 
 // Background watcher that raises desktop notifications for big releases & watchlist hits.
@@ -159,8 +160,8 @@ app.MapPost("/opml/import", async (HttpRequest request, OpmlService opml) =>
     if (file is null) return Results.BadRequest("No file uploaded.");
 
     await using var stream = file.OpenReadStream();
-    var (added, skipped) = await opml.ImportOpmlAsync(stream);
-    return Results.Redirect($"/sources?opmlAdded={added}&opmlSkipped={skipped}");
+    var (added, skipped, unreachable) = await opml.ImportOpmlAsync(stream);
+    return Results.Redirect($"/sources?opmlAdded={added}&opmlSkipped={skipped}&opmlUnreachable={unreachable}");
 }).RequireAuthorization(policy => policy.RequireRole("Admin"));
 
 app.MapRazorComponents<App>()

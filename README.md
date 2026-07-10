@@ -23,7 +23,9 @@ It aggregates ~39 RSS/Atom sources (blogs, news outlets, arXiv, Hacker News, Red
 
 ## ✨ Features
 
-- **📡 Live news feed** from ~39 sources, with search and filters (✨ New / Unread / Today / News / Research / Tools / Community), plus richer **content-type** (News/Tutorial/Release/Paper/Discussion/Video), **level** (Beginner/Intermediate/Advanced) and **topic tag** filters, and a **List/Grid** view toggle. Items newer than your last visit are badged **NEW**. Resilient parser with a lenient fallback for awkward feeds.
+- **📡 Live news feed** from ~39 sources, with search and filters (✨ New / Unread / Today / News / Research / Tools / Community), plus richer **content-type** (News/Tutorial/Release/Paper/Discussion/Video), **level** (Beginner/Intermediate/Advanced) and **topic tag** filters, and a **List/Grid** view toggle. Items newer than your last visit are badged **NEW**. Resilient parser with a lenient fallback for awkward feeds. Links have tracking params (`utm_*`, `fbclid`, etc.) stripped automatically.
+- **⌨️ Full keyboard navigation** on the News feed — `j`/`k` move focus, `o`/`Enter` opens the focused item, `m` toggles read, `b` toggles bookmark, `?` shows the cheat sheet (inactive while typing in a text field).
+- **🚫 Exclude filters** — the inverse of the watchlist: hide items matching a plain-text or regex pattern, so a noisy topic disappears from the feed entirely instead of just being unhighlighted.
 - **🔁 Cross-source dedup** — when multiple sources cover the same story, they're merged into one item badged "+N more sources" (title-similarity matching within a time window — no AI).
 - **📅 Weekly Digest** — a 7-day rollup: item/source counts, top category, "biggest stories" ranked by how many sources covered them, and a day-by-day breakdown.
 - **🏷️ Auto-tagging** — every item is tagged against the curated glossary (RAG, MCP, agents…) by matching its title/summary against each term and its aliases, so tags stay consistent with the Glossary page for free.
@@ -36,7 +38,8 @@ It aggregates ~39 RSS/Atom sources (blogs, news outlets, arXiv, Hacker News, Red
 - **🧰 Tools & Tips** — a "right tool for the right task" matrix (Claude Code vs Copilot vs Codex vs Cline/Aider/Ollama…) plus token-optimization tips.
 - **🔖 Reading List** — bookmark articles (filterable by content-type/level/tag, same as News); persists to disk; one-click **export to an Obsidian-ready Markdown note** with tags carried through as `#hashtags`.
 - **👥 Multi-user with roles** — cookie auth backed by a real Users table. Self-registration (`/register`) creates a **Pending** account that an **Admin** approves at `/users`; roles are **Admin** (manages Sources/Users/Backup) and **User** (everything else). Each account gets its own bookmarks, watchlist, learning progress, and Playground chat history.
-- **📥 OPML import/export** — bulk-import feeds from any RSS reader's export, or export AiPulse's sources to use elsewhere. Admin-only, from the Sources page.
+- **📥 OPML import/export** — bulk-import feeds from any RSS reader's export, or export AiPulse's sources to use elsewhere. Every newly imported URL gets a quick reachability check so dead links are flagged immediately instead of silently failing later. Admin-only, from the Sources page.
+- **📈 Source health history** — a rolling 30-day uptime % per source on the Sources page, so "flaky feed" is something you can see, not just guess at.
 - **🌗 Light/Dark theme**, remembered in the browser across every navigation.
 - **🔎 Global search** (`Ctrl`/`Cmd`+`K`) — instantly search across the Glossary, Tools & Tips, and Learning Hub from anywhere in the app.
 

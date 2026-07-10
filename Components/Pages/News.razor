@@ -1,9 +1,11 @@
 @page "/news"
 @attribute [Authorize]
 @rendermode InteractiveServer
+@implements IAsyncDisposable
 @inject FeedAggregatorService Feeds
 @inject ReadingStateService Reading
 @inject NavigationManager Nav
+@inject IJSRuntime JS
 
 <PageTitle>AiPulse · News Feed</PageTitle>
 
@@ -29,8 +31,22 @@
             }
             @(_loading ? "Refreshing…" : "Refresh")
         </button>
+        <button class="btn btn-sm btn-outline-dark" title="Keyboard shortcuts" @onclick="() => _showShortcutsHelp = !_showShortcutsHelp">?</button>
     </div>
 </div>
+
+@if (_showShortcutsHelp)
+{
+    <div class="alert alert-light border small mb-3">
+        <strong>Keyboard shortcuts</strong> (inactive while typing in a text field):
+        <code>j</code>/<code>k</code> move focus down/up ·
+        <code>o</code>/<code>Enter</code> open focused item ·
+        <code>m</code> toggle read ·
+        <code>b</code> toggle bookmark ·
+        <code>?</code> toggle this help ·
+        <code>Esc</code> clear focus
+    </div>
+}
 
 <input class="form-control mb-3" placeholder="Search the feed…" @bind="_search" @bind:event="oninput" />
 
@@ -105,7 +121,7 @@ else if (_result is null)
 }
 else
 {
-    var items = Filtered();
+    var items = _visibleItems = Filtered();
 
     @if (_result.Errors.Count > 0)
     {
@@ -122,14 +138,14 @@ else
     @if (_view == "Grid")
     {
         <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-3">
-            @foreach (var item in items)
+            @foreach (var (item, idx) in items.Select((it, i) => (it, i)))
             {
                 var isNew = item.Published > _sinceVisit;
                 var saved = Reading.IsBookmarked(item.Link);
                 var read = Reading.IsRead(item.Link);
                 var watched = Reading.MatchWatchlist(item.Title + " " + item.Summary);
-                <div class="col">
-                    <div class="card h-100 feed-grid-card @(isNew ? "border-start border-danger border-3" : "") @(watched is not null ? "watched-item" : "") @(read ? "read-item" : "")">
+                <div class="col" id="news-item-@idx">
+                    <div class="card h-100 feed-grid-card @(isNew ? "border-start border-danger border-3" : "") @(watched is not null ? "watched-item" : "") @(read ? "read-item" : "") @(idx == _focusedIndex ? "kb-focused" : "")">
                         <div class="card-body d-flex flex-column">
                             <div class="d-flex justify-content-between align-items-start gap-2 mb-1">
                                 <span class="badge ctype-@item.ContentType.ToLower()">@item.ContentType</span>
@@ -181,13 +197,13 @@ else
     }
     else
     {
-        @foreach (var item in items)
+        @foreach (var (item, idx) in items.Select((it, i) => (it, i)))
         {
             var isNew = item.Published > _sinceVisit;
             var saved = Reading.IsBookmarked(item.Link);
             var read = Reading.IsRead(item.Link);
             var watched = Reading.MatchWatchlist(item.Title + " " + item.Summary);
-            <div class="card mb-2 @(isNew ? "border-start border-danger border-3" : "") @(watched is not null ? "watched-item" : "") @(read ? "read-item" : "")">
+            <div id="news-item-@idx" class="card mb-2 @(isNew ? "border-start border-danger border-3" : "") @(watched is not null ? "watched-item" : "") @(read ? "read-item" : "") @(idx == _focusedIndex ? "kb-focused" : "")">
                 <div class="card-body py-2">
                     <div class="d-flex justify-content-between align-items-start gap-2">
                         <a href="@item.Link" target="_blank" rel="noopener" class="h6 mb-1 text-decoration-none">
@@ -270,6 +286,10 @@ else
     private bool _showFilters;
     private DateTimeOffset _sinceVisit = DateTimeOffset.MinValue;
     private int _newCount;
+    private List<FeedItem> _visibleItems = new();
+    private int _focusedIndex = -1;
+    private bool _showShortcutsHelp;
+    private DotNetObjectReference<News>? _dotNetRef;
 
     private readonly string[] _filters = { "All", "New", "Unread", "Today", "News", "Research", "Tools", "Community" };
     private readonly string[] _contentTypes = { "News", "Tutorial", "Release", "Paper", "Discussion", "Video" };
@@ -339,6 +359,9 @@ else
         if (_result is null) return new();
         IEnumerable<FeedItem> q = _result.Items;
 
+        if (Reading.ExcludeFilters.Count > 0)
+            q = q.Where(i => !Reading.IsExcluded(i.Title + " " + i.Summary));
+
         q = _filter switch
         {
             "New" => q.Where(i => i.Published > _sinceVisit),
@@ -375,4 +398,57 @@ else
     private void Toggle(FeedItem item) => Reading.ToggleBookmark(item);
 
     private void ToggleRead(FeedItem item) => Reading.ToggleRead(item.Link);
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender) return;
+        _dotNetRef = DotNetObjectReference.Create(this);
+        try { await JS.InvokeVoidAsync("aipulseKeyboard.register", _dotNetRef); } catch { /* circuit may already be gone */ }
+    }
+
+    [JSInvokable]
+    public async Task HandleKey(string key)
+    {
+        if (_visibleItems.Count == 0 && key is not ("?" or "Escape")) return;
+
+        switch (key)
+        {
+            case "j":
+                _focusedIndex = Math.Min(_focusedIndex + 1, _visibleItems.Count - 1);
+                await JS.InvokeVoidAsync("aipulseKeyboard.scrollToFocused", _focusedIndex);
+                break;
+            case "k":
+                _focusedIndex = _focusedIndex < 0 ? 0 : Math.Max(_focusedIndex - 1, 0);
+                await JS.InvokeVoidAsync("aipulseKeyboard.scrollToFocused", _focusedIndex);
+                break;
+            case "o":
+            case "Enter":
+                if (_focusedIndex >= 0 && _focusedIndex < _visibleItems.Count)
+                    await JS.InvokeVoidAsync("aipulseKeyboard.openLink", _visibleItems[_focusedIndex].Link);
+                break;
+            case "m":
+                if (_focusedIndex >= 0 && _focusedIndex < _visibleItems.Count)
+                    ToggleRead(_visibleItems[_focusedIndex]);
+                break;
+            case "b":
+                if (_focusedIndex >= 0 && _focusedIndex < _visibleItems.Count)
+                    Toggle(_visibleItems[_focusedIndex]);
+                break;
+            case "?":
+                _showShortcutsHelp = !_showShortcutsHelp;
+                break;
+            case "Escape":
+                _showShortcutsHelp = false;
+                _focusedIndex = -1;
+                break;
+        }
+        StateHasChanged();
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_dotNetRef is null) return;
+        try { await JS.InvokeVoidAsync("aipulseKeyboard.unregister"); } catch { /* circuit may already be gone */ }
+        _dotNetRef.Dispose();
+    }
 }

@@ -474,6 +474,9 @@ a.card:hover { transform: translateY(-1px); }
 /* Watchlist-matched feed items */
 .watched-item { box-shadow: inset 3px 0 0 var(--ap-warning); }
 
+/* Keyboard-navigation focus (News Feed j/k) */
+.kb-focused { outline: 2px solid var(--ap-accent, #6d5efc); outline-offset: -2px; }
+
 /* Top bar */
 .top-row {
     display: flex;

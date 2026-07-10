@@ -39,6 +39,42 @@
                 }
             </div>
         }
+
+        <hr class="my-4" />
+
+        <h4 class="section-title"><Icon Name="star" /> Exclude filters</h4>
+        <p class="text-muted">The opposite of the watchlist — matching items are hidden from the News feed entirely. Use plain text, or check "regex" for a regular expression.</p>
+
+        <div class="input-group mb-2">
+            <input class="form-control" placeholder="e.g. crypto, or a regex like ^Sponsored:" @bind="_newFilterPattern" @bind:event="oninput"
+                   @onkeydown="@(e => { if (e.Key == "Enter") AddExcludeFilter(); })" />
+            <div class="input-group-text">
+                <input class="form-check-input mt-0 me-1" type="checkbox" @bind="_newFilterIsRegex" id="newFilterRegex" />
+                <label class="form-check-label" for="newFilterRegex">regex</label>
+            </div>
+            <button class="btn btn-primary" @onclick="AddExcludeFilter">Add</button>
+        </div>
+
+        @if (Reading.ExcludeFilters.Count == 0)
+        {
+            <p class="text-muted">No exclude filters yet.</p>
+        }
+        else
+        {
+            <div class="d-flex flex-column gap-1">
+                @foreach (var f in Reading.ExcludeFilters)
+                {
+                    <div class="d-flex align-items-center gap-2">
+                        <code class="small">@f.Pattern</code>
+                        @if (f.IsRegex)
+                        {
+                            <span class="badge bg-secondary">regex</span>
+                        }
+                        <button class="btn btn-sm btn-link p-0 text-danger" @onclick="() => RemoveExcludeFilter(f.Id)">remove</button>
+                    </div>
+                }
+            </div>
+        }
     </div>
 
     <div class="col-lg-6">
@@ -112,6 +148,8 @@
     public string? RestoredParam { get; set; }
 
     private string _newKeyword = "";
+    private string _newFilterPattern = "";
+    private bool _newFilterIsRegex;
     private string? _exportPath;
     private string _permission = "unknown";
     private string? _exportMsg;
@@ -132,6 +170,15 @@
     }
 
     private void Remove(string k) => Reading.RemoveKeyword(k);
+
+    private void AddExcludeFilter()
+    {
+        Reading.AddExcludeFilter(_newFilterPattern, _newFilterIsRegex);
+        _newFilterPattern = "";
+        _newFilterIsRegex = false;
+    }
+
+    private void RemoveExcludeFilter(Guid id) => Reading.RemoveExcludeFilter(id);
 
     private async Task RequestPermission()
     {

@@ -8,11 +8,15 @@ Status tags: ✅ done · 🟢 fits philosophy, no AI needed · 🟡 needs a desi
 
 ## ✅ Shipped
 
-- OPML import/export (bulk source management)
+- OPML import/export (bulk source management), with a reachability check on every newly imported URL
 - Cross-source deduplication (title-similarity merge, "+N more sources")
 - Weekly Digest page (7-day rollup, biggest multi-source stories)
 - Multi-user accounts: registration, admin approval, Admin/User roles, per-user bookmarks/watchlist/chat history
 - Desktop notifications (releases + watchlist), keyword watchlist
+- Regex/boolean exclude filters (the inverse of the watchlist — hide matching items entirely)
+- Full keyboard navigation on the News feed (j/k/o/Enter/m/b/?)
+- Source health/uptime history (rolling 30-day % per source on the Sources page)
+- Tracking-param stripping from feed links (utm_*, fbclid, gclid, etc.)
 - Learning Hub, Glossary, Tools & Tips, Explore (HF/GitHub trending), Playground (local Ollama chat)
 - Backup/restore, Obsidian export, global search, light/dark theme
 
@@ -22,14 +26,9 @@ Status tags: ✅ done · 🟢 fits philosophy, no AI needed · 🟡 needs a desi
 
 | Idea | Source | Notes |
 |---|---|---|
-| **Boolean/regex source filters** | RSSbrew | Watchlist today is substring-match only. Real include/exclude rules (AND/OR/NOT on title/link/description) would let you mute a noisy source or topic without disabling the whole feed. |
 | **Web scraping for non-RSS sites (XPath)** | FreshRSS | The #1 reason a source can't be added today is "no RSS feed." An XPath-based scraper closes that gap. |
 | **Full-text fetching for summary-only feeds** | Miniflux | Some feeds only ship a teaser; auto-fetching the full article means reading everything in AiPulse instead of clicking out. |
-| **Strip tracking pixels/params from feed content** | Miniflux | Privacy hygiene — Miniflux treats this as core, not an afterthought. Cheap to add to the existing `CleanText` pipeline. |
-| **Source health/uptime history** | ai-news-aggregator | The Sources page already shows a live "N failed" streak; persisting it (e.g. last 30 days of success/fail per source) turns it into a real health report. |
 | **WebSub/PubSubHubbub push** | FreshRSS | Near-instant updates instead of waiting for the next poll, for publishers that support it. Bigger lift — needs a public callback endpoint. |
-| **Full keyboard navigation** (j/k next/prev, `m` mark read, etc.) | Miniflux, FreshRSS | Power-user navigation for the News Feed and Reading List without touching the mouse. |
-| **OPML round-trip test / source validation on import** | — | Ping each imported URL once and flag dead links immediately instead of waiting for the first poll. |
 
 ## 🟡 Valuable, needs a design decision
 

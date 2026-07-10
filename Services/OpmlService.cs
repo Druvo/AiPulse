@@ -8,8 +8,13 @@ namespace AiPulse.Services;
 public sealed class OpmlService
 {
     private readonly KnowledgeBaseService _kb;
+    private readonly IHttpClientFactory _httpFactory;
 
-    public OpmlService(KnowledgeBaseService kb) => _kb = kb;
+    public OpmlService(KnowledgeBaseService kb, IHttpClientFactory httpFactory)
+    {
+        _kb = kb;
+        _httpFactory = httpFactory;
+    }
 
     /// <summary>Builds an OPML document from the current sources, grouped by category.</summary>
     public string ExportOpml()
@@ -42,22 +47,34 @@ public sealed class OpmlService
 
     /// <summary>
     /// Parses an OPML file and adds any feed URLs not already present. Category comes from the enclosing
-    /// folder outline's title if present, otherwise defaults to "News". Returns (added, skipped-as-duplicate).
+    /// folder outline's title if present, otherwise defaults to "News". Every new URL gets a quick
+    /// reachability check so a bad import doesn't silently add dead links - unreachable ones are still
+    /// added (a feed can be down momentarily) but counted separately so the admin can review them.
     /// </summary>
-    public async Task<(int Added, int Skipped)> ImportOpmlAsync(Stream opmlStream)
+    public async Task<(int Added, int Skipped, int Unreachable)> ImportOpmlAsync(Stream opmlStream)
     {
         var doc = await XDocument.LoadAsync(opmlStream, LoadOptions.None, default);
         var existingUrls = new HashSet<string>(_kb.SourceRecords.Select(s => s.Url), StringComparer.OrdinalIgnoreCase);
 
-        int added = 0, skipped = 0;
-        foreach (var (name, url, category) in WalkOutlines(doc.Descendants("body").FirstOrDefault(), null))
+        var toAdd = new List<(string Name, string Url, string? Category)>();
+        int skipped = 0;
+        foreach (var entry in WalkOutlines(doc.Descendants("body").FirstOrDefault(), null))
         {
-            if (string.IsNullOrWhiteSpace(url) || existingUrls.Contains(url))
+            if (string.IsNullOrWhiteSpace(entry.Url) || existingUrls.Contains(entry.Url))
             {
                 skipped++;
                 continue;
             }
+            existingUrls.Add(entry.Url); // guard against duplicate entries within the same OPML file
+            toAdd.Add(entry);
+        }
 
+        var reachability = await CheckReachabilityAsync(toAdd.Select(e => e.Url));
+
+        var added = 0;
+        var unreachable = 0;
+        foreach (var (name, url, category) in toAdd)
+        {
             await _kb.AddSourceAsync(new SourceRecord
             {
                 Name = string.IsNullOrWhiteSpace(name) ? url : name,
@@ -67,11 +84,42 @@ public sealed class OpmlService
                 ContentType = "News",
                 Level = "Intermediate"
             });
-            existingUrls.Add(url);
             added++;
+            if (!reachability.GetValueOrDefault(url, true))
+                unreachable++;
         }
 
-        return (added, skipped);
+        return (added, skipped, unreachable);
+    }
+
+    /// <summary>Quick, concurrency-limited GET per URL (5s timeout each) - just enough to flag dead links, not a full fetch.</summary>
+    private async Task<Dictionary<string, bool>> CheckReachabilityAsync(IEnumerable<string> urls)
+    {
+        var client = _httpFactory.CreateClient("feeds");
+        var results = new System.Collections.Concurrent.ConcurrentDictionary<string, bool>();
+        using var gate = new SemaphoreSlim(5);
+
+        var tasks = urls.Select(async url =>
+        {
+            await gate.WaitAsync();
+            try
+            {
+                using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+                using var resp = await client.GetAsync(url, HttpCompletionOption.ResponseHeadersRead, cts.Token);
+                results[url] = resp.IsSuccessStatusCode;
+            }
+            catch
+            {
+                results[url] = false;
+            }
+            finally
+            {
+                gate.Release();
+            }
+        });
+
+        await Task.WhenAll(tasks);
+        return new Dictionary<string, bool>(results);
     }
 
     /// <summary>Recursively walks outline elements; a folder (no xmlUrl) sets the category for its children.</summary>

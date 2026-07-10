@@ -17,15 +17,17 @@ public sealed class FeedAggregatorService
 
     private readonly IHttpClientFactory _httpFactory;
     private readonly KnowledgeBaseService _kb;
+    private readonly SourceHealthService _health;
     private readonly ILogger<FeedAggregatorService> _log;
 
     private readonly SemaphoreSlim _refreshLock = new(1, 1);
     private FeedResult? _cache;
 
-    public FeedAggregatorService(IHttpClientFactory httpFactory, KnowledgeBaseService kb, ILogger<FeedAggregatorService> log)
+    public FeedAggregatorService(IHttpClientFactory httpFactory, KnowledgeBaseService kb, SourceHealthService health, ILogger<FeedAggregatorService> log)
     {
         _httpFactory = httpFactory;
         _kb = kb;
+        _health = health;
         _log = log;
     }
 
@@ -76,12 +78,14 @@ public sealed class FeedAggregatorService
                 foreach (var item in await FetchOneAsync(source, ct))
                     items.Add(item);
                 _failureStreaks[source.Name] = 0;
+                _health.RecordResult(source.Name, true);
             }
             catch (Exception ex)
             {
                 _log.LogWarning(ex, "Feed failed: {Source}", source.Name);
                 errors.Add($"{source.Name}: {ex.Message}");
                 _failureStreaks.AddOrUpdate(source.Name, 1, (_, n) => n + 1);
+                _health.RecordResult(source.Name, false);
             }
             finally
             {
@@ -258,7 +262,7 @@ public sealed class FeedAggregatorService
             result.Add(new FeedItem
             {
                 Title = CleanText(item.Title?.Text ?? "(untitled)", 200),
-                Link = link,
+                Link = CleanUrl(link),
                 Summary = CleanText(ExtractSummary(item), 320),
                 Published = published,
                 SourceName = source.Name,
@@ -297,7 +301,7 @@ public sealed class FeedAggregatorService
             result.Add(new FeedItem
             {
                 Title = CleanText(title, 200),
-                Link = link ?? "",
+                Link = CleanUrl(link ?? ""),
                 Summary = CleanText(summary, 320),
                 Published = published == default ? DateTimeOffset.Now : published,
                 SourceName = source.Name,
@@ -325,5 +329,36 @@ public sealed class FeedAggregatorService
         text = System.Net.WebUtility.HtmlDecode(text);
         text = Regex.Replace(text, @"\s+", " ").Trim();
         return text.Length > max ? text[..max].TrimEnd() + "…" : text;
+    }
+
+    private static readonly HashSet<string> TrackingParams = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "utm_source", "utm_medium", "utm_campaign", "utm_term", "utm_content", "utm_id", "utm_name", "utm_reader",
+        "fbclid", "gclid", "gclsrc", "dclid", "msclkid", "mc_cid", "mc_eid", "igshid",
+        "ref", "ref_src", "ref_url", "_hsenc", "_hsmi", "spm", "yclid", "vero_id", "oly_enc_id", "oly_anon_id"
+    };
+
+    /// <summary>Strips known tracking query params from an item's link before it's stored/displayed/exported - privacy hygiene, not functional.</summary>
+    private static string CleanUrl(string url)
+    {
+        if (string.IsNullOrWhiteSpace(url)) return url;
+        var qIndex = url.IndexOf('?');
+        if (qIndex < 0) return url;
+
+        var baseUrl = url[..qIndex];
+        var query = url[(qIndex + 1)..];
+        var fragment = "";
+        var hashIndex = query.IndexOf('#');
+        if (hashIndex >= 0)
+        {
+            fragment = query[hashIndex..];
+            query = query[..hashIndex];
+        }
+
+        var kept = query.Split('&', StringSplitOptions.RemoveEmptyEntries)
+            .Where(pair => !TrackingParams.Contains(Uri.UnescapeDataString(pair.Split('=', 2)[0])))
+            .ToList();
+
+        return kept.Count == 0 ? baseUrl + fragment : $"{baseUrl}?{string.Join('&', kept)}{fragment}";
     }
 }

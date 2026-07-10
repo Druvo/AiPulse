@@ -3,6 +3,7 @@
 @rendermode InteractiveServer
 @inject KnowledgeBaseService Kb
 @inject FeedAggregatorService Feeds
+@inject SourceHealthService Health
 @inject IJSRuntime JS
 
 <PageTitle>AiPulse · Sources</PageTitle>
@@ -16,8 +17,12 @@
 
 @if (OpmlAdded is not null)
 {
-    <div class="alert alert-success py-2 small">
+    <div class="alert @(OpmlUnreachable is > 0 ? "alert-warning" : "alert-success") py-2 small">
         OPML import: added @OpmlAdded new source(s)@(OpmlSkipped is > 0 ? $", skipped {OpmlSkipped} already-present" : "").
+        @if (OpmlUnreachable is > 0)
+        {
+            <text> @OpmlUnreachable of them didn't respond to a quick check just now — still added, but worth a look below.</text>
+        }
     </div>
 }
 
@@ -81,7 +86,7 @@
 <div class="table-responsive">
     <table class="table table-sm align-middle">
         <thead>
-            <tr><th>Source</th><th>Category</th><th>Type</th><th>Level</th><th>Tags</th><th>Status</th><th>What it gives you</th><th></th></tr>
+            <tr><th>Source</th><th>Category</th><th>Type</th><th>Level</th><th>Tags</th><th>Status</th><th>Uptime (30d)</th><th>What it gives you</th><th></th></tr>
         </thead>
         <tbody>
             @foreach (var s in Kb.SourceRecords)
@@ -89,7 +94,7 @@
                 @if (_editingId == s.Id)
                 {
                     <tr>
-                        <td colspan="8">
+                        <td colspan="9">
                             <div class="row g-2">
                                 <div class="col-md-4"><input class="form-control form-control-sm" @bind="_form.Name" /></div>
                                 <div class="col-md-8"><input class="form-control form-control-sm" @bind="_form.Url" /></div>
@@ -154,6 +159,20 @@
                                 <span class="badge bg-warning ms-1" title="@streak consecutive failed fetch(es)">@streak failed</span>
                             }
                         </td>
+                        <td class="small">
+                            @{
+                                var (healthy, total) = Health.GetSummary(s.Name);
+                            }
+                            @if (total == 0)
+                            {
+                                <span class="text-muted">no data yet</span>
+                            }
+                            else
+                            {
+                                var pct = healthy * 100 / total;
+                                <span class="@(pct >= 90 ? "text-success" : pct >= 60 ? "text-warning" : "text-danger")" title="@healthy of @total recorded days healthy">@pct% (@healthy/@total d)</span>
+                            }
+                        </td>
                         <td class="small text-muted">@s.Note</td>
                         <td class="text-nowrap">
                             <button class="btn btn-sm btn-link p-0 me-2" title="Edit" @onclick="() => StartEdit(s)"><Icon Name="settings" Size="15" /></button>
@@ -176,6 +195,7 @@
 @code {
     [SupplyParameterFromQuery(Name = "opmlAdded")] private int? OpmlAdded { get; set; }
     [SupplyParameterFromQuery(Name = "opmlSkipped")] private int? OpmlSkipped { get; set; }
+    [SupplyParameterFromQuery(Name = "opmlUnreachable")] private int? OpmlUnreachable { get; set; }
 
     private bool _showAddForm;
     private int? _editingId;
