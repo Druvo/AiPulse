@@ -1,5 +1,5 @@
 @page "/sources"
-@attribute [Authorize]
+@attribute [Authorize(Roles = "Admin")]
 @rendermode InteractiveServer
 @inject KnowledgeBaseService Kb
 @inject FeedAggregatorService Feeds
@@ -14,9 +14,27 @@
     </p>
 </div>
 
-<button class="btn btn-primary mb-3" @onclick="ToggleAddForm">
-    <Icon Name="@(_showAddForm ? "check" : "database")" Size="15" /> @(_showAddForm ? "Close" : "Add source")
-</button>
+@if (OpmlAdded is not null)
+{
+    <div class="alert alert-success py-2 small">
+        OPML import: added @OpmlAdded new source(s)@(OpmlSkipped is > 0 ? $", skipped {OpmlSkipped} already-present" : "").
+    </div>
+}
+
+<div class="d-flex flex-wrap gap-2 mb-3">
+    <button class="btn btn-primary" @onclick="ToggleAddForm">
+        <Icon Name="@(_showAddForm ? "check" : "database")" Size="15" /> @(_showAddForm ? "Close" : "Add source")
+    </button>
+    <a class="btn btn-outline-secondary" href="/opml/export">
+        <Icon Name="download" Size="15" /> Export OPML
+    </a>
+    <form method="post" action="/opml/import" enctype="multipart/form-data" class="d-flex gap-2">
+        <input type="file" name="file" accept=".opml,.xml" class="form-control form-control-sm" required style="max-width:220px" />
+        <button type="submit" class="btn btn-outline-secondary">
+            <Icon Name="database" Size="15" /> Import OPML
+        </button>
+    </form>
+</div>
 
 @if (_showAddForm)
 {
@@ -156,6 +174,9 @@
 </div>
 
 @code {
+    [SupplyParameterFromQuery(Name = "opmlAdded")] private int? OpmlAdded { get; set; }
+    [SupplyParameterFromQuery(Name = "opmlSkipped")] private int? OpmlSkipped { get; set; }
+
     private bool _showAddForm;
     private int? _editingId;
     private string? _error;

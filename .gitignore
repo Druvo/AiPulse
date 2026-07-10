@@ -10,6 +10,10 @@ App_Data/
 # Local/secret config (put your password hash & Obsidian path here)
 appsettings.Development.json
 appsettings.Local.json
+appsettings.Production.json
+
+# Publish/deploy output (binaries + copied App_Data) - not source, may contain real secrets/user data
+DeployAiPulse/
 
 # Logs
 *.log

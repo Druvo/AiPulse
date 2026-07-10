@@ -1,0 +1,196 @@
+@page "/users"
+@attribute [Authorize(Roles = "Admin")]
+@rendermode InteractiveServer
+@inject UserService UserSvc
+@inject AuthenticationStateProvider AuthState
+@inject IJSRuntime JS
+
+<PageTitle>AiPulse · Users</PageTitle>
+
+<div class="page-header">
+    <h1><Icon Name="user" Size="22" /> Users</h1>
+    <p class="lead">Approve new registrations, manage roles, and disable accounts.</p>
+</div>
+
+@if (_error is not null)
+{
+    <div class="alert alert-danger py-2">@_error</div>
+}
+@if (_message is not null)
+{
+    <div class="alert alert-success py-2">@_message</div>
+}
+
+<button class="btn btn-primary mb-3" @onclick="() => _showAddForm = !_showAddForm">
+    <Icon Name="@(_showAddForm ? "check" : "user")" Size="15" /> @(_showAddForm ? "Close" : "Add user directly")
+</button>
+
+@if (_showAddForm)
+{
+    <div class="card mb-3">
+        <div class="card-body">
+            <EditForm Model="_form" OnValidSubmit="AddUser">
+                <div class="row g-2">
+                    <div class="col-md-4"><input class="form-control" placeholder="Username" @bind="_form.Username" /></div>
+                    <div class="col-md-4"><input type="password" class="form-control" placeholder="Password" @bind="_form.Password" /></div>
+                    <div class="col-md-3">
+                        <select class="form-select" @bind="_form.Role">
+                            <option value="User">User</option>
+                            <option value="Admin">Admin</option>
+                        </select>
+                    </div>
+                </div>
+                <p class="text-muted small mt-2 mb-0">Users added here are auto-approved (no registration wait).</p>
+                <button type="submit" class="btn btn-success mt-2">Create</button>
+            </EditForm>
+        </div>
+    </div>
+}
+
+<div class="table-responsive">
+    <table class="table table-sm align-middle">
+        <thead><tr><th>Username</th><th>Role</th><th>Status</th><th>Created</th><th></th></tr></thead>
+        <tbody>
+            @foreach (var u in _users)
+            {
+                <tr>
+                    <td>@u.Username</td>
+                    <td>
+                        <select class="form-select form-select-sm" style="width:auto" value="@u.Role" @onchange="e => ChangeRole(u, (string)e.Value!)">
+                            <option value="User">User</option>
+                            <option value="Admin">Admin</option>
+                        </select>
+                    </td>
+                    <td>
+                        @if (u.Status == UserStatuses.Approved)
+                        {
+                            <span class="text-success">● approved</span>
+                        }
+                        else if (u.Status == UserStatuses.Pending)
+                        {
+                            <span class="text-warning">○ pending</span>
+                        }
+                        else
+                        {
+                            <span class="text-muted">○ disabled</span>
+                        }
+                    </td>
+                    <td class="small text-muted">@u.CreatedAt.ToLocalTime().ToString("MMM d, yyyy")</td>
+                    <td class="text-nowrap">
+                        @if (u.Status == UserStatuses.Pending)
+                        {
+                            <button class="btn btn-sm btn-success me-1" @onclick="() => Approve(u)">Approve</button>
+                        }
+                        @if (u.Status == UserStatuses.Approved)
+                        {
+                            <button class="btn btn-sm btn-outline-secondary me-1" @onclick="() => Disable(u)">Disable</button>
+                        }
+                        else if (u.Status == UserStatuses.Disabled)
+                        {
+                            <button class="btn btn-sm btn-outline-success me-1" @onclick="() => Approve(u)">Enable</button>
+                        }
+                        <button class="btn btn-sm btn-link p-0 text-danger" title="Delete" @onclick="() => Delete(u)"><Icon Name="trash" Size="15" /></button>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>
+
+@code {
+    private List<AppUser> _users = new();
+    private bool _showAddForm;
+    private string? _error;
+    private string? _message;
+    private string? _currentUsername;
+    private AddUserForm _form = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        var state = await AuthState.GetAuthenticationStateAsync();
+        _currentUsername = state.User.Identity?.Name;
+        await Reload();
+    }
+
+    private async Task Reload() => _users = await UserSvc.GetAllAsync();
+
+    private async Task AddUser()
+    {
+        _error = null;
+        if (string.IsNullOrWhiteSpace(_form.Username) || _form.Password.Length < 6)
+        {
+            _error = "Username required and password must be at least 6 characters.";
+            return;
+        }
+        if (_users.Any(u => u.Username.Equals(_form.Username, StringComparison.OrdinalIgnoreCase)))
+        {
+            _error = "That username already exists.";
+            return;
+        }
+
+        await UserSvc.CreateApprovedUserAsync(_form.Username.Trim(), _form.Password, _form.Role);
+        _form = new AddUserForm();
+        _showAddForm = false;
+        _message = "User created.";
+        await Reload();
+    }
+
+    private async Task Approve(AppUser u)
+    {
+        await UserSvc.SetStatusAsync(u.Id, UserStatuses.Approved);
+        await Reload();
+    }
+
+    private async Task Disable(AppUser u)
+    {
+        if (await IsLastAdmin(u))
+        {
+            _error = "Can't disable the only remaining Admin.";
+            return;
+        }
+        await UserSvc.SetStatusAsync(u.Id, UserStatuses.Disabled);
+        await Reload();
+    }
+
+    private async Task Delete(AppUser u)
+    {
+        if (await IsLastAdmin(u))
+        {
+            _error = "Can't delete the only remaining Admin.";
+            return;
+        }
+        var confirmed = await JS.InvokeAsync<bool>("confirm", $"Delete user '{u.Username}'? This can't be undone.");
+        if (!confirmed) return;
+
+        await UserSvc.DeleteAsync(u.Id);
+        await Reload();
+    }
+
+    private async Task ChangeRole(AppUser u, string newRole)
+    {
+        _error = null;
+        if (u.Role == UserRoles.Admin && newRole != UserRoles.Admin && await IsLastAdmin(u))
+        {
+            _error = "Can't demote the only remaining Admin.";
+            await Reload(); // revert the dropdown's optimistic UI change
+            return;
+        }
+        await UserSvc.SetRoleAsync(u.Id, newRole);
+        await Reload();
+    }
+
+    /// <summary>True if removing/disabling/demoting this user would leave zero approved Admins.</summary>
+    private async Task<bool> IsLastAdmin(AppUser u)
+    {
+        if (u.Role != UserRoles.Admin || u.Status != UserStatuses.Approved)
+            return false;
+        return await UserSvc.CountActiveAdminsAsync() <= 1;
+    }
+
+    private sealed class AddUserForm
+    {
+        public string Username { get; set; } = "";
+        public string Password { get; set; } = "";
+        public string Role { get; set; } = "User";
+    }
+}

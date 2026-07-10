@@ -1,8 +1,9 @@
 @page "/login"
 @layout AiPulse.Components.Layout.EmptyLayout
+@using System.Security.Claims
 @using Microsoft.AspNetCore.Authentication
 @using Microsoft.AspNetCore.Authentication.Cookies
-@inject AuthService Auth
+@inject UserService Users
 @inject IHttpContextAccessor Http
 @inject NavigationManager Nav
 
@@ -11,11 +12,6 @@
 <div class="login-card">
     <div class="login-brand"><Icon Name="zap" Size="22" /> AiPulse</div>
     <p class="text-muted mb-4">Your AI reading &amp; learning station</p>
-
-    @if (!Auth.IsConfigured)
-    {
-        <div class="alert alert-danger">No credentials are configured. Set <code>Auth:Username</code> and a password in <code>appsettings.json</code>.</div>
-    }
 
     <EditForm Model="Input" OnValidSubmit="SignIn" FormName="login" method="post">
         <DataAnnotationsValidator />
@@ -37,6 +33,10 @@
         </div>
         <button type="submit" class="btn btn-primary w-100">Sign in</button>
     </EditForm>
+
+    <p class="text-center text-muted small mt-3 mb-0">
+        Don't have an account? <a href="/register">Register</a>
+    </p>
 </div>
 
 @code {
@@ -46,12 +46,25 @@
 
     private async Task SignIn()
     {
-        var principal = Auth.Validate(Input.Username, Input.Password);
-        if (principal is null)
+        var (result, user) = await Users.TryLoginAsync(Input.Username, Input.Password);
+
+        _error = result switch
         {
-            _error = "Invalid username or password.";
+            LoginResult.PendingApproval => "Your account is pending admin approval.",
+            LoginResult.Success => null,
+            _ => "Invalid username or password."
+        };
+        if (_error is not null || user is null)
             return;
-        }
+
+        var claims = new[]
+        {
+            new Claim(ClaimTypes.Name, user.Username),
+            new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
+            new Claim(ClaimTypes.Role, user.Role)
+        };
+        var identity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
+        var principal = new ClaimsPrincipal(identity);
 
         var http = Http.HttpContext!;
         await http.SignInAsync(

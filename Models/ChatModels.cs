@@ -7,6 +7,8 @@ public sealed class ChatSessionRecord
     public required string ModelName { get; set; }
     public string Title { get; set; } = "New chat";
     public string? SystemPrompt { get; set; }
+    /// <summary>Owning user's username. Null for sessions created before multi-user support - treated as unowned/shared.</summary>
+    public string? Username { get; set; }
     public DateTimeOffset CreatedAt { get; set; }
     public DateTimeOffset UpdatedAt { get; set; }
 }

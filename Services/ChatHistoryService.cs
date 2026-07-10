@@ -1,22 +1,35 @@
 using AiPulse.Models;
+using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.EntityFrameworkCore;
 
 namespace AiPulse.Services;
 
 /// <summary>
-/// Persists Playground chat sessions and their messages in SQLite, so old conversations survive app
-/// restarts. Same EnsureCreated caveat as ModelUsageService: existing databases don't automatically gain
-/// new tables, so schema is reconciled with a one-time raw-SQL check on first use.
+/// Persists Playground chat sessions and their messages in SQLite, scoped to the signed-in user, so old
+/// conversations survive app restarts and each account only sees its own history. Registered Scoped (one
+/// instance per circuit) so the resolved username stays correct per signed-in user. Same EnsureCreated
+/// caveat as other DB-backed services here: existing databases don't automatically gain new
+/// tables/columns, so schema is reconciled with a one-time raw-SQL check on first use.
 /// </summary>
 public sealed class ChatHistoryService
 {
     private readonly IDbContextFactory<AiPulseDbContext> _dbFactory;
+    private readonly AuthenticationStateProvider _authProvider;
     private bool _schemaEnsured;
     private readonly SemaphoreSlim _schemaLock = new(1, 1);
+    private string? _username;
 
-    public ChatHistoryService(IDbContextFactory<AiPulseDbContext> dbFactory)
+    public ChatHistoryService(IDbContextFactory<AiPulseDbContext> dbFactory, AuthenticationStateProvider authProvider)
     {
         _dbFactory = dbFactory;
+        _authProvider = authProvider;
+    }
+
+    private async Task<string> GetUsernameAsync()
+    {
+        if (_username is not null) return _username;
+        var state = await _authProvider.GetAuthenticationStateAsync();
+        return _username = state.User.Identity?.Name ?? "anonymous";
     }
 
     public async Task<List<ChatSessionRecord>> GetSessionsAsync()
@@ -24,7 +37,8 @@ public sealed class ChatHistoryService
         await using var db = await _dbFactory.CreateDbContextAsync();
         await EnsureSchemaAsync(db);
 
-        var all = await db.ChatSessions.ToListAsync();
+        var username = await GetUsernameAsync();
+        var all = await db.ChatSessions.Where(s => s.Username == username).ToListAsync();
         return all.OrderByDescending(s => s.UpdatedAt).ToList();
     }
 
@@ -48,6 +62,7 @@ public sealed class ChatHistoryService
             ModelName = modelName,
             Title = "New chat",
             SystemPrompt = string.IsNullOrWhiteSpace(systemPrompt) ? null : systemPrompt.Trim(),
+            Username = await GetUsernameAsync(),
             CreatedAt = now,
             UpdatedAt = now
         };
@@ -140,6 +155,7 @@ public sealed class ChatHistoryService
                             "ModelName" TEXT NOT NULL,
                             "Title" TEXT NOT NULL,
                             "SystemPrompt" TEXT NULL,
+                            "Username" TEXT NULL,
                             "CreatedAt" TEXT NOT NULL,
                             "UpdatedAt" TEXT NOT NULL
                         )
@@ -148,27 +164,8 @@ public sealed class ChatHistoryService
                 }
                 else
                 {
-                    // Existing DB from before SystemPrompt existed - add the column if it's missing.
-                    await using var pragma = conn.CreateCommand();
-                    pragma.CommandText = "PRAGMA table_info(ChatSessions)";
-                    await using var reader = await pragma.ExecuteReaderAsync();
-                    var hasSystemPrompt = false;
-                    while (await reader.ReadAsync())
-                    {
-                        if (string.Equals(reader.GetString(reader.GetOrdinal("name")), "SystemPrompt", StringComparison.OrdinalIgnoreCase))
-                        {
-                            hasSystemPrompt = true;
-                            break;
-                        }
-                    }
-                    await reader.DisposeAsync();
-
-                    if (!hasSystemPrompt)
-                    {
-                        await using var alter = conn.CreateCommand();
-                        alter.CommandText = """ALTER TABLE "ChatSessions" ADD COLUMN "SystemPrompt" TEXT NULL""";
-                        await alter.ExecuteNonQueryAsync();
-                    }
+                    await EnsureColumnAsync(conn, "ChatSessions", "SystemPrompt", "TEXT NULL");
+                    await EnsureColumnAsync(conn, "ChatSessions", "Username", "TEXT NULL");
                 }
             }
 
@@ -197,6 +194,30 @@ public sealed class ChatHistoryService
         finally
         {
             _schemaLock.Release();
+        }
+    }
+
+    private static async Task EnsureColumnAsync(System.Data.Common.DbConnection conn, string table, string column, string columnDef)
+    {
+        await using var pragma = conn.CreateCommand();
+        pragma.CommandText = $"PRAGMA table_info({table})";
+        await using var reader = await pragma.ExecuteReaderAsync();
+        var hasColumn = false;
+        while (await reader.ReadAsync())
+        {
+            if (string.Equals(reader.GetString(reader.GetOrdinal("name")), column, StringComparison.OrdinalIgnoreCase))
+            {
+                hasColumn = true;
+                break;
+            }
+        }
+        await reader.DisposeAsync();
+
+        if (!hasColumn)
+        {
+            await using var alter = conn.CreateCommand();
+            alter.CommandText = $"""ALTER TABLE "{table}" ADD COLUMN "{column}" {columnDef}""";
+            await alter.ExecuteNonQueryAsync();
         }
     }
 }

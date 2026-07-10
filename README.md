@@ -24,6 +24,8 @@ It aggregates ~39 RSS/Atom sources (blogs, news outlets, arXiv, Hacker News, Red
 ## ✨ Features
 
 - **📡 Live news feed** from ~39 sources, with search and filters (✨ New / Unread / Today / News / Research / Tools / Community), plus richer **content-type** (News/Tutorial/Release/Paper/Discussion/Video), **level** (Beginner/Intermediate/Advanced) and **topic tag** filters, and a **List/Grid** view toggle. Items newer than your last visit are badged **NEW**. Resilient parser with a lenient fallback for awkward feeds.
+- **🔁 Cross-source dedup** — when multiple sources cover the same story, they're merged into one item badged "+N more sources" (title-similarity matching within a time window — no AI).
+- **📅 Weekly Digest** — a 7-day rollup: item/source counts, top category, "biggest stories" ranked by how many sources covered them, and a day-by-day breakdown.
 - **🏷️ Auto-tagging** — every item is tagged against the curated glossary (RAG, MCP, agents…) by matching its title/summary against each term and its aliases, so tags stay consistent with the Glossary page for free.
 - **🔥 Trending panel & 📅 Activity heatmap** — the Dashboard shows top tags/sources over the last 7 days and a GitHub-style contribution heatmap backed by a small persisted history log (`App_Data/feed-history.json`) that grows the longer AiPulse runs. Click any tag or day to jump into a pre-filtered News Feed.
 - **🔭 Explore** — trending models & datasets (live from the Hugging Face Hub API), curated benchmark/leaderboard links, recently-popular AI repos (via GitHub's Search API), and a "try a model" directory with Ollama/Hugging Face deep-links.
@@ -33,7 +35,8 @@ It aggregates ~39 RSS/Atom sources (blogs, news outlets, arXiv, Hacker News, Red
 - **📖 Glossary** — 28 developer-focused definitions, searchable, with aliases so mis-heard terms still resolve (RAG, MCP, agents, agentic loops, headroom, caveman prompting, quantization…), each showing **recent live mentions** pulled straight from the News feed.
 - **🧰 Tools & Tips** — a "right tool for the right task" matrix (Claude Code vs Copilot vs Codex vs Cline/Aider/Ollama…) plus token-optimization tips.
 - **🔖 Reading List** — bookmark articles (filterable by content-type/level/tag, same as News); persists to disk; one-click **export to an Obsidian-ready Markdown note** with tags carried through as `#hashtags`.
-- **🔐 Login** — cookie auth with a single configured user (plaintext for quick start, or PBKDF2 hash for real security).
+- **👥 Multi-user with roles** — cookie auth backed by a real Users table. Self-registration (`/register`) creates a **Pending** account that an **Admin** approves at `/users`; roles are **Admin** (manages Sources/Users/Backup) and **User** (everything else). Each account gets its own bookmarks, watchlist, learning progress, and Playground chat history.
+- **📥 OPML import/export** — bulk-import feeds from any RSS reader's export, or export AiPulse's sources to use elsewhere. Admin-only, from the Sources page.
 - **🌗 Light/Dark theme**, remembered in the browser across every navigation.
 - **🔎 Global search** (`Ctrl`/`Cmd`+`K`) — instantly search across the Glossary, Tools & Tips, and Learning Hub from anywhere in the app.
 
@@ -49,10 +52,12 @@ cd AiPulse
 dotnet run
 ```
 
-Open the printed URL (default **http://localhost:5257**) and sign in:
+Open the printed URL (default **http://localhost:5257**) and sign in with the bootstrapped Admin account:
 
 - Username: `admin`
 - Password: `changeme`  ← **change this** (see [Security](#-security))
+
+That account is seeded once, on first run, from the `Auth` section of `appsettings.json`. Anyone else can create an account at `/register`, but new accounts stay **Pending** until you (the Admin) approve them at `/users`.
 
 > Requires the [.NET 8 SDK](https://dotnet.microsoft.com/download) or newer.
 
@@ -105,10 +110,12 @@ Set these in the in-app **Settings** page (stored in `App_Data/`, not source con
 
 ## 🔐 Security
 
-- All pages require sign-in except `/login`.
-- For a real password, generate a hash (Development only):
-  `http://localhost:5257/auth/hash?password=YOUR-PASSWORD` → paste the result into `Auth:PasswordHash` and clear `Auth:Password`.
-- Keep it on `localhost` unless you need otherwise. If you expose it, run behind HTTPS and use the hashed password.
+- All pages require sign-in except `/login` and `/register`.
+- Registration never auto-approves — new accounts are **Pending** until an Admin approves them at `/users`, so a public-facing instance can't be self-signed-up-into by strangers.
+- Sources, Users, and Backup/Restore are **Admin-only**; everything else (News, Learning Hub, Bookmarks, Playground, etc.) is open to any approved account.
+- For a real bootstrap password, generate a hash (Development only):
+  `http://localhost:5257/auth/hash?password=YOUR-PASSWORD` → paste the result into `Auth:PasswordHash` and clear `Auth:Password`. Accounts created via `/register` or `/users` are always hashed automatically.
+- Keep it on `localhost` unless you need otherwise. If you expose it, run behind HTTPS.
 
 ---
 

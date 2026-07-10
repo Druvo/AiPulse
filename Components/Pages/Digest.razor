@@ -1,0 +1,155 @@
+@page "/digest"
+@attribute [Authorize]
+@rendermode InteractiveServer
+@inject FeedHistoryService History
+
+<PageTitle>AiPulse · Weekly Digest</PageTitle>
+
+<div class="page-header">
+    <h1><Icon Name="calendar" Size="22" /> Weekly Digest</h1>
+    <p class="lead">
+        What happened in the last 7 days, rolled up from everything AiPulse has already collected — no AI summarization, just counting and grouping.
+    </p>
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-6 col-lg-3">
+        <div class="stat-card">
+            <div class="stat-num">@_weekItems.Count</div>
+            <div class="stat-label"><Icon Name="rss" Size="14" /> Items this week</div>
+        </div>
+    </div>
+    <div class="col-6 col-lg-3">
+        <div class="stat-card">
+            <div class="stat-num">@_activeSourceCount</div>
+            <div class="stat-label"><Icon Name="database" Size="14" /> Active sources</div>
+        </div>
+    </div>
+    <div class="col-6 col-lg-3">
+        <div class="stat-card">
+            <div class="stat-num">@(_topCategory ?? "—")</div>
+            <div class="stat-label"><Icon Name="trending-up" Size="14" /> Top category</div>
+        </div>
+    </div>
+    <div class="col-6 col-lg-3">
+        <div class="stat-card">
+            <div class="stat-num">@_multiSourceStories.Count</div>
+            <div class="stat-label"><Icon Name="star" Size="14" /> Multi-source stories</div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-4 mb-4">
+    <div class="col-lg-6">
+        <TrendingPanel Items="_weekItems" />
+    </div>
+    <div class="col-lg-6">
+        <MiniTimeline Items="History.Items" />
+    </div>
+</div>
+
+<h4 class="section-title"><Icon Name="star" /> Biggest stories this week</h4>
+<p class="text-muted">Ranked by how many of your sources covered the same story — the more sources reporting it, the bigger the signal.</p>
+
+@if (_biggestStories.Count == 0)
+{
+    <p class="text-muted">Not enough data yet — check back after AiPulse has been running a few days.</p>
+}
+else
+{
+    @foreach (var item in _biggestStories)
+    {
+        var coverage = 1 + item.AlsoSeenOn.Length;
+        <div class="card mb-2">
+            <div class="card-body py-2">
+                <div class="d-flex justify-content-between align-items-start gap-2">
+                    <a href="@item.Link" target="_blank" rel="noopener" class="h6 mb-1 text-decoration-none">@item.Title</a>
+                    @if (coverage > 1)
+                    {
+                        <span class="badge bg-secondary text-nowrap">@coverage sources</span>
+                    }
+                </div>
+                <div class="x-small text-muted">
+                    @item.SourceName
+                    @if (item.AlsoSeenOn.Length > 0)
+                    {
+                        <span> + @string.Join(", ", item.AlsoSeenOn)</span>
+                    }
+                    · @item.Published.ToLocalTime().ToString("MMM d")
+                </div>
+            </div>
+        </div>
+    }
+}
+
+<h4 class="section-title mt-4"><Icon Name="calendar" /> Day by day</h4>
+<div class="table-responsive">
+    <table class="table table-sm align-middle">
+        <thead><tr><th>Day</th><th>Items</th><th>Top categories</th></tr></thead>
+        <tbody>
+            @foreach (var day in _byDay)
+            {
+                <tr>
+                    <td>@day.Date.ToString("ddd, MMM d")</td>
+                    <td>@day.Count</td>
+                    <td>
+                        @foreach (var (cat, count) in day.TopCategories)
+                        {
+                            <span class="badge bg-secondary me-1">@cat @count</span>
+                        }
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>
+
+@code {
+    private List<FeedItem> _weekItems = new();
+    private List<FeedItem> _biggestStories = new();
+    private List<FeedItem> _multiSourceStories = new();
+    private int _activeSourceCount;
+    private string? _topCategory;
+    private List<DayRow> _byDay = new();
+
+    protected override void OnInitialized()
+    {
+        var cutoff = DateTimeOffset.Now.AddDays(-7);
+        _weekItems = History.Items.Where(i => i.Published >= cutoff).ToList();
+
+        _activeSourceCount = _weekItems.Select(i => i.SourceName).Distinct(StringComparer.OrdinalIgnoreCase).Count();
+        _topCategory = _weekItems.GroupBy(i => i.Category)
+            .OrderByDescending(g => g.Count())
+            .Select(g => g.Key)
+            .FirstOrDefault();
+
+        _multiSourceStories = _weekItems.Where(i => i.AlsoSeenOn.Length > 0).ToList();
+        _biggestStories = _weekItems
+            .OrderByDescending(i => i.AlsoSeenOn.Length)
+            .ThenByDescending(i => i.Published)
+            .Take(10)
+            .ToList();
+
+        _byDay = _weekItems
+            .GroupBy(i => i.Published.LocalDateTime.Date)
+            .OrderByDescending(g => g.Key)
+            .Select(g => new DayRow
+            {
+                Date = g.Key,
+                Count = g.Count(),
+                TopCategories = g.GroupBy(i => i.Category)
+                    .OrderByDescending(c => c.Count())
+                    .Take(3)
+                    .Select(c => (c.Key, c.Count()))
+                    .ToList()
+            })
+            .ToList();
+    }
+
+    private sealed class DayRow
+    {
+        public DateTime Date { get; set; }
+        public int Count { get; set; }
+        public List<(string Category, int Count)> TopCategories { get; set; } = new();
+    }
+}

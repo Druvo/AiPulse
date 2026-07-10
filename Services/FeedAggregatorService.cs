@@ -93,10 +93,93 @@ public sealed class FeedAggregatorService
 
         return new FeedResult
         {
-            Items = items.OrderByDescending(i => i.Published).ToList(),
+            Items = Deduplicate(items).OrderByDescending(i => i.Published).ToList(),
             Errors = errors.OrderBy(e => e).ToList(),
             FetchedAt = DateTimeOffset.Now
         };
+    }
+
+    private static readonly HashSet<string> Stopwords = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "the", "and", "for", "with", "from", "that", "this", "your", "you", "are", "was", "were",
+        "into", "how", "why", "what", "new", "now", "will", "can", "has", "have", "its", "our"
+    };
+
+    /// <summary>
+    /// Merges items that are almost certainly the same story reported by multiple sources - matched by a
+    /// normalized-title key (significant words, sorted) within a 3-day window, so a big release covered by
+    /// five blogs shows up once instead of five times. Pure string matching, no AI involved.
+    /// </summary>
+    private static IEnumerable<FeedItem> Deduplicate(IEnumerable<FeedItem> items)
+    {
+        var groups = new Dictionary<string, List<FeedItem>>();
+        foreach (var item in items)
+        {
+            var key = NormalizedTitleKey(item.Title);
+            if (key is null)
+            {
+                yield return item; // title too short/generic to safely dedupe - keep as-is
+                continue;
+            }
+            if (!groups.TryGetValue(key, out var bucket))
+                groups[key] = bucket = new List<FeedItem>();
+            bucket.Add(item);
+        }
+
+        foreach (var bucket in groups.Values)
+        {
+            if (bucket.Count == 1)
+            {
+                yield return bucket[0];
+                continue;
+            }
+
+            // Split into sub-clusters by publish time (within 3 days of each other) - avoids merging
+            // an old and a new story that happen to share generic significant words.
+            foreach (var cluster in ClusterByTime(bucket))
+            {
+                if (cluster.Count == 1)
+                {
+                    yield return cluster[0];
+                    continue;
+                }
+
+                var primary = cluster.OrderBy(i => i.Published).First();
+                var others = cluster.Where(i => i != primary).Select(i => i.SourceName)
+                    .Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
+                var mergedTags = cluster.SelectMany(i => i.Tags).Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
+
+                yield return primary with { AlsoSeenOn = others, Tags = mergedTags };
+            }
+        }
+    }
+
+    private static List<List<FeedItem>> ClusterByTime(List<FeedItem> items)
+    {
+        var sorted = items.OrderBy(i => i.Published).ToList();
+        var clusters = new List<List<FeedItem>>();
+        foreach (var item in sorted)
+        {
+            var cluster = clusters.LastOrDefault();
+            if (cluster is not null && item.Published - cluster[^1].Published <= TimeSpan.FromDays(3))
+                cluster.Add(item);
+            else
+                clusters.Add(new List<FeedItem> { item });
+        }
+        return clusters;
+    }
+
+    /// <summary>Lowercase, strip punctuation, drop stopwords/short words, sort what's left. Null if too little signal.</summary>
+    private static string? NormalizedTitleKey(string title)
+    {
+        var words = Regex.Replace(title.ToLowerInvariant(), @"[^a-z0-9\s]", " ")
+            .Split(' ', StringSplitOptions.RemoveEmptyEntries)
+            .Where(w => w.Length > 3 && !Stopwords.Contains(w))
+            .Distinct()
+            .OrderBy(w => w, StringComparer.Ordinal)
+            .ToList();
+
+        return words.Count < 3 ? null : string.Join(' ', words);
     }
 
     private async Task<List<FeedItem>> FetchOneAsync(FeedSource source, CancellationToken ct)

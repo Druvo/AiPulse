@@ -29,6 +29,8 @@ public sealed record FeedItem
     public string ContentType { get; init; } = "News";
     public string Level { get; init; } = "Intermediate";
     public string[] Tags { get; init; } = Array.Empty<string>();
+    /// <summary>Other sources that covered the same story, when cross-source dedup merges near-identical titles.</summary>
+    public string[] AlsoSeenOn { get; init; } = Array.Empty<string>();
 }
 
 /// <summary>Result of one aggregation run, including any sources that failed.</summary>

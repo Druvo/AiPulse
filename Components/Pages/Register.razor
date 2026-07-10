@@ -1,0 +1,77 @@
+@page "/register"
+@layout AiPulse.Components.Layout.EmptyLayout
+@rendermode InteractiveServer
+@inject UserService Users
+
+<PageTitle>AiPulse · Register</PageTitle>
+
+<div class="login-card">
+    <div class="login-brand"><Icon Name="zap" Size="22" /> AiPulse</div>
+    <p class="text-muted mb-4">Create an account</p>
+
+    @if (_registered)
+    {
+        <div class="alert alert-success">
+            Account created. An admin needs to approve it before you can sign in.
+        </div>
+        <a class="btn btn-primary w-100" href="/login">Back to sign in</a>
+    }
+    else
+    {
+        <EditForm Model="_form" OnValidSubmit="Submit">
+            @if (_error is not null)
+            {
+                <div class="alert alert-danger py-2">@_error</div>
+            }
+            <div class="mb-3">
+                <label class="form-label">Username</label>
+                <input class="form-control" @bind="_form.Username" autocomplete="username" />
+            </div>
+            <div class="mb-3">
+                <label class="form-label">Password</label>
+                <input type="password" class="form-control" @bind="_form.Password" autocomplete="new-password" />
+            </div>
+            <div class="mb-3">
+                <label class="form-label">Confirm password</label>
+                <input type="password" class="form-control" @bind="_form.ConfirmPassword" autocomplete="new-password" />
+            </div>
+            <button type="submit" class="btn btn-primary w-100">Create account</button>
+        </EditForm>
+
+        <p class="text-center text-muted small mt-3 mb-0">
+            Already have an account? <a href="/login">Sign in</a>
+        </p>
+    }
+</div>
+
+@code {
+    private readonly RegisterForm _form = new();
+    private string? _error;
+    private bool _registered;
+
+    private async Task Submit()
+    {
+        _error = null;
+        if (_form.Password != _form.ConfirmPassword)
+        {
+            _error = "Passwords don't match.";
+            return;
+        }
+
+        var (success, error) = await Users.RegisterAsync(_form.Username, _form.Password);
+        if (!success)
+        {
+            _error = error;
+            return;
+        }
+
+        _registered = true;
+    }
+
+    private sealed class RegisterForm
+    {
+        public string Username { get; set; } = "";
+        public string Password { get; set; } = "";
+        public string ConfirmPassword { get; set; } = "";
+    }
+}

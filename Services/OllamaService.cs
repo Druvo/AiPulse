@@ -7,23 +7,22 @@ using AiPulse.Models;
 namespace AiPulse.Services;
 
 /// <summary>
-/// Talks to a locally-running Ollama instance (http://localhost:11434) so models can actually be pulled
-/// and chatted with from inside AiPulse - not just linked out to. AiPulse never bundles or hosts inference
-/// itself; this only works if the user already has Ollama installed and running on their machine, which
-/// keeps the app's "zero AI, no API keys" positioning intact (Ollama is local and free, not a paid API).
+/// Talks to a locally-running Ollama instance so models can be pulled and chatted with from AiPulse.
+/// Base URL is configurable via appsettings ("Ollama:BaseUrl"), defaults to http://localhost:11434.
 /// </summary>
 public sealed class OllamaService
 {
-    private const string BaseUrl = "http://localhost:11434";
+    private readonly string _baseUrl;
     private static readonly JsonSerializerOptions JsonOpts = new() { PropertyNameCaseInsensitive = true };
 
     private readonly IHttpClientFactory _httpFactory;
     private readonly ILogger<OllamaService> _log;
 
-    public OllamaService(IHttpClientFactory httpFactory, ILogger<OllamaService> log)
+    public OllamaService(IHttpClientFactory httpFactory, ILogger<OllamaService> log, IConfiguration config)
     {
         _httpFactory = httpFactory;
         _log = log;
+        _baseUrl = config["Ollama:BaseUrl"] ?? "http://localhost:11434";
     }
 
     /// <summary>Quick check - is Ollama installed and running right now? Fails fast (2s) if not.</summary>
@@ -33,7 +32,7 @@ public sealed class OllamaService
         {
             using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(2));
             var client = _httpFactory.CreateClient("ollama");
-            var resp = await client.GetAsync($"{BaseUrl}/api/tags", cts.Token);
+            var resp = await client.GetAsync($"{_baseUrl}/api/tags", cts.Token);
             return resp.IsSuccessStatusCode;
         }
         catch
@@ -47,7 +46,7 @@ public sealed class OllamaService
         try
         {
             var client = _httpFactory.CreateClient("ollama");
-            var result = await client.GetFromJsonAsync<TagsResponse>($"{BaseUrl}/api/tags", JsonOpts, ct);
+            var result = await client.GetFromJsonAsync<TagsResponse>($"{_baseUrl}/api/tags", JsonOpts, ct);
             return (result?.Models ?? new()).Select(m => new OllamaModel
             {
                 Name = m.Name ?? m.Model ?? "unknown",
@@ -75,7 +74,7 @@ public sealed class OllamaService
         var client = _httpFactory.CreateClient("ollama");
         client.Timeout = TimeSpan.FromMinutes(30);
 
-        using var request = new HttpRequestMessage(HttpMethod.Post, $"{BaseUrl}/api/pull")
+        using var request = new HttpRequestMessage(HttpMethod.Post, $"{_baseUrl}/api/pull")
         {
             Content = JsonContent.Create(new { model = modelName, stream = true })
         };
@@ -105,7 +104,7 @@ public sealed class OllamaService
         try
         {
             var client = _httpFactory.CreateClient("ollama");
-            using var request = new HttpRequestMessage(HttpMethod.Delete, $"{BaseUrl}/api/delete")
+            using var request = new HttpRequestMessage(HttpMethod.Delete, $"{_baseUrl}/api/delete")
             {
                 Content = JsonContent.Create(new { model = modelName })
             };
@@ -134,7 +133,7 @@ public sealed class OllamaService
         var client = _httpFactory.CreateClient("ollama");
         client.Timeout = TimeSpan.FromMinutes(10);
 
-        using var request = new HttpRequestMessage(HttpMethod.Post, $"{BaseUrl}/api/chat")
+        using var request = new HttpRequestMessage(HttpMethod.Post, $"{_baseUrl}/api/chat")
         {
             Content = JsonContent.Create(new
             {

@@ -1,4 +1,5 @@
 using System.Net.Http.Headers;
+using System.Text;
 using AiPulse.Components;
 using AiPulse.Services;
 using Microsoft.AspNetCore.Authentication;
@@ -47,18 +48,20 @@ builder.Services.AddDbContextFactory<AiPulseDbContext>(options => options.UseSql
 // Core app services.
 builder.Services.AddSingleton<KnowledgeBaseService>();
 builder.Services.AddSingleton<FeedAggregatorService>();
-builder.Services.AddSingleton<ReadingStateService>();
+// Scoped (one instance per signed-in circuit) - these resolve the current user via AuthenticationStateProvider.
+builder.Services.AddScoped<ReadingStateService>();
 builder.Services.AddSingleton<FeedHistoryService>();
-builder.Services.AddSingleton<AuthService>();
+builder.Services.AddSingleton<UserService>();
 builder.Services.AddSingleton<NotificationService>();
-builder.Services.AddSingleton<ObsidianExportService>();
+builder.Services.AddScoped<ObsidianExportService>();
 builder.Services.AddSingleton<HuggingFaceService>();
 builder.Services.AddSingleton<GitHubTrendingService>();
 builder.Services.AddSingleton<OllamaService>();
 builder.Services.AddSingleton<SystemInfoService>();
 builder.Services.AddSingleton<ModelUsageService>();
-builder.Services.AddSingleton<ChatHistoryService>();
+builder.Services.AddScoped<ChatHistoryService>();
 builder.Services.AddSingleton<BackupService>();
+builder.Services.AddSingleton<OpmlService>();
 builder.Services.AddHttpContextAccessor();
 
 // Background watcher that raises desktop notifications for big releases & watchlist hits.
@@ -75,7 +78,7 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
     {
         options.LoginPath = "/login";
         options.LogoutPath = "/auth/logout";
-        options.AccessDeniedPath = "/login";
+        options.AccessDeniedPath = "/access-denied";
         options.ExpireTimeSpan = TimeSpan.FromDays(30);
         options.SlidingExpiration = true;
         options.Cookie.Name = "AiPulse.Auth";
@@ -121,7 +124,7 @@ app.MapPost("/auth/logout", async (HttpContext http) =>
 // Dev-only helper: generate a PBKDF2 hash to paste into appsettings ("Auth:PasswordHash").
 if (app.Environment.IsDevelopment())
 {
-    app.MapGet("/auth/hash", (string password) => Results.Text(AuthService.CreateHash(password)));
+    app.MapGet("/auth/hash", (string password) => Results.Text(PasswordHasher.Hash(password)));
 }
 
 // Backup/restore App_Data (sources, bookmarks, chat history, feed history) as a single zip.
@@ -141,7 +144,24 @@ app.MapPost("/backup/restore", async (HttpRequest request, BackupService backup)
     await using var stream = file.OpenReadStream();
     await backup.RestoreFromZipAsync(stream);
     return Results.Redirect("/settings?restored=true");
-}).RequireAuthorization();
+}).RequireAuthorization(policy => policy.RequireRole("Admin"));
+
+// Bulk import/export of sources via OPML - the standard RSS-reader interchange format.
+app.MapGet("/opml/export", (OpmlService opml) =>
+    Results.Text(opml.ExportOpml(), "text/x-opml", Encoding.UTF8))
+    .RequireAuthorization(policy => policy.RequireRole("Admin"));
+
+app.MapPost("/opml/import", async (HttpRequest request, OpmlService opml) =>
+{
+    if (!request.HasFormContentType) return Results.BadRequest("Expected multipart form data.");
+    var form = await request.ReadFormAsync();
+    var file = form.Files.GetFile("file");
+    if (file is null) return Results.BadRequest("No file uploaded.");
+
+    await using var stream = file.OpenReadStream();
+    var (added, skipped) = await opml.ImportOpmlAsync(stream);
+    return Results.Redirect($"/sources?opmlAdded={added}&opmlSkipped={skipped}");
+}).RequireAuthorization(policy => policy.RequireRole("Admin"));
 
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
@@ -151,6 +171,12 @@ using (var scope = app.Services.CreateScope())
 {
     var kb = scope.ServiceProvider.GetRequiredService<KnowledgeBaseService>();
     await kb.InitializeSourcesAsync();
+
+    var authOptions = scope.ServiceProvider.GetRequiredService<Microsoft.Extensions.Options.IOptions<AuthOptions>>().Value;
+    await scope.ServiceProvider.GetRequiredService<UserService>().EnsureSchemaAndBootstrapAsync();
+
+    // Upgrade path: move pre-multi-user reading-state.json into the bootstrapped Admin's per-user folder.
+    ReadingStateService.MigrateLegacyStateFile(app.Environment, authOptions.Username);
 }
 
 app.Run();

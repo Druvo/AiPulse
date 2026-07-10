@@ -12,4 +12,5 @@ public sealed class AiPulseDbContext : DbContext
     public DbSet<ModelUsageRecord> ModelUsage => Set<ModelUsageRecord>();
     public DbSet<ChatSessionRecord> ChatSessions => Set<ChatSessionRecord>();
     public DbSet<ChatMessageRecord> ChatMessages => Set<ChatMessageRecord>();
+    public DbSet<AppUser> Users => Set<AppUser>();
 }

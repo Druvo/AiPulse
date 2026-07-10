@@ -1,44 +1,78 @@
 using System.Text.Json;
 using AiPulse.Models;
+using Microsoft.AspNetCore.Components.Authorization;
 
 namespace AiPulse.Services;
 
 /// <summary>
-/// Persists the single user's reading state (bookmarks, read items, last visit) to a JSON file
-/// under App_Data so it survives restarts. No database needed.
+/// Persists the signed-in user's reading state (bookmarks, read items, last visit, watchlist, prefs) to a
+/// per-user JSON file under App_Data/users/{username}/, so each account gets its own bookmarks/watchlist.
+/// Registered Scoped (one instance per Blazor circuit = per signed-in user), and resolves the current
+/// username lazily via AuthenticationStateProvider on first use.
 /// </summary>
 public sealed class ReadingStateService
 {
     private static readonly JsonSerializerOptions JsonOpts = new() { WriteIndented = true };
 
-    private readonly string _path;
+    private readonly string _usersDir;
+    private readonly AuthenticationStateProvider _authProvider;
     private readonly object _lock = new();
-    private readonly ReadingState _state;
 
-    public ReadingStateService(IWebHostEnvironment env)
+    private string? _path;
+    private ReadingState? _state;
+
+    public ReadingStateService(IWebHostEnvironment env, AuthenticationStateProvider authProvider)
     {
-        var dir = Path.Combine(env.ContentRootPath, "App_Data");
-        Directory.CreateDirectory(dir);
-        _path = Path.Combine(dir, "reading-state.json");
-        _state = Load();
+        _usersDir = Path.Combine(env.ContentRootPath, "App_Data", "users");
+        _authProvider = authProvider;
+    }
+
+    /// <summary>Resolves the current user and loads their state file, once per circuit. Safe to call repeatedly.</summary>
+    private void EnsureLoaded()
+    {
+        if (_state is not null) return;
+        lock (_lock)
+        {
+            if (_state is not null) return;
+
+            // GetAuthenticationStateAsync() is already resolved by the time an [Authorize]-protected page
+            // renders (the cookie was validated before the circuit was even created), so blocking here
+            // never actually waits on I/O or the renderer - it just unwraps an already-completed Task.
+            var authState = _authProvider.GetAuthenticationStateAsync().GetAwaiter().GetResult();
+            var username = authState.User.Identity?.Name ?? "anonymous";
+            var userKey = SanitizeForPath(username);
+
+            var dir = Path.Combine(_usersDir, userKey);
+            Directory.CreateDirectory(dir);
+            _path = Path.Combine(dir, "reading-state.json");
+            _state = Load();
+        }
+    }
+
+    private static string SanitizeForPath(string s)
+    {
+        foreach (var c in Path.GetInvalidFileNameChars()) s = s.Replace(c, '_');
+        return s.ToLowerInvariant();
     }
 
     public IReadOnlyList<BookmarkItem> Bookmarks
     {
-        get { lock (_lock) return _state.Bookmarks.OrderByDescending(b => b.SavedAt).ToList(); }
+        get { EnsureLoaded(); lock (_lock) return _state!.Bookmarks.OrderByDescending(b => b.SavedAt).ToList(); }
     }
 
     public bool IsBookmarked(string link)
     {
-        lock (_lock) return _state.Bookmarks.Any(b => b.Link == link);
+        EnsureLoaded();
+        lock (_lock) return _state!.Bookmarks.Any(b => b.Link == link);
     }
 
     /// <summary>Adds or removes a bookmark. Returns the new bookmarked state.</summary>
     public bool ToggleBookmark(FeedItem item)
     {
+        EnsureLoaded();
         lock (_lock)
         {
-            var existing = _state.Bookmarks.FirstOrDefault(b => b.Link == item.Link);
+            var existing = _state!.Bookmarks.FirstOrDefault(b => b.Link == item.Link);
             if (existing is not null)
             {
                 _state.Bookmarks.Remove(existing);
@@ -63,23 +97,26 @@ public sealed class ReadingStateService
 
     public void RemoveBookmark(string link)
     {
+        EnsureLoaded();
         lock (_lock)
         {
-            var existing = _state.Bookmarks.FirstOrDefault(b => b.Link == link);
+            var existing = _state!.Bookmarks.FirstOrDefault(b => b.Link == link);
             if (existing is not null) { _state.Bookmarks.Remove(existing); Save(); }
         }
     }
 
     public bool IsRead(string link)
     {
-        lock (_lock) return _state.ReadLinks.Contains(link);
+        EnsureLoaded();
+        lock (_lock) return _state!.ReadLinks.Contains(link);
     }
 
     public void MarkRead(string link, bool read)
     {
+        EnsureLoaded();
         lock (_lock)
         {
-            var changed = read ? _state.ReadLinks.Add(link) : _state.ReadLinks.Remove(link);
+            var changed = read ? _state!.ReadLinks.Add(link) : _state!.ReadLinks.Remove(link);
             if (changed) Save();
         }
     }
@@ -87,39 +124,36 @@ public sealed class ReadingStateService
     /// <summary>Toggles read state and returns the new value.</summary>
     public bool ToggleRead(string link)
     {
+        EnsureLoaded();
         lock (_lock)
         {
-            var nowRead = !_state.ReadLinks.Contains(link);
-            MarkReadInternal(link, nowRead);
+            var nowRead = !_state!.ReadLinks.Contains(link);
+            var changed = nowRead ? _state.ReadLinks.Add(link) : _state.ReadLinks.Remove(link);
+            if (changed) Save();
             return nowRead;
         }
-    }
-
-    private void MarkReadInternal(string link, bool read)
-    {
-        // Caller holds _lock.
-        var changed = read ? _state.ReadLinks.Add(link) : _state.ReadLinks.Remove(link);
-        if (changed) Save();
     }
 
     // --- Learning Hub progress ---
 
     public bool IsModuleComplete(string title)
     {
-        lock (_lock) return _state.CompletedModules.Contains(title);
+        EnsureLoaded();
+        lock (_lock) return _state!.CompletedModules.Contains(title);
     }
 
     public int CompletedModuleCount
     {
-        get { lock (_lock) return _state.CompletedModules.Count; }
+        get { EnsureLoaded(); lock (_lock) return _state!.CompletedModules.Count; }
     }
 
     /// <summary>Toggles a module's completed state and returns the new value.</summary>
     public bool ToggleModuleComplete(string title)
     {
+        EnsureLoaded();
         lock (_lock)
         {
-            var nowComplete = !_state.CompletedModules.Contains(title);
+            var nowComplete = !_state!.CompletedModules.Contains(title);
             if (nowComplete) _state.CompletedModules.Add(title);
             else _state.CompletedModules.Remove(title);
             Save();
@@ -131,16 +165,17 @@ public sealed class ReadingStateService
 
     public IReadOnlyList<string> Watchlist
     {
-        get { lock (_lock) return _state.Watchlist.ToList(); }
+        get { EnsureLoaded(); lock (_lock) return _state!.Watchlist.ToList(); }
     }
 
     public void AddKeyword(string keyword)
     {
+        EnsureLoaded();
         keyword = keyword.Trim();
         if (string.IsNullOrWhiteSpace(keyword)) return;
         lock (_lock)
         {
-            if (!_state.Watchlist.Any(k => k.Equals(keyword, StringComparison.OrdinalIgnoreCase)))
+            if (!_state!.Watchlist.Any(k => k.Equals(keyword, StringComparison.OrdinalIgnoreCase)))
             {
                 _state.Watchlist.Add(keyword);
                 Save();
@@ -150,9 +185,10 @@ public sealed class ReadingStateService
 
     public void RemoveKeyword(string keyword)
     {
+        EnsureLoaded();
         lock (_lock)
         {
-            var existing = _state.Watchlist.FirstOrDefault(k => k.Equals(keyword, StringComparison.OrdinalIgnoreCase));
+            var existing = _state!.Watchlist.FirstOrDefault(k => k.Equals(keyword, StringComparison.OrdinalIgnoreCase));
             if (existing is not null) { _state.Watchlist.Remove(existing); Save(); }
         }
     }
@@ -160,10 +196,11 @@ public sealed class ReadingStateService
     /// <summary>Returns the first watchlist keyword found in the text, or null.</summary>
     public string? MatchWatchlist(string text)
     {
+        EnsureLoaded();
         if (string.IsNullOrEmpty(text)) return null;
         lock (_lock)
         {
-            return _state.Watchlist.FirstOrDefault(k => text.Contains(k, StringComparison.OrdinalIgnoreCase));
+            return _state!.Watchlist.FirstOrDefault(k => text.Contains(k, StringComparison.OrdinalIgnoreCase));
         }
     }
 
@@ -171,20 +208,22 @@ public sealed class ReadingStateService
 
     public string? ObsidianExportPath
     {
-        get { lock (_lock) return _state.ObsidianExportPath; }
+        get { EnsureLoaded(); lock (_lock) return _state!.ObsidianExportPath; }
     }
 
     public void SetObsidianExportPath(string? path)
     {
-        lock (_lock) { _state.ObsidianExportPath = string.IsNullOrWhiteSpace(path) ? null : path.Trim(); Save(); }
+        EnsureLoaded();
+        lock (_lock) { _state!.ObsidianExportPath = string.IsNullOrWhiteSpace(path) ? null : path.Trim(); Save(); }
     }
 
     /// <summary>Returns the previous visit time, then records that the news page was visited now.</summary>
     public DateTimeOffset TouchNewsVisit()
     {
+        EnsureLoaded();
         lock (_lock)
         {
-            var previous = _state.LastNewsVisit;
+            var previous = _state!.LastNewsVisit;
             _state.LastNewsVisit = DateTimeOffset.Now;
             Save();
             return previous;
@@ -196,7 +235,7 @@ public sealed class ReadingStateService
         try
         {
             if (File.Exists(_path))
-                return JsonSerializer.Deserialize<ReadingState>(File.ReadAllText(_path)) ?? new ReadingState();
+                return JsonSerializer.Deserialize<ReadingState>(File.ReadAllText(_path!)) ?? new ReadingState();
         }
         catch { /* corrupt file -> start fresh */ }
         return new ReadingState();
@@ -205,6 +244,53 @@ public sealed class ReadingStateService
     private void Save()
     {
         // Caller holds _lock.
-        File.WriteAllText(_path, JsonSerializer.Serialize(_state, JsonOpts));
+        File.WriteAllText(_path!, JsonSerializer.Serialize(_state, JsonOpts));
+    }
+
+    /// <summary>
+    /// One-time upgrade path: before multi-user support, everyone's bookmarks/watchlist lived in a single
+    /// App_Data/reading-state.json. Moves that file into the bootstrapped Admin's per-user folder so the
+    /// existing owner doesn't lose their data. No-op if there's nothing to migrate or it already ran.
+    /// </summary>
+    public static void MigrateLegacyStateFile(IWebHostEnvironment env, string adminUsername)
+    {
+        var legacyPath = Path.Combine(env.ContentRootPath, "App_Data", "reading-state.json");
+        if (!File.Exists(legacyPath)) return;
+
+        var dir = Path.Combine(env.ContentRootPath, "App_Data", "users", SanitizeForPath(adminUsername));
+        var newPath = Path.Combine(dir, "reading-state.json");
+        if (File.Exists(newPath)) return; // already migrated
+
+        Directory.CreateDirectory(dir);
+        File.Copy(legacyPath, newPath);
+        File.Move(legacyPath, legacyPath + ".migrated");
+    }
+
+    /// <summary>
+    /// Scans every user's reading-state file and unions their watchlists. Used only by the background
+    /// FeedWatcherService, which has no single "current user" - a keyword watched by any user is enough
+    /// to raise a shared desktop-notification alert. Per-user ⭐ highlighting on the News page still uses
+    /// each user's own list via <see cref="MatchWatchlist"/> above.
+    /// </summary>
+    public static IReadOnlyList<string> GetAllUsersWatchlist(IWebHostEnvironment env)
+    {
+        var usersDir = Path.Combine(env.ContentRootPath, "App_Data", "users");
+        var result = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        if (!Directory.Exists(usersDir))
+            return result.ToList();
+
+        foreach (var dir in Directory.GetDirectories(usersDir))
+        {
+            var file = Path.Combine(dir, "reading-state.json");
+            if (!File.Exists(file)) continue;
+            try
+            {
+                var state = JsonSerializer.Deserialize<ReadingState>(File.ReadAllText(file));
+                if (state?.Watchlist is { Count: > 0 })
+                    foreach (var k in state.Watchlist) result.Add(k);
+            }
+            catch { /* corrupt file for that user -> skip */ }
+        }
+        return result.ToList();
     }
 }

@@ -79,27 +79,31 @@
             <div class="alert alert-success mt-2 py-2 small">@_exportMsg</div>
         }
 
-        <hr class="my-4" />
+        <AuthorizeView Roles="Admin">
+            <Authorized>
+                <hr class="my-4" />
 
-        <h4 class="section-title"><Icon Name="database" /> Backup &amp; restore</h4>
-        <p class="text-muted">
-            Your sources, bookmarks, watchlist, Playground chat history, and feed history all live in <code>App_Data/</code>.
-            Back it up before upgrading or migrating to a new machine.
-        </p>
-        <a href="/backup/download" class="btn btn-outline-primary mb-3"><Icon Name="download" Size="14" /> Download backup (.zip)</a>
+                <h4 class="section-title"><Icon Name="database" /> Backup &amp; restore</h4>
+                <p class="text-muted">
+                    Sources, all users' bookmarks/watchlists, Playground chat history, and feed history all live in <code>App_Data/</code>.
+                    Back it up before upgrading or migrating to a new machine. Admin-only since this covers every user's data.
+                </p>
+                <a href="/backup/download" class="btn btn-outline-primary mb-3"><Icon Name="download" Size="14" /> Download backup (.zip)</a>
 
-        <form method="post" action="/backup/restore" enctype="multipart/form-data"
-              onsubmit="return confirm('This overwrites ALL current sources, bookmarks, chat history and feed history with the contents of this backup. Continue?');">
-            <div class="input-group">
-                <input type="file" name="file" accept=".zip" class="form-control" required />
-                <button type="submit" class="btn btn-warning">Restore from backup</button>
-            </div>
-            <p class="text-muted small mt-1">Restart AiPulse after restoring so every page picks up the restored data.</p>
-        </form>
-        @if (RestoredParam == "true")
-        {
-            <div class="alert alert-success mt-2 py-2 small">Backup restored. Please restart AiPulse now.</div>
-        }
+                <form method="post" action="/backup/restore" enctype="multipart/form-data"
+                      onsubmit="return confirm('This overwrites ALL current sources, bookmarks, chat history and feed history with the contents of this backup. Continue?');">
+                    <div class="input-group">
+                        <input type="file" name="file" accept=".zip" class="form-control" required />
+                        <button type="submit" class="btn btn-warning">Restore from backup</button>
+                    </div>
+                    <p class="text-muted small mt-1">Restart AiPulse after restoring so every page picks up the restored data.</p>
+                </form>
+                @if (RestoredParam == "true")
+                {
+                    <div class="alert alert-success mt-2 py-2 small">Backup restored. Please restart AiPulse now.</div>
+                }
+            </Authorized>
+        </AuthorizeView>
     </div>
 </div>
 

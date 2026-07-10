@@ -25,6 +25,12 @@
             </NavLink>
         </div>
         <div class="nav-item px-3">
+            <NavLink class="nav-link" href="digest">
+                <Icon Name="calendar" />
+                <span>Weekly Digest</span>
+            </NavLink>
+        </div>
+        <div class="nav-item px-3">
             <NavLink class="nav-link" href="explore">
                 <Icon Name="trending-up" />
                 <span>Explore</span>
@@ -64,12 +70,23 @@
                 <span>Reading List</span>
             </NavLink>
         </div>
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="sources">
-                <Icon Name="database" />
-                <span>Sources</span>
-            </NavLink>
-        </div>
+        <AuthorizeView Roles="Admin">
+            <Authorized>
+                <div class="nav-section-label px-3">Admin</div>
+                <div class="nav-item px-3">
+                    <NavLink class="nav-link" href="sources">
+                        <Icon Name="database" />
+                        <span>Sources</span>
+                    </NavLink>
+                </div>
+                <div class="nav-item px-3">
+                    <NavLink class="nav-link" href="users">
+                        <Icon Name="user" />
+                        <span>Users</span>
+                    </NavLink>
+                </div>
+            </Authorized>
+        </AuthorizeView>
     </nav>
 </div>
 

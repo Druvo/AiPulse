@@ -19,7 +19,7 @@ public sealed class NotificationOptions
 public sealed class FeedWatcherService : BackgroundService
 {
     private readonly FeedAggregatorService _feeds;
-    private readonly ReadingStateService _reading;
+    private readonly IWebHostEnvironment _env;
     private readonly NotificationService _notify;
     private readonly FeedHistoryService _history;
     private readonly NotificationOptions _opt;
@@ -29,14 +29,14 @@ public sealed class FeedWatcherService : BackgroundService
 
     public FeedWatcherService(
         FeedAggregatorService feeds,
-        ReadingStateService reading,
+        IWebHostEnvironment env,
         NotificationService notify,
         FeedHistoryService history,
         Microsoft.Extensions.Options.IOptions<NotificationOptions> opt,
         ILogger<FeedWatcherService> log)
     {
         _feeds = feeds;
-        _reading = reading;
+        _env = env;
         _notify = notify;
         _history = history;
         _opt = opt.Value;
@@ -81,6 +81,10 @@ public sealed class FeedWatcherService : BackgroundService
         }
 
         var newAlerts = new List<Alert>();
+        // Union of every user's watchlist - background alerts aren't scoped to one user (see the
+        // GetAllUsersWatchlist doc comment for why this differs from the per-user News-page highlighting).
+        var watchlist = _opt.NotifyWatchlist ? ReadingStateService.GetAllUsersWatchlist(_env) : Array.Empty<string>();
+
         foreach (var item in result.Items)
         {
             if (string.IsNullOrEmpty(item.Link) || !_seen.Add(item.Link))
@@ -89,7 +93,8 @@ public sealed class FeedWatcherService : BackgroundService
             if (newAlerts.Count >= _opt.MaxPerPoll)
                 continue;
 
-            var match = _opt.NotifyWatchlist ? _reading.MatchWatchlist(item.Title + " " + item.Summary) : null;
+            var text = item.Title + " " + item.Summary;
+            var match = watchlist.FirstOrDefault(k => text.Contains(k, StringComparison.OrdinalIgnoreCase));
             if (match is not null)
             {
                 newAlerts.Add(new Alert { Title = item.Title, Link = item.Link, SourceName = item.SourceName, Kind = "Watchlist" });
