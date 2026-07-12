@@ -35,6 +35,7 @@ public sealed class SourceRecord
 
     public FeedSource ToFeedSource() => new()
     {
+        Id = Id,
         Name = Name,
         Url = Url,
         Category = Category,

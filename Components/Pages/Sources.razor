@@ -4,6 +4,7 @@
 @inject KnowledgeBaseService Kb
 @inject FeedAggregatorService Feeds
 @inject SourceHealthService Health
+@inject WebSubService WebSub
 @inject IJSRuntime JS
 
 <PageTitle>AiPulse · Sources</PageTitle>
@@ -112,7 +113,7 @@
 <div class="table-responsive">
     <table class="table table-sm align-middle">
         <thead>
-            <tr><th>Source</th><th>Category</th><th>Type</th><th>Level</th><th>Tags</th><th>Status</th><th>Uptime (30d)</th><th>What it gives you</th><th></th></tr>
+            <tr><th>Source</th><th>Category</th><th>Type</th><th>Level</th><th>Tags</th><th>Status</th><th>Uptime (30d)</th><th>Push</th><th>What it gives you</th><th></th></tr>
         </thead>
         <tbody>
             @foreach (var s in Kb.SourceRecords)
@@ -120,7 +121,7 @@
                 @if (_editingId == s.Id)
                 {
                     <tr>
-                        <td colspan="9">
+                        <td colspan="10">
                             <div class="row g-2">
                                 <div class="col-md-4"><input class="form-control form-control-sm" @bind="_form.Name" /></div>
                                 <div class="col-md-8"><input class="form-control form-control-sm" @bind="_form.Url" /></div>
@@ -225,6 +226,31 @@
                                 <span class="@(pct >= 90 ? "text-success" : pct >= 60 ? "text-warning" : "text-danger")" title="@healthy of @total recorded days healthy">@pct% (@healthy/@total d)</span>
                             }
                         </td>
+                        <td class="small">
+                            @if (!WebSub.Enabled)
+                            {
+                                <span class="text-muted" title="Set WebSub:PublicBaseUrl in appsettings.json to enable">off</span>
+                            }
+                            else if (_webSubStatus.TryGetValue(s.Id, out var sub))
+                            {
+                                @if (sub.Status == "Verified")
+                                {
+                                    <span class="text-success" title="@(sub.LeaseExpiresAt is { } exp ? $"Renews before {exp.ToLocalTime():g}" : "")">● live</span>
+                                }
+                                else if (sub.Status == "Pending")
+                                {
+                                    <span class="text-warning">○ pending</span>
+                                }
+                                else
+                                {
+                                    <span class="text-muted">○ unavailable</span>
+                                }
+                            }
+                            else
+                            {
+                                <span class="text-muted">—</span>
+                            }
+                        </td>
                         <td class="small text-muted">@s.Note</td>
                         <td class="text-nowrap">
                             <button class="btn btn-sm btn-link p-0 me-2" title="Edit" @onclick="() => StartEdit(s)"><Icon Name="settings" Size="15" /></button>
@@ -253,10 +279,17 @@
     private int? _editingId;
     private string? _error;
     private SourceForm _form = new();
+    private Dictionary<int, WebSubSubscription> _webSubStatus = new();
 
     private readonly string[] _categories = { "News", "Research", "Tools", "Community" };
     private readonly string[] _contentTypes = { "News", "Tutorial", "Release", "Paper", "Discussion", "Video" };
     private readonly string[] _levels = { "Beginner", "Intermediate", "Advanced" };
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (WebSub.Enabled)
+            _webSubStatus = await WebSub.GetAllStatusesAsync();
+    }
 
     private void ToggleAddForm()
     {

@@ -20,17 +20,19 @@ public sealed class FeedAggregatorService
     private readonly KnowledgeBaseService _kb;
     private readonly SourceHealthService _health;
     private readonly ContentExtractorService _extractor;
+    private readonly WebSubService _webSub;
     private readonly ILogger<FeedAggregatorService> _log;
 
     private readonly SemaphoreSlim _refreshLock = new(1, 1);
     private FeedResult? _cache;
 
-    public FeedAggregatorService(IHttpClientFactory httpFactory, KnowledgeBaseService kb, SourceHealthService health, ContentExtractorService extractor, ILogger<FeedAggregatorService> log)
+    public FeedAggregatorService(IHttpClientFactory httpFactory, KnowledgeBaseService kb, SourceHealthService health, ContentExtractorService extractor, WebSubService webSub, ILogger<FeedAggregatorService> log)
     {
         _httpFactory = httpFactory;
         _kb = kb;
         _health = health;
         _extractor = extractor;
+        _webSub = webSub;
         _log = log;
     }
 
@@ -195,6 +197,8 @@ public sealed class FeedAggregatorService
     private async Task<List<FeedItem>> FetchOneAsync(FeedSource source, CancellationToken ct)
     {
         List<FeedItem> items;
+        string? hubUrl = null;
+
         if (source.IsScrape)
         {
             items = await ScrapeAsync(source, ct);
@@ -210,12 +214,15 @@ public sealed class FeedAggregatorService
             // that don't fit the strict schema (some blogs emit mixed content the strict reader rejects).
             try
             {
-                items = ParseWithSyndication(xml, source);
+                (items, hubUrl) = ParseWithSyndication(xml, source);
             }
             catch (Exception)
             {
-                items = ParseLenient(xml, source);
+                (items, hubUrl) = ParseLenient(xml, source);
             }
+
+            if (hubUrl is not null)
+                await MaybeSubscribeAsync(source, hubUrl, ct);
         }
 
         var vocab = GetTagVocab();
@@ -224,6 +231,75 @@ public sealed class FeedAggregatorService
 
         if (source.FullTextFetch && items.Count > 0)
             items = await ApplyFullTextAsync(items, ct);
+
+        return items;
+    }
+
+    /// <summary>
+    /// If the feed declares a WebSub hub and we're not already subscribed, ask the hub to push future
+    /// updates to us instead of waiting for the next poll. No-op unless WebSub:PublicBaseUrl is configured.
+    /// </summary>
+    private async Task MaybeSubscribeAsync(FeedSource source, string hubUrl, CancellationToken ct)
+    {
+        if (!_webSub.Enabled || source.Id == 0) return;
+        try
+        {
+            if (!await _webSub.HasActiveSubscriptionAsync(source.Id))
+                await _webSub.SubscribeAsync(source.Id, source.Url, hubUrl, ct);
+        }
+        catch (Exception ex)
+        {
+            _log.LogDebug(ex, "WebSub subscribe check failed for {Source}", source.Name);
+        }
+    }
+
+    /// <summary>
+    /// Merges items pushed by a WebSub hub into the live cache immediately, instead of waiting for the
+    /// next scheduled poll. Called from the /websub/callback POST endpoint.
+    /// </summary>
+    public async Task<List<FeedItem>> MergePushedContentAsync(FeedSource source, string xml, CancellationToken ct = default)
+    {
+        List<FeedItem> items;
+        try
+        {
+            (items, _) = ParseWithSyndication(xml, source);
+        }
+        catch (Exception)
+        {
+            (items, _) = ParseLenient(xml, source);
+        }
+
+        var vocab = GetTagVocab();
+        for (var i = 0; i < items.Count; i++)
+            items[i] = items[i] with { Tags = TagFor(items[i], vocab) };
+
+        if (items.Count == 0)
+            return items;
+
+        await _refreshLock.WaitAsync(ct);
+        try
+        {
+            if (_cache is null)
+            {
+                // Nothing polled yet this run - a push arriving first is fine, just seed the cache with it.
+                _cache = new FeedResult { Items = items, FetchedAt = DateTimeOffset.Now };
+            }
+            else
+            {
+                var existingLinks = new HashSet<string>(_cache.Items.Select(i => i.Link), StringComparer.OrdinalIgnoreCase);
+                var merged = _cache.Items.Concat(items.Where(i => !existingLinks.Contains(i.Link)));
+                _cache = new FeedResult
+                {
+                    Items = Deduplicate(merged).OrderByDescending(i => i.Published).ToList(),
+                    Errors = _cache.Errors,
+                    FetchedAt = _cache.FetchedAt
+                };
+            }
+        }
+        finally
+        {
+            _refreshLock.Release();
+        }
 
         return items;
     }
@@ -351,18 +427,20 @@ public sealed class FeedAggregatorService
         return tags.ToArray();
     }
 
-    private static List<FeedItem> ParseWithSyndication(string xml, FeedSource source)
+    private static (List<FeedItem> Items, string? HubUrl) ParseWithSyndication(string xml, FeedSource source)
     {
         using var sr = new StringReader(xml);
         using var reader = XmlReader.Create(sr, new XmlReaderSettings { DtdProcessing = DtdProcessing.Ignore });
         var feed = SyndicationFeed.Load(reader);
         if (feed is null)
-            return new List<FeedItem>();
+            return (new List<FeedItem>(), null);
+
+        var hubUrl = feed.Links.FirstOrDefault(l => l.RelationshipType == "hub")?.Uri?.ToString();
 
         var result = new List<FeedItem>();
         foreach (var item in feed.Items.Take(20))
         {
-            var link = item.Links.FirstOrDefault()?.Uri?.ToString() ?? "";
+            var link = item.Links.FirstOrDefault(l => l.RelationshipType != "hub")?.Uri?.ToString() ?? "";
             var published = item.PublishDate != default ? item.PublishDate
                 : item.LastUpdatedTime != default ? item.LastUpdatedTime
                 : DateTimeOffset.Now;
@@ -380,15 +458,20 @@ public sealed class FeedAggregatorService
                 Tags = source.Tags
             });
         }
-        return result;
+        return (result, hubUrl);
     }
 
     /// <summary>Tolerant parser used when the strict reader rejects a feed. Handles RSS items and Atom entries.</summary>
-    private static List<FeedItem> ParseLenient(string xml, FeedSource source)
+    private static (List<FeedItem> Items, string? HubUrl) ParseLenient(string xml, FeedSource source)
     {
         var doc = System.Xml.Linq.XDocument.Parse(xml, System.Xml.Linq.LoadOptions.None);
         System.Xml.Linq.XNamespace atom = "http://www.w3.org/2005/Atom";
         var result = new List<FeedItem>();
+
+        // Hub link lives at the feed/channel level (RSS <atom:link rel="hub"> or Atom <link rel="hub">), not per-item.
+        var hubUrl = doc.Descendants().Where(e => e.Name.LocalName == "link")
+            .FirstOrDefault(l => (string?)l.Attribute("rel") == "hub")
+            ?.Attribute("href")?.Value;
 
         // RSS: //item ; Atom: //entry
         var entries = doc.Descendants("item").Concat(doc.Descendants(atom + "entry")).Take(20);
@@ -419,7 +502,7 @@ public sealed class FeedAggregatorService
                 Tags = source.Tags
             });
         }
-        return result;
+        return (result, hubUrl);
     }
 
     private static string ExtractSummary(SyndicationItem item)

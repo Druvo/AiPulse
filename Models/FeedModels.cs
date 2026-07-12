@@ -3,6 +3,8 @@ namespace AiPulse.Models;
 /// <summary>A source we pull updates from (RSS/Atom feed or GitHub releases feed).</summary>
 public sealed class FeedSource
 {
+    /// <summary>DB row id (0 for sources not yet persisted). Used to key WebSub subscriptions to a source.</summary>
+    public int Id { get; init; }
     public required string Name { get; init; }
     public required string Url { get; init; }
     public required string Category { get; init; } // News, Research, Tools, Community

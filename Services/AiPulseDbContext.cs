@@ -13,4 +13,5 @@ public sealed class AiPulseDbContext : DbContext
     public DbSet<ChatSessionRecord> ChatSessions => Set<ChatSessionRecord>();
     public DbSet<ChatMessageRecord> ChatMessages => Set<ChatMessageRecord>();
     public DbSet<AppUser> Users => Set<AppUser>();
+    public DbSet<WebSubSubscription> WebSubSubscriptions => Set<WebSubSubscription>();
 }

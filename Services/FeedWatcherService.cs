@@ -22,6 +22,8 @@ public sealed class FeedWatcherService : BackgroundService
     private readonly IWebHostEnvironment _env;
     private readonly NotificationService _notify;
     private readonly FeedHistoryService _history;
+    private readonly KnowledgeBaseService _kb;
+    private readonly WebSubService _webSub;
     private readonly NotificationOptions _opt;
     private readonly ILogger<FeedWatcherService> _log;
     private readonly HashSet<string> _seen = new();
@@ -32,6 +34,8 @@ public sealed class FeedWatcherService : BackgroundService
         IWebHostEnvironment env,
         NotificationService notify,
         FeedHistoryService history,
+        KnowledgeBaseService kb,
+        WebSubService webSub,
         Microsoft.Extensions.Options.IOptions<NotificationOptions> opt,
         ILogger<FeedWatcherService> log)
     {
@@ -39,6 +43,8 @@ public sealed class FeedWatcherService : BackgroundService
         _env = env;
         _notify = notify;
         _history = history;
+        _kb = kb;
+        _webSub = webSub;
         _opt = opt.Value;
         _log = log;
     }
@@ -70,6 +76,9 @@ public sealed class FeedWatcherService : BackgroundService
     {
         var result = await _feeds.GetAsync(force: true, ct);
         _history.Record(result.Items);
+
+        try { await _webSub.RenewExpiringAsync(_kb.Sources, ct); }
+        catch (Exception ex) { _log.LogDebug(ex, "WebSub renewal pass failed"); }
 
         // First pass just records what's already there so we don't alert on the whole backlog.
         if (!_seeded)

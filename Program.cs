@@ -66,6 +66,11 @@ builder.Services.AddSingleton<SourceHealthService>();
 builder.Services.AddSingleton<ContentExtractorService>();
 builder.Services.AddHttpContextAccessor();
 
+// WebSub (PubSubHubbub): subscribe to feeds that push updates instead of polling. Inert unless
+// WebSub:PublicBaseUrl is configured - a hub can't call back to "localhost".
+builder.Services.Configure<WebSubOptions>(builder.Configuration.GetSection("WebSub"));
+builder.Services.AddSingleton<WebSubService>();
+
 // Background watcher that raises desktop notifications for big releases & watchlist hits.
 builder.Services.Configure<NotificationOptions>(builder.Configuration.GetSection("Notifications"));
 builder.Services.AddHostedService<FeedWatcherService>();
@@ -127,6 +132,7 @@ app.MapPost("/auth/logout", async (HttpContext http) =>
 if (app.Environment.IsDevelopment())
 {
     app.MapGet("/auth/hash", (string password) => Results.Text(PasswordHasher.Hash(password)));
+
 }
 
 // Backup/restore App_Data (sources, bookmarks, chat history, feed history) as a single zip.
@@ -164,6 +170,40 @@ app.MapPost("/opml/import", async (HttpRequest request, OpmlService opml) =>
     var (added, skipped, unreachable) = await opml.ImportOpmlAsync(stream);
     return Results.Redirect($"/sources?opmlAdded={added}&opmlSkipped={skipped}&opmlUnreachable={unreachable}");
 }).RequireAuthorization(policy => policy.RequireRole("Admin"));
+
+// WebSub callback: hubs are anonymous external servers, so these two endpoints are deliberately
+// unauthenticated. Correctness/security instead comes from (a) matching hub.topic against what we
+// actually subscribed to on the GET verification handshake, and (b) requiring a valid HMAC signature
+// (computed from a per-subscription secret only we and the hub know) on every POST content push.
+app.MapGet("/websub/callback/{sourceId:int}", async (int sourceId, HttpRequest request, WebSubService webSub) =>
+{
+    var mode = request.Query["hub.mode"].ToString();
+    var topic = request.Query["hub.topic"].ToString();
+    var challenge = request.Query["hub.challenge"].ToString();
+    int? lease = int.TryParse(request.Query["hub.lease_seconds"], out var l) ? l : null;
+
+    var echoed = await webSub.HandleVerificationAsync(sourceId, mode, topic, challenge, lease);
+    return echoed is null ? Results.NotFound() : Results.Text(echoed, "text/plain");
+});
+
+app.MapPost("/websub/callback/{sourceId:int}", async (int sourceId, HttpRequest request, WebSubService webSub, KnowledgeBaseService kb, FeedAggregatorService feeds, FeedHistoryService history) =>
+{
+    using var ms = new MemoryStream();
+    await request.Body.CopyToAsync(ms);
+    var bodyBytes = ms.ToArray();
+
+    var signature = request.Headers["X-Hub-Signature"].FirstOrDefault() ?? request.Headers["X-Hub-Signature-256"].FirstOrDefault();
+    if (!await webSub.VerifyPushSignatureAsync(sourceId, bodyBytes, signature))
+        return Results.Unauthorized();
+
+    var source = kb.SourceRecords.FirstOrDefault(s => s.Id == sourceId)?.ToFeedSource();
+    if (source is null) return Results.NotFound();
+
+    var xml = Encoding.UTF8.GetString(bodyBytes);
+    var pushedItems = await feeds.MergePushedContentAsync(source, xml);
+    history.Record(pushedItems);
+    return Results.Ok();
+});
 
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();

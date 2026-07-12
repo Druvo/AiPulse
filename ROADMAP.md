@@ -19,16 +19,20 @@ Status tags: ✅ done · 🟢 fits philosophy, no AI needed · 🟡 needs a desi
 - Tracking-param stripping from feed links (utm_*, fbclid, gclid, etc.)
 - XPath-based scraping for sites with no RSS/Atom feed at all
 - Full-text fetching for summary-only feeds (readability-style extraction, cached per link)
+- WebSub/PubSubHubbub push - subscribes to any feed that declares a hub so it pushes updates to us
+  instead of us polling. Opt-in via `WebSub:PublicBaseUrl`; inert (and untested-in-the-wild as of this
+  writing - see note below) otherwise.
 - Learning Hub, Glossary, Tools & Tips, Explore (HF/GitHub trending), Playground (local Ollama chat)
 - Backup/restore, Obsidian export, global search, light/dark theme
 
+> **WebSub reality check:** none of AiPulse's ~40 default sources currently declare a hub (checked YouTube,
+> WordPress.com, Feedburner, Blogger - all previously reliable examples, none do anymore). The subscribe/
+> verify/HMAC-signature/renew mechanics are built and directly verified (simulated hub requests against
+> the callback endpoints), but real end-to-end delivery depends on a source that still runs a hub, which
+> is now rare. It'll activate automatically the day one of your sources adds one - nothing to configure
+> beyond `WebSub:PublicBaseUrl`.
+
 ---
-
-## 🟢 High-value, matches "no AI needed" philosophy
-
-| Idea | Source | Notes |
-|---|---|---|
-| **WebSub/PubSubHubbub push** | FreshRSS | Near-instant updates instead of waiting for the next poll, for publishers that support it. Bigger lift — needs a public callback endpoint. |
 
 ## 🟡 Valuable, needs a design decision
 

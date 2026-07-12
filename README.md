@@ -41,6 +41,7 @@ It aggregates ~39 RSS/Atom sources (blogs, news outlets, arXiv, Hacker News, Red
 - **📥 OPML import/export** — bulk-import feeds from any RSS reader's export, or export AiPulse's sources to use elsewhere. Every newly imported URL gets a quick reachability check so dead links are flagged immediately instead of silently failing later. Admin-only, from the Sources page.
 - **🕸️ Scrape sites with no RSS feed** — for pages that don't publish RSS/Atom at all, configure XPath selectors (item container, link, title, date) and AiPulse scrapes the HTML directly instead.
 - **📄 Full-text fetching** — for feeds that only publish a teaser, flip on "Fetch full article text" and AiPulse pulls the whole article (readability-style extraction, cached per link) so you can read it inline via a "Read full text" toggle instead of clicking out.
+- **⚡ WebSub push** (optional) — for the rare feed that still declares a hub, AiPulse subscribes so updates get pushed to it the moment they're published instead of waiting for the next poll. Off unless you set `WebSub:PublicBaseUrl` to your public URL (a hub can't call back to `localhost`); the Sources page shows a **Push** column with live status per source.
 - **📈 Source health history** — a rolling 30-day uptime % per source on the Sources page, so "flaky feed" is something you can see, not just guess at.
 - **🌗 Light/Dark theme**, remembered in the browser across every navigation.
 - **🔎 Global search** (`Ctrl`/`Cmd`+`K`) — instantly search across the Glossary, Tools & Tips, and Learning Hub from anywhere in the app.
@@ -82,6 +83,10 @@ That account is seeded once, on first run, from the `Auth` section of `appsettin
     "NotifyReleases": true,    // alert on new items in the Tools (GitHub releases) category
     "NotifyWatchlist": true,   // alert on watchlist keyword hits
     "MaxPerPoll": 15
+  },
+  "WebSub": {
+    "PublicBaseUrl": "",       // e.g. https://your-domain.example — empty = WebSub fully disabled
+    "RequestedLeaseSeconds": 432000
   }
 }
 ```
@@ -118,6 +123,7 @@ Set these in the in-app **Settings** page (stored in `App_Data/`, not source con
 - All pages require sign-in except `/login` and `/register`.
 - Registration never auto-approves — new accounts are **Pending** until an Admin approves them at `/users`, so a public-facing instance can't be self-signed-up-into by strangers.
 - Sources, Users, and Backup/Restore are **Admin-only**; everything else (News, Learning Hub, Bookmarks, Playground, etc.) is open to any approved account.
+- `/websub/callback/*` is intentionally unauthenticated (external hubs are anonymous servers) — it's instead secured by matching the hub's topic against what was actually subscribed to, and requiring a valid per-subscription HMAC signature on every content push. Fully inert unless you set `WebSub:PublicBaseUrl`.
 - For a real bootstrap password, generate a hash (Development only):
   `http://localhost:5257/auth/hash?password=YOUR-PASSWORD` → paste the result into `Auth:PasswordHash` and clear `Auth:Password`. Accounts created via `/register` or `/users` are always hashed automatically.
 - Keep it on `localhost` unless you need otherwise. If you expose it, run behind HTTPS.
@@ -136,6 +142,7 @@ Models/               FeedItem, GlossaryTerm, ToolEntry, LearningModule, Bookmar
 Services/
   FeedAggregatorService   Fetches + normalizes all feeds, dedupes, auto-tags (HTTP/XML only — no AI)
   ContentExtractorService Full-text article extraction (readability heuristic) + XPath HTML scraping support
+  WebSubService           Subscribe/verify/renew WebSub (PubSubHubbub) push, HMAC-signed content pushes
   OpmlService             Bulk import/export of sources, with reachability checks on import
   SourceHealthService     Rolling 30-day per-source success/fail history
   FeedWatcherService      Background poller that raises release/watchlist alerts + feeds FeedHistoryService
