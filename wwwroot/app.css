@@ -477,6 +477,16 @@ a.card:hover { transform: translateY(-1px); }
 /* Keyboard-navigation focus (News Feed j/k) */
 .kb-focused { outline: 2px solid var(--ap-accent, #6d5efc); outline-offset: -2px; }
 
+/* Full-text article panel (expanded inline in the News feed) */
+.full-text-panel {
+    max-height: 320px;
+    overflow-y: auto;
+    white-space: pre-wrap;
+    background: var(--ap-surface-2, rgba(127,127,127,.06));
+    border-radius: .4rem;
+    padding: .6rem .75rem;
+}
+
 /* Top bar */
 .top-row {
     display: flex;

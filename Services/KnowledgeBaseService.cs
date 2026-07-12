@@ -61,6 +61,7 @@ public sealed class KnowledgeBaseService
     {
         await using var db = await _dbFactory.CreateDbContextAsync();
         await db.Database.EnsureCreatedAsync();
+        await EnsureSourceColumnsAsync(db);
 
         if (!await db.Sources.AnyAsync())
         {
@@ -84,6 +85,44 @@ public sealed class KnowledgeBaseService
         }
 
         await RefreshSourcesAsync(db);
+    }
+
+    /// <summary>
+    /// EnsureCreated only builds the schema for a brand-new DB - an existing Sources table (from before
+    /// full-text-fetch/scrape support existed) won't automatically gain the new columns, so add them
+    /// directly if missing.
+    /// </summary>
+    private static async Task EnsureSourceColumnsAsync(AiPulseDbContext db)
+    {
+        var conn = db.Database.GetDbConnection();
+        await conn.OpenAsync();
+
+        var newColumns = new (string Name, string Def)[]
+        {
+            ("FullTextFetch", "INTEGER NOT NULL DEFAULT 0"),
+            ("IsScrape", "INTEGER NOT NULL DEFAULT 0"),
+            ("ScrapeItemXPath", "TEXT NULL"),
+            ("ScrapeTitleXPath", "TEXT NULL"),
+            ("ScrapeLinkXPath", "TEXT NULL"),
+            ("ScrapeDateXPath", "TEXT NULL")
+        };
+
+        await using var pragma = conn.CreateCommand();
+        pragma.CommandText = "PRAGMA table_info(Sources)";
+        var existing = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        await using (var reader = await pragma.ExecuteReaderAsync())
+        {
+            while (await reader.ReadAsync())
+                existing.Add(reader.GetString(reader.GetOrdinal("name")));
+        }
+
+        foreach (var (name, def) in newColumns)
+        {
+            if (existing.Contains(name)) continue;
+            await using var alter = conn.CreateCommand();
+            alter.CommandText = $"""ALTER TABLE "Sources" ADD COLUMN "{name}" {def}""";
+            await alter.ExecuteNonQueryAsync();
+        }
     }
 
     /// <summary>

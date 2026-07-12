@@ -15,6 +15,18 @@ public sealed class FeedSource
     public string Level { get; init; } = "Intermediate";
     /// <summary>Base topic tags applied to every item from this source (e.g. RAG, agents).</summary>
     public string[] Tags { get; init; } = Array.Empty<string>();
+    /// <summary>Fetch the full article text (not just the feed's teaser) for the newest items each poll.</summary>
+    public bool FullTextFetch { get; init; }
+    /// <summary>If true, Url is an HTML page to scrape with the XPath selectors below instead of an RSS/Atom feed.</summary>
+    public bool IsScrape { get; init; }
+    /// <summary>XPath to each item's container element (e.g. "//article" or "//div[@class='post']").</summary>
+    public string? ScrapeItemXPath { get; init; }
+    /// <summary>Relative XPath (from the item container) to the title text. Falls back to the link text if unset.</summary>
+    public string? ScrapeTitleXPath { get; init; }
+    /// <summary>Relative XPath (from the item container) to the link's anchor element.</summary>
+    public string? ScrapeLinkXPath { get; init; }
+    /// <summary>Relative XPath (from the item container) to a date string, if present. Falls back to "now" if unset/unparsable.</summary>
+    public string? ScrapeDateXPath { get; init; }
 }
 
 /// <summary>A single normalized item pulled from any feed.</summary>
@@ -31,6 +43,8 @@ public sealed record FeedItem
     public string[] Tags { get; init; } = Array.Empty<string>();
     /// <summary>Other sources that covered the same story, when cross-source dedup merges near-identical titles.</summary>
     public string[] AlsoSeenOn { get; init; } = Array.Empty<string>();
+    /// <summary>Full article text, when the source has FullTextFetch enabled and extraction succeeded. Null otherwise.</summary>
+    public string? FullText { get; init; }
 }
 
 /// <summary>Result of one aggregation run, including any sources that failed.</summary>

@@ -3,6 +3,7 @@ using System.ServiceModel.Syndication;
 using System.Text.RegularExpressions;
 using System.Xml;
 using AiPulse.Models;
+using HtmlAgilityPack;
 
 namespace AiPulse.Services;
 
@@ -18,16 +19,18 @@ public sealed class FeedAggregatorService
     private readonly IHttpClientFactory _httpFactory;
     private readonly KnowledgeBaseService _kb;
     private readonly SourceHealthService _health;
+    private readonly ContentExtractorService _extractor;
     private readonly ILogger<FeedAggregatorService> _log;
 
     private readonly SemaphoreSlim _refreshLock = new(1, 1);
     private FeedResult? _cache;
 
-    public FeedAggregatorService(IHttpClientFactory httpFactory, KnowledgeBaseService kb, SourceHealthService health, ILogger<FeedAggregatorService> log)
+    public FeedAggregatorService(IHttpClientFactory httpFactory, KnowledgeBaseService kb, SourceHealthService health, ContentExtractorService extractor, ILogger<FeedAggregatorService> log)
     {
         _httpFactory = httpFactory;
         _kb = kb;
         _health = health;
+        _extractor = extractor;
         _log = log;
     }
 
@@ -186,30 +189,135 @@ public sealed class FeedAggregatorService
         return words.Count < 3 ? null : string.Join(' ', words);
     }
 
+    /// <summary>How many of a source's newest items get a full-text fetch each poll - bounded so a big feed doesn't hammer its own site.</summary>
+    private const int FullTextFetchLimit = 5;
+
     private async Task<List<FeedItem>> FetchOneAsync(FeedSource source, CancellationToken ct)
     {
-        var client = _httpFactory.CreateClient("feeds");
-        using var resp = await client.GetAsync(source.Url, HttpCompletionOption.ResponseHeadersRead, ct);
-        resp.EnsureSuccessStatusCode();
-        var xml = await resp.Content.ReadAsStringAsync(ct);
-
-        // Primary: strict RSS/Atom parsing. Fallback: lenient XDocument parse for feeds
-        // that don't fit the strict schema (some blogs emit mixed content the strict reader rejects).
         List<FeedItem> items;
-        try
+        if (source.IsScrape)
         {
-            items = ParseWithSyndication(xml, source);
+            items = await ScrapeAsync(source, ct);
         }
-        catch (Exception)
+        else
         {
-            items = ParseLenient(xml, source);
+            var client = _httpFactory.CreateClient("feeds");
+            using var resp = await client.GetAsync(source.Url, HttpCompletionOption.ResponseHeadersRead, ct);
+            resp.EnsureSuccessStatusCode();
+            var xml = await resp.Content.ReadAsStringAsync(ct);
+
+            // Primary: strict RSS/Atom parsing. Fallback: lenient XDocument parse for feeds
+            // that don't fit the strict schema (some blogs emit mixed content the strict reader rejects).
+            try
+            {
+                items = ParseWithSyndication(xml, source);
+            }
+            catch (Exception)
+            {
+                items = ParseLenient(xml, source);
+            }
         }
 
         var vocab = GetTagVocab();
         for (var i = 0; i < items.Count; i++)
             items[i] = items[i] with { Tags = TagFor(items[i], vocab) };
 
+        if (source.FullTextFetch && items.Count > 0)
+            items = await ApplyFullTextAsync(items, ct);
+
         return items;
+    }
+
+    /// <summary>Fetches the full article for the newest few items and attaches it as FullText, so summary-only feeds become readable in-app.</summary>
+    private async Task<List<FeedItem>> ApplyFullTextAsync(List<FeedItem> items, CancellationToken ct)
+    {
+        var targets = items.OrderByDescending(i => i.Published).Take(FullTextFetchLimit).ToList();
+        var fullTexts = new Dictionary<string, string?>();
+
+        using var gate = new SemaphoreSlim(3);
+        var tasks = targets.Select(async item =>
+        {
+            await gate.WaitAsync(ct);
+            try
+            {
+                fullTexts[item.Link] = await _extractor.FetchFullTextAsync(item.Link, ct);
+            }
+            finally
+            {
+                gate.Release();
+            }
+        });
+        await Task.WhenAll(tasks);
+
+        for (var i = 0; i < items.Count; i++)
+        {
+            if (fullTexts.TryGetValue(items[i].Link, out var text) && text is not null)
+                items[i] = items[i] with { FullText = text };
+        }
+        return items;
+    }
+
+    /// <summary>Scrapes an HTML page with the source's admin-configured XPath selectors, for sites with no RSS/Atom feed.</summary>
+    private static async Task<List<FeedItem>> ScrapeAsync(FeedSource source, CancellationToken ct)
+    {
+        if (string.IsNullOrWhiteSpace(source.ScrapeItemXPath))
+            throw new InvalidOperationException("Scrape source is missing an item XPath selector.");
+
+        using var http = new HttpClient();
+        http.DefaultRequestHeaders.UserAgent.ParseAdd("AiPulse/1.0 (+https://localhost; personal AI news dashboard)");
+        var html = await http.GetStringAsync(source.Url, ct);
+
+        var doc = new HtmlDocument();
+        doc.LoadHtml(html);
+
+        var itemNodes = doc.DocumentNode.SelectNodes(source.ScrapeItemXPath);
+        if (itemNodes is null)
+            return new List<FeedItem>();
+
+        var pageUri = new Uri(source.Url);
+        var result = new List<FeedItem>();
+
+        foreach (var node in itemNodes.Take(30))
+        {
+            var linkNode = string.IsNullOrWhiteSpace(source.ScrapeLinkXPath)
+                ? node.SelectSingleNode(".//a")
+                : node.SelectSingleNode(source.ScrapeLinkXPath);
+            var href = linkNode?.GetAttributeValue("href", "");
+            if (string.IsNullOrWhiteSpace(href))
+                continue;
+
+            var absoluteLink = Uri.TryCreate(pageUri, href, out var resolved) ? resolved.ToString() : href;
+
+            var titleNode = string.IsNullOrWhiteSpace(source.ScrapeTitleXPath)
+                ? linkNode
+                : node.SelectSingleNode(source.ScrapeTitleXPath);
+            var title = CleanText(System.Net.WebUtility.HtmlDecode(titleNode?.InnerText ?? linkNode?.InnerText ?? "(untitled)"), 200);
+
+            var published = DateTimeOffset.Now;
+            if (!string.IsNullOrWhiteSpace(source.ScrapeDateXPath))
+            {
+                var dateNode = node.SelectSingleNode(source.ScrapeDateXPath);
+                var dateAttr = dateNode?.GetAttributeValue("datetime", "");
+                var dateText = string.IsNullOrWhiteSpace(dateAttr) ? dateNode?.InnerText : dateAttr;
+                if (!string.IsNullOrWhiteSpace(dateText) && DateTimeOffset.TryParse(dateText.Trim(), out var parsed))
+                    published = parsed;
+            }
+
+            result.Add(new FeedItem
+            {
+                Title = title,
+                Link = CleanUrl(absoluteLink),
+                Summary = "",
+                Published = published,
+                SourceName = source.Name,
+                Category = source.Category,
+                ContentType = source.ContentType,
+                Level = source.Level,
+                Tags = source.Tags
+            });
+        }
+
+        return result;
     }
 
     /// <summary>Builds a lowercase term/alias -> canonical tag lookup from the curated glossary, once.</summary>

@@ -72,6 +72,32 @@
                             <label class="form-check-label" for="newEnabled">Enabled</label>
                         </div>
                     </div>
+                    <div class="col-md-4 d-flex align-items-center">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="newFullText" @bind="_form.FullTextFetch" />
+                            <label class="form-check-label" for="newFullText">Fetch full article text</label>
+                        </div>
+                    </div>
+                    <div class="col-md-5 d-flex align-items-center">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="newIsScrape" @bind="_form.IsScrape" />
+                            <label class="form-check-label" for="newIsScrape">Scrape HTML (no RSS feed)</label>
+                        </div>
+                    </div>
+                    @if (_form.IsScrape)
+                    {
+                        <div class="col-12">
+                            <div class="alert alert-light border small mb-0">
+                                <strong>Scrape selectors (XPath)</strong> — the URL above is the page to scrape, not an RSS feed.
+                                <div class="row g-2 mt-1">
+                                    <div class="col-md-6"><input class="form-control form-control-sm" placeholder="Item container XPath, e.g. //article" @bind="_form.ScrapeItemXPath" /></div>
+                                    <div class="col-md-6"><input class="form-control form-control-sm" placeholder="Link XPath (relative), e.g. .//a — default .//a" @bind="_form.ScrapeLinkXPath" /></div>
+                                    <div class="col-md-6"><input class="form-control form-control-sm" placeholder="Title XPath (relative, optional — defaults to link text)" @bind="_form.ScrapeTitleXPath" /></div>
+                                    <div class="col-md-6"><input class="form-control form-control-sm" placeholder="Date XPath (relative, optional)" @bind="_form.ScrapeDateXPath" /></div>
+                                </div>
+                            </div>
+                        </div>
+                    }
                 </div>
                 @if (_error is not null)
                 {
@@ -121,6 +147,32 @@
                                         <label class="form-check-label" for="editEnabled">Enabled</label>
                                     </div>
                                 </div>
+                                <div class="col-md-4 d-flex align-items-center">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="editFullText" @bind="_form.FullTextFetch" />
+                                        <label class="form-check-label" for="editFullText">Fetch full article text</label>
+                                    </div>
+                                </div>
+                                <div class="col-md-5 d-flex align-items-center">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="editIsScrape" @bind="_form.IsScrape" />
+                                        <label class="form-check-label" for="editIsScrape">Scrape HTML (no RSS feed)</label>
+                                    </div>
+                                </div>
+                                @if (_form.IsScrape)
+                                {
+                                    <div class="col-12">
+                                        <div class="alert alert-light border small mb-0">
+                                            <strong>Scrape selectors (XPath)</strong> — the URL above is the page to scrape, not an RSS feed.
+                                            <div class="row g-2 mt-1">
+                                                <div class="col-md-6"><input class="form-control form-control-sm" placeholder="Item container XPath, e.g. //article" @bind="_form.ScrapeItemXPath" /></div>
+                                                <div class="col-md-6"><input class="form-control form-control-sm" placeholder="Link XPath (relative) — default .//a" @bind="_form.ScrapeLinkXPath" /></div>
+                                                <div class="col-md-6"><input class="form-control form-control-sm" placeholder="Title XPath (relative, optional)" @bind="_form.ScrapeTitleXPath" /></div>
+                                                <div class="col-md-6"><input class="form-control form-control-sm" placeholder="Date XPath (relative, optional)" @bind="_form.ScrapeDateXPath" /></div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                }
                             </div>
                             <div class="mt-2">
                                 <button class="btn btn-sm btn-success" @onclick="SaveEdit">Save</button>
@@ -226,7 +278,13 @@
             Level = s.Level,
             TagsCsv = s.TagsCsv,
             Note = s.Note ?? "",
-            Enabled = s.Enabled
+            Enabled = s.Enabled,
+            FullTextFetch = s.FullTextFetch,
+            IsScrape = s.IsScrape,
+            ScrapeItemXPath = s.ScrapeItemXPath ?? "",
+            ScrapeTitleXPath = s.ScrapeTitleXPath ?? "",
+            ScrapeLinkXPath = s.ScrapeLinkXPath ?? "",
+            ScrapeDateXPath = s.ScrapeDateXPath ?? ""
         };
     }
 
@@ -239,6 +297,11 @@
             _error = "Name and URL are required.";
             return;
         }
+        if (_form.IsScrape && string.IsNullOrWhiteSpace(_form.ScrapeItemXPath))
+        {
+            _error = "Scrape sources need at least an item container XPath.";
+            return;
+        }
         _error = null;
         await Kb.AddSourceAsync(new SourceRecord
         {
@@ -249,7 +312,13 @@
             Level = _form.Level,
             TagsCsv = _form.TagsCsv.Trim(),
             Note = string.IsNullOrWhiteSpace(_form.Note) ? null : _form.Note.Trim(),
-            Enabled = _form.Enabled
+            Enabled = _form.Enabled,
+            FullTextFetch = _form.FullTextFetch,
+            IsScrape = _form.IsScrape,
+            ScrapeItemXPath = Blank(_form.ScrapeItemXPath),
+            ScrapeTitleXPath = Blank(_form.ScrapeTitleXPath),
+            ScrapeLinkXPath = Blank(_form.ScrapeLinkXPath),
+            ScrapeDateXPath = Blank(_form.ScrapeDateXPath)
         });
         _showAddForm = false;
     }
@@ -257,6 +326,12 @@
     private async Task SaveEdit()
     {
         if (_editingId is null) return;
+        if (_form.IsScrape && string.IsNullOrWhiteSpace(_form.ScrapeItemXPath))
+        {
+            _error = "Scrape sources need at least an item container XPath.";
+            return;
+        }
+        _error = null;
         await Kb.UpdateSourceAsync(new SourceRecord
         {
             Id = _editingId.Value,
@@ -267,10 +342,18 @@
             Level = _form.Level,
             TagsCsv = _form.TagsCsv.Trim(),
             Note = string.IsNullOrWhiteSpace(_form.Note) ? null : _form.Note.Trim(),
-            Enabled = _form.Enabled
+            Enabled = _form.Enabled,
+            FullTextFetch = _form.FullTextFetch,
+            IsScrape = _form.IsScrape,
+            ScrapeItemXPath = Blank(_form.ScrapeItemXPath),
+            ScrapeTitleXPath = Blank(_form.ScrapeTitleXPath),
+            ScrapeLinkXPath = Blank(_form.ScrapeLinkXPath),
+            ScrapeDateXPath = Blank(_form.ScrapeDateXPath)
         });
         _editingId = null;
     }
+
+    private static string? Blank(string s) => string.IsNullOrWhiteSpace(s) ? null : s.Trim();
 
     private async Task DeleteSource(int id)
     {
@@ -289,5 +372,11 @@
         public string TagsCsv { get; set; } = "";
         public string Note { get; set; } = "";
         public bool Enabled { get; set; } = true;
+        public bool FullTextFetch { get; set; }
+        public bool IsScrape { get; set; }
+        public string ScrapeItemXPath { get; set; } = "";
+        public string ScrapeTitleXPath { get; set; } = "";
+        public string ScrapeLinkXPath { get; set; } = "";
+        public string ScrapeDateXPath { get; set; } = "";
     }
 }

@@ -18,6 +18,13 @@ public sealed class SourceRecord
     /// <summary>Comma-separated tags (existing tag values never contain commas).</summary>
     public string TagsCsv { get; set; } = "";
 
+    public bool FullTextFetch { get; set; }
+    public bool IsScrape { get; set; }
+    public string? ScrapeItemXPath { get; set; }
+    public string? ScrapeTitleXPath { get; set; }
+    public string? ScrapeLinkXPath { get; set; }
+    public string? ScrapeDateXPath { get; set; }
+
     public string[] Tags
     {
         get => string.IsNullOrWhiteSpace(TagsCsv)
@@ -35,6 +42,12 @@ public sealed class SourceRecord
         Note = Note,
         ContentType = ContentType,
         Level = Level,
-        Tags = Tags
+        Tags = Tags,
+        FullTextFetch = FullTextFetch,
+        IsScrape = IsScrape,
+        ScrapeItemXPath = ScrapeItemXPath,
+        ScrapeTitleXPath = ScrapeTitleXPath,
+        ScrapeLinkXPath = ScrapeLinkXPath,
+        ScrapeDateXPath = ScrapeDateXPath
     };
 }

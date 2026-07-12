@@ -17,6 +17,8 @@ Status tags: ✅ done · 🟢 fits philosophy, no AI needed · 🟡 needs a desi
 - Full keyboard navigation on the News feed (j/k/o/Enter/m/b/?)
 - Source health/uptime history (rolling 30-day % per source on the Sources page)
 - Tracking-param stripping from feed links (utm_*, fbclid, gclid, etc.)
+- XPath-based scraping for sites with no RSS/Atom feed at all
+- Full-text fetching for summary-only feeds (readability-style extraction, cached per link)
 - Learning Hub, Glossary, Tools & Tips, Explore (HF/GitHub trending), Playground (local Ollama chat)
 - Backup/restore, Obsidian export, global search, light/dark theme
 
@@ -26,8 +28,6 @@ Status tags: ✅ done · 🟢 fits philosophy, no AI needed · 🟡 needs a desi
 
 | Idea | Source | Notes |
 |---|---|---|
-| **Web scraping for non-RSS sites (XPath)** | FreshRSS | The #1 reason a source can't be added today is "no RSS feed." An XPath-based scraper closes that gap. |
-| **Full-text fetching for summary-only feeds** | Miniflux | Some feeds only ship a teaser; auto-fetching the full article means reading everything in AiPulse instead of clicking out. |
 | **WebSub/PubSubHubbub push** | FreshRSS | Near-instant updates instead of waiting for the next poll, for publishers that support it. Bigger lift — needs a public callback endpoint. |
 
 ## 🟡 Valuable, needs a design decision

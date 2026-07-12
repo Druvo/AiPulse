@@ -167,6 +167,16 @@ else
                             {
                                 <p class="card-text small text-muted mb-2">@item.Summary</p>
                             }
+                            @if (!string.IsNullOrWhiteSpace(item.FullText))
+                            {
+                                <button class="btn btn-sm btn-outline-secondary mb-2 align-self-start" @onclick="() => ToggleExpanded(item.Link)">
+                                    @(_expandedLinks.Contains(item.Link) ? "Hide full text" : "Read full text")
+                                </button>
+                                @if (_expandedLinks.Contains(item.Link))
+                                {
+                                    <p class="card-text small full-text-panel mb-2">@item.FullText</p>
+                                }
+                            }
                             <div class="mt-auto">
                                 @if (item.Tags.Length > 0)
                                 {
@@ -226,6 +236,16 @@ else
                     @if (!string.IsNullOrWhiteSpace(item.Summary))
                     {
                         <p class="card-text small text-muted mb-1">@item.Summary</p>
+                    }
+                    @if (!string.IsNullOrWhiteSpace(item.FullText))
+                    {
+                        <button class="btn btn-sm btn-outline-secondary mb-1" @onclick="() => ToggleExpanded(item.Link)">
+                            @(_expandedLinks.Contains(item.Link) ? "Hide full text" : "Read full text")
+                        </button>
+                        @if (_expandedLinks.Contains(item.Link))
+                        {
+                            <p class="card-text small full-text-panel mb-1">@item.FullText</p>
+                        }
                     }
                     @if (item.Tags.Length > 0)
                     {
@@ -287,6 +307,7 @@ else
     private DateTimeOffset _sinceVisit = DateTimeOffset.MinValue;
     private int _newCount;
     private List<FeedItem> _visibleItems = new();
+    private readonly HashSet<string> _expandedLinks = new();
     private int _focusedIndex = -1;
     private bool _showShortcutsHelp;
     private DotNetObjectReference<News>? _dotNetRef;
@@ -398,6 +419,12 @@ else
     private void Toggle(FeedItem item) => Reading.ToggleBookmark(item);
 
     private void ToggleRead(FeedItem item) => Reading.ToggleRead(item.Link);
+
+    private void ToggleExpanded(string link)
+    {
+        if (!_expandedLinks.Add(link))
+            _expandedLinks.Remove(link);
+    }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {

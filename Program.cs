@@ -63,6 +63,7 @@ builder.Services.AddScoped<ChatHistoryService>();
 builder.Services.AddSingleton<BackupService>();
 builder.Services.AddSingleton<OpmlService>();
 builder.Services.AddSingleton<SourceHealthService>();
+builder.Services.AddSingleton<ContentExtractorService>();
 builder.Services.AddHttpContextAccessor();
 
 // Background watcher that raises desktop notifications for big releases & watchlist hits.

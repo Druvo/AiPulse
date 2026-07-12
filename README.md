@@ -39,6 +39,8 @@ It aggregates ~39 RSS/Atom sources (blogs, news outlets, arXiv, Hacker News, Red
 - **🔖 Reading List** — bookmark articles (filterable by content-type/level/tag, same as News); persists to disk; one-click **export to an Obsidian-ready Markdown note** with tags carried through as `#hashtags`.
 - **👥 Multi-user with roles** — cookie auth backed by a real Users table. Self-registration (`/register`) creates a **Pending** account that an **Admin** approves at `/users`; roles are **Admin** (manages Sources/Users/Backup) and **User** (everything else). Each account gets its own bookmarks, watchlist, learning progress, and Playground chat history.
 - **📥 OPML import/export** — bulk-import feeds from any RSS reader's export, or export AiPulse's sources to use elsewhere. Every newly imported URL gets a quick reachability check so dead links are flagged immediately instead of silently failing later. Admin-only, from the Sources page.
+- **🕸️ Scrape sites with no RSS feed** — for pages that don't publish RSS/Atom at all, configure XPath selectors (item container, link, title, date) and AiPulse scrapes the HTML directly instead.
+- **📄 Full-text fetching** — for feeds that only publish a teaser, flip on "Fetch full article text" and AiPulse pulls the whole article (readability-style extraction, cached per link) so you can read it inline via a "Read full text" toggle instead of clicking out.
 - **📈 Source health history** — a rolling 30-day uptime % per source on the Sources page, so "flaky feed" is something you can see, not just guess at.
 - **🌗 Light/Dark theme**, remembered in the browser across every navigation.
 - **🔎 Global search** (`Ctrl`/`Cmd`+`K`) — instantly search across the Glossary, Tools & Tips, and Learning Hub from anywhere in the app.
@@ -127,22 +129,32 @@ Set these in the in-app **Settings** page (stored in `App_Data/`, not source con
 ```
 Data/                 Curated JSON (glossary + tools + tips + learning + benchmarks + model directory);
                       sources.json is a one-time DB seed only, see above
-App_Data/             aipulse.db (sources), reading-state.json, feed-history.json — auto-created, git-ignored
-Models/               FeedItem, GlossaryTerm, ToolEntry, LearningModule, BookmarkItem, SourceRecord, Alert…
+App_Data/             aipulse.db (sources, users, chat history), users/{username}/reading-state.json,
+                      feed-history.json, source-health.json — all auto-created, git-ignored
+Models/               FeedItem, GlossaryTerm, ToolEntry, LearningModule, BookmarkItem, SourceRecord,
+                      AppUser, ExcludeFilter, Alert…
 Services/
-  FeedAggregatorService   Fetches + normalizes all feeds, auto-tags items from the glossary (HTTP/XML only — no AI)
+  FeedAggregatorService   Fetches + normalizes all feeds, dedupes, auto-tags (HTTP/XML only — no AI)
+  ContentExtractorService Full-text article extraction (readability heuristic) + XPath HTML scraping support
+  OpmlService             Bulk import/export of sources, with reachability checks on import
+  SourceHealthService     Rolling 30-day per-source success/fail history
   FeedWatcherService      Background poller that raises release/watchlist alerts + feeds FeedHistoryService
   FeedHistoryService      Deduped, rolling (90-day) history of items, backing the activity heatmap
   NotificationService     In-memory alert hub the UI bell subscribes to
   KnowledgeBaseService    Loads Data/*.json + the DB-backed, dynamically managed Sources list
-  AiPulseDbContext        EF Core / SQLite context for Sources (App_Data/aipulse.db)
+  AiPulseDbContext        EF Core / SQLite context (Sources, Users, ChatSessions)
   HuggingFaceService      Trending models/datasets from the public HF Hub API (Explore page)
   GitHubTrendingService   Recently-popular AI repos via GitHub's Search API (Explore page)
-  ReadingStateService     Bookmarks / watchlist / read / last-visit / learning-module-progress persistence
+  OllamaService           Talks to a local Ollama instance for the Playground
+  ReadingStateService     Per-user bookmarks/watchlist/exclude-filters/read/progress (Scoped per circuit)
+  ChatHistoryService      Per-user Playground chat history (Scoped per circuit)
   ObsidianExportService   Writes the reading list to a Markdown note (tags included as #hashtags)
-  AuthService             Validates login (PBKDF2 or plaintext)
+  UserService             Registration, admin approval, roles, login validation
+  PasswordHasher          PBKDF2 hashing shared by UserService and the bootstrap Admin account
+  BackupService           Zips/restores all of App_Data
   ISummarizer             Optional AI hook (NullSummarizer = off)
-Components/Pages/     Home, News, Explore, Learn, Glossary, Tools, Bookmarks, Settings, Sources, Login
+Components/Pages/     Home, News, Digest, Explore, Learn, Glossary, Tools, Bookmarks, Settings, Sources,
+                      Users, Playground, Login, Register, AccessDenied
 Components/Shared/    Icon, GlobalSearch, ActivityHeatmap, TrendingPanel, MiniTimeline
 ```
 
