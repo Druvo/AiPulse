@@ -47,11 +47,28 @@
     </div>
 }
 
+<div class="mb-2">
+    <input class="form-control form-control-sm" style="max-width:280px" placeholder="Search users…"
+           value="@_search" @oninput="e => { _search = (string)e.Value!; _page = 1; }" />
+</div>
+
+@{
+    var (pageUsers, totalUsers) = GetPage();
+}
+
 <div class="table-responsive">
     <table class="table table-sm align-middle">
-        <thead><tr><th>Username</th><th>Role</th><th>Status</th><th>Created</th><th></th></tr></thead>
+        <thead>
+            <tr>
+                <SortableHeader Column="username" Label="Username" SortColumn="@_sortColumn" SortAscending="@_sortAscending" OnSort="ToggleSort" />
+                <SortableHeader Column="role" Label="Role" SortColumn="@_sortColumn" SortAscending="@_sortAscending" OnSort="ToggleSort" />
+                <SortableHeader Column="status" Label="Status" SortColumn="@_sortColumn" SortAscending="@_sortAscending" OnSort="ToggleSort" />
+                <SortableHeader Column="created" Label="Created" SortColumn="@_sortColumn" SortAscending="@_sortAscending" OnSort="ToggleSort" />
+                <th></th>
+            </tr>
+        </thead>
         <tbody>
-            @foreach (var u in _users)
+            @foreach (var u in pageUsers)
             {
                 <tr>
                     <td>@u.Username</td>
@@ -97,6 +114,8 @@
     </table>
 </div>
 
+<Pager TotalItems="totalUsers" @bind-CurrentPage="_page" @bind-PageSize="_pageSize" />
+
 @code {
     private List<AppUser> _users = new();
     private bool _showAddForm;
@@ -104,6 +123,50 @@
     private string? _message;
     private string? _currentUsername;
     private AddUserForm _form = new();
+
+    private string _search = "";
+    private string? _sortColumn = "created";
+    private bool _sortAscending = false;
+    private int _page = 1;
+    private int _pageSize = 20;
+
+    private void ToggleSort(string column)
+    {
+        if (_sortColumn == column) _sortAscending = !_sortAscending;
+        else { _sortColumn = column; _sortAscending = true; }
+        _page = 1;
+    }
+
+    private (List<AppUser> Rows, int Total) GetPage()
+    {
+        IEnumerable<AppUser> q = _users;
+
+        if (!string.IsNullOrWhiteSpace(_search))
+        {
+            var needle = _search.Trim();
+            q = q.Where(u =>
+                u.Username.Contains(needle, StringComparison.OrdinalIgnoreCase) ||
+                u.Role.Contains(needle, StringComparison.OrdinalIgnoreCase) ||
+                u.Status.Contains(needle, StringComparison.OrdinalIgnoreCase));
+        }
+
+        q = (_sortColumn, _sortAscending) switch
+        {
+            ("username", false) => q.OrderByDescending(u => u.Username),
+            ("username", true) => q.OrderBy(u => u.Username),
+            ("role", true) => q.OrderBy(u => u.Role),
+            ("role", false) => q.OrderByDescending(u => u.Role),
+            ("status", true) => q.OrderBy(u => u.Status),
+            ("status", false) => q.OrderByDescending(u => u.Status),
+            ("created", true) => q.OrderBy(u => u.CreatedAt),
+            (_, false) => q.OrderByDescending(u => u.CreatedAt),
+            _ => q.OrderBy(u => u.Username),
+        };
+
+        var list = q.ToList();
+        var page = list.Skip((_page - 1) * _pageSize).Take(_pageSize).ToList();
+        return (page, list.Count);
+    }
 
     protected override async Task OnInitializedAsync()
     {

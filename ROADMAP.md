@@ -50,6 +50,14 @@ Status tags: ✅ done · 🟢 fits philosophy, no AI needed · 🟡 needs a desi
   timestamp the first (prerender) pass had just written, collapsing "New" to ~0 items on effectively every
   load. Fixed by peeking the cutoff in `OnInitializedAsync` and only marking the visit in
   `OnAfterRenderAsync(firstRender)`, which Blazor guarantees runs exactly once in the real circuit.
+- Search, sort, and pagination added to every real data table (Sources, Users, Weekly Digest's day-by-day
+  breakdown) via two new reusable components, `Pager` and `SortableHeader`. (Help's page-reference table
+  is static documentation, not data, so it was left alone.) Caught a subtle Blazor gotcha along the way:
+  for a **string-typed** component parameter, `Param="_field"` (no `@`) compiles as a literal string, not a
+  reference to `_field` - non-string parameter types don't have this ambiguity, which is exactly why it
+  silently passed the literal text `"_sortColumn"` into the sort-arrow display while the actual sort *logic*
+  (driven by the page's own field, not the parameter) worked fine. Needs `Param="@_field"` whenever the
+  parameter type is `string`.
 
 > **WebSub reality check:** none of AiPulse's ~40 default sources currently declare a hub (checked YouTube,
 > WordPress.com, Feedburner, Blogger - all previously reliable examples, none do anymore). The subscribe/

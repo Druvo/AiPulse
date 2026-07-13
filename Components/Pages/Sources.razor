@@ -110,14 +110,35 @@
     </div>
 }
 
+<div class="mb-2">
+    <input class="form-control form-control-sm" style="max-width:280px" placeholder="Search sources…"
+           value="@_search" @oninput="e => { _search = (string)e.Value!; _page = 1; }" />
+</div>
+
+@{
+    var (pageRows, totalRows) = GetPage();
+}
+
 <div class="table-responsive">
     <table class="table table-sm align-middle">
         <thead>
-            <tr><th>Source</th><th>Category</th><th>Type</th><th>Level</th><th>Tags</th><th>Status</th><th>Uptime (30d)</th><th>Push</th><th>What it gives you</th><th></th></tr>
+            <tr>
+                <SortableHeader Column="name" Label="Source" SortColumn="@_sortColumn" SortAscending="@_sortAscending" OnSort="ToggleSort" />
+                <SortableHeader Column="category" Label="Category" SortColumn="@_sortColumn" SortAscending="@_sortAscending" OnSort="ToggleSort" />
+                <SortableHeader Column="type" Label="Type" SortColumn="@_sortColumn" SortAscending="@_sortAscending" OnSort="ToggleSort" />
+                <SortableHeader Column="level" Label="Level" SortColumn="@_sortColumn" SortAscending="@_sortAscending" OnSort="ToggleSort" />
+                <th>Tags</th>
+                <SortableHeader Column="status" Label="Status" SortColumn="@_sortColumn" SortAscending="@_sortAscending" OnSort="ToggleSort" />
+                <SortableHeader Column="uptime" Label="Uptime (30d)" SortColumn="@_sortColumn" SortAscending="@_sortAscending" OnSort="ToggleSort" />
+                <th>Push</th>
+                <th>What it gives you</th>
+                <th></th>
+            </tr>
         </thead>
         <tbody>
-            @foreach (var s in Kb.SourceRecords)
+            @foreach (var row in pageRows)
             {
+                var s = row.Source;
                 @if (_editingId == s.Id)
                 {
                     <tr>
@@ -204,26 +225,20 @@
                             {
                                 <span class="text-muted">○ disabled</span>
                             }
-                            @{
-                                var streak = Feeds.GetFailureStreak(s.Name);
-                            }
-                            @if (streak > 0)
+                            @if (row.FailStreak > 0)
                             {
-                                <span class="badge bg-warning ms-1" title="@streak consecutive failed fetch(es)">@streak failed</span>
+                                <span class="badge bg-warning ms-1" title="@row.FailStreak consecutive failed fetch(es)">@row.FailStreak failed</span>
                             }
                         </td>
                         <td class="small">
-                            @{
-                                var (healthy, total) = Health.GetSummary(s.Name);
-                            }
-                            @if (total == 0)
+                            @if (row.HealthTotal == 0)
                             {
                                 <span class="text-muted">no data yet</span>
                             }
                             else
                             {
-                                var pct = healthy * 100 / total;
-                                <span class="@(pct >= 90 ? "text-success" : pct >= 60 ? "text-warning" : "text-danger")" title="@healthy of @total recorded days healthy">@pct% (@healthy/@total d)</span>
+                                var pct = row.Healthy * 100 / row.HealthTotal;
+                                <span class="@(pct >= 90 ? "text-success" : pct >= 60 ? "text-warning" : "text-danger")" title="@row.Healthy of @row.HealthTotal recorded days healthy">@pct% (@row.Healthy/@row.HealthTotal d)</span>
                             }
                         </td>
                         <td class="small">
@@ -263,6 +278,8 @@
     </table>
 </div>
 
+<Pager TotalItems="totalRows" @bind-CurrentPage="_page" @bind-PageSize="_pageSize" />
+
 <div class="alert alert-light border small">
     <strong>Tip:</strong> any RSS/Atom URL works. Handy ones:
     a GitHub project's releases feed is <code>https://github.com/&lt;owner&gt;/&lt;repo&gt;/releases.atom</code>;
@@ -284,6 +301,68 @@
     private readonly string[] _categories = { "News", "Research", "Tools", "Community" };
     private readonly string[] _contentTypes = { "News", "Tutorial", "Release", "Paper", "Discussion", "Video" };
     private readonly string[] _levels = { "Beginner", "Intermediate", "Advanced" };
+
+    private string _search = "";
+    private string? _sortColumn = "name";
+    private bool _sortAscending = true;
+    private int _page = 1;
+    private int _pageSize = 20;
+
+    private sealed class SourceRow
+    {
+        public required SourceRecord Source { get; init; }
+        public int Healthy { get; init; }
+        public int HealthTotal { get; init; }
+        public int FailStreak { get; init; }
+    }
+
+    private void ToggleSort(string column)
+    {
+        if (_sortColumn == column) _sortAscending = !_sortAscending;
+        else { _sortColumn = column; _sortAscending = true; }
+        _page = 1;
+    }
+
+    private (List<SourceRow> Rows, int Total) GetPage()
+    {
+        IEnumerable<SourceRow> q = Kb.SourceRecords.Select(s =>
+        {
+            var (healthy, total) = Health.GetSummary(s.Name);
+            return new SourceRow { Source = s, Healthy = healthy, HealthTotal = total, FailStreak = Feeds.GetFailureStreak(s.Name) };
+        });
+
+        if (!string.IsNullOrWhiteSpace(_search))
+        {
+            var needle = _search.Trim();
+            q = q.Where(r =>
+                r.Source.Name.Contains(needle, StringComparison.OrdinalIgnoreCase) ||
+                r.Source.Category.Contains(needle, StringComparison.OrdinalIgnoreCase) ||
+                r.Source.ContentType.Contains(needle, StringComparison.OrdinalIgnoreCase) ||
+                r.Source.Level.Contains(needle, StringComparison.OrdinalIgnoreCase) ||
+                r.Source.TagsCsv.Contains(needle, StringComparison.OrdinalIgnoreCase) ||
+                (r.Source.Note ?? "").Contains(needle, StringComparison.OrdinalIgnoreCase));
+        }
+
+        q = (_sortColumn, _sortAscending) switch
+        {
+            ("category", true) => q.OrderBy(r => r.Source.Category),
+            ("category", false) => q.OrderByDescending(r => r.Source.Category),
+            ("type", true) => q.OrderBy(r => r.Source.ContentType),
+            ("type", false) => q.OrderByDescending(r => r.Source.ContentType),
+            ("level", true) => q.OrderBy(r => r.Source.Level),
+            ("level", false) => q.OrderByDescending(r => r.Source.Level),
+            ("status", true) => q.OrderBy(r => r.Source.Enabled).ThenBy(r => r.Source.Name),
+            ("status", false) => q.OrderByDescending(r => r.Source.Enabled).ThenBy(r => r.Source.Name),
+            ("uptime", true) => q.OrderBy(r => r.HealthTotal == 0 ? -1 : r.Healthy * 100.0 / r.HealthTotal),
+            ("uptime", false) => q.OrderByDescending(r => r.HealthTotal == 0 ? -1 : r.Healthy * 100.0 / r.HealthTotal),
+            (_, false) => q.OrderByDescending(r => r.Source.Name),
+            _ => q.OrderBy(r => r.Source.Name),
+        };
+
+        var list = q.ToList();
+        var page = list.Skip((_page - 1) * _pageSize).Take(_pageSize).ToList();
+        return (page, list.Count);
+    }
 
     protected override async Task OnInitializedAsync()
     {

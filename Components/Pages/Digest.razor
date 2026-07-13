@@ -83,11 +83,27 @@ else
 }
 
 <h4 class="section-title mt-4"><Icon Name="calendar" /> Day by day</h4>
+
+<div class="mb-2">
+    <input class="form-control form-control-sm" style="max-width:280px" placeholder="Search by category…"
+           value="@_search" @oninput="e => { _search = (string)e.Value!; _page = 1; }" />
+</div>
+
+@{
+    var (pageDays, totalDays) = GetPage();
+}
+
 <div class="table-responsive">
     <table class="table table-sm align-middle">
-        <thead><tr><th>Day</th><th>Items</th><th>Top categories</th></tr></thead>
+        <thead>
+            <tr>
+                <SortableHeader Column="date" Label="Day" SortColumn="@_sortColumn" SortAscending="@_sortAscending" OnSort="ToggleSort" />
+                <SortableHeader Column="count" Label="Items" SortColumn="@_sortColumn" SortAscending="@_sortAscending" OnSort="ToggleSort" />
+                <th>Top categories</th>
+            </tr>
+        </thead>
         <tbody>
-            @foreach (var day in _byDay)
+            @foreach (var day in pageDays)
             {
                 <tr>
                     <td>@day.Date.ToString("ddd, MMM d")</td>
@@ -104,6 +120,8 @@ else
     </table>
 </div>
 
+<Pager TotalItems="totalDays" @bind-CurrentPage="_page" @bind-PageSize="_pageSize" PageSizeOptions="new[] { 7, 14, 30 }" />
+
 @code {
     private List<FeedItem> _weekItems = new();
     private List<FeedItem> _biggestStories = new();
@@ -111,6 +129,43 @@ else
     private int _activeSourceCount;
     private string? _topCategory;
     private List<DayRow> _byDay = new();
+
+    private string _search = "";
+    private string? _sortColumn = "date";
+    private bool _sortAscending = false;
+    private int _page = 1;
+    private int _pageSize = 7;
+
+    private void ToggleSort(string column)
+    {
+        if (_sortColumn == column) _sortAscending = !_sortAscending;
+        else { _sortColumn = column; _sortAscending = true; }
+        _page = 1;
+    }
+
+    private (List<DayRow> Rows, int Total) GetPage()
+    {
+        IEnumerable<DayRow> q = _byDay;
+
+        if (!string.IsNullOrWhiteSpace(_search))
+        {
+            var needle = _search.Trim();
+            q = q.Where(d => d.TopCategories.Any(c => c.Category.Contains(needle, StringComparison.OrdinalIgnoreCase)));
+        }
+
+        q = (_sortColumn, _sortAscending) switch
+        {
+            ("date", true) => q.OrderBy(d => d.Date),
+            ("count", true) => q.OrderBy(d => d.Count),
+            ("count", false) => q.OrderByDescending(d => d.Count),
+            (_, false) => q.OrderByDescending(d => d.Date),
+            _ => q.OrderBy(d => d.Date),
+        };
+
+        var list = q.ToList();
+        var page = list.Skip((_page - 1) * _pageSize).Take(_pageSize).ToList();
+        return (page, list.Count);
+    }
 
     protected override void OnInitialized()
     {

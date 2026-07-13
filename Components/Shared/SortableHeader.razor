@@ -1,0 +1,28 @@
+@* Generic sortable <th> - click toggles asc/desc for this column; only one column is "active" at a time. *@
+
+<th @onclick="Toggle" class="sortable-th" title="Sort by @Label">
+    @Label
+    @if (SortColumn == Column)
+    {
+        <span class="sort-arrow">@(SortAscending ? "▲" : "▼")</span>
+    }
+</th>
+
+@code {
+    [Parameter, EditorRequired]
+    public string Column { get; set; } = "";
+
+    [Parameter, EditorRequired]
+    public string Label { get; set; } = "";
+
+    [Parameter]
+    public string? SortColumn { get; set; }
+
+    [Parameter]
+    public bool SortAscending { get; set; }
+
+    [Parameter]
+    public EventCallback<string> OnSort { get; set; }
+
+    private async Task Toggle() => await OnSort.InvokeAsync(Column);
+}

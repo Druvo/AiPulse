@@ -44,6 +44,7 @@ It aggregates ~39 RSS/Atom sources (blogs, news outlets, arXiv, Hacker News, Red
 - **📄 Full-text fetching** — for feeds that only publish a teaser, flip on "Fetch full article text" and AiPulse pulls the whole article (readability-style extraction, cached per link) so you can read it inline via a "Read full text" toggle instead of clicking out.
 - **⚡ WebSub push** (optional) — for the rare feed that still declares a hub, AiPulse subscribes so updates get pushed to it the moment they're published instead of waiting for the next poll. Off unless you set `WebSub:PublicBaseUrl` to your public URL (a hub can't call back to `localhost`); the Sources page shows a **Push** column with live status per source.
 - **📈 Source health history** — a rolling 30-day uptime % per source on the Sources page, so "flaky feed" is something you can see, not just guess at.
+- **🔢 Sortable, searchable, paginated admin tables** — Sources, Users, and the Weekly Digest's day-by-day table all have a search box, clickable sortable column headers, and page-size/prev-next controls, so they stay usable as they grow.
 - **🌗 Light/Dark theme + accent colors + custom CSS**, remembered in the browser across every navigation. Pick from 5 accent presets or drop in your own CSS for full control.
 - **🔎 Global search** (`Ctrl`/`Cmd`+`K`) — instantly search across the Glossary, Tools & Tips, and Learning Hub from anywhere in the app.
 - **🪝 Outbound webhooks** — send release/watchlist alerts to Slack, Discord, or any generic JSON endpoint, so you're notified even when no tab is open.
@@ -174,7 +175,8 @@ Services/
   ISummarizer             Optional AI hook (NullSummarizer = off)
 Components/Pages/     Home, News, Digest, Explore, Learn, Glossary, Tools, Bookmarks, Settings, Sources,
                       Users, Playground, Help, Login, Register, AccessDenied
-Components/Shared/    Icon, GlobalSearch, ActivityHeatmap, TrendingPanel, MiniTimeline
+Components/Shared/    Icon, GlobalSearch, ActivityHeatmap, TrendingPanel, MiniTimeline, ExploreTrendingPanel,
+                      Pager, SortableHeader (generic search/sort/paginate helpers for admin tables)
 ```
 
 ### Enabling the optional AI layer

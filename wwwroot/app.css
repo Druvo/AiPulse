@@ -509,6 +509,14 @@ a.card:hover { transform: translateY(-1px); }
 /* Custom Dashboard widgets (Settings > Dashboard widgets) */
 .dashboard-widget-frame { width: 100%; height: 320px; border: 0; border-radius: 0 0 var(--ap-radius, 8px) var(--ap-radius, 8px); }
 
+/* Sortable table headers (Sources/Users/Digest tables) */
+.sortable-th { cursor: pointer; user-select: none; white-space: nowrap; }
+.sortable-th:hover { color: var(--ap-accent, #6d5efc); }
+.sort-arrow { font-size: 0.65em; margin-left: 3px; }
+
+/* Pagination bar under sortable tables */
+.pager .btn-outline-secondary.disabled { pointer-events: none; }
+
 /* Full-text article panel (expanded inline in the News feed) */
 .full-text-panel {
     max-height: 320px;
