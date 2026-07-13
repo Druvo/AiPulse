@@ -1,0 +1,91 @@
+@page "/help"
+@attribute [Authorize]
+
+<PageTitle>AiPulse · Help</PageTitle>
+
+<div class="page-header">
+    <h1><Icon Name="help-circle" Size="22" /> Help &amp; Getting Started</h1>
+    <p class="lead">What AiPulse is, what every page does, and how to actually use it day to day.</p>
+</div>
+
+<div class="card mb-4">
+    <div class="card-body">
+        <h4 class="section-title"><Icon Name="zap" /> What is this?</h4>
+        <p>
+            AiPulse is your personal, self-hosted station for keeping up with AI news and leveling up as a developer.
+            It pulls live updates from ~40 sources (blogs, research feeds, GitHub releases, YouTube, Reddit, Mastodon…),
+            and pairs that feed with a curated glossary, a tools comparison, and a learning roadmap — all in one place,
+            so you don't have to piece it together from a dozen tabs.
+        </p>
+        <p class="mb-0">
+            <strong>It runs standalone — no AI, no API key, nothing to configure to get value from it.</strong>
+            Everything you see (aggregation, tagging, summaries, digest) is plain code: HTTP fetches, XML parsing,
+            keyword matching. There's an optional AI hook for later, but it's off by default and nothing here needs it.
+        </p>
+    </div>
+</div>
+
+<h4 class="section-title"><Icon Name="rss" /> A typical day</h4>
+<ol class="mb-4">
+    <li class="mb-2"><strong>Open the <a href="">Dashboard</a>.</strong> It shows what's trending this week, your activity timeline, and where you left off in the Learning Hub.</li>
+    <li class="mb-2"><strong>Check the <a href="news">News Feed</a>.</strong> Filter to <span class="badge bg-danger">New</span> to see only what's arrived since your last visit. Save anything worth a deeper read by clicking the 🏷️ tag icon — it goes to your <a href="bookmarks">Reading List</a>.</li>
+    <li class="mb-2"><strong>Missed a few days?</strong> Open the <a href="digest">Weekly Digest</a> instead — a 7-day rollup of the biggest stories and what's trending, rather than scrolling everything individually.</li>
+    <li class="mb-2"><strong>Heard a term you didn't recognize?</strong> Search it in the <a href="glossary">Glossary</a> — it's written for developers, not textbooks, and includes slang/mis-heard versions (e.g. searching "headroom" finds "context headroom").</li>
+    <li class="mb-2"><strong>Starting a coding task?</strong> Check <a href="tools">Tools &amp; Tips</a> for which AI tool actually fits the job, plus concrete token-saving moves.</li>
+    <li><strong>Want to learn something end-to-end?</strong> Work through the <a href="learn">Learning Hub</a> roadmap — it's ordered from fundamentals to agents, each module says <em>why</em> it matters, not just what to read.</li>
+</ol>
+
+<h4 class="section-title"><Icon Name="grid" /> Every page, in one line each</h4>
+<div class="table-responsive mb-4">
+    <table class="table table-sm align-middle">
+        <thead><tr><th>Page</th><th>What it's for</th></tr></thead>
+        <tbody>
+            <tr><td><a href="">Dashboard</a></td><td>Home base — trending topics, activity heatmap, continue-learning shortcuts, recent bookmarks.</td></tr>
+            <tr><td><a href="news">News Feed</a></td><td>The live feed itself. Search, filter, bookmark, mark read. <code>j</code>/<code>k</code>/<code>o</code>/<code>m</code>/<code>b</code> for keyboard navigation — press <code>?</code> on that page for the full list.</td></tr>
+            <tr><td><a href="digest">Weekly Digest</a></td><td>A 7-day summary instead of a scroll: biggest multi-source stories, top category, day-by-day counts.</td></tr>
+            <tr><td><a href="explore">Explore</a></td><td>What's trending right now on Hugging Face (models/datasets) and GitHub (repos), plus benchmark links and a "try a model" directory.</td></tr>
+            <tr><td><a href="playground">Playground</a></td><td>Chat with a model running locally via <a href="https://ollama.com" target="_blank" rel="noopener">Ollama</a> — nothing leaves your machine. Requires Ollama installed separately.</td></tr>
+            <tr><td><a href="learn">Learning Hub</a></td><td>A 10-module roadmap, tokens → agents. Mark modules complete to track progress. Includes live "fresh tutorials" and free courses.</td></tr>
+            <tr><td><a href="glossary">Glossary</a></td><td>28 terms explained for developers, with aliases so slang/mis-heard versions still find the right entry.</td></tr>
+            <tr><td><a href="tools">Tools &amp; Tips</a></td><td>Right-tool-for-the-job matrix (coding agents, IDE assistants, local runtimes) plus token-optimization tips.</td></tr>
+            <tr><td><a href="bookmarks">Reading List</a></td><td>Everything you've saved from the News Feed. Export to an Obsidian-ready Markdown note from Settings.</td></tr>
+            <tr><td><a href="settings">Settings</a></td><td>Your watchlist, exclude filters, notifications, Obsidian export, theme — see below.</td></tr>
+            <AuthorizeView Roles="Admin">
+                <Authorized>
+                    <tr><td><a href="sources">Sources</a> <span class="badge bg-secondary">Admin</span></td><td>Add/edit/remove feeds, import/export OPML, see per-source uptime history.</td></tr>
+                    <tr><td><a href="users">Users</a> <span class="badge bg-secondary">Admin</span></td><td>Approve new registrations, change roles, disable accounts.</td></tr>
+                </Authorized>
+            </AuthorizeView>
+        </tbody>
+    </table>
+</div>
+
+<h4 class="section-title"><Icon Name="star" /> Watchlist vs. Exclude filters</h4>
+<p>These are opposites, both on the <a href="settings">Settings</a> page:</p>
+<ul class="mb-4">
+    <li><strong>Watchlist</strong> — keywords you <em>do</em> care about. Matching items get a ⭐ and can trigger a desktop notification.</li>
+    <li><strong>Exclude filters</strong> — the opposite: matching items are hidden from the News Feed entirely. Plain text or a regex pattern.</li>
+</ul>
+
+<h4 class="section-title"><Icon Name="bell" /> Notifications</h4>
+<p class="mb-4">
+    A background check runs periodically (every 15 minutes by default) looking for new tool/model releases and watchlist
+    matches, and can raise a desktop notification via your browser — enable it once on the <a href="settings">Settings</a> page.
+    Notifications only fire for items published <em>after</em> the app's first check, so nothing shows in the first few
+    minutes after a restart even when everything's working correctly. Click the 🔔 bell icon (top-right, any page) to see
+    recent alerts.
+</p>
+
+<h4 class="section-title"><Icon Name="database" /> How sources work</h4>
+<ul class="mb-4">
+    <li>Most sources are plain RSS/Atom feeds, fetched and refreshed automatically.</li>
+    <li>Some sources have no title per item (Mastodon posts, for example) — AiPulse shows the start of the post text instead, rather than a blank "(untitled)".</li>
+    <li>When the same story is covered by multiple sources, they're merged into one card badged "+N more sources" instead of repeating.</li>
+    <li>An admin can flag a source to fetch the <strong>full article text</strong> (not just the teaser) or to <strong>scrape a page with no RSS feed at all</strong> — both configured from the <a href="sources">Sources</a> page.</li>
+</ul>
+
+<h4 class="section-title"><Icon Name="graduation-cap" /> Learn more</h4>
+<p class="mb-0">
+    This covers day-to-day use. For self-hosting details (installing, configuring sources, security, backups),
+    see the <a href="https://github.com/Druvo/AiPulse#readme" target="_blank" rel="noopener">project README on GitHub</a>.
+</p>

@@ -22,6 +22,16 @@ public sealed class ExcludeFilter
     public bool IsRegex { get; set; }
 }
 
+/// <summary>A simple embed on the Dashboard - either an iframe (external page) or raw HTML/text.</summary>
+public sealed class DashboardWidget
+{
+    public Guid Id { get; init; } = Guid.NewGuid();
+    public required string Title { get; set; }
+    /// <summary>"Iframe" (Content is a URL) or "Html" (Content is rendered as sanitized-ish raw markup).</summary>
+    public string Type { get; set; } = "Iframe";
+    public required string Content { get; set; }
+}
+
 /// <summary>Persisted, per-user reading state (bookmarks, read items, last visit, prefs) - see ReadingStateService.</summary>
 public sealed class ReadingState
 {
@@ -38,6 +48,22 @@ public sealed class ReadingState
 
     /// <summary>Where "Export to Obsidian" writes. Empty = App_Data/exports.</summary>
     public string? ObsidianExportPath { get; set; }
+
+    /// <summary>True once the user has dismissed the Dashboard's first-visit welcome banner.</summary>
+    public bool WelcomeDismissed { get; set; }
+
+    /// <summary>Slack/Discord/generic incoming-webhook URL for release + watchlist alerts. Null = disabled.</summary>
+    public string? WebhookUrl { get; set; }
+
+    /// <summary>Custom Dashboard embeds (iframes or raw HTML snippets), user-managed.</summary>
+    public List<DashboardWidget> DashboardWidgets { get; set; } = new();
+
+    /// <summary>
+    /// MD5("username:password") for the Fever API (a separate password from the main login, chosen by the
+    /// user in Settings) - stored as the digest itself, never the plaintext, since that's all the protocol
+    /// needs to compare against on each request.
+    /// </summary>
+    public string? FeverApiKey { get; set; }
 }
 
 /// <summary>A notification alert raised when a watched/important item appears in the feed.</summary>

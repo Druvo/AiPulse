@@ -24,6 +24,18 @@ Status tags: ✅ done · 🟢 fits philosophy, no AI needed · 🟡 needs a desi
   writing - see note below) otherwise.
 - Learning Hub, Glossary, Tools & Tips, Explore (HF/GitHub trending), Playground (local Ollama chat)
 - Backup/restore, Obsidian export, global search, light/dark theme
+- Outbound webhooks — Slack/Discord (auto-detected) or generic JSON POST for release + watchlist alerts,
+  per-user URL, with a "send test" button
+- Mobile client API compatibility — a Fever API endpoint (`/fever/`) so AiPulse can be read from Reeder,
+  ReadKit, Fiery Feeds and other Fever-compatible RSS apps, auth'd via a separate per-user API password
+- Theme presets (5 accent colors) + an advanced custom-CSS box for full visual control, both remembered
+  per browser
+- General-purpose Dashboard widgets — embed an iframe or raw HTML snippet of your own (status page,
+  another dashboard, a personal note), managed from Settings
+- In-app Help page (`/help`) covering what AiPulse is, a typical daily workflow, and a full page reference,
+  plus a dismissible first-visit welcome banner on the Dashboard
+- Fixed feed items showing a literal "(untitled)" placeholder — titles now fall back to a summary excerpt,
+  then the source name, instead of a broken-looking placeholder
 
 > **WebSub reality check:** none of AiPulse's ~40 default sources currently declare a hub (checked YouTube,
 > WordPress.com, Feedburner, Blogger - all previously reliable examples, none do anymore). The subscribe/
@@ -38,10 +50,6 @@ Status tags: ✅ done · 🟢 fits philosophy, no AI needed · 🟡 needs a desi
 
 | Idea | Source | The decision |
 |---|---|---|
-| **Outbound webhooks** (Slack/Discord/generic POST) | Horizon, Miniflux, NewsBlur (IFTTT/Zapier) | Desktop notifications only fire while a tab is open. A webhook reaches you anywhere — but needs per-user webhook URL storage and a retry/failure policy. |
-| **Mobile client API compatibility** (Google Reader / Fever API) | FreshRSS, Miniflux | Would let you read AiPulse in existing RSS apps (Reeder, FeedMe) — meaningful surface area to implement and maintain a compat API. |
-| **Multiple visual themes + custom CSS** | Glance | Currently just light/dark. Decide: curated theme presets, or expose a raw custom-CSS box (more powerful, more support burden). |
-| **General-purpose custom widgets** (iframe/HTML/custom-API) | Glance | Biggest architectural addition on this list — turns AiPulse into a general dashboard, not just an AI-news one. Worth asking "do we want that scope?" before building. |
 | **Read-it-later integrations** (Pocket/Instapaper-style export) | NewsBlur, FreshRSS | Obsidian export already covers one destination; decide if others are worth the integration surface. |
 | **Persist notification "seen" state across restarts** | — | Right now `FeedWatcherService` re-seeds its dedup set on every restart, so nothing alerts in the first cycle after a restart even if it's genuinely new. Needs a small persisted "last seen" store. |
 

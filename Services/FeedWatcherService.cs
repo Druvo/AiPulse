@@ -24,6 +24,7 @@ public sealed class FeedWatcherService : BackgroundService
     private readonly FeedHistoryService _history;
     private readonly KnowledgeBaseService _kb;
     private readonly WebSubService _webSub;
+    private readonly WebhookService _webhooks;
     private readonly NotificationOptions _opt;
     private readonly ILogger<FeedWatcherService> _log;
     private readonly HashSet<string> _seen = new();
@@ -36,6 +37,7 @@ public sealed class FeedWatcherService : BackgroundService
         FeedHistoryService history,
         KnowledgeBaseService kb,
         WebSubService webSub,
+        WebhookService webhooks,
         Microsoft.Extensions.Options.IOptions<NotificationOptions> opt,
         ILogger<FeedWatcherService> log)
     {
@@ -45,6 +47,7 @@ public sealed class FeedWatcherService : BackgroundService
         _history = history;
         _kb = kb;
         _webSub = webSub;
+        _webhooks = webhooks;
         _opt = opt.Value;
         _log = log;
     }
@@ -118,6 +121,23 @@ public sealed class FeedWatcherService : BackgroundService
         {
             _log.LogInformation("Feed watcher raising {Count} alert(s)", newAlerts.Count);
             _notify.Add(newAlerts);
+            await FanOutWebhooksAsync(newAlerts, ct);
+        }
+    }
+
+    /// <summary>Posts each new alert to every user's configured webhook, if any. Best-effort - a failed webhook never breaks the poll.</summary>
+    private async Task FanOutWebhooksAsync(List<Alert> alerts, CancellationToken ct)
+    {
+        var urls = ReadingStateService.GetAllWebhookUrls(_env);
+        if (urls.Count == 0) return;
+
+        foreach (var url in urls)
+        {
+            foreach (var alert in alerts)
+            {
+                try { await _webhooks.SendAsync(url, alert, ct); }
+                catch (Exception ex) { _log.LogDebug(ex, "Webhook delivery failed"); }
+            }
         }
     }
 }

@@ -14,6 +14,29 @@
     <p class="lead">Your everyday station to read the AI world and level up as a developer — news, jargon, tools, and a learning roadmap. Runs standalone, no AI required.</p>
 </div>
 
+@if (!_welcomeDismissed)
+{
+    <div class="card mb-4 welcome-banner">
+        <div class="card-body">
+            <div class="d-flex justify-content-between align-items-start gap-3">
+                <div>
+                    <h5 class="mb-1"><Icon Name="sparkle" Size="18" /> New here?</h5>
+                    <p class="mb-2">
+                        AiPulse aggregates ~40 AI news/research/tool sources into one feed, plus a glossary, a tools
+                        comparison, and a learning roadmap — all standalone, no AI required to run it.
+                    </p>
+                    <a href="help" class="btn btn-sm btn-primary">
+                        <Icon Name="help-circle" Size="14" /> Read the full guide
+                    </a>
+                </div>
+                <button class="btn btn-sm btn-link text-muted" @onclick="DismissWelcome" title="Dismiss">
+                    <Icon Name="check" Size="16" /> Got it
+                </button>
+            </div>
+        </div>
+    </div>
+}
+
 <div class="row g-3 mb-4">
     <div class="col-6 col-lg-3">
         <a class="stat-card" href="news">
@@ -50,6 +73,30 @@
         <div class="col-lg-6">
             <MiniTimeline Items="_historyItems" />
         </div>
+    </div>
+}
+
+@if (Reading.DashboardWidgets.Count > 0)
+{
+    <div class="row g-4 mb-4">
+        @foreach (var w in Reading.DashboardWidgets)
+        {
+            <div class="col-lg-6">
+                <h4 class="section-title">@w.Title</h4>
+                @if (w.Type == "Iframe")
+                {
+                    <div class="card">
+                        <iframe src="@w.Content" class="dashboard-widget-frame" sandbox="allow-scripts allow-same-origin allow-popups"></iframe>
+                    </div>
+                }
+                else
+                {
+                    <div class="card">
+                        <div class="card-body">@((MarkupString)w.Content)</div>
+                    </div>
+                }
+            </div>
+        }
     </div>
 }
 
@@ -108,10 +155,18 @@
 
 @code {
     private IReadOnlyList<FeedItem>? _historyItems;
+    private bool _welcomeDismissed;
 
     protected override async Task OnInitializedAsync()
     {
+        _welcomeDismissed = Reading.WelcomeDismissed;
         await Feeds.GetAsync(); // warms the shared cache other pages read from
         _historyItems = History.Items;
+    }
+
+    private void DismissWelcome()
+    {
+        Reading.DismissWelcome();
+        _welcomeDismissed = true;
     }
 }

@@ -43,8 +43,12 @@ It aggregates ~39 RSS/Atom sources (blogs, news outlets, arXiv, Hacker News, Red
 - **📄 Full-text fetching** — for feeds that only publish a teaser, flip on "Fetch full article text" and AiPulse pulls the whole article (readability-style extraction, cached per link) so you can read it inline via a "Read full text" toggle instead of clicking out.
 - **⚡ WebSub push** (optional) — for the rare feed that still declares a hub, AiPulse subscribes so updates get pushed to it the moment they're published instead of waiting for the next poll. Off unless you set `WebSub:PublicBaseUrl` to your public URL (a hub can't call back to `localhost`); the Sources page shows a **Push** column with live status per source.
 - **📈 Source health history** — a rolling 30-day uptime % per source on the Sources page, so "flaky feed" is something you can see, not just guess at.
-- **🌗 Light/Dark theme**, remembered in the browser across every navigation.
+- **🌗 Light/Dark theme + accent colors + custom CSS**, remembered in the browser across every navigation. Pick from 5 accent presets or drop in your own CSS for full control.
 - **🔎 Global search** (`Ctrl`/`Cmd`+`K`) — instantly search across the Glossary, Tools & Tips, and Learning Hub from anywhere in the app.
+- **🪝 Outbound webhooks** — send release/watchlist alerts to Slack, Discord, or any generic JSON endpoint, so you're notified even when no tab is open.
+- **📱 Mobile client support (Fever API)** — read AiPulse from Reeder, ReadKit, Fiery Feeds, or any other Fever-compatible RSS app, using a separate per-user API password set in Settings.
+- **🧩 Custom Dashboard widgets** — embed your own iframe or raw HTML snippet (a status page, another dashboard, a note) right on the Dashboard.
+- **❓ In-app Help page** (`/help`) — what AiPulse is, a typical daily workflow, and a full page-by-page reference, plus a dismissible welcome banner for first-time visitors.
 
 Sources are managed dynamically from the **Sources page** (add/edit/remove feeds, no restart needed) — see [below](#customize-the-content). Glossary, Tools, Practices, and Learning Hub content stays as **editable JSON files in `Data/`** — no code needed to grow it.
 
@@ -111,9 +115,12 @@ Handy feed URL patterns (for adding sources via the Sources page): GitHub releas
 
 Each source also carries `ContentType` (News/Tutorial/Release/Paper/Discussion/Video), `Level` (Beginner/Intermediate/Advanced), and base `Tags` — shown on the Sources page and inherited by every item it produces (further enriched per-item by matching against the glossary).
 
-### Watchlist & Obsidian export
-Set these in the in-app **Settings** page (stored in `App_Data/`, not source control):
+### Watchlist, webhooks, mobile access & Obsidian export
+Set these in the in-app **Settings** page (stored per-user in `App_Data/users/{username}/reading-state.json`, not source control):
 - **Keyword watchlist** — topics to highlight & notify on.
+- **Outbound webhook** — a Slack/Discord/generic URL for release + watchlist alerts; auto-detected by URL, with a "send test" button.
+- **Fever API password** — a separate password (not your login) for mobile RSS apps; the app then shows the server URL, username, and this password to paste into your client.
+- **Dashboard widgets** — add/remove iframe or HTML embeds shown on the Dashboard.
 - **Obsidian export folder** — where **Export to Obsidian** writes `AiPulse Reading List.md` (leave blank to use `App_Data/exports`).
 
 ---
@@ -124,6 +131,8 @@ Set these in the in-app **Settings** page (stored in `App_Data/`, not source con
 - Registration never auto-approves — new accounts are **Pending** until an Admin approves them at `/users`, so a public-facing instance can't be self-signed-up-into by strangers.
 - Sources, Users, and Backup/Restore are **Admin-only**; everything else (News, Learning Hub, Bookmarks, Playground, etc.) is open to any approved account.
 - `/websub/callback/*` is intentionally unauthenticated (external hubs are anonymous servers) — it's instead secured by matching the hub's topic against what was actually subscribed to, and requiring a valid per-subscription HMAC signature on every content push. Fully inert unless you set `WebSub:PublicBaseUrl`.
+- `/fever/` is likewise unauthenticated at the ASP.NET Core level (mobile RSS clients don't send AiPulse's login cookie) — it's secured instead by the Fever protocol's own `api_key`, checked per-user inside `FeverApiService`. No-op until a user sets a Fever API password in Settings.
+- The **Dashboard widgets "HTML" type renders raw markup unsanitized** (`MarkupString`) — it's opt-in, per-user, and runs as your own logged-in session, so only use it with content you trust (same trust model as the custom-CSS box).
 - For a real bootstrap password, generate a hash (Development only):
   `http://localhost:5257/auth/hash?password=YOUR-PASSWORD` → paste the result into `Auth:PasswordHash` and clear `Auth:Password`. Accounts created via `/register` or `/users` are always hashed automatically.
 - Keep it on `localhost` unless you need otherwise. If you expose it, run behind HTTPS.
@@ -143,6 +152,8 @@ Services/
   FeedAggregatorService   Fetches + normalizes all feeds, dedupes, auto-tags (HTTP/XML only — no AI)
   ContentExtractorService Full-text article extraction (readability heuristic) + XPath HTML scraping support
   WebSubService           Subscribe/verify/renew WebSub (PubSubHubbub) push, HMAC-signed content pushes
+  WebhookService          Posts release/watchlist alerts to Slack/Discord/generic JSON endpoints
+  FeverApiService         Fever API (mobile RSS client compatibility) - groups/feeds/items/mark
   OpmlService             Bulk import/export of sources, with reachability checks on import
   SourceHealthService     Rolling 30-day per-source success/fail history
   FeedWatcherService      Background poller that raises release/watchlist alerts + feeds FeedHistoryService
@@ -161,7 +172,7 @@ Services/
   BackupService           Zips/restores all of App_Data
   ISummarizer             Optional AI hook (NullSummarizer = off)
 Components/Pages/     Home, News, Digest, Explore, Learn, Glossary, Tools, Bookmarks, Settings, Sources,
-                      Users, Playground, Login, Register, AccessDenied
+                      Users, Playground, Help, Login, Register, AccessDenied
 Components/Shared/    Icon, GlobalSearch, ActivityHeatmap, TrendingPanel, MiniTimeline
 ```
 

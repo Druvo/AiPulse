@@ -3,12 +3,16 @@
 @rendermode InteractiveServer
 @inject ReadingStateService Reading
 @inject ObsidianExportService Export
+@inject WebhookService Webhooks
+@inject AuthenticationStateProvider AuthState
+@inject NavigationManager Nav
 @inject IJSRuntime JS
 
 <PageTitle>AiPulse · Settings</PageTitle>
 
 <div class="page-header">
     <h1><Icon Name="settings" Size="22" /> Settings</h1>
+    <p class="lead">Your personal preferences — watchlist, filters, notifications, and export. New to AiPulse? See the <a href="help">Help page</a> first.</p>
 </div>
 
 <div class="row g-4">
@@ -75,6 +79,25 @@
                 }
             </div>
         }
+
+        <hr class="my-4" />
+
+        <h4 class="section-title"><Icon Name="sparkle" /> Appearance</h4>
+        <p class="text-muted">An accent color on top of the light/dark toggle (top-left), plus optional custom CSS for full control. Remembered on this browser.</p>
+
+        <div class="d-flex gap-2 mb-3">
+            <button class="accent-swatch" style="background:#0891b2" title="Default (teal)" @onclick='() => SetAccent("")'></button>
+            <button class="accent-swatch" style="background:#7c3aed" title="Violet" @onclick='() => SetAccent("violet")'></button>
+            <button class="accent-swatch" style="background:#e11d48" title="Rose" @onclick='() => SetAccent("rose")'></button>
+            <button class="accent-swatch" style="background:#d97706" title="Amber" @onclick='() => SetAccent("amber")'></button>
+            <button class="accent-swatch" style="background:#059669" title="Emerald" @onclick='() => SetAccent("emerald")'></button>
+        </div>
+
+        <details>
+            <summary class="small text-muted mb-2" style="cursor:pointer">Advanced: custom CSS</summary>
+            <textarea class="form-control form-control-sm font-monospace mt-2" rows="6" placeholder="e.g. .stat-num { font-size: 2.5rem; }" @bind="_customCss"></textarea>
+            <button class="btn btn-sm btn-outline-primary mt-2" @onclick="SaveCustomCss">Apply</button>
+        </details>
     </div>
 
     <div class="col-lg-6">
@@ -100,6 +123,94 @@
             and re-check every <code>Notifications:PollMinutes</code> (default 15 min, in <code>appsettings.json</code>) —
             so nothing shows in the first few minutes after a restart even when everything's working correctly.
         </p>
+
+        <hr class="my-4" />
+
+        <h4 class="section-title"><Icon Name="webhook" /> Outbound webhook</h4>
+        <p class="text-muted">
+            Desktop notifications only fire while a tab is open. A webhook reaches you anywhere — paste a
+            <a href="https://api.slack.com/messaging/webhooks" target="_blank" rel="noopener">Slack</a> or
+            <a href="https://support.discord.com/hc/en-us/articles/228383668" target="_blank" rel="noopener">Discord</a>
+            incoming-webhook URL and it's auto-detected; any other URL gets a generic JSON POST.
+        </p>
+        <div class="input-group mb-2">
+            <input class="form-control" placeholder="https://hooks.slack.com/services/…" @bind="_webhookUrl" />
+            <button class="btn btn-primary" @onclick="SaveWebhook">Save</button>
+        </div>
+        <button class="btn btn-outline-secondary" @onclick="TestWebhook" disabled="@string.IsNullOrWhiteSpace(_webhookUrl)">Send test</button>
+        @if (_webhookTestResult is not null)
+        {
+            <div class="alert @(_webhookTestResult == "ok" ? "alert-success" : "alert-warning") py-2 mt-2 small">
+                @(_webhookTestResult == "ok" ? "Test message sent — check your channel." : $"Failed: {_webhookTestResult}")
+            </div>
+        }
+
+        <hr class="my-4" />
+
+        <h4 class="section-title"><Icon Name="rss" /> Mobile apps (Fever API)</h4>
+        <p class="text-muted">
+            Read AiPulse from an RSS app that supports the <strong>Fever API</strong> (Reeder, ReadKit, Fiery Feeds, and others).
+            Set a separate password here — it's not your login password, just for this.
+        </p>
+        <div class="input-group mb-2">
+            <input type="password" class="form-control" placeholder="Fever API password" @bind="_feverPassword" />
+            <button class="btn btn-primary" @onclick="SaveFeverPassword">Save</button>
+        </div>
+        @if (_feverSaved)
+        {
+            <div class="alert alert-success py-2 small mb-2">
+                Saved. In your RSS app, use server <code>@_feverEndpointUrl</code>, username <code>@_username</code>, and the password you just set.
+            </div>
+        }
+        @if (Reading.FeverApiKey is not null)
+        {
+            <p class="text-muted small mb-0">Fever API access is currently <strong class="text-success">enabled</strong> for this account.</p>
+        }
+
+        <hr class="my-4" />
+
+        <h4 class="section-title"><Icon Name="grid" /> Dashboard widgets</h4>
+        <p class="text-muted">
+            Embed your own content on the Dashboard — a status page, a personal RSS reader, a Grafana panel, anything.
+            <strong>Iframe</strong> takes a URL. <strong>HTML</strong> renders raw markup directly, unsanitized — only use it
+            with content you trust, since it runs as your own logged-in session (the same trust model as the custom CSS above).
+        </p>
+        <div class="row g-2 mb-2">
+            <div class="col-md-3">
+                <input class="form-control" placeholder="Title" @bind="_newWidgetTitle" />
+            </div>
+            <div class="col-md-2">
+                <select class="form-select" @bind="_newWidgetType">
+                    <option value="Iframe">Iframe</option>
+                    <option value="Html">HTML</option>
+                </select>
+            </div>
+            <div class="col-md-5">
+                <input class="form-control" placeholder="@(_newWidgetType == "Iframe" ? "https://…" : "<div>…</div>")" @bind="_newWidgetContent" />
+            </div>
+            <div class="col-md-2">
+                <button class="btn btn-primary w-100" @onclick="AddWidget">Add</button>
+            </div>
+        </div>
+
+        @if (Reading.DashboardWidgets.Count == 0)
+        {
+            <p class="text-muted">No widgets yet.</p>
+        }
+        else
+        {
+            <div class="d-flex flex-column gap-1">
+                @foreach (var w in Reading.DashboardWidgets)
+                {
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="badge bg-secondary">@w.Type</span>
+                        <span class="small fw-bold">@w.Title</span>
+                        <code class="small text-truncate" style="max-width:260px">@w.Content</code>
+                        <button class="btn btn-sm btn-link p-0 text-danger ms-auto" @onclick="() => RemoveWidget(w.Id)">remove</button>
+                    </div>
+                }
+            </div>
+        }
 
         <hr class="my-4" />
 
@@ -154,13 +265,66 @@
     private string _permission = "unknown";
     private string? _exportMsg;
     private string? _testResult;
+    private string _customCss = "";
+    private string _webhookUrl = "";
+    private string? _webhookTestResult;
+    private string _feverPassword = "";
+    private bool _feverSaved;
+    private string _username = "";
+    private string _feverEndpointUrl = "";
+    private string _newWidgetTitle = "";
+    private string _newWidgetType = "Iframe";
+    private string _newWidgetContent = "";
 
-    protected override void OnInitialized() => _exportPath = Reading.ObsidianExportPath ?? Export.TargetDir;
+    protected override void OnInitialized()
+    {
+        _exportPath = Reading.ObsidianExportPath ?? Export.TargetDir;
+        _webhookUrl = Reading.WebhookUrl ?? "";
+        _feverEndpointUrl = new Uri(new Uri(Nav.Uri), "/fever/").ToString();
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        var state = await AuthState.GetAuthenticationStateAsync();
+        _username = state.User.Identity?.Name ?? "";
+    }
+
+    private void SaveFeverPassword()
+    {
+        if (string.IsNullOrWhiteSpace(_feverPassword)) return;
+        Reading.SetFeverApiPassword(_username, _feverPassword);
+        _feverPassword = "";
+        _feverSaved = true;
+    }
+
+    private void SaveWebhook() => Reading.SetWebhookUrl(_webhookUrl);
+
+    private async Task TestWebhook()
+    {
+        var (success, error) = await Webhooks.SendTestAsync(_webhookUrl);
+        _webhookTestResult = success ? "ok" : (error ?? "unknown error");
+    }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (!firstRender) return;
         try { _permission = await JS.InvokeAsync<string>("aipulseNotify.permission"); StateHasChanged(); } catch { }
+        try
+        {
+            _customCss = await JS.InvokeAsync<string>("eval", "localStorage.getItem('aipulse-custom-css') || ''");
+            StateHasChanged();
+        }
+        catch { }
+    }
+
+    private async Task SetAccent(string name)
+    {
+        try { await JS.InvokeVoidAsync("setAccent", name); } catch { }
+    }
+
+    private async Task SaveCustomCss()
+    {
+        try { await JS.InvokeVoidAsync("setCustomCss", _customCss); } catch { }
     }
 
     private void AddKeyword()
@@ -179,6 +343,16 @@
     }
 
     private void RemoveExcludeFilter(Guid id) => Reading.RemoveExcludeFilter(id);
+
+    private void AddWidget()
+    {
+        if (string.IsNullOrWhiteSpace(_newWidgetTitle) || string.IsNullOrWhiteSpace(_newWidgetContent)) return;
+        Reading.AddDashboardWidget(_newWidgetTitle, _newWidgetType, _newWidgetContent);
+        _newWidgetTitle = "";
+        _newWidgetContent = "";
+    }
+
+    private void RemoveWidget(Guid id) => Reading.RemoveDashboardWidget(id);
 
     private async Task RequestPermission()
     {

@@ -367,7 +367,9 @@ public sealed class FeedAggregatorService
             var titleNode = string.IsNullOrWhiteSpace(source.ScrapeTitleXPath)
                 ? linkNode
                 : node.SelectSingleNode(source.ScrapeTitleXPath);
-            var title = CleanText(System.Net.WebUtility.HtmlDecode(titleNode?.InnerText ?? linkNode?.InnerText ?? "(untitled)"), 200);
+            var rawTitle = titleNode?.InnerText ?? linkNode?.InnerText;
+            var itemText = CleanText(System.Net.WebUtility.HtmlDecode(node.InnerText), 320);
+            var title = DeriveTitle(rawTitle is null ? null : System.Net.WebUtility.HtmlDecode(rawTitle), itemText, source.Name);
 
             var published = DateTimeOffset.Now;
             if (!string.IsNullOrWhiteSpace(source.ScrapeDateXPath))
@@ -445,11 +447,12 @@ public sealed class FeedAggregatorService
                 : item.LastUpdatedTime != default ? item.LastUpdatedTime
                 : DateTimeOffset.Now;
 
+            var summary = CleanText(ExtractSummary(item), 320);
             result.Add(new FeedItem
             {
-                Title = CleanText(item.Title?.Text ?? "(untitled)", 200),
+                Title = DeriveTitle(item.Title?.Text, summary, source.Name),
                 Link = CleanUrl(link),
-                Summary = CleanText(ExtractSummary(item), 320),
+                Summary = summary,
                 Published = published,
                 SourceName = source.Name,
                 Category = source.Category,
@@ -477,13 +480,14 @@ public sealed class FeedAggregatorService
         var entries = doc.Descendants("item").Concat(doc.Descendants(atom + "entry")).Take(20);
         foreach (var e in entries)
         {
-            var title = e.Element("title")?.Value ?? e.Element(atom + "title")?.Value ?? "(untitled)";
+            var title = e.Element("title")?.Value ?? e.Element(atom + "title")?.Value;
             var link = e.Element("link")?.Value;
             if (string.IsNullOrWhiteSpace(link))
                 link = e.Elements(atom + "link").FirstOrDefault(l => (string?)l.Attribute("rel") != "self")?.Attribute("href")?.Value;
-            var summary = e.Element("description")?.Value
+            var summaryRaw = e.Element("description")?.Value
                 ?? e.Element(atom + "summary")?.Value
                 ?? e.Element(atom + "content")?.Value ?? "";
+            var summary = CleanText(summaryRaw, 320);
             var dateStr = e.Element("pubDate")?.Value
                 ?? e.Element(atom + "updated")?.Value
                 ?? e.Element(atom + "published")?.Value;
@@ -491,9 +495,9 @@ public sealed class FeedAggregatorService
 
             result.Add(new FeedItem
             {
-                Title = CleanText(title, 200),
+                Title = DeriveTitle(title, summary, source.Name),
                 Link = CleanUrl(link ?? ""),
-                Summary = CleanText(summary, 320),
+                Summary = summary,
                 Published = published == default ? DateTimeOffset.Now : published,
                 SourceName = source.Name,
                 Category = source.Category,
@@ -520,6 +524,30 @@ public sealed class FeedAggregatorService
         text = System.Net.WebUtility.HtmlDecode(text);
         text = Regex.Replace(text, @"\s+", " ").Trim();
         return text.Length > max ? text[..max].TrimEnd() + "…" : text;
+    }
+
+    /// <summary>
+    /// Feeds without a per-item title (common for microblog-style posts - Mastodon, some YouTube
+    /// Community posts, etc.) used to show as a bare "(untitled)", which read as broken rather than
+    /// "this platform just doesn't have titles". Derive something readable instead: the raw title if
+    /// there is one, otherwise the start of the summary, otherwise a plain fallback naming the source.
+    /// </summary>
+    private static string DeriveTitle(string? rawTitle, string cleanedSummary, string sourceName)
+    {
+        if (!string.IsNullOrWhiteSpace(rawTitle))
+        {
+            var cleaned = CleanText(rawTitle, 200);
+            if (!string.IsNullOrWhiteSpace(cleaned))
+                return cleaned;
+        }
+
+        if (!string.IsNullOrWhiteSpace(cleanedSummary))
+        {
+            const int max = 80;
+            return cleanedSummary.Length > max ? cleanedSummary[..max].TrimEnd() + "…" : cleanedSummary;
+        }
+
+        return $"New post from {sourceName}";
     }
 
     private static readonly HashSet<string> TrackingParams = new(StringComparer.OrdinalIgnoreCase)

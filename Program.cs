@@ -70,6 +70,8 @@ builder.Services.AddHttpContextAccessor();
 // WebSub:PublicBaseUrl is configured - a hub can't call back to "localhost".
 builder.Services.Configure<WebSubOptions>(builder.Configuration.GetSection("WebSub"));
 builder.Services.AddSingleton<WebSubService>();
+builder.Services.AddSingleton<WebhookService>();
+builder.Services.AddSingleton<FeverApiService>();
 
 // Background watcher that raises desktop notifications for big releases & watchlist hits.
 builder.Services.Configure<NotificationOptions>(builder.Configuration.GetSection("Notifications"));
@@ -203,6 +205,20 @@ app.MapPost("/websub/callback/{sourceId:int}", async (int sourceId, HttpRequest 
     var pushedItems = await feeds.MergePushedContentAsync(source, xml);
     history.Record(pushedItems);
     return Results.Ok();
+});
+
+// Fever API - lets mobile RSS clients (Reeder, ReadKit, Fiery Feeds, etc.) read AiPulse's feed. Unauthenticated
+// at the ASP.NET Core level like the WebSub callback (mobile apps don't send our login cookie); auth is the
+// protocol's own api_key, checked per-user inside FeverApiService. Force feed refresh isn't triggered here -
+// it reads whatever FeedHistoryService already has, which the background watcher keeps current.
+app.MapMethods("/fever/", new[] { "GET", "POST" }, async (HttpRequest request, FeverApiService fever) =>
+{
+    IFormCollection? form = request.HasFormContentType ? await request.ReadFormAsync() : null;
+    var apiKey = form?["api_key"].FirstOrDefault() ?? request.Query["api_key"].FirstOrDefault();
+    var userKey = fever.Authenticate(apiKey);
+
+    var response = await fever.BuildResponseAsync(userKey, request.Query, form);
+    return Results.Json(response);
 });
 
 app.MapRazorComponents<App>()
