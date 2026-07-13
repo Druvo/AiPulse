@@ -1,0 +1,123 @@
+@* Obsidian-style month calendar: click a day to select it, shift-click to extend into a range. *@
+
+@{
+    var monthStart = _displayMonth;
+    var monthEnd = monthStart.AddMonths(1).AddDays(-1);
+    var counts = Items
+        .GroupBy(i => DateOnly.FromDateTime(i.Published.LocalDateTime))
+        .ToDictionary(g => g.Key, g => g.Count());
+    var max = counts.Count > 0 ? counts.Values.Max() : 0;
+    var today = DateOnly.FromDateTime(DateTime.Today);
+
+    var gridStart = monthStart.AddDays(-(int)monthStart.DayOfWeek);
+    var totalCells = 42; // always 6 full weeks, so the grid height doesn't jump between months
+}
+
+<div class="month-calendar">
+    <div class="month-calendar-header">
+        <button type="button" class="btn btn-sm btn-outline-secondary" @onclick="PrevMonth" title="Previous month">‹</button>
+        <span class="fw-bold">@monthStart.ToString("MMMM yyyy")</span>
+        <button type="button" class="btn btn-sm btn-outline-secondary" @onclick="NextMonth" title="Next month">›</button>
+        <button type="button" class="btn btn-sm btn-outline-secondary ms-2" @onclick="GoToday">Today</button>
+    </div>
+    <div class="month-calendar-grid">
+        @foreach (var wd in new[] { "Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat" })
+        {
+            <div class="month-calendar-weekday">@wd</div>
+        }
+        @for (var i = 0; i < totalCells; i++)
+        {
+            var day = gridStart.AddDays(i);
+            var inMonth = day.Month == monthStart.Month;
+            var count = counts.GetValueOrDefault(day);
+            var level = Level(count, max);
+            var inRange = RangeStart is not null && RangeEnd is not null && day >= RangeStart.Value && day <= RangeEnd.Value;
+            var isToday = day == today;
+            var capturedDay = day;
+            var cellTitle = count > 0 ? $"{day:MMM d, yyyy}: {count} item(s)" : day.ToString("MMM d, yyyy");
+            <div class="month-calendar-cell heatmap-@level @(inMonth ? "" : "month-calendar-outside") @(inRange ? "month-calendar-selected" : "") @(isToday ? "month-calendar-today" : "")"
+                 title="@cellTitle"
+                 @onclick="@(e => DayClicked(capturedDay, e))">
+                <span class="month-calendar-daynum">@day.Day</span>
+                @if (count > 0)
+                {
+                    <span class="month-calendar-dot"></span>
+                }
+            </div>
+        }
+    </div>
+    @if (RangeStart is not null)
+    {
+        <p class="text-muted x-small mt-2 mb-0">
+            @if (RangeEnd is not null && RangeEnd != RangeStart)
+            {
+                <text>Selected: @RangeStart.Value.ToString("MMM d") – @RangeEnd.Value.ToString("MMM d, yyyy")</text>
+            }
+            else
+            {
+                <text>Selected: @RangeStart.Value.ToString("MMM d, yyyy")</text>
+            }
+            <span> · shift-click another day to select a range</span>
+        </p>
+    }
+    else
+    {
+        <p class="text-muted x-small mt-2 mb-0">Click a day to filter the feed to it · shift-click another day to select a range.</p>
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired]
+    public IReadOnlyList<FeedItem> Items { get; set; } = Array.Empty<FeedItem>();
+
+    [Parameter]
+    public DateOnly? RangeStart { get; set; }
+
+    [Parameter]
+    public DateOnly? RangeEnd { get; set; }
+
+    [Parameter]
+    public EventCallback<(DateOnly Start, DateOnly End)> OnRangeChanged { get; set; }
+
+    private DateOnly _displayMonth = DateOnly.FromDateTime(DateTime.Today).AddDays(1 - DateTime.Today.Day);
+    private bool _initialized;
+
+    protected override void OnParametersSet()
+    {
+        if (_initialized) return;
+        _initialized = true;
+        var anchor = RangeStart ?? DateOnly.FromDateTime(DateTime.Today);
+        _displayMonth = anchor.AddDays(1 - anchor.Day);
+    }
+
+    private void PrevMonth() => _displayMonth = _displayMonth.AddMonths(-1);
+    private void NextMonth() => _displayMonth = _displayMonth.AddMonths(1);
+    private void GoToday() => _displayMonth = DateOnly.FromDateTime(DateTime.Today).AddDays(1 - DateTime.Today.Day);
+
+    private async Task DayClicked(DateOnly day, MouseEventArgs e)
+    {
+        if (e.ShiftKey && RangeStart is not null)
+        {
+            var start = RangeStart.Value < day ? RangeStart.Value : day;
+            var end = RangeStart.Value < day ? day : RangeStart.Value;
+            await OnRangeChanged.InvokeAsync((start, end));
+        }
+        else
+        {
+            await OnRangeChanged.InvokeAsync((day, day));
+        }
+    }
+
+    private static int Level(int count, int max)
+    {
+        if (count == 0 || max == 0) return 0;
+        var ratio = (double)count / max;
+        return ratio switch
+        {
+            <= 0.25 => 1,
+            <= 0.5 => 2,
+            <= 0.75 => 3,
+            _ => 4
+        };
+    }
+}

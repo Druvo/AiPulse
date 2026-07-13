@@ -71,15 +71,29 @@
             <span class="badge bg-info ms-1">@ActiveFilterCount()</span>
         }
     </button>
+    <button class="btn btn-sm btn-outline-dark" @onclick="() => _showCalendar = !_showCalendar">
+        <Icon Name="calendar" Size="14" /> Calendar
+    </button>
     @if (!string.IsNullOrEmpty(_tag))
     {
         <button class="btn btn-sm btn-warning" @onclick='() => SetTag("")'>Tag: @_tag ✕</button>
     }
-    @if (_date is not null)
+    @if (_dateFrom is not null && _dateTo is not null)
     {
-        <button class="btn btn-sm btn-warning" @onclick="ClearDate">Day: @_date.Value.ToString("MMM d") ✕</button>
+        <button class="btn btn-sm btn-warning" @onclick="ClearDate">
+            @(_dateFrom == _dateTo ? $"Day: {_dateFrom.Value:MMM d}" : $"{_dateFrom.Value:MMM d} – {_dateTo.Value:MMM d}") ✕
+        </button>
     }
 </div>
+
+@if (_showCalendar)
+{
+    <div class="card mb-3">
+        <div class="card-body">
+            <MonthCalendar Items="_result?.Items ?? new()" RangeStart="_dateFrom" RangeEnd="_dateTo" OnRangeChanged="OnCalendarRangeChanged" />
+        </div>
+    </div>
+}
 
 @if (_showFilters)
 {
@@ -282,6 +296,12 @@ else
     [SupplyParameterFromQuery(Name = "date")]
     public string? DateParam { get; set; }
 
+    [SupplyParameterFromQuery(Name = "dateFrom")]
+    public string? DateFromParam { get; set; }
+
+    [SupplyParameterFromQuery(Name = "dateTo")]
+    public string? DateToParam { get; set; }
+
     [SupplyParameterFromQuery(Name = "view")]
     public string? ViewParam { get; set; }
 
@@ -301,9 +321,11 @@ else
     private string _contentType = "";
     private string _level = "";
     private string _tag = "";
-    private DateOnly? _date;
+    private DateOnly? _dateFrom;
+    private DateOnly? _dateTo;
     private string _view = "List";
     private bool _showFilters;
+    private bool _showCalendar;
     private DateTimeOffset _sinceVisit = DateTimeOffset.MinValue;
     private int _newCount;
     private List<FeedItem> _visibleItems = new();
@@ -320,8 +342,16 @@ else
     {
         if (!string.IsNullOrWhiteSpace(TagParam))
             _tag = TagParam;
-        if (DateOnly.TryParse(DateParam, out var d))
-            _date = d;
+        if (DateOnly.TryParse(DateFromParam, out var dFrom) && DateOnly.TryParse(DateToParam, out var dTo))
+        {
+            _dateFrom = dFrom < dTo ? dFrom : dTo;
+            _dateTo = dFrom < dTo ? dTo : dFrom;
+        }
+        else if (DateOnly.TryParse(DateParam, out var d))
+        {
+            _dateFrom = d;
+            _dateTo = d;
+        }
         if (ViewParam is "List" or "Grid")
             _view = ViewParam;
         if (!string.IsNullOrWhiteSpace(FilterParam) && _filters.Contains(FilterParam))
@@ -343,7 +373,10 @@ else
     private void SetView(string view) { _view = view; SyncUrl(); }
     private void SetFilter(string filter) { _filter = filter; SyncUrl(); }
     private void SetTag(string tag) { _tag = tag; SyncUrl(); }
-    private void ClearDate() { _date = null; SyncUrl(); }
+    private void ClearDate() { _dateFrom = null; _dateTo = null; SyncUrl(); }
+
+    private void SetDateRange(DateOnly start, DateOnly end) { _dateFrom = start; _dateTo = end; SyncUrl(); }
+    private void OnCalendarRangeChanged((DateOnly Start, DateOnly End) range) => SetDateRange(range.Start, range.End);
 
     /// <summary>Reflects the current filter/view state into the URL so a refresh (or a shared link) lands back in the same place.</summary>
     private void SyncUrl()
@@ -352,7 +385,11 @@ else
         if (_view != "List") query.Add($"view={_view}");
         if (_filter != "All") query.Add($"filter={Uri.EscapeDataString(_filter)}");
         if (!string.IsNullOrEmpty(_tag)) query.Add($"tag={Uri.EscapeDataString(_tag)}");
-        if (_date is not null) query.Add($"date={_date:yyyy-MM-dd}");
+        if (_dateFrom is not null && _dateTo is not null)
+        {
+            if (_dateFrom == _dateTo) query.Add($"date={_dateFrom:yyyy-MM-dd}");
+            else query.Add($"dateFrom={_dateFrom:yyyy-MM-dd}&dateTo={_dateTo:yyyy-MM-dd}");
+        }
         if (!string.IsNullOrEmpty(_contentType)) query.Add($"contentType={Uri.EscapeDataString(_contentType)}");
         if (!string.IsNullOrEmpty(_level)) query.Add($"level={Uri.EscapeDataString(_level)}");
         var qs = query.Count > 0 ? "?" + string.Join("&", query) : "";
@@ -405,8 +442,12 @@ else
         if (!string.IsNullOrEmpty(_tag))
             q = q.Where(i => i.Tags.Contains(_tag, StringComparer.OrdinalIgnoreCase));
 
-        if (_date is not null)
-            q = q.Where(i => DateOnly.FromDateTime(i.Published.LocalDateTime) == _date.Value);
+        if (_dateFrom is not null && _dateTo is not null)
+            q = q.Where(i =>
+            {
+                var d = DateOnly.FromDateTime(i.Published.LocalDateTime);
+                return d >= _dateFrom.Value && d <= _dateTo.Value;
+            });
 
         if (!string.IsNullOrWhiteSpace(_search))
         {

@@ -24,6 +24,7 @@ It aggregates ~39 RSS/Atom sources (blogs, news outlets, arXiv, Hacker News, Red
 ## ✨ Features
 
 - **📡 Live news feed** from ~39 sources, with search and filters (✨ New / Unread / Today / News / Research / Tools / Community), plus richer **content-type** (News/Tutorial/Release/Paper/Discussion/Video), **level** (Beginner/Intermediate/Advanced) and **topic tag** filters, and a **List/Grid** view toggle. Items newer than your last visit are badged **NEW**. Resilient parser with a lenient fallback for awkward feeds. Links have tracking params (`utm_*`, `fbclid`, etc.) stripped automatically.
+- **📅 Calendar date filtering** — an Obsidian-style month calendar on the News Feed, with per-day item-count shading. Click a day to filter to it, shift-click another day to select a date range; month navigation and a "Today" shortcut included.
 - **⌨️ Full keyboard navigation** on the News feed — `j`/`k` move focus, `o`/`Enter` opens the focused item, `m` toggles read, `b` toggles bookmark, `?` shows the cheat sheet (inactive while typing in a text field).
 - **🚫 Exclude filters** — the inverse of the watchlist: hide items matching a plain-text or regex pattern, so a noisy topic disappears from the feed entirely instead of just being unhighlighted.
 - **🔁 Cross-source dedup** — when multiple sources cover the same story, they're merged into one item badged "+N more sources" (title-similarity matching within a time window — no AI).
@@ -176,7 +177,8 @@ Services/
 Components/Pages/     Home, News, Digest, Explore, Learn, Glossary, Tools, Bookmarks, Settings, Sources,
                       Users, Playground, Help, Login, Register, AccessDenied
 Components/Shared/    Icon, GlobalSearch, ActivityHeatmap, TrendingPanel, MiniTimeline, ExploreTrendingPanel,
-                      Pager, SortableHeader (generic search/sort/paginate helpers for admin tables)
+                      Pager, SortableHeader (generic search/sort/paginate helpers for admin tables),
+                      MonthCalendar (Obsidian-style month view + range picker for the News Feed)
 ```
 
 ### Enabling the optional AI layer

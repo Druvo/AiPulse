@@ -684,3 +684,24 @@ a.heatmap-cell:hover { outline: 2px solid var(--ap-accent-hover); }
 .heatmap-2 { background: color-mix(in srgb, var(--ap-accent) 50%, var(--ap-surface-2)); }
 .heatmap-3 { background: color-mix(in srgb, var(--ap-accent) 75%, var(--ap-surface-2)); }
 .heatmap-4 { background: var(--ap-accent); }
+
+/* Obsidian-style month calendar (News feed date filter) */
+.month-calendar { max-width: 420px; }
+.month-calendar-header { display: flex; align-items: center; justify-content: center; gap: 0.5rem; margin-bottom: 0.5rem; }
+.month-calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 3px; }
+.month-calendar-weekday { text-align: center; font-size: 0.7rem; color: var(--ap-text-muted, #888); text-transform: uppercase; padding-bottom: 2px; }
+.month-calendar-cell {
+    position: relative;
+    aspect-ratio: 1 / 1;
+    border-radius: 5px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 0.8rem;
+}
+.month-calendar-cell:hover { outline: 2px solid var(--ap-accent-hover); }
+.month-calendar-cell.month-calendar-outside { opacity: 0.35; }
+.month-calendar-cell.month-calendar-today { box-shadow: inset 0 0 0 2px var(--ap-accent); }
+.month-calendar-cell.month-calendar-selected { outline: 2px solid var(--ap-accent); font-weight: bold; }
+.month-calendar-dot { position: absolute; bottom: 3px; width: 4px; height: 4px; border-radius: 50%; background: currentColor; opacity: 0.6; }

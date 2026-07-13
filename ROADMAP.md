@@ -58,6 +58,11 @@ Status tags: ✅ done · 🟢 fits philosophy, no AI needed · 🟡 needs a desi
   silently passed the literal text `"_sortColumn"` into the sort-arrow display while the actual sort *logic*
   (driven by the page's own field, not the parameter) worked fine. Needs `Param="@_field"` whenever the
   parameter type is `string`.
+- News Feed date filtering upgraded from a single-day pick to a real range, plus an Obsidian-style month
+  calendar (`MonthCalendar` component): click a day to filter to it, shift-click another day to select a
+  range, with per-day item-count shading reusing the Dashboard's heatmap color scale. `news?date=` links
+  (Dashboard's activity heatmap, etc.) still work unchanged; the calendar/range adds `dateFrom`/`dateTo`
+  query params alongside it.
 
 > **WebSub reality check:** none of AiPulse's ~40 default sources currently declare a hub (checked YouTube,
 > WordPress.com, Feedburner, Blogger - all previously reliable examples, none do anymore). The subscribe/
