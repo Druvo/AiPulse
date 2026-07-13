@@ -39,7 +39,17 @@ Status tags: ✅ done · 🟢 fits philosophy, no AI needed · 🟡 needs a desi
   anything already recorded with the old placeholder (feed history and saved bookmarks alike), so the fix
   covers existing data, not just newly-fetched items.
 - Dashboard now also surfaces a compact "Trending models & repos" panel (top Hugging Face models + GitHub
-  repos, same live data as Explore) alongside the existing tag-trending panel
+  repos, same live data as Explore) alongside the existing tag-trending panel, plus a "new since last visit"
+  stat card and a standalone "biggest story this week" highlight (same ranking as the Weekly Digest)
+- Nav reorganized around actual usage: Reading List moved up next to News/Digest (Overview), Explore moved
+  next to Learning Hub/Glossary/Tools under a renamed "Learn & Explore" section (it's model/repo discovery,
+  not daily triage), Playground/Sources/Users stay under Admin
+- Fixed a real bug in the News feed's "New" filter/badges: Blazor Server prerenders every full page load by
+  default, which runs `OnInitializedAsync` twice against two separate scoped-service instances - since
+  marking "last visited" was a mutate-on-read, the second (interactive) pass silently read back the
+  timestamp the first (prerender) pass had just written, collapsing "New" to ~0 items on effectively every
+  load. Fixed by peeking the cutoff in `OnInitializedAsync` and only marking the visit in
+  `OnAfterRenderAsync(firstRender)`, which Blazor guarantees runs exactly once in the real circuit.
 
 > **WebSub reality check:** none of AiPulse's ~40 default sources currently declare a hub (checked YouTube,
 > WordPress.com, Feedburner, Blogger - all previously reliable examples, none do anymore). The subscribe/

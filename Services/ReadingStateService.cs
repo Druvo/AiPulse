@@ -347,6 +347,12 @@ public sealed class ReadingStateService
         }
     }
 
+    /// <summary>Read-only peek at the last News-feed visit, for pages (e.g. Dashboard) that want to show a "new since" count without marking the feed as visited.</summary>
+    public DateTimeOffset LastNewsVisit
+    {
+        get { EnsureLoaded(); lock (_lock) return _state!.LastNewsVisit; }
+    }
+
     /// <summary>Returns the previous visit time, then records that the news page was visited now.</summary>
     public DateTimeOffset TouchNewsVisit()
     {

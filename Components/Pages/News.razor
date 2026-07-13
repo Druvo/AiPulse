@@ -331,8 +331,12 @@ else
         if (!string.IsNullOrWhiteSpace(LevelParam) && _levels.Contains(LevelParam))
             _level = LevelParam;
 
-        // Record the visit and remember the previous time so we can flag what's new.
-        _sinceVisit = Reading.TouchNewsVisit();
+        // Peek (don't mark yet) so prerender + the interactive circuit's own OnInitializedAsync - two
+        // separate component instances, both hitting this - agree on the same cutoff. Marking the visit
+        // itself is deferred to OnAfterRenderAsync(firstRender), which Blazor Server guarantees runs exactly
+        // once in the real circuit; doing the mutate-on-read here would let the interactive pass read back
+        // the timestamp the prerender pass had just written, collapsing "New" to ~0 items every time.
+        _sinceVisit = Reading.LastNewsVisit;
         await Load(false);
     }
 
@@ -429,6 +433,7 @@ else
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (!firstRender) return;
+        Reading.TouchNewsVisit(); // now that _sinceVisit is already committed to this render, safe to mark the visit
         _dotNetRef = DotNetObjectReference.Create(this);
         try { await JS.InvokeVoidAsync("aipulseKeyboard.register", _dotNetRef); } catch { /* circuit may already be gone */ }
     }

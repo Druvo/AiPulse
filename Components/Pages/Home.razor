@@ -39,26 +39,32 @@
     </div>
 }
 
-<div class="row g-3 mb-4">
-    <div class="col-6 col-lg-3">
+<div class="row g-3 mb-4 row-cols-2 row-cols-lg-5">
+    <div class="col">
+        <a class="stat-card" href="news?filter=New">
+            <div class="stat-num">@_newSinceVisit</div>
+            <div class="stat-label"><Icon Name="rss" Size="14" /> New since last visit</div>
+        </a>
+    </div>
+    <div class="col">
         <a class="stat-card" href="news">
             <div class="stat-num">@Kb.Sources.Count(s => s.Enabled)</div>
             <div class="stat-label"><Icon Name="rss" Size="14" /> Live sources</div>
         </a>
     </div>
-    <div class="col-6 col-lg-3">
+    <div class="col">
         <a class="stat-card" href="glossary">
             <div class="stat-num">@Kb.Glossary.Count</div>
             <div class="stat-label"><Icon Name="book" Size="14" /> Glossary terms</div>
         </a>
     </div>
-    <div class="col-6 col-lg-3">
+    <div class="col">
         <a class="stat-card" href="learn">
             <div class="stat-num">@Kb.Learning.Count</div>
             <div class="stat-label"><Icon Name="graduation-cap" Size="14" /> Learning modules</div>
         </a>
     </div>
-    <div class="col-6 col-lg-3">
+    <div class="col">
         <a class="stat-card" href="bookmarks">
             <div class="stat-num">@Reading.Bookmarks.Count</div>
             <div class="stat-label"><Icon Name="bookmark" Size="14" /> Saved to read</div>
@@ -77,6 +83,25 @@
         </div>
         <div class="col-lg-4">
             <ExploreTrendingPanel Models="_trendingModels" Repos="_trendingRepos" Loading="_trendingLoading" />
+        </div>
+    </div>
+}
+
+@if (_biggestStory is not null)
+{
+    <div class="card mb-4 biggest-story-card">
+        <div class="card-body py-2">
+            <div class="d-flex justify-content-between align-items-start gap-3">
+                <div>
+                    <div class="x-small text-muted text-uppercase mb-1"><Icon Name="star" Size="12" /> Biggest story this week</div>
+                    <a href="@_biggestStory.Link" target="_blank" rel="noopener" class="h6 mb-1 text-decoration-none d-block">@_biggestStory.Title</a>
+                    <div class="text-muted x-small">
+                        @_biggestStory.SourceName
+                        <span> + @_biggestStory.AlsoSeenOn.Length more source@(_biggestStory.AlsoSeenOn.Length == 1 ? "" : "s")</span>
+                    </div>
+                </div>
+                <a href="digest" class="btn btn-sm btn-outline-primary text-nowrap">Full digest →</a>
+            </div>
         </div>
     </div>
 }
@@ -164,6 +189,8 @@
     private List<TrendingModel> _trendingModels = new();
     private List<TrendingRepo> _trendingRepos = new();
     private bool _trendingLoading = true;
+    private int _newSinceVisit;
+    private FeedItem? _biggestStory;
 
     protected override async Task OnInitializedAsync()
     {
@@ -176,6 +203,17 @@
         (_trendingModels, _) = hfTask.Result;
         _trendingRepos = reposTask.Result;
         _trendingLoading = false;
+
+        // Same live-cache source News.razor's own "New" filter counts against - History.Items (90-day
+        // persisted log) would disagree with what clicking through to News actually shows.
+        _newSinceVisit = feedsTask.Result.Items.Count(i => i.Published > Reading.LastNewsVisit);
+
+        var cutoff = DateTimeOffset.Now.AddDays(-7);
+        _biggestStory = _historyItems
+            .Where(i => i.Published >= cutoff && i.AlsoSeenOn.Length > 0)
+            .OrderByDescending(i => i.AlsoSeenOn.Length)
+            .ThenByDescending(i => i.Published)
+            .FirstOrDefault();
     }
 
     private void DismissWelcome()
