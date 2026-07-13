@@ -6,6 +6,8 @@
 @inject ISummarizer Ai
 @inject FeedAggregatorService Feeds
 @inject FeedHistoryService History
+@inject HuggingFaceService HuggingFace
+@inject GitHubTrendingService GitHubTrending
 
 <PageTitle>AiPulse · Dashboard</PageTitle>
 
@@ -67,11 +69,14 @@
 @if (_historyItems is not null)
 {
     <div class="row g-4 mb-4">
-        <div class="col-lg-6">
+        <div class="col-lg-4">
             <TrendingPanel Items="_historyItems" />
         </div>
-        <div class="col-lg-6">
+        <div class="col-lg-4">
             <MiniTimeline Items="_historyItems" />
+        </div>
+        <div class="col-lg-4">
+            <ExploreTrendingPanel Models="_trendingModels" Repos="_trendingRepos" Loading="_trendingLoading" />
         </div>
     </div>
 }
@@ -156,12 +161,21 @@
 @code {
     private IReadOnlyList<FeedItem>? _historyItems;
     private bool _welcomeDismissed;
+    private List<TrendingModel> _trendingModels = new();
+    private List<TrendingRepo> _trendingRepos = new();
+    private bool _trendingLoading = true;
 
     protected override async Task OnInitializedAsync()
     {
         _welcomeDismissed = Reading.WelcomeDismissed;
-        await Feeds.GetAsync(); // warms the shared cache other pages read from
+        var feedsTask = Feeds.GetAsync(); // warms the shared cache other pages read from
+        var hfTask = HuggingFace.GetTrendingAsync();
+        var reposTask = GitHubTrending.GetTrendingReposAsync();
+        await Task.WhenAll(feedsTask, hfTask, reposTask);
         _historyItems = History.Items;
+        (_trendingModels, _) = hfTask.Result;
+        _trendingRepos = reposTask.Result;
+        _trendingLoading = false;
     }
 
     private void DismissWelcome()

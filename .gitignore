@@ -15,6 +15,9 @@ appsettings.Production.json
 # Publish/deploy output (binaries + copied App_Data) - not source, may contain real secrets/user data
 DeployAiPulse/
 
+# Local deploy automation - reveals internal homelab hostname/IP, not for the public repo
+deploy.sh
+
 # Logs
 *.log
 

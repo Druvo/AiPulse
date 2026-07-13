@@ -54,6 +54,32 @@ public sealed class FeedHistoryService
         }
     }
 
+    /// <summary>
+    /// One-time repair for items recorded before the "(untitled)" fix (<see cref="FeedAggregatorService.DeriveTitle"/>)
+    /// - re-derives a title from the stored summary/source instead of the frozen placeholder. Safe to call on every
+    /// startup: a no-op once every stale item has been fixed.
+    /// </summary>
+    public int RepairUntitledTitles()
+    {
+        lock (_lock)
+        {
+            var fixedCount = 0;
+            foreach (var key in _byLink.Keys.ToList())
+            {
+                var item = _byLink[key];
+                if (item.Title != "(untitled)") continue;
+
+                var newTitle = FeedAggregatorService.DeriveTitle(null, item.Summary, item.SourceName);
+                if (newTitle == item.Title) continue;
+
+                _byLink[key] = item with { Title = newTitle };
+                fixedCount++;
+            }
+            if (fixedCount > 0) Save();
+            return fixedCount;
+        }
+    }
+
     private Dictionary<string, FeedItem> Load()
     {
         try

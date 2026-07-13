@@ -424,6 +424,59 @@ public sealed class ReadingStateService
         return result.ToList();
     }
 
+    /// <summary>
+    /// One-time repair for bookmarks saved before the "(untitled)" fix - re-titles them from the (now-repaired)
+    /// history entry for the same link, or falls back to naming the source. Safe to call on every startup.
+    /// </summary>
+    public static int RepairUntitledBookmarksForAllUsers(IWebHostEnvironment env, FeedHistoryService history)
+    {
+        var usersDir = Path.Combine(env.ContentRootPath, "App_Data", "users");
+        if (!Directory.Exists(usersDir)) return 0;
+
+        var fixedCount = 0;
+        foreach (var dir in Directory.GetDirectories(usersDir))
+        {
+            var path = Path.Combine(dir, "reading-state.json");
+            if (!File.Exists(path)) continue;
+
+            ReadingState? state;
+            try { state = JsonSerializer.Deserialize<ReadingState>(File.ReadAllText(path)); }
+            catch { continue; }
+            if (state is null) continue;
+
+            var changed = false;
+            for (var i = 0; i < state.Bookmarks.Count; i++)
+            {
+                var b = state.Bookmarks[i];
+                if (b.Title != "(untitled)") continue;
+
+                var match = history.Items.FirstOrDefault(it => it.Link == b.Link);
+                var newTitle = match is not null && match.Title != "(untitled)"
+                    ? match.Title
+                    : FeedAggregatorService.DeriveTitle(null, "", b.SourceName);
+                if (newTitle == b.Title) continue;
+
+                state.Bookmarks[i] = new BookmarkItem
+                {
+                    Title = newTitle,
+                    Link = b.Link,
+                    SourceName = b.SourceName,
+                    Category = b.Category,
+                    ContentType = b.ContentType,
+                    Level = b.Level,
+                    Tags = b.Tags,
+                    SavedAt = b.SavedAt
+                };
+                fixedCount++;
+                changed = true;
+            }
+
+            if (changed)
+                File.WriteAllText(path, JsonSerializer.Serialize(state, JsonOpts));
+        }
+        return fixedCount;
+    }
+
     /// <summary>Every user's configured webhook URL, for the background watcher to fan alerts out to. Same rationale as GetAllUsersWatchlist.</summary>
     public static IReadOnlyList<string> GetAllWebhookUrls(IWebHostEnvironment env)
     {

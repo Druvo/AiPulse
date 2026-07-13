@@ -35,7 +35,11 @@ Status tags: ✅ done · 🟢 fits philosophy, no AI needed · 🟡 needs a desi
 - In-app Help page (`/help`) covering what AiPulse is, a typical daily workflow, and a full page reference,
   plus a dismissible first-visit welcome banner on the Dashboard
 - Fixed feed items showing a literal "(untitled)" placeholder — titles now fall back to a summary excerpt,
-  then the source name, instead of a broken-looking placeholder
+  then the source name, instead of a broken-looking placeholder. A one-time startup repair also re-titles
+  anything already recorded with the old placeholder (feed history and saved bookmarks alike), so the fix
+  covers existing data, not just newly-fetched items.
+- Dashboard now also surfaces a compact "Trending models & repos" panel (top Hugging Face models + GitHub
+  repos, same live data as Explore) alongside the existing tag-trending panel
 
 > **WebSub reality check:** none of AiPulse's ~40 default sources currently declare a hub (checked YouTube,
 > WordPress.com, Feedburner, Blogger - all previously reliable examples, none do anymore). The subscribe/

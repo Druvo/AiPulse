@@ -532,7 +532,7 @@ public sealed class FeedAggregatorService
     /// "this platform just doesn't have titles". Derive something readable instead: the raw title if
     /// there is one, otherwise the start of the summary, otherwise a plain fallback naming the source.
     /// </summary>
-    private static string DeriveTitle(string? rawTitle, string cleanedSummary, string sourceName)
+    public static string DeriveTitle(string? rawTitle, string cleanedSummary, string sourceName)
     {
         if (!string.IsNullOrWhiteSpace(rawTitle))
         {

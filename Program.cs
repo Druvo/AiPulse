@@ -235,6 +235,13 @@ using (var scope = app.Services.CreateScope())
 
     // Upgrade path: move pre-multi-user reading-state.json into the bootstrapped Admin's per-user folder.
     ReadingStateService.MigrateLegacyStateFile(app.Environment, authOptions.Username);
+
+    // One-time repair for items/bookmarks recorded before the "(untitled)" fix - no-op on subsequent runs.
+    var history = scope.ServiceProvider.GetRequiredService<FeedHistoryService>();
+    var repairedTitles = history.RepairUntitledTitles();
+    var repairedBookmarks = ReadingStateService.RepairUntitledBookmarksForAllUsers(app.Environment, history);
+    if (repairedTitles > 0 || repairedBookmarks > 0)
+        app.Logger.LogInformation("Repaired {Titles} historical item title(s) and {Bookmarks} bookmark title(s) that were \"(untitled)\"", repairedTitles, repairedBookmarks);
 }
 
 app.Run();
