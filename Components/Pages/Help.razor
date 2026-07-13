@@ -44,7 +44,6 @@
             <tr><td><a href="news">News Feed</a></td><td>The live feed itself. Search, filter, bookmark, mark read. <code>j</code>/<code>k</code>/<code>o</code>/<code>m</code>/<code>b</code> for keyboard navigation — press <code>?</code> on that page for the full list.</td></tr>
             <tr><td><a href="digest">Weekly Digest</a></td><td>A 7-day summary instead of a scroll: biggest multi-source stories, top category, day-by-day counts.</td></tr>
             <tr><td><a href="explore">Explore</a></td><td>What's trending right now on Hugging Face (models/datasets) and GitHub (repos), plus benchmark links and a "try a model" directory.</td></tr>
-            <tr><td><a href="playground">Playground</a></td><td>Chat with a model running locally via <a href="https://ollama.com" target="_blank" rel="noopener">Ollama</a> — nothing leaves your machine. Requires Ollama installed separately.</td></tr>
             <tr><td><a href="learn">Learning Hub</a></td><td>A 10-module roadmap, tokens → agents. Mark modules complete to track progress. Includes live "fresh tutorials" and free courses.</td></tr>
             <tr><td><a href="glossary">Glossary</a></td><td>28 terms explained for developers, with aliases so slang/mis-heard versions still find the right entry.</td></tr>
             <tr><td><a href="tools">Tools &amp; Tips</a></td><td>Right-tool-for-the-job matrix (coding agents, IDE assistants, local runtimes) plus token-optimization tips.</td></tr>
@@ -52,6 +51,7 @@
             <tr><td><a href="settings">Settings</a></td><td>Your watchlist, exclude filters, notifications, Obsidian export, theme — see below.</td></tr>
             <AuthorizeView Roles="Admin">
                 <Authorized>
+                    <tr><td><a href="playground">Playground</a> <span class="badge bg-secondary">Admin</span></td><td>Chat with a model running locally via <a href="https://ollama.com" target="_blank" rel="noopener">Ollama</a> — nothing leaves your machine. Requires Ollama installed separately.</td></tr>
                     <tr><td><a href="sources">Sources</a> <span class="badge bg-secondary">Admin</span></td><td>Add/edit/remove feeds, import/export OPML, see per-source uptime history.</td></tr>
                     <tr><td><a href="users">Users</a> <span class="badge bg-secondary">Admin</span></td><td>Approve new registrations, change roles, disable accounts.</td></tr>
                 </Authorized>

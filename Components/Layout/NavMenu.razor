@@ -36,12 +36,6 @@
                 <span>Explore</span>
             </NavLink>
         </div>
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="playground">
-                <Icon Name="message" />
-                <span>Playground</span>
-            </NavLink>
-        </div>
 
         <div class="nav-section-label px-3">Learn</div>
         <div class="nav-item px-3">
@@ -73,6 +67,12 @@
         <AuthorizeView Roles="Admin">
             <Authorized>
                 <div class="nav-section-label px-3">Admin</div>
+                <div class="nav-item px-3">
+                    <NavLink class="nav-link" href="playground">
+                        <Icon Name="message" />
+                        <span>Playground</span>
+                    </NavLink>
+                </div>
                 <div class="nav-item px-3">
                     <NavLink class="nav-link" href="sources">
                         <Icon Name="database" />

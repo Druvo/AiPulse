@@ -219,7 +219,9 @@ else if (_section == "try")
                                     </div>
                                 </div>
                                 <div class="d-flex gap-2">
-                                    <a class="btn btn-sm btn-outline-primary" href="@($"playground?model={Uri.EscapeDataString(im.Name)}")"><Icon Name="play" Size="13" /> Chat</a>
+                                    <AuthorizeView Roles="Admin">
+                                        <Authorized><a class="btn btn-sm btn-outline-primary" href="@($"playground?model={Uri.EscapeDataString(im.Name)}")"><Icon Name="play" Size="13" /> Chat</a></Authorized>
+                                    </AuthorizeView>
                                     <button class="btn btn-sm btn-outline-danger" @onclick="() => RemoveModel(im.Name)"><Icon Name="trash" Size="13" /></button>
                                 </div>
                             </div>
@@ -271,7 +273,9 @@ else if (_section == "try")
                                 <div class="d-flex gap-2 flex-wrap align-items-center">
                                     @if (installedMatch is not null)
                                     {
-                                        <a class="btn btn-sm btn-outline-primary" href="@($"playground?model={Uri.EscapeDataString(installedMatch.Name)}")"><Icon Name="play" Size="13" /> Chat</a>
+                                        <AuthorizeView Roles="Admin">
+                                            <Authorized><a class="btn btn-sm btn-outline-primary" href="@($"playground?model={Uri.EscapeDataString(installedMatch.Name)}")"><Icon Name="play" Size="13" /> Chat</a></Authorized>
+                                        </AuthorizeView>
                                     }
                                     else if (slug is not null)
                                     {
@@ -346,7 +350,9 @@ else if (_section == "try")
                             <div class="d-flex gap-2 flex-wrap align-items-center mt-2">
                                 @if (installedMatch is not null)
                                 {
-                                    <a class="btn btn-sm btn-outline-primary" href="@($"playground?model={Uri.EscapeDataString(installedMatch.Name)}")"><Icon Name="play" Size="13" /> Chat</a>
+                                    <AuthorizeView Roles="Admin">
+                                        <Authorized><a class="btn btn-sm btn-outline-primary" href="@($"playground?model={Uri.EscapeDataString(installedMatch.Name)}")"><Icon Name="play" Size="13" /> Chat</a></Authorized>
+                                    </AuthorizeView>
                                 }
                                 else
                                 {
