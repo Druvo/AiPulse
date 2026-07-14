@@ -162,14 +162,14 @@ h1:focus {
     --ap-surface-2: #eef2f2;
     --ap-text: #101817;
     --ap-text-secondary: #4b5b59;
-    --ap-muted: #8a9997;
+    --ap-muted: #657572;
     --ap-border: #e2e8e7;
     --ap-border-strong: #cbd6d4;
 
     --ap-accent: #0891b2;
     --ap-accent-hover: #0e7490;
     --ap-accent-2: #06b6d4;
-    --ap-accent-soft: #ecfeff;
+    --ap-accent-soft: #cffafe;
     --ap-accent-soft-text: #155e75;
 
     --ap-success: #16a34a;
@@ -198,16 +198,16 @@ h1:focus {
    Accent presets — pick a hue independent of light/dark, via [data-accent] on <html>.
    Default (no attribute) keeps the teal values defined above.
    ============================================================ */
-[data-accent="violet"] { --ap-accent: #7c3aed; --ap-accent-hover: #6d28d9; --ap-accent-2: #a78bfa; --ap-accent-soft: #f5f3ff; --ap-accent-soft-text: #5b21b6; }
+[data-accent="violet"] { --ap-accent: #7c3aed; --ap-accent-hover: #6d28d9; --ap-accent-2: #a78bfa; --ap-accent-soft: #ede9fe; --ap-accent-soft-text: #5b21b6; }
 [data-theme="dark"][data-accent="violet"] { --ap-accent: #a78bfa; --ap-accent-hover: #c4b5fd; --ap-accent-2: #8b5cf6; }
 
-[data-accent="rose"] { --ap-accent: #e11d48; --ap-accent-hover: #be123c; --ap-accent-2: #fb7185; --ap-accent-soft: #fff1f2; --ap-accent-soft-text: #9f1239; }
+[data-accent="rose"] { --ap-accent: #e11d48; --ap-accent-hover: #be123c; --ap-accent-2: #fb7185; --ap-accent-soft: #ffe4e6; --ap-accent-soft-text: #9f1239; }
 [data-theme="dark"][data-accent="rose"] { --ap-accent: #fb7185; --ap-accent-hover: #fda4af; --ap-accent-2: #f43f5e; }
 
-[data-accent="amber"] { --ap-accent: #d97706; --ap-accent-hover: #b45309; --ap-accent-2: #fbbf24; --ap-accent-soft: #fffbeb; --ap-accent-soft-text: #92400e; }
+[data-accent="amber"] { --ap-accent: #d97706; --ap-accent-hover: #b45309; --ap-accent-2: #fbbf24; --ap-accent-soft: #fef3c7; --ap-accent-soft-text: #92400e; }
 [data-theme="dark"][data-accent="amber"] { --ap-accent: #fbbf24; --ap-accent-hover: #fcd34d; --ap-accent-2: #f59e0b; }
 
-[data-accent="emerald"] { --ap-accent: #059669; --ap-accent-hover: #047857; --ap-accent-2: #34d399; --ap-accent-soft: #ecfdf5; --ap-accent-soft-text: #065f46; }
+[data-accent="emerald"] { --ap-accent: #059669; --ap-accent-hover: #047857; --ap-accent-2: #34d399; --ap-accent-soft: #d1fae5; --ap-accent-soft-text: #065f46; }
 [data-theme="dark"][data-accent="emerald"] { --ap-accent: #34d399; --ap-accent-hover: #6ee7b7; --ap-accent-2: #10b981; }
 
 [data-theme="dark"] {

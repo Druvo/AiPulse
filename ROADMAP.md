@@ -76,6 +76,15 @@ Status tags: ✅ done · 🟢 fits philosophy, no AI needed · 🟡 needs a desi
   `MD5(username:password)`, silently invalid under the new name with no way to recompute it without the
   plaintext password). Admins can't rename/reset their own account this way - a stale cookie claim would
   make it confusing - so their own row instead points to Settings.
+- Fixed a real light-mode contrast bug: `--ap-accent-soft` (the icon-chip/badge tint used by the logo,
+  info badges, "Release" tags, active tag-chips) was Tailwind's ultra-pale "-50" tier in every light-mode
+  accent preset (e.g. `#ecfeff`) - nearly indistinguishable from the white surfaces it sits on, which is
+  why the logo's chip (and similar badges) looked like they'd vanished in light mode while looking fine in
+  dark mode, where the same token is a translucent overlay that pops against a dark background regardless.
+  `--ap-success-soft`/`--ap-warning-soft`/`--ap-danger-soft` were already correctly toned at the "-100" tier
+  (e.g. `#dcfce7`) - `--ap-accent-soft` was the one inconsistency. Bumped it (and all 4 accent presets) to
+  match. Also darkened `--ap-muted` from a 2.96:1 to a 4.84:1 contrast ratio against white (WCAG AA for
+  normal text is 4.5:1) - it was borderline unreadable for timestamps/secondary labels in light mode.
 
 > **WebSub reality check:** none of AiPulse's ~40 default sources currently declare a hub (checked YouTube,
 > WordPress.com, Feedburner, Blogger - all previously reliable examples, none do anymore). The subscribe/
