@@ -288,6 +288,51 @@
     "Tags": []
   },
   {
+    "Name": "r/artificial",
+    "Url": "https://www.reddit.com/r/artificial/.rss",
+    "Category": "Community",
+    "Note": "General AI news and discussion, broader and more beginner-friendly than r/MachineLearning.",
+    "ContentType": "Discussion",
+    "Level": "Beginner",
+    "Tags": []
+  },
+  {
+    "Name": "r/singularity",
+    "Url": "https://www.reddit.com/r/singularity/.rss",
+    "Category": "Community",
+    "Note": "AI progress, AGI timelines, and frontier-model discussion - more speculative than r/MachineLearning.",
+    "ContentType": "Discussion",
+    "Level": "Intermediate",
+    "Tags": ["AGI"]
+  },
+  {
+    "Name": "r/OpenAI",
+    "Url": "https://www.reddit.com/r/OpenAI/.rss",
+    "Category": "Community",
+    "Note": "OpenAI product news and community discussion.",
+    "ContentType": "Discussion",
+    "Level": "Beginner",
+    "Tags": []
+  },
+  {
+    "Name": "r/ClaudeAI",
+    "Url": "https://www.reddit.com/r/ClaudeAI/.rss",
+    "Category": "Community",
+    "Note": "Claude/Anthropic product news, prompting tips, and Claude Code discussion.",
+    "ContentType": "Discussion",
+    "Level": "Beginner",
+    "Tags": []
+  },
+  {
+    "Name": "r/LangChain",
+    "Url": "https://www.reddit.com/r/LangChain/.rss",
+    "Category": "Community",
+    "Note": "Agent/RAG framework community - build questions, patterns, and showcases.",
+    "ContentType": "Discussion",
+    "Level": "Intermediate",
+    "Tags": ["Agents", "RAG"]
+  },
+  {
     "Name": "Two Minute Papers (YouTube)",
     "Url": "https://www.youtube.com/feeds/videos.xml?channel_id=UCbfYPyITQ-7l4upoX8nvctg",
     "Category": "News",

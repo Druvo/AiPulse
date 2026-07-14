@@ -100,6 +100,20 @@ Status tags: ✅ done · 🟢 fits philosophy, no AI needed · 🟡 needs a desi
   page. Also moved the Calendar from an inline card (appeared centered in the main content column) to a
   fixed slide-out panel anchored to the right edge of the viewport, with a dismiss-on-backdrop-click overlay,
   matching how a calendar drawer usually behaves rather than pushing the day's news down the page.
+- Added 5 more Reddit sources - r/artificial, r/singularity, r/OpenAI, r/ClaudeAI, r/LangChain - alongside
+  the existing r/LocalLLaMA and r/MachineLearning. See the Reddit reality check below before adding more.
+
+> **Reddit reality check:** Reddit's unauthenticated `.rss` endpoint rate-limits hard and per-IP, not
+> per-subreddit - fetching several Reddit sources in the same poll cycle (AiPulse fetches all sources
+> roughly together) reliably exhausts the shared budget after just 1-2 successful requests, so most of them
+> come back `429` on any given poll. Verified directly: manually spacing requests ~15-30s apart, all 7
+> current Reddit sources return real content individually, but a live force-refresh through the app got 5 of
+> 6 new ones rate-limited at once. This isn't a config problem - it self-heals over multiple poll cycles
+> (the two original Reddit sources already have 152 and 32 items respectively in the history despite
+> frequent failures) - but it does mean uptime % on the Sources page will look worse for Reddit than for
+> everything else, and it gets worse the more Reddit sources you add. A real fix would mean staggering
+> Reddit-domain fetches with a delay inside `FeedAggregatorService` instead of fetching every source
+> together; not done here since it wasn't asked for.
 
 > **WebSub reality check:** none of AiPulse's ~40 default sources currently declare a hub (checked YouTube,
 > WordPress.com, Feedburner, Blogger - all previously reliable examples, none do anymore). The subscribe/

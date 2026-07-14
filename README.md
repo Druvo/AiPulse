@@ -7,7 +7,7 @@
 
 **A standalone, self-hosted dashboard to keep developers current on the AI world** — news, jargon, the right tool for the right task, token-optimization tips, and a structured learning roadmap.
 
-It aggregates ~39 RSS/Atom sources (blogs, news outlets, arXiv, Hacker News, Reddit, YouTube channels, dev.to, Product Hunt, Mastodon, and GitHub release feeds) and pairs them with a curated, editable knowledge base. **It runs with zero AI and no API keys** — the optional AI layer is stubbed behind an interface for when you want it.
+It aggregates ~44 RSS/Atom sources (blogs, news outlets, arXiv, Hacker News, Reddit, YouTube channels, dev.to, Product Hunt, Mastodon, and GitHub release feeds) and pairs them with a curated, editable knowledge base. **It runs with zero AI and no API keys** — the optional AI layer is stubbed behind an interface for when you want it.
 
 > Built with ASP.NET Core + Blazor (Server interactivity), targeting .NET 8. MIT licensed.
 
@@ -23,7 +23,7 @@ It aggregates ~39 RSS/Atom sources (blogs, news outlets, arXiv, Hacker News, Red
 
 ## ✨ Features
 
-- **📡 Live news feed** from ~39 sources, with search and filters (✨ New / Unread / Today / News / Research / Tools / Community), plus richer **content-type** (News/Tutorial/Release/Paper/Discussion/Video), **level** (Beginner/Intermediate/Advanced), **source**, and **topic tag** filters, a **sort** order (Newest/Oldest/Source A-Z/Title A-Z), and a **List/Grid** view toggle. Items newer than your last visit are badged **NEW**. Resilient parser with a lenient fallback for awkward feeds. Links have tracking params (`utm_*`, `fbclid`, etc.) stripped automatically. Paginated (20/page) rather than one unbounded scroll.
+- **📡 Live news feed** from ~44 sources, with search and filters (✨ New / Unread / Today / News / Research / Tools / Community), plus richer **content-type** (News/Tutorial/Release/Paper/Discussion/Video), **level** (Beginner/Intermediate/Advanced), **source**, and **topic tag** filters, a **sort** order (Newest/Oldest/Source A-Z/Title A-Z), and a **List/Grid** view toggle. Items newer than your last visit are badged **NEW**. Resilient parser with a lenient fallback for awkward feeds. Links have tracking params (`utm_*`, `fbclid`, etc.) stripped automatically. Paginated (20/page) rather than one unbounded scroll.
 - **📅 Calendar date filtering** — an Obsidian-style month calendar, opened as a slide-out panel from the right edge of the News Feed, with per-day item-count shading. Click a day to filter to it, shift-click another day to select a date range; month navigation and a "Today" shortcut included.
 - **⌨️ Full keyboard navigation** on the News feed — `j`/`k` move focus, `o`/`Enter` opens the focused item, `m` toggles read, `b` toggles bookmark, `?` shows the cheat sheet (inactive while typing in a text field).
 - **🚫 Exclude filters** — the inverse of the watchlist: hide items matching a plain-text or regex pattern, so a noisy topic disappears from the feed entirely instead of just being unhighlighted.
@@ -80,7 +80,7 @@ A fresh clone isn't blank, but it also won't look "full" right away — there's 
 seeded and what only builds up once AiPulse has been running for a while:
 
 **Seeded immediately, same for everyone:**
-- The **~39 curated sources**, from `Data/sources.json` (one-time DB seed — editing that file later has no
+- The **~44 curated sources**, from `Data/sources.json` (one-time DB seed — editing that file later has no
   effect; use the Sources page instead)
 - **Glossary** (28 terms), **Tools & Tips**, **Learning Hub** (10 modules), benchmarks, model directory — all
   static JSON, loaded live on every page view, not dependent on any accumulated history
