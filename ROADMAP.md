@@ -85,6 +85,21 @@ Status tags: ✅ done · 🟢 fits philosophy, no AI needed · 🟡 needs a desi
   (e.g. `#dcfce7`) - `--ap-accent-soft` was the one inconsistency. Bumped it (and all 4 accent presets) to
   match. Also darkened `--ap-muted` from a 2.96:1 to a 4.84:1 contrast ratio against white (WCAG AA for
   normal text is 4.5:1) - it was borderline unreadable for timestamps/secondary labels in light mode.
+- Found and fixed the root cause of the light-mode logo/sidebar visibility complaint: the sidebar was
+  hardcoded to a permanently-dark background (`--ap-sidebar-bg`, `-text`, `-text-active` never varied with
+  `[data-theme]`), so it stayed dark even in light mode - clashing with the rest of the now-light UI, and
+  several colors (`.navbar-brand`'s `color: #fff`, hover-state `rgba(255,255,255,...)` overlays, the mobile
+  hamburger icon) were hardcoded assuming that permanent darkness. Made the sidebar theme-aware: light
+  background + dark text in light mode, unchanged dark background + light text in dark mode, via new
+  `--ap-sidebar-hover`/`-hover-strong` tokens replacing the hardcoded white overlays. Verified live in both
+  themes via computed styles (a live-toggle check briefly looked wrong for the nav-link color specifically -
+  traced to a getComputedStyle/tooling staleness artifact, not a real bug, since a fresh page load in either
+  theme resolves correctly).
+- News Feed: added a Source filter dropdown (34 sources), a sort dropdown (Newest/Oldest/Source A-Z/Title
+  A-Z), and pagination (`Pager`, 20/page default) - previously showed every filtered item on one unbounded
+  page. Also moved the Calendar from an inline card (appeared centered in the main content column) to a
+  fixed slide-out panel anchored to the right edge of the viewport, with a dismiss-on-backdrop-click overlay,
+  matching how a calendar drawer usually behaves rather than pushing the day's news down the page.
 
 > **WebSub reality check:** none of AiPulse's ~40 default sources currently declare a hub (checked YouTube,
 > WordPress.com, Feedburner, Blogger - all previously reliable examples, none do anymore). The subscribe/
