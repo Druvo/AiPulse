@@ -333,6 +333,15 @@
     "Tags": ["Agents", "RAG"]
   },
   {
+    "Name": "r/ObsidianMD",
+    "Url": "https://www.reddit.com/r/ObsidianMD/.rss",
+    "Category": "Community",
+    "Note": "Obsidian note-taking app community - plugins, workflows, PKM discussion.",
+    "ContentType": "Discussion",
+    "Level": "Beginner",
+    "Tags": []
+  },
+  {
     "Name": "Two Minute Papers (YouTube)",
     "Url": "https://www.youtube.com/feeds/videos.xml?channel_id=UCbfYPyITQ-7l4upoX8nvctg",
     "Category": "News",
@@ -403,5 +412,56 @@
     "ContentType": "Discussion",
     "Level": "Beginner",
     "Tags": []
+  },
+  {
+    "Name": "ASP.NET Core releases",
+    "Url": "https://github.com/dotnet/aspnetcore/releases.atom",
+    "Category": "Tools",
+    "Note": "What changed in each ASP.NET Core release.",
+    "ContentType": "Release",
+    "Level": "Intermediate",
+    "Tags": ["ASP.NET", "C#"]
+  },
+  {
+    "Name": ".NET Blog",
+    "Url": "https://devblogs.microsoft.com/dotnet/feed/",
+    "Category": "Tools",
+    "Note": "Official Microsoft .NET/C# announcements, deep dives, and roadmap posts.",
+    "ContentType": "Tutorial",
+    "Level": "Intermediate",
+    "Tags": ["C#", ".NET"]
+  },
+  {
+    "Name": "llama.cpp releases",
+    "Url": "https://github.com/ggml-org/llama.cpp/releases.atom",
+    "Category": "Tools",
+    "Note": "The core local-inference engine most other local-model tools (Ollama, LM Studio) build on.",
+    "ContentType": "Release",
+    "Level": "Advanced",
+    "Tags": ["Local Models"]
+  },
+  {
+    "Name": "GitHub Trending",
+    "Url": "https://github.com/trending?since=daily",
+    "Category": "Tools",
+    "Note": "Whatever's gaining stars fastest across all of GitHub right now, any language.",
+    "ContentType": "Release",
+    "Level": "Beginner",
+    "Tags": ["Trending"],
+    "IsScrape": true,
+    "ScrapeItemXPath": "//article[contains(@class,'Box-row')]",
+    "ScrapeLinkXPath": ".//h2//a"
+  },
+  {
+    "Name": "GitHub Trending · C#",
+    "Url": "https://github.com/trending/csharp?since=daily",
+    "Category": "Tools",
+    "Note": "Same as GitHub Trending, filtered to C# repos.",
+    "ContentType": "Release",
+    "Level": "Beginner",
+    "Tags": ["C#", "Trending"],
+    "IsScrape": true,
+    "ScrapeItemXPath": "//article[contains(@class,'Box-row')]",
+    "ScrapeLinkXPath": ".//h2//a"
   }
 ]

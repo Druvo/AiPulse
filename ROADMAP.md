@@ -102,6 +102,14 @@ Status tags: ✅ done · 🟢 fits philosophy, no AI needed · 🟡 needs a desi
   matching how a calendar drawer usually behaves rather than pushing the day's news down the page.
 - Added 5 more Reddit sources - r/artificial, r/singularity, r/OpenAI, r/ClaudeAI, r/LangChain - alongside
   the existing r/LocalLLaMA and r/MachineLearning. See the Reddit reality check below before adding more.
+- Added 6 more sources rounding out open-source/repo/local-model coverage: r/ObsidianMD (Reddit); ASP.NET
+  Core releases and .NET Blog (official Microsoft/.NET Core feeds); llama.cpp releases (the core local-
+  inference engine most other local-model tools build on); and two scraped sources, GitHub Trending and
+  GitHub Trending · C# (`github.com/trending` has no RSS feed at all, so these use the XPath scraper -
+  `ScrapeItemXPath="//article[contains(@class,'Box-row')]"`, `ScrapeLinkXPath=".//h2//a"` - the explicit
+  link XPath matters here since the default `.//a` would grab a Sponsor/Star button link before the actual
+  repo link). Verified live: both Trending sources return correctly-titled/linked repo items (e.g.
+  `dotnet/aspnetcore`, `bitwarden/server`) on the very first fetch.
 
 > **Reddit reality check:** Reddit's unauthenticated `.rss` endpoint rate-limits hard and per-IP, not
 > per-subreddit - fetching several Reddit sources in the same poll cycle (AiPulse fetches all sources
