@@ -74,6 +74,37 @@ That account is seeded once, on first run, from the `Auth` section of `appsettin
 
 > Requires the [.NET 8 SDK](https://dotnet.microsoft.com/download) or newer.
 
+### What to expect on first run
+
+A fresh clone isn't blank, but it also won't look "full" right away — there's a real split between what's
+seeded and what only builds up once AiPulse has been running for a while:
+
+**Seeded immediately, same for everyone:**
+- The **~39 curated sources**, from `Data/sources.json` (one-time DB seed — editing that file later has no
+  effect; use the Sources page instead)
+- **Glossary** (28 terms), **Tools & Tips**, **Learning Hub** (10 modules), benchmarks, model directory — all
+  static JSON, loaded live on every page view, not dependent on any accumulated history
+- The bootstrapped **Admin** account from `Auth:Username`/`Password`
+- The **News Feed itself** — a live fetch across all sources on first visit, so real articles should show up
+  within seconds (given internet access), not something that needs to "warm up"
+
+**Starts empty and builds up over time** (all backed by `App_Data/`, which is git-ignored and created fresh
+on first run):
+- **Trending panel, Activity heatmap, "items tracked since…"** — these come from a persisted history log
+  that only grows from actual polling. Day one, it's nearly empty.
+- **Weekly Digest's "biggest stories"** — needs several days of cross-source coverage to say anything
+  meaningful.
+- **Source health % ("Uptime 30d")** — shows "no data yet" until at least one day has been recorded.
+- **Notifications** — the background watcher deliberately seeds silently on a true first run (no persisted
+  history yet) instead of alerting on the entire backlog as "new"; alerts only start from the second poll
+  cycle onward.
+- **Bookmarks, watchlist, exclude filters, dashboard widgets, theme/accent, Fever API password** — all
+  per-user, never seeded.
+
+One first-run quirk worth knowing and not mistaking for a bug: the Dashboard's **"New since last visit"**
+stat will likely show a large number on your very first visit, since there's no prior visit to compare
+against yet.
+
 ---
 
 ## ⚙️ Configuration (`appsettings.json`)
