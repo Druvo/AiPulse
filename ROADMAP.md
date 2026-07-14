@@ -63,6 +63,19 @@ Status tags: ✅ done · 🟢 fits philosophy, no AI needed · 🟡 needs a desi
   range, with per-day item-count shading reusing the Dashboard's heatmap color scale. `news?date=` links
   (Dashboard's activity heatmap, etc.) still work unchanged; the calendar/range adds `dateFrom`/`dateTo`
   query params alongside it.
+- Fixed the notification-persistence gap above: `FeedWatcherService` now snapshots which links
+  `FeedHistoryService` already knew about (persisted to disk, survives restarts) instead of an in-memory-only
+  set that forgot everything on every restart. A restart now resumes and alerts on anything genuinely new
+  since shutdown; only a true first-ever install (empty history) still seeds silently. Verified live: after
+  a restart it logged "resuming with 5600 previously-known item(s)" and correctly raised 15 alerts for items
+  that had arrived while the app was down.
+- Proper user/password management: users can change their own password in Settings (requires the current
+  password); Admins can rename another user's username and/or reset their password from the Users page
+  (inline edit, matching the Sources page's pattern). Renaming migrates the user's `App_Data/users/{name}/`
+  folder and their Playground chat history so nothing looks lost, and clears their Fever API key (it's
+  `MD5(username:password)`, silently invalid under the new name with no way to recompute it without the
+  plaintext password). Admins can't rename/reset their own account this way - a stale cookie claim would
+  make it confusing - so their own row instead points to Settings.
 
 > **WebSub reality check:** none of AiPulse's ~40 default sources currently declare a hub (checked YouTube,
 > WordPress.com, Feedburner, Blogger - all previously reliable examples, none do anymore). The subscribe/
@@ -78,7 +91,6 @@ Status tags: ✅ done · 🟢 fits philosophy, no AI needed · 🟡 needs a desi
 | Idea | Source | The decision |
 |---|---|---|
 | **Read-it-later integrations** (Pocket/Instapaper-style export) | NewsBlur, FreshRSS | Obsidian export already covers one destination; decide if others are worth the integration surface. |
-| **Persist notification "seen" state across restarts** | — | Right now `FeedWatcherService` re-seeds its dedup set on every restart, so nothing alerts in the first cycle after a restart even if it's genuinely new. Needs a small persisted "last seen" store. |
 
 ## 🔴 Conflicts with "no AI" positioning (not recommended, listed for completeness)
 

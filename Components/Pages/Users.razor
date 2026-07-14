@@ -3,6 +3,7 @@
 @rendermode InteractiveServer
 @inject UserService UserSvc
 @inject AuthenticationStateProvider AuthState
+@inject IWebHostEnvironment Env
 @inject IJSRuntime JS
 
 <PageTitle>AiPulse · Users</PageTitle>
@@ -70,45 +71,75 @@
         <tbody>
             @foreach (var u in pageUsers)
             {
-                <tr>
-                    <td>@u.Username</td>
-                    <td>
-                        <select class="form-select form-select-sm" style="width:auto" value="@u.Role" @onchange="e => ChangeRole(u, (string)e.Value!)">
-                            <option value="User">User</option>
-                            <option value="Admin">Admin</option>
-                        </select>
-                    </td>
-                    <td>
-                        @if (u.Status == UserStatuses.Approved)
-                        {
-                            <span class="text-success">● approved</span>
-                        }
-                        else if (u.Status == UserStatuses.Pending)
-                        {
-                            <span class="text-warning">○ pending</span>
-                        }
-                        else
-                        {
-                            <span class="text-muted">○ disabled</span>
-                        }
-                    </td>
-                    <td class="small text-muted">@u.CreatedAt.ToLocalTime().ToString("MMM d, yyyy")</td>
-                    <td class="text-nowrap">
-                        @if (u.Status == UserStatuses.Pending)
-                        {
-                            <button class="btn btn-sm btn-success me-1" @onclick="() => Approve(u)">Approve</button>
-                        }
-                        @if (u.Status == UserStatuses.Approved)
-                        {
-                            <button class="btn btn-sm btn-outline-secondary me-1" @onclick="() => Disable(u)">Disable</button>
-                        }
-                        else if (u.Status == UserStatuses.Disabled)
-                        {
-                            <button class="btn btn-sm btn-outline-success me-1" @onclick="() => Approve(u)">Enable</button>
-                        }
-                        <button class="btn btn-sm btn-link p-0 text-danger" title="Delete" @onclick="() => Delete(u)"><Icon Name="trash" Size="15" /></button>
-                    </td>
-                </tr>
+                @if (_editingId == u.Id)
+                {
+                    <tr>
+                        <td colspan="5">
+                            <div class="row g-2 align-items-center">
+                                <div class="col-md-3"><input class="form-control form-control-sm" placeholder="Username" @bind="_editForm.Username" /></div>
+                                <div class="col-md-3"><input type="password" class="form-control form-control-sm" placeholder="New password (leave blank to keep current)" @bind="_editForm.NewPassword" /></div>
+                                <div class="col-md-6">
+                                    <button class="btn btn-sm btn-success me-1" @onclick="SaveEdit">Save</button>
+                                    <button class="btn btn-sm btn-outline-secondary" @onclick="CancelEdit">Cancel</button>
+                                </div>
+                            </div>
+                            @if (_editError is not null)
+                            {
+                                <div class="alert alert-danger py-1 px-2 mt-2 mb-0 small">@_editError</div>
+                            }
+                        </td>
+                    </tr>
+                }
+                else
+                {
+                    <tr>
+                        <td>@u.Username</td>
+                        <td>
+                            <select class="form-select form-select-sm" style="width:auto" value="@u.Role" @onchange="e => ChangeRole(u, (string)e.Value!)">
+                                <option value="User">User</option>
+                                <option value="Admin">Admin</option>
+                            </select>
+                        </td>
+                        <td>
+                            @if (u.Status == UserStatuses.Approved)
+                            {
+                                <span class="text-success">● approved</span>
+                            }
+                            else if (u.Status == UserStatuses.Pending)
+                            {
+                                <span class="text-warning">○ pending</span>
+                            }
+                            else
+                            {
+                                <span class="text-muted">○ disabled</span>
+                            }
+                        </td>
+                        <td class="small text-muted">@u.CreatedAt.ToLocalTime().ToString("MMM d, yyyy")</td>
+                        <td class="text-nowrap">
+                            @if (u.Status == UserStatuses.Pending)
+                            {
+                                <button class="btn btn-sm btn-success me-1" @onclick="() => Approve(u)">Approve</button>
+                            }
+                            @if (u.Status == UserStatuses.Approved)
+                            {
+                                <button class="btn btn-sm btn-outline-secondary me-1" @onclick="() => Disable(u)">Disable</button>
+                            }
+                            else if (u.Status == UserStatuses.Disabled)
+                            {
+                                <button class="btn btn-sm btn-outline-success me-1" @onclick="() => Approve(u)">Enable</button>
+                            }
+                            @if (u.Username == _currentUsername)
+                            {
+                                <span class="text-muted small me-2" title="Use Settings to change your own password">Use Settings for your own account</span>
+                            }
+                            else
+                            {
+                                <button class="btn btn-sm btn-link p-0 me-2" title="Rename / reset password" @onclick="() => StartEdit(u)"><Icon Name="settings" Size="15" /></button>
+                            }
+                            <button class="btn btn-sm btn-link p-0 text-danger" title="Delete" @onclick="() => Delete(u)"><Icon Name="trash" Size="15" /></button>
+                        </td>
+                    </tr>
+                }
             }
         </tbody>
     </table>
@@ -123,6 +154,9 @@
     private string? _message;
     private string? _currentUsername;
     private AddUserForm _form = new();
+    private int? _editingId;
+    private string? _editError;
+    private EditUserForm _editForm = new();
 
     private string _search = "";
     private string? _sortColumn = "created";
@@ -250,10 +284,63 @@
         return await UserSvc.CountActiveAdminsAsync() <= 1;
     }
 
+    private void StartEdit(AppUser u)
+    {
+        _showAddForm = false;
+        _editingId = u.Id;
+        _editError = null;
+        _editForm = new EditUserForm { Username = u.Username };
+    }
+
+    private void CancelEdit() { _editingId = null; _editError = null; }
+
+    private async Task SaveEdit()
+    {
+        if (_editingId is null) return;
+        _editError = null;
+
+        var current = _users.FirstOrDefault(u => u.Id == _editingId);
+        if (current is null) { _editingId = null; return; }
+
+        var oldUsername = current.Username;
+        var newUsername = _editForm.Username.Trim();
+
+        if (!string.Equals(oldUsername, newUsername, StringComparison.Ordinal))
+        {
+            var (renamed, renameError, _) = await UserSvc.RenameUserAsync(_editingId.Value, newUsername);
+            if (!renamed)
+            {
+                _editError = renameError;
+                return;
+            }
+            ReadingStateService.RenameUserFolder(Env, oldUsername, newUsername);
+        }
+
+        if (!string.IsNullOrWhiteSpace(_editForm.NewPassword))
+        {
+            var (passwordSet, passwordError) = await UserSvc.SetPasswordAsync(_editingId.Value, _editForm.NewPassword);
+            if (!passwordSet)
+            {
+                _editError = passwordError;
+                return;
+            }
+        }
+
+        _editingId = null;
+        _message = "User updated.";
+        await Reload();
+    }
+
     private sealed class AddUserForm
     {
         public string Username { get; set; } = "";
         public string Password { get; set; } = "";
         public string Role { get; set; } = "User";
+    }
+
+    private sealed class EditUserForm
+    {
+        public string Username { get; set; } = "";
+        public string NewPassword { get; set; } = "";
     }
 }

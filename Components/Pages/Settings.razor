@@ -4,6 +4,7 @@
 @inject ReadingStateService Reading
 @inject ObsidianExportService Export
 @inject WebhookService Webhooks
+@inject UserService UserSvc
 @inject AuthenticationStateProvider AuthState
 @inject NavigationManager Nav
 @inject IJSRuntime JS
@@ -101,6 +102,21 @@
     </div>
 
     <div class="col-lg-6">
+        <h4 class="section-title"><Icon Name="user" /> Account</h4>
+        <p class="text-muted">Signed in as <strong>@_username</strong>.</p>
+        <div class="row g-2 mb-2">
+            <div class="col-md-4"><input type="password" class="form-control" placeholder="Current password" @bind="_currentPassword" /></div>
+            <div class="col-md-4"><input type="password" class="form-control" placeholder="New password" @bind="_newPassword" /></div>
+            <div class="col-md-4"><input type="password" class="form-control" placeholder="Confirm new password" @bind="_confirmPassword" /></div>
+        </div>
+        <button class="btn btn-primary" @onclick="ChangePassword">Change password</button>
+        @if (_passwordChangeMessage is not null)
+        {
+            <div class="alert @(_passwordChangeSuccess ? "alert-success" : "alert-warning") py-2 mt-2 small mb-0">@_passwordChangeMessage</div>
+        }
+
+        <hr class="my-4" />
+
         <h4 class="section-title"><Icon Name="bell" /> Desktop notifications</h4>
         <p class="text-muted">Get notified about new tool/model releases and watchlist hits while a tab is open.</p>
         <p>Browser permission: <strong>@_permission</strong></p>
@@ -275,6 +291,11 @@
     private string _newWidgetTitle = "";
     private string _newWidgetType = "Iframe";
     private string _newWidgetContent = "";
+    private string _currentPassword = "";
+    private string _newPassword = "";
+    private string _confirmPassword = "";
+    private string? _passwordChangeMessage;
+    private bool _passwordChangeSuccess;
 
     protected override void OnInitialized()
     {
@@ -287,6 +308,26 @@
     {
         var state = await AuthState.GetAuthenticationStateAsync();
         _username = state.User.Identity?.Name ?? "";
+    }
+
+    private async Task ChangePassword()
+    {
+        if (_newPassword != _confirmPassword)
+        {
+            _passwordChangeSuccess = false;
+            _passwordChangeMessage = "New password and confirmation don't match.";
+            return;
+        }
+
+        var (success, error) = await UserSvc.ChangeOwnPasswordAsync(_username, _currentPassword, _newPassword);
+        _passwordChangeSuccess = success;
+        _passwordChangeMessage = success ? "Password changed." : error;
+        if (success)
+        {
+            _currentPassword = "";
+            _newPassword = "";
+            _confirmPassword = "";
+        }
     }
 
     private void SaveFeverPassword()

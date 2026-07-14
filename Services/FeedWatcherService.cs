@@ -27,7 +27,6 @@ public sealed class FeedWatcherService : BackgroundService
     private readonly WebhookService _webhooks;
     private readonly NotificationOptions _opt;
     private readonly ILogger<FeedWatcherService> _log;
-    private readonly HashSet<string> _seen = new();
     private bool _seeded;
 
     public FeedWatcherService(
@@ -78,18 +77,29 @@ public sealed class FeedWatcherService : BackgroundService
     private async Task PollAsync(CancellationToken ct)
     {
         var result = await _feeds.GetAsync(force: true, ct);
+
+        // Snapshot which links FeedHistoryService already knew about *before* recording this batch.
+        // Its history is persisted to disk and loaded on startup, so this survives restarts - unlike the
+        // old in-memory-only "seen" set, which forgot everything on every restart and silently re-seeded
+        // instead of alerting, even for items that had genuinely arrived while the app was down.
+        var alreadyKnown = _history.Items.Select(i => i.Link).ToHashSet();
         _history.Record(result.Items);
 
         try { await _webSub.RenewExpiringAsync(_kb.Sources, ct); }
         catch (Exception ex) { _log.LogDebug(ex, "WebSub renewal pass failed"); }
 
-        // First pass just records what's already there so we don't alert on the whole backlog.
+        // On the very first poll of a brand-new install (no persisted history yet), just seed silently -
+        // otherwise every item currently live in every feed would fire as a fresh alert. A restart with
+        // existing history falls straight through and alerts on anything not already known.
         if (!_seeded)
         {
-            foreach (var item in result.Items) _seen.Add(item.Link);
             _seeded = true;
-            _log.LogInformation("Feed watcher seeded with {Count} items", _seen.Count);
-            return;
+            if (alreadyKnown.Count == 0)
+            {
+                _log.LogInformation("Feed watcher seeded with {Count} item(s) (first run, nothing to alert on)", result.Items.Count);
+                return;
+            }
+            _log.LogInformation("Feed watcher resuming with {Count} previously-known item(s) from persisted history", alreadyKnown.Count);
         }
 
         var newAlerts = new List<Alert>();
@@ -99,8 +109,8 @@ public sealed class FeedWatcherService : BackgroundService
 
         foreach (var item in result.Items)
         {
-            if (string.IsNullOrEmpty(item.Link) || !_seen.Add(item.Link))
-                continue; // already seen
+            if (string.IsNullOrEmpty(item.Link) || !alreadyKnown.Add(item.Link))
+                continue; // already seen (or a duplicate link within this same batch)
 
             if (newAlerts.Count >= _opt.MaxPerPoll)
                 continue;

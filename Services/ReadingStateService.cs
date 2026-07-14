@@ -403,6 +403,38 @@ public sealed class ReadingStateService
     }
 
     /// <summary>
+    /// Moves a renamed user's per-user folder (bookmarks, watchlist, exclude filters, etc.) from the old
+    /// username's key to the new one, so a rename doesn't look like data loss. Also clears FeverApiKey -
+    /// it's MD5(username:password), so it's silently invalid under the new username and there's no way to
+    /// recompute it without the plaintext password; the user just needs to re-set it in Settings if they
+    /// use a Fever-compatible mobile client.
+    /// </summary>
+    public static void RenameUserFolder(IWebHostEnvironment env, string oldUsername, string newUsername)
+    {
+        var oldKey = SanitizeForPath(oldUsername);
+        var newKey = SanitizeForPath(newUsername);
+        if (oldKey == newKey) return;
+
+        var usersDir = Path.Combine(env.ContentRootPath, "App_Data", "users");
+        var oldDir = Path.Combine(usersDir, oldKey);
+        var newDir = Path.Combine(usersDir, newKey);
+        if (!Directory.Exists(oldDir) || Directory.Exists(newDir)) return;
+
+        Directory.Move(oldDir, newDir);
+
+        var statePath = Path.Combine(newDir, "reading-state.json");
+        if (!File.Exists(statePath)) return;
+        try
+        {
+            var state = JsonSerializer.Deserialize<ReadingState>(File.ReadAllText(statePath));
+            if (state is null || state.FeverApiKey is null) return;
+            state.FeverApiKey = null;
+            File.WriteAllText(statePath, JsonSerializer.Serialize(state, JsonOpts));
+        }
+        catch { /* corrupt file - leave as-is, nothing more we can safely do here */ }
+    }
+
+    /// <summary>
     /// Scans every user's reading-state file and unions their watchlists. Used only by the background
     /// FeedWatcherService, which has no single "current user" - a keyword watched by any user is enough
     /// to raise a shared desktop-notification alert. Per-user ⭐ highlighting on the News page still uses
