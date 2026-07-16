@@ -115,6 +115,15 @@ public sealed class ReadingState
     public List<WebhookRoute> WebhookRoutes { get; set; } = new();
 
     /// <summary>
+    /// Sources this user has hidden from their own News Feed, by exact name (always matches
+    /// <see cref="FeedItem.SourceName"/> verbatim, both ultimately from the same <c>SourceRecord.Name</c> -
+    /// no case-insensitive comparer needed, unlike free-typed input). Sources themselves stay
+    /// global/admin-managed (one shared fetch/cache for everyone); this only filters at display time, so
+    /// different users can have meaningfully different feeds without each needing their own source list.
+    /// </summary>
+    public HashSet<string> MutedSources { get; set; } = new();
+
+    /// <summary>
     /// MD5("username:password") for the Fever API (a separate password from the main login, chosen by the
     /// user in Settings) - stored as the digest itself, never the plaintext, since that's all the protocol
     /// needs to compare against on each request.

@@ -83,6 +83,30 @@
 
         <hr class="my-4" />
 
+        <h4 class="section-title"><Icon Name="eye-off" /> Muted sources</h4>
+        <p class="text-muted">
+            Sources are shared/admin-managed across everyone, but you can hide specific ones from just your
+            own News Feed - click the eye icon next to a source name on any feed item to mute it.
+        </p>
+        @if (Reading.MutedSources.Count == 0)
+        {
+            <p class="text-muted">No muted sources yet.</p>
+        }
+        else
+        {
+            <div class="d-flex flex-wrap gap-2">
+                @foreach (var source in Reading.MutedSources.OrderBy(s => s))
+                {
+                    <div class="tag-chip small d-flex align-items-center gap-1">
+                        @source
+                        <button class="btn btn-sm btn-link p-0" title="Unmute" @onclick="() => Reading.ToggleMutedSource(source)">✕</button>
+                    </div>
+                }
+            </div>
+        }
+
+        <hr class="my-4" />
+
         <h4 class="section-title"><Icon Name="sparkle" /> Appearance</h4>
         <p class="text-muted">An accent color on top of the light/dark toggle (top-left), plus optional custom CSS for full control. Remembered on this browser.</p>
 

@@ -309,6 +309,20 @@ Status tags: ✅ done · 🟢 fits philosophy, no AI needed · 🟡 needs a desi
   calendar day, links to `/news?tag=X`, fans out through the same webhook routes (including per-keyword
   ones) as Release/Watchlist alerts. Toggle: `Notifications:NotifyTrends` (default on).
 
+> **Per-user source preferences - the design decision:** "different users want different feeds" could mean
+> either (a) each user mutes/hides specific sources from their own feed, or (b) each user manages a fully
+> independent source list. Went with (a): Sources stay global/admin-managed with one shared fetch/cache
+> across everyone (`FeedAggregatorService`'s whole efficiency model depends on that), and a new per-user
+> `MutedSources` set (same `App_Data/users/{name}/reading-state.json` pattern as bookmarks/watchlist/saved
+> searches) filters at *display* time in `News.razor`'s `Filtered()` - one line, right next to the existing
+> `ExcludeFilters` check it mirrors. Mute from an eye-off icon next to any card's source name (only rendered
+> when `OnMuteSource` is wired, i.e. on News - Bookmarks/Home previews don't offer it), manage/unmute the
+> list from Settings. (b) would mean re-architecting the shared fetch/cache into a per-user one - a much
+> bigger change, and not what "users might want different feeds" actually needs when the real ask is "I
+> don't want to see r/X in my feed," not "I want to run my own completely separate source list." Verified
+> live: muted a source via a hand-edited state file, confirmed it showed in Settings with an unmute chip,
+> unmuted it, confirmed the round-trip persisted correctly to disk both ways.
+
 > **GitHub Trending scrape reality check:** `GitHubTrendingService` scrapes `github.com/trending` and
 > `github.com/trending/developers` directly for the repo/developer views above - GitHub has no API for
 > either, and "stars today" and contributor avatars only exist on those unofficial pages, so there's no

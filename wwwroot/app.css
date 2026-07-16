@@ -380,6 +380,10 @@ a.card:hover { transform: translateY(-1px); }
 .read-item { opacity: .55; }
 .read-item:hover { opacity: .85; }
 
+/* Mute-this-source (feed cards) */
+.mute-source-btn { opacity: .5; text-decoration: none; }
+.mute-source-btn:hover { opacity: 1; color: var(--ap-danger, #dc2626); }
+
 /* Share menu (feed cards) */
 .share-menu-wrapper { position: relative; }
 .share-menu { position: absolute; right: 0; top: 100%; z-index: 20; min-width: 180px; margin-top: 2px; }

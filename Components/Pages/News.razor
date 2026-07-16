@@ -204,6 +204,7 @@ else
                                   IsBookmarked="Reading.IsBookmarked(item.Link)"
                                   OnToggleRead="() => ToggleRead(item)"
                                   OnToggleBookmark="() => Toggle(item)"
+                                  OnMuteSource="MuteSource"
                                   ShowFullTextToggle="true"
                                   Expanded="_expandedLinks.Contains(item.Link)"
                                   OnToggleExpanded="() => ToggleExpanded(item.Link)"
@@ -224,6 +225,7 @@ else
                               IsBookmarked="Reading.IsBookmarked(item.Link)"
                               OnToggleRead="() => ToggleRead(item)"
                               OnToggleBookmark="() => Toggle(item)"
+                              OnMuteSource="MuteSource"
                               ShowFullTextToggle="true"
                               Expanded="_expandedLinks.Contains(item.Link)"
                               OnToggleExpanded="() => ToggleExpanded(item.Link)"
@@ -487,6 +489,9 @@ else
         if (Reading.ExcludeFilters.Count > 0)
             q = q.Where(i => !Reading.IsExcluded(i.Title + " " + i.Summary));
 
+        if (Reading.MutedSources.Count > 0)
+            q = q.Where(i => !Reading.IsSourceMuted(i.SourceName));
+
         q = _filter switch
         {
             "New" => q.Where(i => i.Published > _sinceVisit),
@@ -545,6 +550,8 @@ else
     private void Toggle(FeedItem item) => Reading.ToggleBookmark(item);
 
     private void ToggleRead(FeedItem item) => Reading.ToggleRead(item);
+
+    private void MuteSource(string sourceName) => Reading.ToggleMutedSource(sourceName);
 
     private void ToggleExpanded(string link)
     {

@@ -215,6 +215,33 @@ public sealed class ReadingStateService
         }
     }
 
+    // --- Per-user muted sources (Sources themselves stay global/admin-managed - see MutedSources doc comment) ---
+
+    public IReadOnlyCollection<string> MutedSources
+    {
+        get { EnsureLoaded(); lock (_lock) return _state!.MutedSources.ToList(); }
+    }
+
+    public bool IsSourceMuted(string sourceName)
+    {
+        EnsureLoaded();
+        lock (_lock) return _state!.MutedSources.Contains(sourceName);
+    }
+
+    /// <summary>Toggles whether a source is muted for this user and returns the new state.</summary>
+    public bool ToggleMutedSource(string sourceName)
+    {
+        EnsureLoaded();
+        lock (_lock)
+        {
+            var nowMuted = !_state!.MutedSources.Contains(sourceName);
+            if (nowMuted) _state.MutedSources.Add(sourceName);
+            else _state.MutedSources.Remove(sourceName);
+            Save();
+            return nowMuted;
+        }
+    }
+
     // --- Saved searches ("smart folders") ---
 
     public IReadOnlyList<SavedSearch> SavedSearches

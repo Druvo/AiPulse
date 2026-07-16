@@ -87,6 +87,13 @@
                     }
                 </span>
                 <span>@Item.SourceName</span>
+                @if (OnMuteSource.HasDelegate)
+                {
+                    <button class="btn btn-sm btn-link p-0 mute-source-btn" title="Hide @Item.SourceName from your feed"
+                            @onclick="() => OnMuteSource.InvokeAsync(Item.SourceName)" @onclick:stopPropagation="true">
+                        <Icon Name="eye-off" Size="12" />
+                    </button>
+                }
                 @if (Item.AlsoSeenOn.Length > 0)
                 {
                     <span class="badge bg-secondary" title="Also covered by: @string.Join(", ", Item.AlsoSeenOn)">+@Item.AlsoSeenOn.Length more@(Item.AlsoSeenOn.Length > 1 ? " sources" : " source")</span>
@@ -123,6 +130,8 @@
     [Parameter] public bool IsBookmarked { get; set; }
     [Parameter] public EventCallback OnToggleRead { get; set; }
     [Parameter] public EventCallback OnToggleBookmark { get; set; }
+    /// <summary>Optional - only News.razor wires this up. Invoked with the item's SourceName when the user asks to hide that source from their own feed.</summary>
+    [Parameter] public EventCallback<string> OnMuteSource { get; set; }
     [Parameter] public bool ShowFullTextToggle { get; set; }
     [Parameter] public bool Expanded { get; set; }
     [Parameter] public EventCallback OnToggleExpanded { get; set; }
