@@ -6,7 +6,10 @@
     "Note": "Practical, developer-focused coverage of new models, tools and techniques.",
     "ContentType": "Tutorial",
     "Level": "Intermediate",
-    "Tags": ["Prompting", "Tools"]
+    "Tags": [
+      "Prompting",
+      "Tools"
+    ]
   },
   {
     "Name": "Hugging Face Blog",
@@ -15,7 +18,9 @@
     "Note": "New open models, libraries and how-to posts.",
     "ContentType": "Tutorial",
     "Level": "Intermediate",
-    "Tags": ["Open Models"]
+    "Tags": [
+      "Open Models"
+    ]
   },
   {
     "Name": "Import AI (Jack Clark)",
@@ -24,7 +29,9 @@
     "Note": "Weekly digest of important AI research and policy.",
     "ContentType": "News",
     "Level": "Advanced",
-    "Tags": ["Policy"]
+    "Tags": [
+      "Policy"
+    ]
   },
   {
     "Name": "Latent Space",
@@ -33,7 +40,11 @@
     "Note": "AI engineering: agents, RAG, evals, tooling.",
     "ContentType": "Tutorial",
     "Level": "Intermediate",
-    "Tags": ["Agents", "RAG", "Evals"]
+    "Tags": [
+      "Agents",
+      "RAG",
+      "Evals"
+    ]
   },
   {
     "Name": "Ahead of AI (Sebastian Raschka)",
@@ -42,7 +53,9 @@
     "Note": "Deep, clear explainers on LLM internals and training.",
     "ContentType": "Tutorial",
     "Level": "Advanced",
-    "Tags": ["LLM Internals"]
+    "Tags": [
+      "LLM Internals"
+    ]
   },
   {
     "Name": "The Gradient",
@@ -54,7 +67,7 @@
     "Tags": []
   },
   {
-    "Name": "Google · AI",
+    "Name": "Google \u00b7 AI",
     "Url": "https://blog.google/innovation-and-ai/technology/ai/rss/",
     "Category": "News",
     "Note": "Official Google AI announcements.",
@@ -69,10 +82,12 @@
     "Note": "Official OpenAI announcements and product news.",
     "ContentType": "News",
     "Level": "Beginner",
-    "Tags": ["Product Launches"]
+    "Tags": [
+      "Product Launches"
+    ]
   },
   {
-    "Name": "The Verge · AI",
+    "Name": "The Verge \u00b7 AI",
     "Url": "https://www.theverge.com/rss/ai-artificial-intelligence/index.xml",
     "Category": "News",
     "Note": "Mainstream AI news and product launches.",
@@ -81,7 +96,7 @@
     "Tags": []
   },
   {
-    "Name": "VentureBeat · AI",
+    "Name": "VentureBeat \u00b7 AI",
     "Url": "https://venturebeat.com/category/ai/feed/",
     "Category": "News",
     "Note": "Enterprise AI news and analysis.",
@@ -90,7 +105,7 @@
     "Tags": []
   },
   {
-    "Name": "TechCrunch · AI",
+    "Name": "TechCrunch \u00b7 AI",
     "Url": "https://techcrunch.com/category/artificial-intelligence/feed/",
     "Category": "News",
     "Note": "Startup and industry AI news.",
@@ -114,7 +129,9 @@
     "Note": "Newest computational linguistics / LLM papers.",
     "ContentType": "Paper",
     "Level": "Advanced",
-    "Tags": ["NLP"]
+    "Tags": [
+      "NLP"
+    ]
   },
   {
     "Name": "arXiv cs.AI",
@@ -132,7 +149,9 @@
     "Note": "Newest machine-learning papers.",
     "ContentType": "Paper",
     "Level": "Advanced",
-    "Tags": ["Machine Learning"]
+    "Tags": [
+      "Machine Learning"
+    ]
   },
   {
     "Name": "Claude Code releases",
@@ -141,7 +160,9 @@
     "Note": "What changed in each Claude Code release.",
     "ContentType": "Release",
     "Level": "Intermediate",
-    "Tags": ["Coding Agent"]
+    "Tags": [
+      "Coding Agent"
+    ]
   },
   {
     "Name": "Ollama releases",
@@ -150,7 +171,9 @@
     "Note": "Local model runtime updates.",
     "ContentType": "Release",
     "Level": "Intermediate",
-    "Tags": ["Local Models"]
+    "Tags": [
+      "Local Models"
+    ]
   },
   {
     "Name": "MCP servers releases",
@@ -159,7 +182,9 @@
     "Note": "Model Context Protocol reference servers.",
     "ContentType": "Release",
     "Level": "Intermediate",
-    "Tags": ["MCP"]
+    "Tags": [
+      "MCP"
+    ]
   },
   {
     "Name": "LiteLLM releases",
@@ -177,7 +202,10 @@
     "Note": "Popular agent/RAG framework.",
     "ContentType": "Release",
     "Level": "Intermediate",
-    "Tags": ["Agents", "RAG"]
+    "Tags": [
+      "Agents",
+      "RAG"
+    ]
   },
   {
     "Name": "LlamaIndex releases",
@@ -186,7 +214,9 @@
     "Note": "Data framework for RAG apps.",
     "ContentType": "Release",
     "Level": "Intermediate",
-    "Tags": ["RAG"]
+    "Tags": [
+      "RAG"
+    ]
   },
   {
     "Name": "Cline releases",
@@ -195,7 +225,9 @@
     "Note": "Open-source VS Code coding agent.",
     "ContentType": "Release",
     "Level": "Intermediate",
-    "Tags": ["Coding Agent"]
+    "Tags": [
+      "Coding Agent"
+    ]
   },
   {
     "Name": "Aider releases",
@@ -204,7 +236,9 @@
     "Note": "Terminal pair-programming agent.",
     "ContentType": "Release",
     "Level": "Intermediate",
-    "Tags": ["Coding Agent"]
+    "Tags": [
+      "Coding Agent"
+    ]
   },
   {
     "Name": "Open WebUI releases",
@@ -213,7 +247,9 @@
     "Note": "Self-hosted chat UI for local models.",
     "ContentType": "Release",
     "Level": "Beginner",
-    "Tags": ["Local Models"]
+    "Tags": [
+      "Local Models"
+    ]
   },
   {
     "Name": "vLLM releases",
@@ -243,7 +279,7 @@
     "Tags": []
   },
   {
-    "Name": "Hacker News · LLM",
+    "Name": "Hacker News \u00b7 LLM",
     "Url": "https://hnrss.org/newest?q=LLM&count=25",
     "Category": "Community",
     "Note": "Fresh HN posts mentioning LLMs.",
@@ -252,22 +288,26 @@
     "Tags": []
   },
   {
-    "Name": "Hacker News · AI agents",
+    "Name": "Hacker News \u00b7 AI agents",
     "Url": "https://hnrss.org/newest?q=AI+agent&count=25",
     "Category": "Community",
     "Note": "Fresh HN posts about agents.",
     "ContentType": "Discussion",
     "Level": "Intermediate",
-    "Tags": ["Agents"]
+    "Tags": [
+      "Agents"
+    ]
   },
   {
-    "Name": "Hacker News · MCP",
+    "Name": "Hacker News \u00b7 MCP",
     "Url": "https://hnrss.org/newest?q=MCP&count=20",
     "Category": "Community",
     "Note": "Fresh HN posts about Model Context Protocol.",
     "ContentType": "Discussion",
     "Level": "Intermediate",
-    "Tags": ["MCP"]
+    "Tags": [
+      "MCP"
+    ]
   },
   {
     "Name": "r/LocalLLaMA",
@@ -276,7 +316,10 @@
     "Note": "Local model releases, quantization, hardware, optimization.",
     "ContentType": "Discussion",
     "Level": "Advanced",
-    "Tags": ["Local Models", "Quantization"]
+    "Tags": [
+      "Local Models",
+      "Quantization"
+    ]
   },
   {
     "Name": "r/MachineLearning",
@@ -303,7 +346,9 @@
     "Note": "AI progress, AGI timelines, and frontier-model discussion - more speculative than r/MachineLearning.",
     "ContentType": "Discussion",
     "Level": "Intermediate",
-    "Tags": ["AGI"]
+    "Tags": [
+      "AGI"
+    ]
   },
   {
     "Name": "r/OpenAI",
@@ -330,7 +375,10 @@
     "Note": "Agent/RAG framework community - build questions, patterns, and showcases.",
     "ContentType": "Discussion",
     "Level": "Intermediate",
-    "Tags": ["Agents", "RAG"]
+    "Tags": [
+      "Agents",
+      "RAG"
+    ]
   },
   {
     "Name": "r/ObsidianMD",
@@ -348,7 +396,9 @@
     "Note": "Short, visual explainers on new AI research papers.",
     "ContentType": "Video",
     "Level": "Beginner",
-    "Tags": ["Research Explainers"]
+    "Tags": [
+      "Research Explainers"
+    ]
   },
   {
     "Name": "AI Explained (YouTube)",
@@ -366,10 +416,12 @@
     "Note": "Fast-paced dev tool and framework overviews, including AI coding tools.",
     "ContentType": "Video",
     "Level": "Beginner",
-    "Tags": ["Coding"]
+    "Tags": [
+      "Coding"
+    ]
   },
   {
-    "Name": "dev.to · AI tag",
+    "Name": "dev.to \u00b7 AI tag",
     "Url": "https://dev.to/feed/tag/ai",
     "Category": "News",
     "Note": "Practical, hands-on AI posts and tutorials from working developers.",
@@ -378,7 +430,7 @@
     "Tags": []
   },
   {
-    "Name": "freeCodeCamp · AI",
+    "Name": "freeCodeCamp \u00b7 AI",
     "Url": "https://www.freecodecamp.org/news/tag/ai/rss/",
     "Category": "News",
     "Note": "Step-by-step AI tutorials aimed at learners.",
@@ -402,10 +454,12 @@
     "Note": "New product launches, including a steady stream of AI tools.",
     "ContentType": "Release",
     "Level": "Beginner",
-    "Tags": ["Product Launches"]
+    "Tags": [
+      "Product Launches"
+    ]
   },
   {
-    "Name": "Mastodon · #AI",
+    "Name": "Mastodon \u00b7 #AI",
     "Url": "https://mastodon.social/tags/ai.rss",
     "Category": "Community",
     "Note": "Live public posts tagged #AI on the largest Mastodon instance.",
@@ -420,7 +474,10 @@
     "Note": "What changed in each ASP.NET Core release.",
     "ContentType": "Release",
     "Level": "Intermediate",
-    "Tags": ["ASP.NET", "C#"]
+    "Tags": [
+      "ASP.NET",
+      "C#"
+    ]
   },
   {
     "Name": ".NET Blog",
@@ -429,7 +486,10 @@
     "Note": "Official Microsoft .NET/C# announcements, deep dives, and roadmap posts.",
     "ContentType": "Tutorial",
     "Level": "Intermediate",
-    "Tags": ["C#", ".NET"]
+    "Tags": [
+      "C#",
+      ".NET"
+    ]
   },
   {
     "Name": "llama.cpp releases",
@@ -438,7 +498,9 @@
     "Note": "The core local-inference engine most other local-model tools (Ollama, LM Studio) build on.",
     "ContentType": "Release",
     "Level": "Advanced",
-    "Tags": ["Local Models"]
+    "Tags": [
+      "Local Models"
+    ]
   },
   {
     "Name": "GitHub Trending",
@@ -447,21 +509,1097 @@
     "Note": "Whatever's gaining stars fastest across all of GitHub right now, any language.",
     "ContentType": "Release",
     "Level": "Beginner",
-    "Tags": ["Trending"],
+    "Tags": [
+      "Trending"
+    ],
     "IsScrape": true,
     "ScrapeItemXPath": "//article[contains(@class,'Box-row')]",
     "ScrapeLinkXPath": ".//h2//a"
   },
   {
-    "Name": "GitHub Trending · C#",
+    "Name": "GitHub Trending \u00b7 C#",
     "Url": "https://github.com/trending/csharp?since=daily",
     "Category": "Tools",
     "Note": "Same as GitHub Trending, filtered to C# repos.",
     "ContentType": "Release",
     "Level": "Beginner",
-    "Tags": ["C#", "Trending"],
+    "Tags": [
+      "C#",
+      "Trending"
+    ],
     "IsScrape": true,
     "ScrapeItemXPath": "//article[contains(@class,'Box-row')]",
     "ScrapeLinkXPath": ".//h2//a"
+  },
+  {
+    "Name": "r/Agent_AI",
+    "Url": "https://www.reddit.com/r/Agent_AI/.rss",
+    "Category": "Community",
+    "Note": "AI agents that plan, execute, learn autonomously.",
+    "ContentType": "Discussion",
+    "Level": "Intermediate",
+    "Tags": [
+      "Agents"
+    ]
+  },
+  {
+    "Name": "r/AI_Agents",
+    "Url": "https://www.reddit.com/r/AI_Agents/.rss",
+    "Category": "Community",
+    "Note": "AI Agents and tools - LLMs using tools/functions autonomously.",
+    "ContentType": "Discussion",
+    "Level": "Intermediate",
+    "Tags": [
+      "Agents",
+      "Tools"
+    ]
+  },
+  {
+    "Name": "r/AI_Tools_Land",
+    "Url": "https://www.reddit.com/r/AI_Tools_Land/.rss",
+    "Category": "Community",
+    "Note": "Best AI Tools.",
+    "ContentType": "Discussion",
+    "Level": "Beginner",
+    "Tags": [
+      "Tools"
+    ]
+  },
+  {
+    "Name": "r/AIAgentsInAction",
+    "Url": "https://www.reddit.com/r/AIAgentsInAction/.rss",
+    "Category": "Community",
+    "Note": "Automating tasks using AI.",
+    "ContentType": "Discussion",
+    "Level": "Intermediate",
+    "Tags": [
+      "Agents",
+      "Automation"
+    ]
+  },
+  {
+    "Name": "r/AIAssisted",
+    "Url": "https://www.reddit.com/r/AIAssisted/.rss",
+    "Category": "Community",
+    "Note": "Real-world AI usage - prompts, tools, wins and fails.",
+    "ContentType": "Discussion",
+    "Level": "Beginner",
+    "Tags": [
+      "Tools",
+      "Prompting"
+    ]
+  },
+  {
+    "Name": "r/AIDiscussion",
+    "Url": "https://www.reddit.com/r/AIDiscussion/.rss",
+    "Category": "Community",
+    "Note": "Technical and philosophical aspects of AI.",
+    "ContentType": "Discussion",
+    "Level": "Intermediate",
+    "Tags": [
+      "AI"
+    ]
+  },
+  {
+    "Name": "r/AIToolsAndTips",
+    "Url": "https://www.reddit.com/r/AIToolsAndTips/.rss",
+    "Category": "Community",
+    "Note": "Latest AI tools, automation hacks, productivity boosters.",
+    "ContentType": "Discussion",
+    "Level": "Beginner",
+    "Tags": [
+      "Tools",
+      "Automation"
+    ]
+  },
+  {
+    "Name": "r/Anthropic",
+    "Url": "https://www.reddit.com/r/Anthropic/.rss",
+    "Category": "Community",
+    "Note": "Anthropic and Claude community.",
+    "ContentType": "Discussion",
+    "Level": "Beginner",
+    "Tags": [
+      "Claude",
+      "Anthropic"
+    ]
+  },
+  {
+    "Name": "r/Bard",
+    "Url": "https://www.reddit.com/r/Bard/.rss",
+    "Category": "Community",
+    "Note": "Google Gemini (formerly Bard) AI discussions.",
+    "ContentType": "Discussion",
+    "Level": "Beginner",
+    "Tags": [
+      "Gemini",
+      "Google"
+    ]
+  },
+  {
+    "Name": "r/ChatGPT",
+    "Url": "https://www.reddit.com/r/ChatGPT/.rss",
+    "Category": "Community",
+    "Note": "ChatGPT and AI discussions.",
+    "ContentType": "Discussion",
+    "Level": "Beginner",
+    "Tags": [
+      "ChatGPT",
+      "OpenAI"
+    ]
+  },
+  {
+    "Name": "r/ChatGPTCoding",
+    "Url": "https://www.reddit.com/r/ChatGPTCoding/.rss",
+    "Category": "Community",
+    "Note": "Coding with ChatGPT - interactions, tips, creations.",
+    "ContentType": "Discussion",
+    "Level": "Intermediate",
+    "Tags": [
+      "Coding",
+      "ChatGPT"
+    ]
+  },
+  {
+    "Name": "r/ChatGPTPro",
+    "Url": "https://www.reddit.com/r/ChatGPTPro/.rss",
+    "Category": "Community",
+    "Note": "Advanced/professional ChatGPT and LLM usage.",
+    "ContentType": "Discussion",
+    "Level": "Intermediate",
+    "Tags": [
+      "ChatGPT",
+      "Workflows"
+    ]
+  },
+  {
+    "Name": "r/ClaudeCode",
+    "Url": "https://www.reddit.com/r/ClaudeCode/.rss",
+    "Category": "Community",
+    "Note": "Claude Code enthusiasts building, sharing, solving.",
+    "ContentType": "Discussion",
+    "Level": "Intermediate",
+    "Tags": [
+      "Claude",
+      "Coding"
+    ]
+  },
+  {
+    "Name": "r/ClaudeMCP",
+    "Url": "https://www.reddit.com/r/ClaudeMCP/.rss",
+    "Category": "Community",
+    "Note": "Claude MCP - servers, tools, integrations, tutorials.",
+    "ContentType": "Discussion",
+    "Level": "Intermediate",
+    "Tags": [
+      "MCP",
+      "Claude"
+    ]
+  },
+  {
+    "Name": "r/DeepSeek",
+    "Url": "https://www.reddit.com/r/DeepSeek/.rss",
+    "Category": "Community",
+    "Note": "DeepSeek AGI community.",
+    "ContentType": "Discussion",
+    "Level": "Intermediate",
+    "Tags": [
+      "DeepSeek"
+    ]
+  },
+  {
+    "Name": "r/GeminiAI",
+    "Url": "https://www.reddit.com/r/GeminiAI/.rss",
+    "Category": "Community",
+    "Note": "Google Gemini AI neural network discussions.",
+    "ContentType": "Discussion",
+    "Level": "Beginner",
+    "Tags": [
+      "Gemini",
+      "Google"
+    ]
+  },
+  {
+    "Name": "r/GeminiCLI",
+    "Url": "https://www.reddit.com/r/GeminiCLI/.rss",
+    "Category": "Community",
+    "Note": "Gemini CLI features, tips, troubleshooting.",
+    "ContentType": "Discussion",
+    "Level": "Intermediate",
+    "Tags": [
+      "Gemini",
+      "CLI"
+    ]
+  },
+  {
+    "Name": "r/GeminiCodeAssist",
+    "Url": "https://www.reddit.com/r/GeminiCodeAssist/.rss",
+    "Category": "Community",
+    "Note": "Gemini Code Assist discussions.",
+    "ContentType": "Discussion",
+    "Level": "Intermediate",
+    "Tags": [
+      "Gemini",
+      "Coding"
+    ]
+  },
+  {
+    "Name": "r/GithubCopilot",
+    "Url": "https://www.reddit.com/r/GithubCopilot/.rss",
+    "Category": "Community",
+    "Note": "GitHub Copilot AI coding tool.",
+    "ContentType": "Discussion",
+    "Level": "Intermediate",
+    "Tags": [
+      "Copilot",
+      "Coding"
+    ]
+  },
+  {
+    "Name": "r/LLMDevs",
+    "Url": "https://www.reddit.com/r/LLMDevs/.rss",
+    "Category": "Community",
+    "Note": "LLM enthusiasts, developers, researchers.",
+    "ContentType": "Discussion",
+    "Level": "Advanced",
+    "Tags": [
+      "LLM",
+      "Development"
+    ]
+  },
+  {
+    "Name": "r/LocalLLM",
+    "Url": "https://www.reddit.com/r/LocalLLM/.rss",
+    "Category": "Community",
+    "Note": "Locally run large language models.",
+    "ContentType": "Discussion",
+    "Level": "Advanced",
+    "Tags": [
+      "Local Models"
+    ]
+  },
+  {
+    "Name": "r/MLQuestions",
+    "Url": "https://www.reddit.com/r/MLQuestions/.rss",
+    "Category": "Community",
+    "Note": "Beginner ML questions and answers.",
+    "ContentType": "Discussion",
+    "Level": "Beginner",
+    "Tags": [
+      "Machine Learning"
+    ]
+  },
+  {
+    "Name": "r/learnmachinelearning",
+    "Url": "https://www.reddit.com/r/learnmachinelearning/.rss",
+    "Category": "Community",
+    "Note": "ML learners and educators community.",
+    "ContentType": "Discussion",
+    "Level": "Beginner",
+    "Tags": [
+      "Machine Learning"
+    ]
+  },
+  {
+    "Name": "r/CharacterAI",
+    "Url": "https://www.reddit.com/r/CharacterAI/.rss",
+    "Category": "Community",
+    "Note": "Character.AI - create and talk to advanced AI.",
+    "ContentType": "Discussion",
+    "Level": "Beginner",
+    "Tags": [
+      "AI Characters"
+    ]
+  },
+  {
+    "Name": "r/GoogleGeminiAI",
+    "Url": "https://www.reddit.com/r/GoogleGeminiAI/.rss",
+    "Category": "Community",
+    "Note": "Google Gemini multimodal LLM discussions.",
+    "ContentType": "Discussion",
+    "Level": "Beginner",
+    "Tags": [
+      "Gemini",
+      "Google"
+    ]
+  },
+  {
+    "Name": "r/hermesagent",
+    "Url": "https://www.reddit.com/r/hermesagent/.rss",
+    "Category": "Community",
+    "Note": "Hermes Agent by Nous Research community.",
+    "ContentType": "Discussion",
+    "Level": "Intermediate",
+    "Tags": [
+      "Hermes",
+      "Agents"
+    ]
+  },
+  {
+    "Name": "r/mcp",
+    "Url": "https://www.reddit.com/r/mcp/.rss",
+    "Category": "Community",
+    "Note": "Model Context Protocol - open standard for AI tool connections.",
+    "ContentType": "Discussion",
+    "Level": "Intermediate",
+    "Tags": [
+      "MCP"
+    ]
+  },
+  {
+    "Name": "r/MediaSynthesis",
+    "Url": "https://www.reddit.com/r/MediaSynthesis/.rss",
+    "Category": "Community",
+    "Note": "AI-generated media - deepfakes, image/audio/text synthesis.",
+    "ContentType": "Discussion",
+    "Level": "Intermediate",
+    "Tags": [
+      "Generation"
+    ]
+  },
+  {
+    "Name": "r/bigsleep",
+    "Url": "https://www.reddit.com/r/bigsleep/.rss",
+    "Category": "Community",
+    "Note": "AI imagery generated from text descriptions.",
+    "ContentType": "Discussion",
+    "Level": "Beginner",
+    "Tags": [
+      "Image Generation"
+    ]
+  },
+  {
+    "Name": "r/isthisAI",
+    "Url": "https://www.reddit.com/r/isthisAI/.rss",
+    "Category": "Community",
+    "Note": "Is this AI-generated? Detection discussions.",
+    "ContentType": "Discussion",
+    "Level": "Beginner",
+    "Tags": [
+      "AI Detection"
+    ]
+  },
+  {
+    "Name": "r/antiai",
+    "Url": "https://www.reddit.com/r/antiai/.rss",
+    "Category": "Community",
+    "Note": "Critical discussion on AI advancements.",
+    "ContentType": "Discussion",
+    "Level": "Beginner",
+    "Tags": [
+      "AI Ethics"
+    ]
+  },
+  {
+    "Name": "r/algorithms",
+    "Url": "https://www.reddit.com/r/algorithms/.rss",
+    "Category": "Community",
+    "Note": "Computer Science for Computer Scientists.",
+    "ContentType": "Discussion",
+    "Level": "Intermediate",
+    "Tags": [
+      "CS",
+      "Algorithms"
+    ]
+  },
+  {
+    "Name": "r/coding",
+    "Url": "https://www.reddit.com/r/coding/.rss",
+    "Category": "Community",
+    "Note": "General coding discussions.",
+    "ContentType": "Discussion",
+    "Level": "Beginner",
+    "Tags": [
+      "Coding"
+    ]
+  },
+  {
+    "Name": "r/cpp",
+    "Url": "https://www.reddit.com/r/cpp/.rss",
+    "Category": "Community",
+    "Note": "C++ programming language discussions.",
+    "ContentType": "Discussion",
+    "Level": "Intermediate",
+    "Tags": [
+      "C++"
+    ]
+  },
+  {
+    "Name": "r/dotnet",
+    "Url": "https://www.reddit.com/r/dotnet/.rss",
+    "Category": "Community",
+    "Note": ".NET community - C#, VB.NET, F#.",
+    "ContentType": "Discussion",
+    "Level": "Intermediate",
+    "Tags": [
+      ".NET",
+      "C#"
+    ]
+  },
+  {
+    "Name": "r/javascript",
+    "Url": "https://www.reddit.com/r/javascript/.rss",
+    "Category": "Community",
+    "Note": "JavaScript and TypeScript discussions.",
+    "ContentType": "Discussion",
+    "Level": "Beginner",
+    "Tags": [
+      "JavaScript"
+    ]
+  },
+  {
+    "Name": "r/learnjavascript",
+    "Url": "https://www.reddit.com/r/learnjavascript/.rss",
+    "Category": "Community",
+    "Note": "Learn JavaScript community.",
+    "ContentType": "Discussion",
+    "Level": "Beginner",
+    "Tags": [
+      "JavaScript"
+    ]
+  },
+  {
+    "Name": "r/learnprogramming",
+    "Url": "https://www.reddit.com/r/learnprogramming/.rss",
+    "Category": "Community",
+    "Note": "Programming questions in any language.",
+    "ContentType": "Discussion",
+    "Level": "Beginner",
+    "Tags": [
+      "Programming"
+    ]
+  },
+  {
+    "Name": "r/leetcode",
+    "Url": "https://www.reddit.com/r/leetcode/.rss",
+    "Category": "Community",
+    "Note": "Interview prep and leetcode questions.",
+    "ContentType": "Discussion",
+    "Level": "Intermediate",
+    "Tags": [
+      "Interviews",
+      "Algorithms"
+    ]
+  },
+  {
+    "Name": "r/cscareerquestions",
+    "Url": "https://www.reddit.com/r/cscareerquestions/.rss",
+    "Category": "Community",
+    "Note": "CS career questions and industry navigation.",
+    "ContentType": "Discussion",
+    "Level": "Beginner",
+    "Tags": [
+      "Career"
+    ]
+  },
+  {
+    "Name": "r/ExperiencedDevs",
+    "Url": "https://www.reddit.com/r/ExperiencedDevs/.rss",
+    "Category": "Community",
+    "Note": "For experienced software developers.",
+    "ContentType": "Discussion",
+    "Level": "Advanced",
+    "Tags": [
+      "Career",
+      "Development"
+    ]
+  },
+  {
+    "Name": "r/developersIndia",
+    "Url": "https://www.reddit.com/r/developersIndia/.rss",
+    "Category": "Community",
+    "Note": "Software and tech community in India.",
+    "ContentType": "Discussion",
+    "Level": "Beginner",
+    "Tags": [
+      "Community"
+    ]
+  },
+  {
+    "Name": "r/BDDevs",
+    "Url": "https://www.reddit.com/r/BDDevs/.rss",
+    "Category": "Community",
+    "Note": "Tech community of Bangladesh.",
+    "ContentType": "Discussion",
+    "Level": "Beginner",
+    "Tags": [
+      "Community"
+    ]
+  },
+  {
+    "Name": "r/gamedev",
+    "Url": "https://www.reddit.com/r/gamedev/.rss",
+    "Category": "Community",
+    "Note": "Game development - programming, design, art, marketing.",
+    "ContentType": "Discussion",
+    "Level": "Intermediate",
+    "Tags": [
+      "Game Dev"
+    ]
+  },
+  {
+    "Name": "r/godot",
+    "Url": "https://www.reddit.com/r/godot/.rss",
+    "Category": "Community",
+    "Note": "Godot Engine community.",
+    "ContentType": "Discussion",
+    "Level": "Intermediate",
+    "Tags": [
+      "Game Dev",
+      "Godot"
+    ]
+  },
+  {
+    "Name": "r/codex",
+    "Url": "https://www.reddit.com/r/codex/.rss",
+    "Category": "Community",
+    "Note": "OpenAI Codex tools - CLI, IDE Extension, Cloud.",
+    "ContentType": "Discussion",
+    "Level": "Intermediate",
+    "Tags": [
+      "Codex",
+      "OpenAI"
+    ]
+  },
+  {
+    "Name": "r/ansible",
+    "Url": "https://www.reddit.com/r/ansible/.rss",
+    "Category": "Community",
+    "Note": "Ansible automation community.",
+    "ContentType": "Discussion",
+    "Level": "Intermediate",
+    "Tags": [
+      "Automation",
+      "DevOps"
+    ]
+  },
+  {
+    "Name": "r/Cloud",
+    "Url": "https://www.reddit.com/r/Cloud/.rss",
+    "Category": "Community",
+    "Note": "Cloud computing discussions.",
+    "ContentType": "Discussion",
+    "Level": "Beginner",
+    "Tags": [
+      "Cloud"
+    ]
+  },
+  {
+    "Name": "r/cloudengineering",
+    "Url": "https://www.reddit.com/r/cloudengineering/.rss",
+    "Category": "Community",
+    "Note": "Cloud engineering discussions.",
+    "ContentType": "Discussion",
+    "Level": "Intermediate",
+    "Tags": [
+      "Cloud",
+      "Engineering"
+    ]
+  },
+  {
+    "Name": "r/CLI",
+    "Url": "https://www.reddit.com/r/CLI/.rss",
+    "Category": "Community",
+    "Note": "Command line interface tools and discussions.",
+    "ContentType": "Discussion",
+    "Level": "Beginner",
+    "Tags": [
+      "CLI"
+    ]
+  },
+  {
+    "Name": "r/linuxadmin",
+    "Url": "https://www.reddit.com/r/linuxadmin/.rss",
+    "Category": "Community",
+    "Note": "Linux administration.",
+    "ContentType": "Discussion",
+    "Level": "Intermediate",
+    "Tags": [
+      "Linux"
+    ]
+  },
+  {
+    "Name": "r/linuxquestions",
+    "Url": "https://www.reddit.com/r/linuxquestions/.rss",
+    "Category": "Community",
+    "Note": "Linux questions and help.",
+    "ContentType": "Discussion",
+    "Level": "Beginner",
+    "Tags": [
+      "Linux"
+    ]
+  },
+  {
+    "Name": "r/archlinux",
+    "Url": "https://www.reddit.com/r/archlinux/.rss",
+    "Category": "Community",
+    "Note": "Arch Linux user community.",
+    "ContentType": "Discussion",
+    "Level": "Intermediate",
+    "Tags": [
+      "Linux",
+      "Arch"
+    ]
+  },
+  {
+    "Name": "r/n8n",
+    "Url": "https://www.reddit.com/r/n8n/.rss",
+    "Category": "Community",
+    "Note": "n8n workflow automation tool.",
+    "ContentType": "Discussion",
+    "Level": "Intermediate",
+    "Tags": [
+      "Automation",
+      "n8n"
+    ]
+  },
+  {
+    "Name": "r/homelab",
+    "Url": "https://www.reddit.com/r/homelab/.rss",
+    "Category": "Community",
+    "Note": "Home labs - servers, projects, builds.",
+    "ContentType": "Discussion",
+    "Level": "Intermediate",
+    "Tags": [
+      "Homelab"
+    ]
+  },
+  {
+    "Name": "r/HomeDataCenter",
+    "Url": "https://www.reddit.com/r/HomeDataCenter/.rss",
+    "Category": "Community",
+    "Note": "Home datacenter hosting discussions.",
+    "ContentType": "Discussion",
+    "Level": "Advanced",
+    "Tags": [
+      "Homelab"
+    ]
+  },
+  {
+    "Name": "r/HomeServer",
+    "Url": "https://www.reddit.com/r/HomeServer/.rss",
+    "Category": "Community",
+    "Note": "Home and small business server discussions.",
+    "ContentType": "Discussion",
+    "Level": "Intermediate",
+    "Tags": [
+      "Homelab"
+    ]
+  },
+  {
+    "Name": "r/HomeNetworking",
+    "Url": "https://www.reddit.com/r/HomeNetworking/.rss",
+    "Category": "Community",
+    "Note": "Home and small office networking.",
+    "ContentType": "Discussion",
+    "Level": "Beginner",
+    "Tags": [
+      "Networking"
+    ]
+  },
+  {
+    "Name": "r/homeassistant",
+    "Url": "https://www.reddit.com/r/homeassistant/.rss",
+    "Category": "Community",
+    "Note": "Open source home automation - local control, privacy.",
+    "ContentType": "Discussion",
+    "Level": "Intermediate",
+    "Tags": [
+      "Smart Home"
+    ]
+  },
+  {
+    "Name": "r/jellyfin",
+    "Url": "https://www.reddit.com/r/jellyfin/.rss",
+    "Category": "Community",
+    "Note": "Jellyfin open source media server.",
+    "ContentType": "Discussion",
+    "Level": "Intermediate",
+    "Tags": [
+      "Self-hosting"
+    ]
+  },
+  {
+    "Name": "r/Bitwarden",
+    "Url": "https://www.reddit.com/r/Bitwarden/.rss",
+    "Category": "Community",
+    "Note": "Bitwarden password manager.",
+    "ContentType": "Discussion",
+    "Level": "Beginner",
+    "Tags": [
+      "Security"
+    ]
+  },
+  {
+    "Name": "r/Entrepreneur",
+    "Url": "https://www.reddit.com/r/Entrepreneur/.rss",
+    "Category": "Community",
+    "Note": "Entrepreneurship community - problem-solving, networking.",
+    "ContentType": "Discussion",
+    "Level": "Intermediate",
+    "Tags": [
+      "Business"
+    ]
+  },
+  {
+    "Name": "r/EntrepreneurRideAlong",
+    "Url": "https://www.reddit.com/r/EntrepreneurRideAlong/.rss",
+    "Category": "Community",
+    "Note": "Real founders, raw journey of starting companies.",
+    "ContentType": "Discussion",
+    "Level": "Beginner",
+    "Tags": [
+      "Startup"
+    ]
+  },
+  {
+    "Name": "r/founder",
+    "Url": "https://www.reddit.com/r/founder/.rss",
+    "Category": "Community",
+    "Note": "Founder community.",
+    "ContentType": "Discussion",
+    "Level": "Beginner",
+    "Tags": [
+      "Startup"
+    ]
+  },
+  {
+    "Name": "r/Business_Ideas",
+    "Url": "https://www.reddit.com/r/Business_Ideas/.rss",
+    "Category": "Community",
+    "Note": "Business ideas and venture insights.",
+    "ContentType": "Discussion",
+    "Level": "Beginner",
+    "Tags": [
+      "Business"
+    ]
+  },
+  {
+    "Name": "r/micro_saas",
+    "Url": "https://www.reddit.com/r/micro_saas/.rss",
+    "Category": "Community",
+    "Note": "Micro SaaS - small team, niche products.",
+    "ContentType": "Discussion",
+    "Level": "Intermediate",
+    "Tags": [
+      "SaaS"
+    ]
+  },
+  {
+    "Name": "r/microsaas",
+    "Url": "https://www.reddit.com/r/microsaas/.rss",
+    "Category": "Community",
+    "Note": "Micro SaaS apps community.",
+    "ContentType": "Discussion",
+    "Level": "Intermediate",
+    "Tags": [
+      "SaaS"
+    ]
+  },
+  {
+    "Name": "r/freelance",
+    "Url": "https://www.reddit.com/r/freelance/.rss",
+    "Category": "Community",
+    "Note": "Freelancing articles and discussions.",
+    "ContentType": "Discussion",
+    "Level": "Beginner",
+    "Tags": [
+      "Freelance"
+    ]
+  },
+  {
+    "Name": "r/GrowthHacking",
+    "Url": "https://www.reddit.com/r/GrowthHacking/.rss",
+    "Category": "Community",
+    "Note": "Growth marketing experiments and tools.",
+    "ContentType": "Discussion",
+    "Level": "Intermediate",
+    "Tags": [
+      "Marketing"
+    ]
+  },
+  {
+    "Name": "r/content_marketing",
+    "Url": "https://www.reddit.com/r/content_marketing/.rss",
+    "Category": "Community",
+    "Note": "Content marketing feedback and resources.",
+    "ContentType": "Discussion",
+    "Level": "Intermediate",
+    "Tags": [
+      "Marketing"
+    ]
+  },
+  {
+    "Name": "r/ai_trading",
+    "Url": "https://www.reddit.com/r/ai_trading/.rss",
+    "Category": "Community",
+    "Note": "AI trading, investing, algotrading tools.",
+    "ContentType": "Discussion",
+    "Level": "Intermediate",
+    "Tags": [
+      "Trading",
+      "AI"
+    ]
+  },
+  {
+    "Name": "r/algotrading",
+    "Url": "https://www.reddit.com/r/algotrading/.rss",
+    "Category": "Community",
+    "Note": "Quantitative trading, automated strategies.",
+    "ContentType": "Discussion",
+    "Level": "Advanced",
+    "Tags": [
+      "Trading",
+      "Algorithms"
+    ]
+  },
+  {
+    "Name": "r/ArtificialInteligence",
+    "Url": "https://www.reddit.com/r/ArtificialInteligence/.rss",
+    "Category": "Community",
+    "Note": "High-signal AI hub.",
+    "ContentType": "Discussion",
+    "Level": "Intermediate",
+    "Tags": [
+      "AI"
+    ]
+  },
+  {
+    "Name": "r/Futurology",
+    "Url": "https://www.reddit.com/r/Futurology/.rss",
+    "Category": "Community",
+    "Note": "Future studies - humanity, technology, civilization.",
+    "ContentType": "Discussion",
+    "Level": "Intermediate",
+    "Tags": [
+      "Future"
+    ]
+  },
+  {
+    "Name": "r/CyberNews",
+    "Url": "https://www.reddit.com/r/CyberNews/.rss",
+    "Category": "Community",
+    "Note": "Cybersecurity and technology news.",
+    "ContentType": "Discussion",
+    "Level": "Beginner",
+    "Tags": [
+      "Security"
+    ]
+  },
+  {
+    "Name": "r/MachineLearningJobs",
+    "Url": "https://www.reddit.com/r/MachineLearningJobs/.rss",
+    "Category": "Community",
+    "Note": "AI/ML/DS careers and jobs.",
+    "ContentType": "Discussion",
+    "Level": "Beginner",
+    "Tags": [
+      "Career",
+      "ML"
+    ]
+  },
+  {
+    "Name": "r/machinelearningnews",
+    "Url": "https://www.reddit.com/r/machinelearningnews/.rss",
+    "Category": "Community",
+    "Note": "AI, ML, Data Science, Deep Learning news.",
+    "ContentType": "Discussion",
+    "Level": "Intermediate",
+    "Tags": [
+      "ML",
+      "News"
+    ]
+  },
+  {
+    "Name": "r/AISEOInsider",
+    "Url": "https://www.reddit.com/r/AISEOInsider/.rss",
+    "Category": "Community",
+    "Note": "AI SEO strategies and tools.",
+    "ContentType": "Discussion",
+    "Level": "Beginner",
+    "Tags": [
+      "SEO",
+      "AI"
+    ]
+  },
+  {
+    "Name": "r/freetoolsAI",
+    "Url": "https://www.reddit.com/r/freetoolsAI/.rss",
+    "Category": "Community",
+    "Note": "Free AI tools discovery.",
+    "ContentType": "Discussion",
+    "Level": "Beginner",
+    "Tags": [
+      "Tools",
+      "Free"
+    ]
+  },
+  {
+    "Name": "r/MouseReview",
+    "Url": "https://www.reddit.com/r/MouseReview/.rss",
+    "Category": "Community",
+    "Note": "Computer mouse peripherals and accessories.",
+    "ContentType": "Discussion",
+    "Level": "Beginner",
+    "Tags": [
+      "Hardware"
+    ]
+  },
+  {
+    "Name": "r/apple",
+    "Url": "https://www.reddit.com/r/apple/.rss",
+    "Category": "Community",
+    "Note": "Apple community - devices and software.",
+    "ContentType": "Discussion",
+    "Level": "Beginner",
+    "Tags": [
+      "Apple"
+    ]
+  },
+  {
+    "Name": "r/mac",
+    "Url": "https://www.reddit.com/r/mac/.rss",
+    "Category": "Community",
+    "Note": "Apple Mac computers.",
+    "ContentType": "Discussion",
+    "Level": "Beginner",
+    "Tags": [
+      "Apple",
+      "Mac"
+    ]
+  },
+  {
+    "Name": "r/oculus",
+    "Url": "https://www.reddit.com/r/oculus/.rss",
+    "Category": "Community",
+    "Note": "Oculus VR discussions.",
+    "ContentType": "Discussion",
+    "Level": "Beginner",
+    "Tags": [
+      "VR"
+    ]
+  },
+  {
+    "Name": "r/MetaQuestVR",
+    "Url": "https://www.reddit.com/r/MetaQuestVR/.rss",
+    "Category": "Community",
+    "Note": "Meta Quest VR community.",
+    "ContentType": "Discussion",
+    "Level": "Beginner",
+    "Tags": [
+      "VR"
+    ]
+  },
+  {
+    "Name": "r/LinusTechTips",
+    "Url": "https://www.reddit.com/r/LinusTechTips/.rss",
+    "Category": "Community",
+    "Note": "LinusTechTips and LMG content.",
+    "ContentType": "Discussion",
+    "Level": "Beginner",
+    "Tags": [
+      "Tech"
+    ]
+  },
+  {
+    "Name": "r/BD_CINEPHILES",
+    "Url": "https://www.reddit.com/r/BD_CINEPHILES/.rss",
+    "Category": "Community",
+    "Note": "Bangladesh cinema discussions.",
+    "ContentType": "Discussion",
+    "Level": "Beginner",
+    "Tags": [
+      "Bangladesh"
+    ]
+  },
+  {
+    "Name": "r/Dhaka",
+    "Url": "https://www.reddit.com/r/Dhaka/.rss",
+    "Category": "Community",
+    "Note": "Dhaka, Bangladesh capital community.",
+    "ContentType": "Discussion",
+    "Level": "Beginner",
+    "Tags": [
+      "Bangladesh"
+    ]
+  },
+  {
+    "Name": "r/mauritius",
+    "Url": "https://www.reddit.com/r/mauritius/.rss",
+    "Category": "Community",
+    "Note": "Mauritius community.",
+    "ContentType": "Discussion",
+    "Level": "Beginner",
+    "Tags": [
+      "Mauritius"
+    ]
+  },
+  {
+    "Name": "r/IndiaTech",
+    "Url": "https://www.reddit.com/r/IndiaTech/.rss",
+    "Category": "Community",
+    "Note": "Largest tech subreddit of India.",
+    "ContentType": "Discussion",
+    "Level": "Beginner",
+    "Tags": [
+      "India",
+      "Tech"
+    ]
+  },
+  {
+    "Name": "r/admincraft",
+    "Url": "https://www.reddit.com/r/admincraft/.rss",
+    "Category": "Community",
+    "Note": "Minecraft server administration and development.",
+    "ContentType": "Discussion",
+    "Level": "Intermediate",
+    "Tags": [
+      "Minecraft"
+    ]
+  },
+  {
+    "Name": "r/AskReddit",
+    "Url": "https://www.reddit.com/r/AskReddit/.rss",
+    "Category": "Community",
+    "Note": "Thought-provoking questions.",
+    "ContentType": "Discussion",
+    "Level": "Beginner",
+    "Tags": [
+      "General"
+    ]
+  },
+  {
+    "Name": "r/FlockSurveillance",
+    "Url": "https://www.reddit.com/r/FlockSurveillance/.rss",
+    "Category": "Community",
+    "Note": "Flock Safety mass surveillance news and activism.",
+    "ContentType": "Discussion",
+    "Level": "Intermediate",
+    "Tags": [
+      "Privacy"
+    ]
+  },
+  {
+    "Name": "r/it",
+    "Url": "https://www.reddit.com/r/it/.rss",
+    "Category": "Community",
+    "Note": "Information technology discussions.",
+    "ContentType": "Discussion",
+    "Level": "Beginner",
+    "Tags": [
+      "IT"
+    ]
+  },
+  {
+    "Name": "r/dataanalysiscareers",
+    "Url": "https://www.reddit.com/r/dataanalysiscareers/.rss",
+    "Category": "Community",
+    "Note": "Data analysis career discussions.",
+    "ContentType": "Discussion",
+    "Level": "Beginner",
+    "Tags": [
+      "Career",
+      "Data"
+    ]
   }
 ]
