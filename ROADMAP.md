@@ -252,6 +252,16 @@ Status tags: ✅ done · 🟢 fits philosophy, no AI needed · 🟡 needs a desi
   News, via plain share-intent URLs (no API keys, no new external dependency). Deliberately generic share
   icon rather than brand logos, matching the rest of the icon set (self-contained inline SVG, no external
   icon font).
+- New **Reading Stats** page (`/reading-stats`) - read today/this week/this month/all-time, an estimated
+  reading-time total (from each article's existing word-count estimate, not real measured time - AiPulse
+  doesn't instrument actual time-on-page), top sources read, and a 14-day breakdown. Needed a real change
+  underneath: the old `ReadLinks` was just a set (member or not), so `ToggleRead` now also appends to a new
+  append-only `ReadHistory` log (link/source/reading-minutes/timestamp) whenever something transitions to
+  read - the only way to answer "when" instead of just "is it". `ToggleRead`'s signature changed from
+  `(string link)` to `(FeedItem item)` to have the source/reading-time on hand to record; its one call site
+  (News.razor) was updated. Scoped to the interactive mark-read path only - the Fever API's separate
+  `MarkReadForUserKey` (used by mobile RSS readers) doesn't feed this log, a deliberate limitation rather
+  than instrumenting a second, less-central code path for the same purpose.
 
 > **GitHub Trending scrape reality check:** `GitHubTrendingService` scrapes `github.com/trending` and
 > `github.com/trending/developers` directly for the repo/developer views above - GitHub has no API for

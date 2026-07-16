@@ -44,6 +44,18 @@ public sealed class SavedSearch
     public int? DateWindowDays { get; set; }
 }
 
+/// <summary>
+/// One "marked as read" event, appended (never rewritten) so the Reading Stats page can show real
+/// per-day/per-source history - the older `ReadLinks` set only tracks current membership, not when.
+/// </summary>
+public sealed class ReadEvent
+{
+    public required string Link { get; init; }
+    public string SourceName { get; init; } = "";
+    public int ReadingMinutes { get; init; }
+    public DateTimeOffset At { get; init; } = DateTimeOffset.Now;
+}
+
 /// <summary>A simple embed on the Dashboard - either an iframe (external page) or raw HTML/text.</summary>
 public sealed class DashboardWidget
 {
@@ -82,6 +94,9 @@ public sealed class ReadingState
 
     /// <summary>Named, reusable News Feed filter combinations ("smart folders").</summary>
     public List<SavedSearch> SavedSearches { get; set; } = new();
+
+    /// <summary>Append-only "marked as read" history, for the Reading Stats page.</summary>
+    public List<ReadEvent> ReadHistory { get; set; } = new();
 
     /// <summary>
     /// MD5("username:password") for the Fever API (a separate password from the main login, chosen by the

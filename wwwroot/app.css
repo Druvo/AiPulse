@@ -384,6 +384,25 @@ a.card:hover { transform: translateY(-1px); }
 .share-menu-wrapper { position: relative; }
 .share-menu { position: absolute; right: 0; top: 100%; z-index: 20; min-width: 180px; margin-top: 2px; }
 
+/* Reading Stats day bars */
+.reading-stats-bar {
+    display: inline-block;
+    width: 80px;
+    height: 8px;
+    border-radius: 4px;
+    background: var(--ap-surface-2);
+    position: relative;
+    overflow: hidden;
+}
+.reading-stats-bar::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    width: var(--pct, 0%);
+    background: var(--ap-accent, #6d5efc);
+    border-radius: 4px;
+}
+
 /* Learning Hub progress */
 .progress { background-color: var(--ap-surface-2); border-radius: 999px; }
 .progress-bar { background-color: var(--ap-accent); }

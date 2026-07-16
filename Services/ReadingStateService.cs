@@ -114,6 +114,12 @@ public sealed class ReadingStateService
         lock (_lock) return _state!.ReadLinks.Contains(link);
     }
 
+    /// <summary>Append-only "marked as read" history, for the Reading Stats page.</summary>
+    public IReadOnlyList<ReadEvent> ReadHistory
+    {
+        get { EnsureLoaded(); lock (_lock) return _state!.ReadHistory.ToList(); }
+    }
+
     public void MarkRead(string link, bool read)
     {
         EnsureLoaded();
@@ -124,15 +130,17 @@ public sealed class ReadingStateService
         }
     }
 
-    /// <summary>Toggles read state and returns the new value.</summary>
-    public bool ToggleRead(string link)
+    /// <summary>Toggles read state and returns the new value. Appends a <see cref="ReadEvent"/> when transitioning to read, for the Reading Stats page.</summary>
+    public bool ToggleRead(FeedItem item)
     {
         EnsureLoaded();
         lock (_lock)
         {
-            var nowRead = !_state!.ReadLinks.Contains(link);
-            var changed = nowRead ? _state.ReadLinks.Add(link) : _state.ReadLinks.Remove(link);
-            if (changed) Save();
+            var nowRead = !_state!.ReadLinks.Contains(item.Link);
+            var changed = nowRead ? _state.ReadLinks.Add(item.Link) : _state.ReadLinks.Remove(item.Link);
+            if (nowRead)
+                _state.ReadHistory.Add(new ReadEvent { Link = item.Link, SourceName = item.SourceName, ReadingMinutes = item.ReadingMinutes ?? 0 });
+            if (changed || nowRead) Save();
             return nowRead;
         }
     }
