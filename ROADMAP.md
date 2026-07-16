@@ -409,6 +409,13 @@ Status tags: ✅ done · 🟢 fits philosophy, no AI needed · 🟡 needs a desi
   did), with every interactive control inside it - read/bookmark/share buttons, the share dropdown, mute
   source, "read full text" - using `@onclick:stopPropagation` so they keep working as their own separate
   actions instead of also triggering the card-wide open.
+- Added a "Back to top" button, site-wide, for long pages (News, Explore, Learn, etc.) - a single fixed
+  circular button added once in `MainLayout.razor` rather than per-page, so it applies everywhere without
+  touching individual pages. Pure JS (`wwwroot/js/scrollTop.js`): toggles a `.show` CSS class once the
+  page scrolls past 400px and smooth-scrolls to top on click - no Blazor/JS interop round-trip needed for
+  either the show/hide check or the click itself. Since it lives in `MainLayout` (not `@Body`), it
+  persists across Blazor Server's in-app navigation, so the script only needs to wire up its listeners
+  once per real page load. Added a new "arrow-up" case to the shared `Icon` component for it.
 
 > **GitHub Trending scrape reality check:** `GitHubTrendingService` scrapes `github.com/trending` and
 > `github.com/trending/developers` directly for the repo/developer views above - GitHub has no API for
