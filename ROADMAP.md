@@ -440,6 +440,20 @@ Status tags: ✅ done · 🟢 fits philosophy, no AI needed · 🟡 needs a desi
   names. Since `sources.json` only seeds an empty DB (`KnowledgeBaseService.SeedAsync`), and this dev
   machine's `App_Data/aipulse.db` already existed, the same 12 rows were also inserted directly into the
   live DB so they show up without a fresh-DB reset.
+- Added a much larger second batch of 45 curated YouTube channels spanning AI/LLM engineering, AI
+  research/ML education, backend/system design, .NET/C#, DevOps/cloud, general software engineering, AI
+  agents, MLOps, and computer science fundamentals - same resolution discipline as the first batch
+  (canonical link + `externalId` cross-checked live, every feed URL fetched and title-verified, nothing
+  guessed), and the same rows inserted directly into `App_Data/aipulse.db` alongside the `sources.json`
+  update. Of the ~59 handles given, 12 were skipped as already present from the earlier round or
+  `sources.json`'s original seed (`IBM Technology`, `Andrej Karpathy`, `LangChain`, `AssemblyAI`, `Hussein
+  Nasser`, `ByteByteGo`, `CodeOpinion`, `Nick Chapsas`, `Milan Jovanović`, `TechWorld with Nana`, `Two
+  Minute Papers`, `3Blue1Brown`) and 45 resolved cleanly. 13 handles failed to resolve (404 - the handle as
+  given doesn't exist): `@AnthropicAI`, `@berkeleyai`, `@ArpitBhayani`, `@GOTOConferences`,
+  `@NDCConferences`, `@AmichaiMantinband`, `@Docker`, `@ContinuousDelivery`, `@LowLevelLearning`,
+  `@MLOpsCommunity`, `@MLflow`, `@SnowflakeComputing`, and notably `@ThePrimeTimeagen` - which does resolve,
+  but to an unrelated channel (not ThePrimeagen; the correct handle, `@ThePrimeagen`, was already added in
+  the previous batch). These need the real handle found manually before they can be added.
 
 > **GitHub Trending scrape reality check:** `GitHubTrendingService` scrapes `github.com/trending` and
 > `github.com/trending/developers` directly for the repo/developer views above - GitHub has no API for

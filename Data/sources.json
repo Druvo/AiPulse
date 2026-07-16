@@ -1749,5 +1749,546 @@
       "Docker",
       "Kubernetes"
     ]
+  },
+  {
+    "Name": "OpenAI (YouTube)",
+    "Url": "https://www.youtube.com/feeds/videos.xml?channel_id=UCXZCJLdBC09xxGZ6gcdrc6A",
+    "Category": "News",
+    "Note": "Official OpenAI channel: product announcements and talks.",
+    "ContentType": "Video",
+    "Level": "Intermediate",
+    "Tags": [
+      "AI",
+      "News"
+    ]
+  },
+  {
+    "Name": "Google DeepMind (YouTube)",
+    "Url": "https://www.youtube.com/feeds/videos.xml?channel_id=UCP7jMXSY2xbc3KCAE0MHQ-A",
+    "Category": "News",
+    "Note": "Official Google DeepMind channel: research highlights and talks.",
+    "ContentType": "Video",
+    "Level": "Advanced",
+    "Tags": [
+      "AI",
+      "Research"
+    ]
+  },
+  {
+    "Name": "Google Cloud Tech (YouTube)",
+    "Url": "https://www.youtube.com/feeds/videos.xml?channel_id=UCJS9pqu9BzkAMNTmzNMNhvg",
+    "Category": "News",
+    "Note": "Google Cloud product demos and AI/infra tutorials.",
+    "ContentType": "Video",
+    "Level": "Intermediate",
+    "Tags": [
+      "AI",
+      "Cloud"
+    ]
+  },
+  {
+    "Name": "Microsoft Developer (YouTube)",
+    "Url": "https://www.youtube.com/feeds/videos.xml?channel_id=UCsMica-v34Irf9KVTh6xx-g",
+    "Category": "News",
+    "Note": "Microsoft developer tooling, Azure, and AI announcements.",
+    "ContentType": "Video",
+    "Level": "Intermediate",
+    "Tags": [
+      "AI",
+      "Cloud"
+    ]
+  },
+  {
+    "Name": "NVIDIA Developer (YouTube)",
+    "Url": "https://www.youtube.com/feeds/videos.xml?channel_id=UCBHcMCGaiJhv-ESTcWGJPcw",
+    "Category": "News",
+    "Note": "NVIDIA developer talks: GPUs, CUDA, and AI infrastructure.",
+    "ContentType": "Video",
+    "Level": "Intermediate",
+    "Tags": [
+      "AI",
+      "GPU"
+    ]
+  },
+  {
+    "Name": "Hugging Face (YouTube)",
+    "Url": "https://www.youtube.com/feeds/videos.xml?channel_id=UCHlNU7kIZhRgSbhHvFoy72w",
+    "Category": "News",
+    "Note": "Official Hugging Face channel: open models and tooling.",
+    "ContentType": "Video",
+    "Level": "Intermediate",
+    "Tags": [
+      "AI",
+      "Open Models"
+    ]
+  },
+  {
+    "Name": "LlamaIndex (YouTube)",
+    "Url": "https://www.youtube.com/feeds/videos.xml?channel_id=UCeRjipR4_SsCddq9VZ2AeKg",
+    "Category": "News",
+    "Note": "Official LlamaIndex channel: RAG and agent framework tutorials.",
+    "ContentType": "Video",
+    "Level": "Intermediate",
+    "Tags": [
+      "AI",
+      "RAG",
+      "Agents"
+    ]
+  },
+  {
+    "Name": "Weights & Biases (YouTube)",
+    "Url": "https://www.youtube.com/feeds/videos.xml?channel_id=UCBp3w4DCEC64FZr4k9ROxig",
+    "Category": "News",
+    "Note": "ML experiment tracking and MLOps tutorials.",
+    "ContentType": "Video",
+    "Level": "Intermediate",
+    "Tags": [
+      "AI",
+      "MLOps"
+    ]
+  },
+  {
+    "Name": "Cohere (YouTube)",
+    "Url": "https://www.youtube.com/feeds/videos.xml?channel_id=UCAKTUy0tz47ZY02DFpxMqoQ",
+    "Category": "News",
+    "Note": "Official Cohere channel: enterprise LLM talks and demos.",
+    "ContentType": "Video",
+    "Level": "Intermediate",
+    "Tags": [
+      "AI",
+      "LLM"
+    ]
+  },
+  {
+    "Name": "Databricks (YouTube)",
+    "Url": "https://www.youtube.com/feeds/videos.xml?channel_id=UC3q8O3Bh2Le8Rj1-Q-_UUbA",
+    "Category": "News",
+    "Note": "Data and AI platform talks and tutorials.",
+    "ContentType": "Video",
+    "Level": "Intermediate",
+    "Tags": [
+      "AI",
+      "Data"
+    ]
+  },
+  {
+    "Name": "Yannic Kilcher (YouTube)",
+    "Url": "https://www.youtube.com/feeds/videos.xml?channel_id=UCZHmQk67mSJgfCCTn7xBfew",
+    "Category": "News",
+    "Note": "In-depth breakdowns of AI research papers.",
+    "ContentType": "Video",
+    "Level": "Advanced",
+    "Tags": [
+      "AI",
+      "Research"
+    ]
+  },
+  {
+    "Name": "StatQuest (YouTube)",
+    "Url": "https://www.youtube.com/feeds/videos.xml?channel_id=UCtYLUTtgS3k1Fg4y5tAhLbw",
+    "Category": "News",
+    "Note": "Clear, friendly explainers of statistics and ML concepts.",
+    "ContentType": "Video",
+    "Level": "Beginner",
+    "Tags": [
+      "Machine Learning",
+      "Statistics"
+    ]
+  },
+  {
+    "Name": "DeepLearning.AI (YouTube)",
+    "Url": "https://www.youtube.com/feeds/videos.xml?channel_id=UCcIXc5mJsHVYTZR1maL5l9w",
+    "Category": "News",
+    "Note": "Andrew Ng's channel: deep learning courses and talks.",
+    "ContentType": "Video",
+    "Level": "Intermediate",
+    "Tags": [
+      "AI",
+      "Courses"
+    ]
+  },
+  {
+    "Name": "Stanford Online (YouTube)",
+    "Url": "https://www.youtube.com/feeds/videos.xml?channel_id=UCBa5G_ESCn8Yd4vw5U-gIcg",
+    "Category": "News",
+    "Note": "Recorded Stanford lectures, including AI/CS courses.",
+    "ContentType": "Video",
+    "Level": "Advanced",
+    "Tags": [
+      "AI",
+      "Courses"
+    ]
+  },
+  {
+    "Name": "MIT OpenCourseWare (YouTube)",
+    "Url": "https://www.youtube.com/feeds/videos.xml?channel_id=UCEBb1b_L6zDS3xTUrIALZOw",
+    "Category": "News",
+    "Note": "Full MIT course lecture recordings.",
+    "ContentType": "Video",
+    "Level": "Advanced",
+    "Tags": [
+      "Computer Science",
+      "Courses"
+    ]
+  },
+  {
+    "Name": "InfoQ (YouTube)",
+    "Url": "https://www.youtube.com/feeds/videos.xml?channel_id=UCkQX1tChV7Z7l1LFF4L9j_g",
+    "Category": "Tools",
+    "Note": "Software architecture and engineering conference talks.",
+    "ContentType": "Video",
+    "Level": "Advanced",
+    "Tags": [
+      "Architecture",
+      "Conferences"
+    ]
+  },
+  {
+    "Name": "Devoxx (YouTube)",
+    "Url": "https://www.youtube.com/feeds/videos.xml?channel_id=UCCBVCTuk6uJrN3iFV_3vurg",
+    "Category": "Tools",
+    "Note": "Developer conference talks, mostly Java/JVM ecosystem.",
+    "ContentType": "Video",
+    "Level": "Advanced",
+    "Tags": [
+      "Conferences",
+      "Java"
+    ]
+  },
+  {
+    "Name": "QCon (YouTube)",
+    "Url": "https://www.youtube.com/feeds/videos.xml?channel_id=UCzHfzaPJN1UUiWqwKNlyl9Q",
+    "Category": "Tools",
+    "Note": "Software architecture and engineering conference talks.",
+    "ContentType": "Video",
+    "Level": "Advanced",
+    "Tags": [
+      "Architecture",
+      "Conferences"
+    ]
+  },
+  {
+    "Name": ".NET (YouTube)",
+    "Url": "https://www.youtube.com/feeds/videos.xml?channel_id=UCvtT19MZW8dq5Wwfu6B0oxw",
+    "Category": "Tools",
+    "Note": "Official .NET channel: framework news and community talks.",
+    "ContentType": "Video",
+    "Level": "Intermediate",
+    "Tags": [
+      ".NET",
+      "Official"
+    ]
+  },
+  {
+    "Name": "IAmTimCorey (YouTube)",
+    "Url": "https://www.youtube.com/feeds/videos.xml?channel_id=UC-ptWR16ITQyYOglXyQmpzw",
+    "Category": "Tools",
+    "Note": "Beginner-friendly C#/.NET tutorials.",
+    "ContentType": "Video",
+    "Level": "Beginner",
+    "Tags": [
+      ".NET",
+      "C#"
+    ]
+  },
+  {
+    "Name": "Raw Coding (YouTube)",
+    "Url": "https://www.youtube.com/feeds/videos.xml?channel_id=UCP_jWxjn__YXmo4iU7Low0g",
+    "Category": "Tools",
+    "Note": "Advanced .NET/C# deep dives.",
+    "ContentType": "Video",
+    "Level": "Advanced",
+    "Tags": [
+      ".NET",
+      "C#"
+    ]
+  },
+  {
+    "Name": "Les Jackson (YouTube)",
+    "Url": "https://www.youtube.com/feeds/videos.xml?channel_id=UCzl9VVLe0K2qXqJtY01xY8Q",
+    "Category": "Tools",
+    "Note": ".NET and C# tutorials and walkthroughs.",
+    "ContentType": "Video",
+    "Level": "Intermediate",
+    "Tags": [
+      ".NET",
+      "C#"
+    ]
+  },
+  {
+    "Name": "KodeKloud (YouTube)",
+    "Url": "https://www.youtube.com/feeds/videos.xml?channel_id=UCSWj8mqQCcrcBlXPi4ThRDQ",
+    "Category": "Tools",
+    "Note": "Beginner-friendly DevOps, Docker, and Kubernetes courses.",
+    "ContentType": "Video",
+    "Level": "Beginner",
+    "Tags": [
+      "DevOps",
+      "Kubernetes"
+    ]
+  },
+  {
+    "Name": "NetworkChuck (YouTube)",
+    "Url": "https://www.youtube.com/feeds/videos.xml?channel_id=UC9x0AN7BWHpCDHSm9NiJFJQ",
+    "Category": "Tools",
+    "Note": "Networking, cloud, and IT tutorials.",
+    "ContentType": "Video",
+    "Level": "Beginner",
+    "Tags": [
+      "Networking",
+      "Cloud"
+    ]
+  },
+  {
+    "Name": "Kubernetes (YouTube)",
+    "Url": "https://www.youtube.com/feeds/videos.xml?channel_id=UCZ2bu0qutTOM0tHYa_jkIwg",
+    "Category": "Tools",
+    "Note": "Official Kubernetes project channel.",
+    "ContentType": "Video",
+    "Level": "Intermediate",
+    "Tags": [
+      "Kubernetes",
+      "Official"
+    ]
+  },
+  {
+    "Name": "HashiCorp (YouTube)",
+    "Url": "https://www.youtube.com/feeds/videos.xml?channel_id=UC-AdvAxaagE9W2f0webyNUQ",
+    "Category": "Tools",
+    "Note": "Terraform, Vault, and infrastructure-as-code talks.",
+    "ContentType": "Video",
+    "Level": "Intermediate",
+    "Tags": [
+      "DevOps",
+      "Terraform"
+    ]
+  },
+  {
+    "Name": "Grafana (YouTube)",
+    "Url": "https://www.youtube.com/feeds/videos.xml?channel_id=UCYCwgQAMm9sTJv0rgwQLCxw",
+    "Category": "Tools",
+    "Note": "Observability and monitoring tutorials.",
+    "ContentType": "Video",
+    "Level": "Intermediate",
+    "Tags": [
+      "Observability",
+      "DevOps"
+    ]
+  },
+  {
+    "Name": "AWS (YouTube)",
+    "Url": "https://www.youtube.com/feeds/videos.xml?channel_id=UCd6MoB9NC6uYN2grvUNT-Zg",
+    "Category": "Tools",
+    "Note": "Official Amazon Web Services channel.",
+    "ContentType": "Video",
+    "Level": "Intermediate",
+    "Tags": [
+      "Cloud",
+      "AWS"
+    ]
+  },
+  {
+    "Name": "Microsoft Azure (YouTube)",
+    "Url": "https://www.youtube.com/feeds/videos.xml?channel_id=UC0m-80FnNY2Qb7obvTL_2fA",
+    "Category": "Tools",
+    "Note": "Official Microsoft Azure channel.",
+    "ContentType": "Video",
+    "Level": "Intermediate",
+    "Tags": [
+      "Cloud",
+      "Azure"
+    ]
+  },
+  {
+    "Name": "Computerphile (YouTube)",
+    "Url": "https://www.youtube.com/feeds/videos.xml?channel_id=UC9-y-6csu5WGm29I7JiwpnA",
+    "Category": "Tools",
+    "Note": "Accessible computer science explainers.",
+    "ContentType": "Video",
+    "Level": "Beginner",
+    "Tags": [
+      "Computer Science"
+    ]
+  },
+  {
+    "Name": "freeCodeCamp (YouTube)",
+    "Url": "https://www.youtube.com/feeds/videos.xml?channel_id=UC8butISFwT-Wl7EV0hUK0BQ",
+    "Category": "Tools",
+    "Note": "Free full-length programming courses.",
+    "ContentType": "Video",
+    "Level": "Beginner",
+    "Tags": [
+      "Web Dev",
+      "Courses"
+    ]
+  },
+  {
+    "Name": "Traversy Media (YouTube)",
+    "Url": "https://www.youtube.com/feeds/videos.xml?channel_id=UC29ju8bIPH5as8OGnQzwJyA",
+    "Category": "Tools",
+    "Note": "Web development tutorials and crash courses.",
+    "ContentType": "Video",
+    "Level": "Beginner",
+    "Tags": [
+      "Web Dev",
+      "Tutorial"
+    ]
+  },
+  {
+    "Name": "Coding Tech (YouTube)",
+    "Url": "https://www.youtube.com/feeds/videos.xml?channel_id=UCtxCXg-UvSnTKPOzLH4wJaQ",
+    "Category": "Tools",
+    "Note": "Reposted software engineering conference talks.",
+    "ContentType": "Video",
+    "Level": "Intermediate",
+    "Tags": [
+      "Conferences",
+      "Programming"
+    ]
+  },
+  {
+    "Name": "CodeAesthetic (YouTube)",
+    "Url": "https://www.youtube.com/feeds/videos.xml?channel_id=UCaSCt8s_4nfkRglWCvNSDrg",
+    "Category": "Tools",
+    "Note": "Software design and code quality principles.",
+    "ContentType": "Video",
+    "Level": "Advanced",
+    "Tags": [
+      "Software Design"
+    ]
+  },
+  {
+    "Name": "No Boilerplate (YouTube)",
+    "Url": "https://www.youtube.com/feeds/videos.xml?channel_id=UCUMwY9iS8oMyWDYIe6_RmoA",
+    "Category": "Tools",
+    "Note": "Rust and software design deep dives.",
+    "ContentType": "Video",
+    "Level": "Advanced",
+    "Tags": [
+      "Rust",
+      "Software Design"
+    ]
+  },
+  {
+    "Name": "Sebastian Lague (YouTube)",
+    "Url": "https://www.youtube.com/feeds/videos.xml?channel_id=UCmtyQOKKmrMVaKuRXz02jbQ",
+    "Category": "Tools",
+    "Note": "Programming and game dev/algorithm visualizations.",
+    "ContentType": "Video",
+    "Level": "Intermediate",
+    "Tags": [
+      "Programming",
+      "Game Dev"
+    ]
+  },
+  {
+    "Name": "Ben Eater (YouTube)",
+    "Url": "https://www.youtube.com/feeds/videos.xml?channel_id=UCS0N5baNlQWJCUrhCEo8WlA",
+    "Category": "Tools",
+    "Note": "Build-it-yourself computer systems and electronics.",
+    "ContentType": "Video",
+    "Level": "Advanced",
+    "Tags": [
+      "Systems",
+      "Electronics"
+    ]
+  },
+  {
+    "Name": "Reducible (YouTube)",
+    "Url": "https://www.youtube.com/feeds/videos.xml?channel_id=UCK8XIGR5kRidIw2fWqwyHRA",
+    "Category": "Tools",
+    "Note": "Visual explanations of algorithms and computer science.",
+    "ContentType": "Video",
+    "Level": "Intermediate",
+    "Tags": [
+      "Algorithms",
+      "Computer Science"
+    ]
+  },
+  {
+    "Name": "AI Jason (YouTube)",
+    "Url": "https://www.youtube.com/feeds/videos.xml?channel_id=UCrXSVX9a1mj8l0CMLwKgMVw",
+    "Category": "News",
+    "Note": "Practical AI agent and automation build-alongs.",
+    "ContentType": "Video",
+    "Level": "Intermediate",
+    "Tags": [
+      "AI",
+      "Agents",
+      "Automation"
+    ]
+  },
+  {
+    "Name": "Cole Medin (YouTube)",
+    "Url": "https://www.youtube.com/feeds/videos.xml?channel_id=UCMwVTLZIRRUyyVrkjDpn4pA",
+    "Category": "News",
+    "Note": "AI agent and RAG system tutorials.",
+    "ContentType": "Video",
+    "Level": "Intermediate",
+    "Tags": [
+      "AI",
+      "Agents"
+    ]
+  },
+  {
+    "Name": "IndyDevDan (YouTube)",
+    "Url": "https://www.youtube.com/feeds/videos.xml?channel_id=UC_x36zCEGilGpB1m-V4gmjg",
+    "Category": "News",
+    "Note": "AI coding agents and automation workflows.",
+    "ContentType": "Video",
+    "Level": "Intermediate",
+    "Tags": [
+      "AI",
+      "Agents",
+      "Automation"
+    ]
+  },
+  {
+    "Name": "David Ondrej (YouTube)",
+    "Url": "https://www.youtube.com/feeds/videos.xml?channel_id=UCPGrgwfbkjTIgPoOh2q1BAg",
+    "Category": "News",
+    "Note": "AI agent tutorials and news.",
+    "ContentType": "Video",
+    "Level": "Intermediate",
+    "Tags": [
+      "AI",
+      "Agents"
+    ]
+  },
+  {
+    "Name": "Kubeflow (YouTube)",
+    "Url": "https://www.youtube.com/feeds/videos.xml?channel_id=UCNSJwHkt2f_cP_UN2q-yJlw",
+    "Category": "Tools",
+    "Note": "Official Kubeflow project channel: ML pipelines on Kubernetes.",
+    "ContentType": "Video",
+    "Level": "Advanced",
+    "Tags": [
+      "MLOps",
+      "Kubernetes"
+    ]
+  },
+  {
+    "Name": "CS50 (YouTube)",
+    "Url": "https://www.youtube.com/feeds/videos.xml?channel_id=UCcabW7890RKJzL968QWEykA",
+    "Category": "News",
+    "Note": "Harvard's introductory computer science course.",
+    "ContentType": "Video",
+    "Level": "Beginner",
+    "Tags": [
+      "Computer Science",
+      "Courses"
+    ]
+  },
+  {
+    "Name": "Neso Academy (YouTube)",
+    "Url": "https://www.youtube.com/feeds/videos.xml?channel_id=UCQYMhOMi_Cdj1CEAU-fv80A",
+    "Category": "News",
+    "Note": "Computer science and engineering fundamentals.",
+    "ContentType": "Video",
+    "Level": "Beginner",
+    "Tags": [
+      "Computer Science",
+      "Courses"
+    ]
   }
 ]
