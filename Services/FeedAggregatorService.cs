@@ -18,6 +18,10 @@ public sealed class FeedAggregatorService
 
     private readonly IHttpClientFactory _httpFactory;
     private readonly KnowledgeBaseService _kb;
+
+    /// <summary>Per-domain throttle: tracks last fetch time per host to avoid rate-limiting (e.g. Reddit 429s).</summary>
+    private static readonly ConcurrentDictionary<string, DateTime> _lastDomainFetch = new();
+    private static readonly TimeSpan DomainCooldown = TimeSpan.FromSeconds(2);
     private readonly SourceHealthService _health;
     private readonly ContentExtractorService _extractor;
     private readonly WebSubService _webSub;
@@ -80,6 +84,20 @@ public sealed class FeedAggregatorService
             await gate.WaitAsync(ct);
             try
             {
+                // Per-domain throttle: wait if another request to the same host just fired.
+                if (source.Url is not null && Uri.TryCreate(source.Url, UriKind.Absolute, out var uri))
+                {
+                    var host = uri.Host;
+                    var now = DateTime.UtcNow;
+                    if (_lastDomainFetch.TryGetValue(host, out var last))
+                    {
+                        var elapsed = now - last;
+                        if (elapsed < DomainCooldown)
+                            await Task.Delay(DomainCooldown - elapsed, ct);
+                    }
+                    _lastDomainFetch[host] = DateTime.UtcNow;
+                }
+
                 foreach (var item in await FetchOneAsync(source, ct))
                     items.Add(item);
                 _failureStreaks[source.Name] = 0;
