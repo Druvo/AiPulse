@@ -139,7 +139,16 @@ public sealed class ReadingStateService
             var nowRead = !_state!.ReadLinks.Contains(item.Link);
             var changed = nowRead ? _state.ReadLinks.Add(item.Link) : _state.ReadLinks.Remove(item.Link);
             if (nowRead)
-                _state.ReadHistory.Add(new ReadEvent { Link = item.Link, SourceName = item.SourceName, ReadingMinutes = item.ReadingMinutes ?? 0 });
+                _state.ReadHistory.Add(new ReadEvent
+                {
+                    Link = item.Link,
+                    SourceName = item.SourceName,
+                    ReadingMinutes = item.ReadingMinutes ?? 0,
+                    Title = item.Title,
+                    ContentType = item.ContentType,
+                    Level = item.Level,
+                    Category = item.Category
+                });
             if (changed || nowRead) Save();
             return nowRead;
         }

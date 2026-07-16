@@ -5,8 +5,18 @@ public sealed class TrendingModel
 {
     public required string Id { get; init; }
     public int Likes { get; init; }
+    /// <summary>Downloads in the last 30 days - the only download figure the public Hub API exposes (there is no separate "all-time" counter).</summary>
     public long Downloads { get; init; }
     public string? PipelineTag { get; init; }
+    /// <summary>The org/user that owns the repo, e.g. "meta-llama" - null if the API didn't report one.</summary>
+    public string? Author { get; init; }
+    /// <summary>Framework the model card declares, e.g. "transformers", "diffusers", "gguf" - null if unset.</summary>
+    public string? LibraryName { get; init; }
+    /// <summary>Raw tag list from the Hub (includes framework/license/language tags mixed together).</summary>
+    public string[] Tags { get; init; } = Array.Empty<string>();
+    public DateTimeOffset? LastModified { get; init; }
+    /// <summary>Extracted from a "license:xxx" tag, if present.</summary>
+    public string? License => Tags.FirstOrDefault(t => t.StartsWith("license:"))?["license:".Length..];
     public string Url => $"https://huggingface.co/{Id}";
 }
 
@@ -15,6 +25,11 @@ public sealed class TrendingDataset
 {
     public required string Id { get; init; }
     public int Likes { get; init; }
+    public long Downloads { get; init; }
+    public string? Author { get; init; }
+    public string[] Tags { get; init; } = Array.Empty<string>();
+    public DateTimeOffset? LastModified { get; init; }
+    public string? License => Tags.FirstOrDefault(t => t.StartsWith("license:"))?["license:".Length..];
     public string Url => $"https://huggingface.co/datasets/{Id}";
 }
 

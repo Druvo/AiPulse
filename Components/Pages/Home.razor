@@ -131,12 +131,14 @@
         }
         else
         {
-            @foreach (var item in _biggestStories)
-            {
-                <div class="mb-2">
-                    <FeedItemCard Item="item" Layout="Compact" />
-                </div>
-            }
+            <div class="biggest-stories-scroll">
+                @foreach (var item in _biggestStories)
+                {
+                    <div class="mb-2">
+                        <FeedItemCard Item="item" Layout="Compact" />
+                    </div>
+                }
+            </div>
         }
     </div>
     <div class="col-md-6">
@@ -241,7 +243,7 @@
         }
         else
         {
-            @foreach (var b in Reading.Bookmarks.Take(6))
+            @foreach (var b in Reading.Bookmarks.Take(4))
             {
                 <div class="mb-2">
                     <FeedItemCard Item="ToFeedItem(b)" Layout="Compact" />
@@ -366,7 +368,7 @@
         _biggestStories = _rangeItems
             .OrderByDescending(i => i.AlsoSeenOn.Length)
             .ThenByDescending(i => i.Published)
-            .Take(10)
+            .Take(6)
             .ToList();
 
         _byDay = _rangeItems

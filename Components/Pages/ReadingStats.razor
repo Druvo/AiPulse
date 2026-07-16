@@ -17,28 +17,40 @@
 else
 {
     <div class="row g-2 mb-4">
-        <div class="col-6 col-md-3">
+        <div class="col-6 col-md-2">
             <div class="card h-100"><div class="card-body py-2 text-center">
                 <div class="fs-4 fw-bold">@CountSince(Today)</div>
                 <div class="x-small text-muted">Read today</div>
             </div></div>
         </div>
-        <div class="col-6 col-md-3">
+        <div class="col-6 col-md-2">
             <div class="card h-100"><div class="card-body py-2 text-center">
                 <div class="fs-4 fw-bold">@CountSince(Today.AddDays(-6))</div>
                 <div class="x-small text-muted">Read this week</div>
             </div></div>
         </div>
-        <div class="col-6 col-md-3">
+        <div class="col-6 col-md-2">
             <div class="card h-100"><div class="card-body py-2 text-center">
                 <div class="fs-4 fw-bold">@CountSince(Today.AddDays(-29))</div>
                 <div class="x-small text-muted">Read this month</div>
             </div></div>
         </div>
-        <div class="col-6 col-md-3">
+        <div class="col-6 col-md-2">
             <div class="card h-100"><div class="card-body py-2 text-center">
                 <div class="fs-4 fw-bold">@_history.Count</div>
                 <div class="x-small text-muted">Read all-time</div>
+            </div></div>
+        </div>
+        <div class="col-6 col-md-2">
+            <div class="card h-100"><div class="card-body py-2 text-center">
+                <div class="fs-4 fw-bold">@CurrentStreak() 🔥</div>
+                <div class="x-small text-muted">Day streak</div>
+            </div></div>
+        </div>
+        <div class="col-6 col-md-2">
+            <div class="card h-100"><div class="card-body py-2 text-center">
+                <div class="fs-4 fw-bold">@LongestStreak()</div>
+                <div class="x-small text-muted">Longest streak</div>
             </div></div>
         </div>
     </div>
@@ -49,33 +61,113 @@ else
         - based on each article's own word-count estimate, not actual measured time.
     </p>
 
-    <div class="row g-4">
+    @if (!string.IsNullOrWhiteSpace(TodayGoalMessage()))
+    {
+        <div class="alert alert-light border py-2 small mb-3">@TodayGoalMessage()</div>
+    }
+
+    <div class="row g-4 mb-4">
         <div class="col-md-6">
             <h6 class="section-title mb-2">Top sources</h6>
+            <p class="text-muted x-small mb-2">Click a source to jump into its articles on the News Feed.</p>
             <ul class="list-unstyled small">
                 @foreach (var (source, count) in TopSources().Take(10))
                 {
-                    <li class="d-flex justify-content-between border-bottom py-1">
-                        <span>@source</span>
-                        <span class="text-muted">@count</span>
+                    <li class="border-bottom py-1">
+                        <a class="d-flex justify-content-between text-decoration-none" href="@($"news?source={Uri.EscapeDataString(source)}")">
+                            <span>@source</span>
+                            <span class="text-muted">@count</span>
+                        </a>
                     </li>
                 }
             </ul>
         </div>
         <div class="col-md-6">
             <h6 class="section-title mb-2">Last 14 days</h6>
+            <p class="text-muted x-small mb-2">Click a day to see what was published then.</p>
             <ul class="list-unstyled small">
                 @foreach (var day in Last14Days())
                 {
-                    <li class="d-flex justify-content-between align-items-center border-bottom py-1">
-                        <span>@day.Date.ToString("ddd, MMM d")</span>
-                        <span class="d-flex align-items-center gap-2">
-                            <span class="reading-stats-bar" style="--pct: @(day.Count == 0 ? 0 : Math.Max(8, day.Count * 100 / MaxDayCount()))%"></span>
-                            <span class="text-muted">@day.Count</span>
-                        </span>
+                    <li class="border-bottom py-1">
+                        <a class="d-flex justify-content-between align-items-center text-decoration-none" href="@($"news?date={day.Date:yyyy-MM-dd}")">
+                            <span>@day.Date.ToString("ddd, MMM d")</span>
+                            <span class="d-flex align-items-center gap-2">
+                                <span class="reading-stats-bar" style="--pct: @(day.Count == 0 ? 0 : Math.Max(8, day.Count * 100 / MaxDayCount()))%"></span>
+                                <span class="text-muted">@day.Count</span>
+                            </span>
+                        </a>
                     </li>
                 }
             </ul>
+        </div>
+    </div>
+
+    <div class="row g-4 mb-4">
+        <div class="col-md-4">
+            <h6 class="section-title mb-2">By content type</h6>
+            @if (ByContentType().Count == 0)
+            {
+                <p class="text-muted small">Not available for items marked read before this breakdown was added.</p>
+            }
+            else
+            {
+                <ul class="list-unstyled small">
+                    @foreach (var (type, count) in ByContentType())
+                    {
+                        <li class="d-flex justify-content-between align-items-center border-bottom py-1">
+                            <span>@type</span>
+                            <span class="d-flex align-items-center gap-2">
+                                <span class="reading-stats-bar" style="--pct: @(Math.Max(8, count * 100 / ByContentType().Max(x => x.Count)))%"></span>
+                                <span class="text-muted">@count</span>
+                            </span>
+                        </li>
+                    }
+                </ul>
+            }
+        </div>
+        <div class="col-md-4">
+            <h6 class="section-title mb-2">By level</h6>
+            @if (ByLevel().Count == 0)
+            {
+                <p class="text-muted small">Not available for items marked read before this breakdown was added.</p>
+            }
+            else
+            {
+                <ul class="list-unstyled small">
+                    @foreach (var (level, count) in ByLevel())
+                    {
+                        <li class="d-flex justify-content-between align-items-center border-bottom py-1">
+                            <span class="badge level-@level.ToLower()">@level</span>
+                            <span class="d-flex align-items-center gap-2">
+                                <span class="reading-stats-bar" style="--pct: @(Math.Max(8, count * 100 / ByLevel().Max(x => x.Count)))%"></span>
+                                <span class="text-muted">@count</span>
+                            </span>
+                        </li>
+                    }
+                </ul>
+            }
+        </div>
+        <div class="col-md-4">
+            <h6 class="section-title mb-2">Recently read</h6>
+            @{
+                var recent = _history.Where(h => !string.IsNullOrWhiteSpace(h.Title)).OrderByDescending(h => h.At).Take(8).ToList();
+            }
+            @if (recent.Count == 0)
+            {
+                <p class="text-muted small">Titles aren't available for items marked read before this list was added.</p>
+            }
+            else
+            {
+                <ul class="list-unstyled small">
+                    @foreach (var h in recent)
+                    {
+                        <li class="border-bottom py-1">
+                            <a href="@h.Link" target="_blank" rel="noopener" class="d-block text-decoration-none text-truncate" title="@h.Title">@h.Title</a>
+                            <span class="x-small text-muted">@h.SourceName · @h.At.ToLocalTime().ToString("MMM d, HH:mm")</span>
+                        </li>
+                    }
+                </ul>
+            }
         </div>
     </div>
 }
@@ -96,6 +188,20 @@ else
             .OrderByDescending(x => x.Item2)
             .ToList();
 
+    private List<(string Type, int Count)> ByContentType() =>
+        _history.Where(h => !string.IsNullOrWhiteSpace(h.ContentType))
+            .GroupBy(h => h.ContentType, StringComparer.OrdinalIgnoreCase)
+            .Select(g => (g.Key, g.Count()))
+            .OrderByDescending(x => x.Item2)
+            .ToList();
+
+    private List<(string Level, int Count)> ByLevel() =>
+        _history.Where(h => !string.IsNullOrWhiteSpace(h.Level))
+            .GroupBy(h => h.Level, StringComparer.OrdinalIgnoreCase)
+            .Select(g => (g.Key, g.Count()))
+            .OrderByDescending(x => x.Item2)
+            .ToList();
+
     private List<(DateOnly Date, int Count)> Last14Days()
     {
         var byDay = _history
@@ -110,6 +216,46 @@ else
     }
 
     private int MaxDayCount() => Math.Max(1, Last14Days().Max(d => d.Count));
+
+    /// <summary>Consecutive days up to and including today with at least one read event - 0 if today has none yet (streak already broken until the next read).</summary>
+    private int CurrentStreak()
+    {
+        var days = new HashSet<DateOnly>(_history.Select(h => DateOnly.FromDateTime(h.At.ToLocalTime().Date)));
+        var streak = 0;
+        var d = Today;
+        while (days.Contains(d)) { streak++; d = d.AddDays(-1); }
+        return streak;
+    }
+
+    /// <summary>Longest run of consecutive days with at least one read event, ever.</summary>
+    private int LongestStreak()
+    {
+        var days = _history.Select(h => DateOnly.FromDateTime(h.At.ToLocalTime().Date)).Distinct().OrderBy(d => d).ToList();
+        if (days.Count == 0) return 0;
+
+        var longest = 1;
+        var current = 1;
+        for (var i = 1; i < days.Count; i++)
+        {
+            current = days[i].DayNumber == days[i - 1].DayNumber + 1 ? current + 1 : 1;
+            longest = Math.Max(longest, current);
+        }
+        return longest;
+    }
+
+    private string TodayGoalMessage()
+    {
+        if (CountSince(Today) > 0) return "";
+
+        var days = new HashSet<DateOnly>(_history.Select(h => DateOnly.FromDateTime(h.At.ToLocalTime().Date)));
+        var streakBeforeToday = 0;
+        var d = Today.AddDays(-1);
+        while (days.Contains(d)) { streakBeforeToday++; d = d.AddDays(-1); }
+
+        return streakBeforeToday == 0
+            ? "Read one article today to start a new streak."
+            : $"Read one article today to keep your {streakBeforeToday}-day streak alive.";
+    }
 
     private static string FormatMinutes(int minutes) =>
         minutes < 60 ? $"{minutes} min" : $"{minutes / 60}h {minutes % 60}m";

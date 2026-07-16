@@ -8,6 +8,7 @@
 @inject SystemInfoService SystemInfo
 @inject ModelUsageService ModelUsage
 @inject NavigationManager Nav
+@inject IJSRuntime JS
 
 <PageTitle>AiPulse · Explore</PageTitle>
 
@@ -17,17 +18,17 @@
 </div>
 
 <div class="btn-group mb-4 flex-wrap" role="group">
-    <button class="btn btn-sm @(_section == "models" ? "btn-dark" : "btn-outline-dark")" @onclick='() => SetSection("models")'>
-        <Icon Name="sparkle" Size="14" /> Models &amp; Datasets
-    </button>
-    <button class="btn btn-sm @(_section == "benchmarks" ? "btn-dark" : "btn-outline-dark")" @onclick='() => SetSection("benchmarks")'>
-        <Icon Name="trending-up" Size="14" /> Benchmarks
-    </button>
     <button class="btn btn-sm @(_section == "github" ? "btn-dark" : "btn-outline-dark")" @onclick='() => SetSection("github")'>
         <Icon Name="code" Size="14" /> GitHub Trending
     </button>
+    <button class="btn btn-sm @(_section == "models" ? "btn-dark" : "btn-outline-dark")" @onclick='() => SetSection("models")'>
+        <Icon Name="sparkle" Size="14" /> Models &amp; Datasets
+    </button>
     <button class="btn btn-sm @(_section == "try" ? "btn-dark" : "btn-outline-dark")" @onclick='() => SetSection("try")'>
         <Icon Name="play" Size="14" /> Try a Model
+    </button>
+    <button class="btn btn-sm @(_section == "benchmarks" ? "btn-dark" : "btn-outline-dark")" @onclick='() => SetSection("benchmarks")'>
+        <Icon Name="trending-up" Size="14" /> Benchmarks
     </button>
 </div>
 
@@ -61,19 +62,55 @@
             <h6 class="section-title mb-2">@(string.IsNullOrWhiteSpace(_hfActiveQuery) ? "Trending models" : "Models")</h6>
             @foreach (var m in _models.Skip((_modelPage - 1) * _modelPageSize).Take(_modelPageSize))
             {
-                <a href="@m.Url" target="_blank" rel="noopener" class="card mb-2 text-decoration-none">
+                <div class="card mb-2">
                     <div class="card-body py-2">
                         <div class="d-flex justify-content-between align-items-center">
-                            <span class="fw-bold small">@m.Id</span>
+                            <a href="@m.Url" target="_blank" rel="noopener" class="fw-bold small text-decoration-none">@m.Id</a>
                             @if (!string.IsNullOrWhiteSpace(m.PipelineTag))
                             {
                                 <span class="tag-chip small">@m.PipelineTag</span>
                             }
                         </div>
-                        <div class="x-small text-muted">@m.Likes.ToString("N0") likes · @m.Downloads.ToString("N0") downloads/mo</div>
+                        <div class="x-small text-muted">
+                            @m.Likes.ToString("N0") likes · @m.Downloads.ToString("N0") downloads (last 30d)
+                            @if (!string.IsNullOrWhiteSpace(m.Author)) { <span> · by <a href="@($"https://huggingface.co/{m.Author}")" target="_blank" rel="noopener">@m.Author</a></span> }
+                        </div>
+                        <button class="btn btn-sm btn-link p-0 mt-1" @onclick="() => ToggleModelExpanded(m.Id)">
+                            @(_expandedModels.Contains(m.Id) ? "Hide options ▴" : "Downloads, license, use this model… ▾")
+                        </button>
+                        @if (_expandedModels.Contains(m.Id))
+                        {
+                            <div class="mt-2 x-small">
+                                <div class="d-flex flex-wrap gap-3 mb-2">
+                                    <span><strong>Library:</strong> @(m.LibraryName ?? "—")</span>
+                                    <span><strong>License:</strong> @(m.License ?? "—")</span>
+                                    <span><strong>Last modified:</strong> @(m.LastModified is { } lm ? lm.ToLocalTime().ToString("MMM d, yyyy") : "—")</span>
+                                </div>
+                                @if (m.Tags.Length > 0)
+                                {
+                                    <div class="d-flex flex-wrap gap-1 mb-2">
+                                        @foreach (var t in m.Tags.Where(t => !t.Contains(':')).Take(10))
+                                        {
+                                            <span class="tag-chip small">@t</span>
+                                        }
+                                    </div>
+                                }
+                                <div class="text-muted text-uppercase mb-1">Use this model</div>
+                                @foreach (var (label, snippet) in ModelSnippets(m))
+                                {
+                                    <div class="mb-2">
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <span class="text-muted">@label</span>
+                                            <button class="btn btn-sm btn-outline-secondary py-0 px-1" @onclick="() => CopySnippet(snippet)"><Icon Name="copy" Size="11" /> Copy</button>
+                                        </div>
+                                        <pre class="model-snippet mb-0"><code>@snippet</code></pre>
+                                    </div>
+                                }
+                            </div>
+                        }
                         <span class="tag-chip small mt-1">via Hugging Face</span>
                     </div>
-                </a>
+                </div>
             }
             @if (_modelsLoading)
             {
@@ -92,13 +129,45 @@
             <h6 class="section-title mb-2">@(string.IsNullOrWhiteSpace(_hfActiveQuery) ? "Trending datasets" : "Datasets")</h6>
             @foreach (var d in _datasets.Skip((_datasetPage - 1) * _datasetPageSize).Take(_datasetPageSize))
             {
-                <a href="@d.Url" target="_blank" rel="noopener" class="card mb-2 text-decoration-none">
+                <div class="card mb-2">
                     <div class="card-body py-2">
-                        <span class="fw-bold small">@d.Id</span>
-                        <div class="x-small text-muted">@d.Likes.ToString("N0") likes</div>
+                        <a href="@d.Url" target="_blank" rel="noopener" class="fw-bold small text-decoration-none d-block">@d.Id</a>
+                        <div class="x-small text-muted">
+                            @d.Likes.ToString("N0") likes · @d.Downloads.ToString("N0") downloads (last 30d)
+                            @if (!string.IsNullOrWhiteSpace(d.Author)) { <span> · by <a href="@($"https://huggingface.co/{d.Author}")" target="_blank" rel="noopener">@d.Author</a></span> }
+                        </div>
+                        <button class="btn btn-sm btn-link p-0 mt-1" @onclick="() => ToggleDatasetExpanded(d.Id)">
+                            @(_expandedDatasets.Contains(d.Id) ? "Hide options ▴" : "License, use this dataset… ▾")
+                        </button>
+                        @if (_expandedDatasets.Contains(d.Id))
+                        {
+                            <div class="mt-2 x-small">
+                                <div class="d-flex flex-wrap gap-3 mb-2">
+                                    <span><strong>License:</strong> @(d.License ?? "—")</span>
+                                    <span><strong>Last modified:</strong> @(d.LastModified is { } lm ? lm.ToLocalTime().ToString("MMM d, yyyy") : "—")</span>
+                                </div>
+                                @if (d.Tags.Length > 0)
+                                {
+                                    <div class="d-flex flex-wrap gap-1 mb-2">
+                                        @foreach (var t in d.Tags.Where(t => !t.Contains(':')).Take(10))
+                                        {
+                                            <span class="tag-chip small">@t</span>
+                                        }
+                                    </div>
+                                }
+                                <div class="text-muted text-uppercase mb-1">Use this dataset</div>
+                                <div class="mb-2">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <span class="text-muted">Python (🤗 datasets)</span>
+                                        <button class="btn btn-sm btn-outline-secondary py-0 px-1" @onclick="() => CopySnippet(DatasetSnippet(d))"><Icon Name="copy" Size="11" /> Copy</button>
+                                    </div>
+                                    <pre class="model-snippet mb-0"><code>@DatasetSnippet(d)</code></pre>
+                                </div>
+                            </div>
+                        }
                         <span class="tag-chip small mt-1">via Hugging Face</span>
                     </div>
-                </a>
+                </div>
             }
             @if (_modelsLoading)
             {
@@ -522,7 +591,7 @@ else if (_section == "try")
 
     private static readonly HashSet<string> ValidSections = new() { "models", "benchmarks", "github", "try" };
 
-    private string _section = "models";
+    private string _section = "github";
     private bool _modelsLoading = true;
     private bool _reposLoading = true;
     private bool _developersLoading = true;
@@ -542,6 +611,9 @@ else if (_section == "try")
     private int _devPageSize = 20;
     private int _ggufPage = 1;
     private int _ggufPageSize = 10;
+
+    private readonly HashSet<string> _expandedModels = new();
+    private readonly HashSet<string> _expandedDatasets = new();
 
     private string _hfQuery = "";
     private string _hfActiveQuery = "";
@@ -622,6 +694,50 @@ else if (_section == "try")
 
     private string LastUpdatedLabel(DateTimeOffset? at) =>
         at is null ? "never fetched yet" : $"updated {at.Value.ToLocalTime():g}";
+
+    private void ToggleModelExpanded(string id)
+    {
+        if (!_expandedModels.Remove(id)) _expandedModels.Add(id);
+    }
+
+    private void ToggleDatasetExpanded(string id)
+    {
+        if (!_expandedDatasets.Remove(id)) _expandedDatasets.Add(id);
+    }
+
+    private async Task CopySnippet(string text) => await JS.InvokeVoidAsync("copyText", text);
+
+    /// <summary>
+    /// A few concrete ways to actually use a trending model, since the Hub API only gives us metadata,
+    /// not a runnable environment - these are the same code paths Hugging Face's own model card shows,
+    /// generated from data we already have (id, library, pipeline tag) rather than an extra API call.
+    /// </summary>
+    private static List<(string Label, string Snippet)> ModelSnippets(TrendingModel m)
+    {
+        var snippets = new List<(string, string)>();
+
+        if (string.IsNullOrWhiteSpace(m.LibraryName) || m.LibraryName == "transformers")
+        {
+            var cls = m.PipelineTag switch
+            {
+                "text-generation" or "text2text-generation" or "conversational" => "AutoModelForCausalLM",
+                _ => "AutoModel"
+            };
+            snippets.Add(("Python (🤗 transformers)",
+                $"pip install transformers\n\nfrom transformers import {cls}, AutoTokenizer\n\nmodel = {cls}.from_pretrained(\"{m.Id}\")\ntokenizer = AutoTokenizer.from_pretrained(\"{m.Id}\")"));
+        }
+
+        snippets.Add(("Run locally via Ollama",
+            $"# Works if this repo includes GGUF weights - Ollama will say so if it doesn't\nollama run hf.co/{m.Id}"));
+
+        snippets.Add(("Hosted Inference API (cURL)",
+            $"curl https://api-inference.huggingface.co/models/{m.Id} \\\n  -H \"Authorization: Bearer $HF_TOKEN\" \\\n  -d '{{\"inputs\": \"Hello, world!\"}}'"));
+
+        return snippets;
+    }
+
+    private static string DatasetSnippet(TrendingDataset d) =>
+        $"pip install datasets\n\nfrom datasets import load_dataset\n\ndataset = load_dataset(\"{d.Id}\")";
 
     private RenderFragment SystemBanner() => @<div>
         <div class="alert alert-light border py-2 small mb-2 d-flex align-items-center gap-2">

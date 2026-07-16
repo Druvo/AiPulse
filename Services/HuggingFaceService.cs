@@ -57,8 +57,8 @@ public sealed class HuggingFaceService
             if (!force && _cache is { } c2 && DateTimeOffset.Now - c2.At < CacheFor)
                 return (c2.Models, c2.Datasets);
 
-            var models = await FetchModelsAsync($"https://huggingface.co/api/models?sort=trendingScore&direction=-1&limit={ResultLimit}", ct);
-            var datasets = await FetchDatasetsAsync($"https://huggingface.co/api/datasets?sort=trendingScore&direction=-1&limit={ResultLimit}", ct);
+            var models = await FetchModelsAsync($"https://huggingface.co/api/models?sort=trendingScore&direction=-1&limit={ResultLimit}&full=true", ct);
+            var datasets = await FetchDatasetsAsync($"https://huggingface.co/api/datasets?sort=trendingScore&direction=-1&limit={ResultLimit}&full=true", ct);
 
             _cache = (DateTimeOffset.Now, models, datasets);
             SavePersisted();
@@ -81,8 +81,8 @@ public sealed class HuggingFaceService
         var q = Uri.EscapeDataString(query);
         try
         {
-            var models = await FetchModelsAsync($"https://huggingface.co/api/models?search={q}&sort=trendingScore&direction=-1&limit={ResultLimit}", ct);
-            var datasets = await FetchDatasetsAsync($"https://huggingface.co/api/datasets?search={q}&sort=trendingScore&direction=-1&limit={ResultLimit}", ct);
+            var models = await FetchModelsAsync($"https://huggingface.co/api/models?search={q}&sort=trendingScore&direction=-1&limit={ResultLimit}&full=true", ct);
+            var datasets = await FetchDatasetsAsync($"https://huggingface.co/api/datasets?search={q}&sort=trendingScore&direction=-1&limit={ResultLimit}&full=true", ct);
             return (models, datasets);
         }
         catch (Exception ex)
@@ -112,7 +112,7 @@ public sealed class HuggingFaceService
             // Note: combining filter=gguf with sort=trendingScore silently drops the filter (verified against
             // the live API - it returns the generic trending list regardless of filter). sort=downloads is the
             // closest "popular" ordering that actually respects the filter.
-            var models = await FetchModelsAsync($"https://huggingface.co/api/models?filter=gguf&sort=downloads&direction=-1&limit={ResultLimit}", ct);
+            var models = await FetchModelsAsync($"https://huggingface.co/api/models?filter=gguf&sort=downloads&direction=-1&limit={ResultLimit}&full=true", ct);
             _ggufCache = (DateTimeOffset.Now, models);
             SavePersisted();
             return models;
@@ -134,7 +134,7 @@ public sealed class HuggingFaceService
         var q = Uri.EscapeDataString(query);
         try
         {
-            return await FetchModelsAsync($"https://huggingface.co/api/models?filter=gguf&search={q}&sort=downloads&direction=-1&limit={ResultLimit}", ct);
+            return await FetchModelsAsync($"https://huggingface.co/api/models?filter=gguf&search={q}&sort=downloads&direction=-1&limit={ResultLimit}&full=true", ct);
         }
         catch (Exception ex)
         {
@@ -151,14 +151,26 @@ public sealed class HuggingFaceService
             Id = m.Id ?? m.ModelId ?? "unknown",
             Likes = m.Likes,
             Downloads = m.Downloads,
-            PipelineTag = m.PipelineTag
+            PipelineTag = m.PipelineTag,
+            Author = m.Author,
+            LibraryName = m.LibraryName,
+            Tags = m.Tags ?? Array.Empty<string>(),
+            LastModified = m.LastModified
         }).ToList();
     }
 
     private async Task<List<TrendingDataset>> FetchDatasetsAsync(string url, CancellationToken ct)
     {
         var dtos = await FetchAsync<HfDatasetDto>(url, ct);
-        return dtos.Select(d => new TrendingDataset { Id = d.Id ?? "unknown", Likes = d.Likes }).ToList();
+        return dtos.Select(d => new TrendingDataset
+        {
+            Id = d.Id ?? "unknown",
+            Likes = d.Likes,
+            Downloads = d.Downloads,
+            Author = d.Author,
+            Tags = d.Tags ?? Array.Empty<string>(),
+            LastModified = d.LastModified
+        }).ToList();
     }
 
     private async Task<List<T>> FetchAsync<T>(string url, CancellationToken ct)
@@ -217,11 +229,19 @@ public sealed class HuggingFaceService
         public int Likes { get; set; }
         public long Downloads { get; set; }
         [JsonPropertyName("pipeline_tag")] public string? PipelineTag { get; set; }
+        public string? Author { get; set; }
+        [JsonPropertyName("library_name")] public string? LibraryName { get; set; }
+        public string[]? Tags { get; set; }
+        public DateTimeOffset? LastModified { get; set; }
     }
 
     private sealed class HfDatasetDto
     {
         public string? Id { get; set; }
         public int Likes { get; set; }
+        public long Downloads { get; set; }
+        public string? Author { get; set; }
+        public string[]? Tags { get; set; }
+        public DateTimeOffset? LastModified { get; set; }
     }
 }

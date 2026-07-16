@@ -367,6 +367,29 @@ Status tags: ✅ done · 🟢 fits philosophy, no AI needed · 🟡 needs a desi
 - Moved the News Feed's Filters panel (content type/level/sort, source chips, tag chips, saved searches)
   out of the main content column and into the always-visible calendar sidebar, directly below the month
   calendar - keeps the primary feed column focused on items while filtering controls live in one place.
+- Rebalanced the Dashboard's uneven card heights: the Trending/Activity timeline/Trending models & repos
+  row now stretches all three cards to match the tallest one (`h-100`) instead of each hugging its own
+  content height; "Biggest stories" is capped to 6 items in a scrollable `max-height: 420px` panel instead
+  of up to 10 plain-stacked cards, so it no longer dwarfs "Day by day" next to it; "Read later" now shows
+  4 items (was 6) to better match "Continue learning"'s 4.
+- Reading Stats is now genuinely actionable instead of just a readout: added a current/longest read-streak
+  pair (plus a nudge banner - "Read one article today to keep your streak alive" - when today's count is
+  still zero), made "Top sources" and "Last 14 days" rows clickable straight into the matching News Feed
+  filter (`news?source=`/`news?date=`), and added By content type / By level breakdowns plus a Recently
+  read list of the last 8 items linking straight to the original article. The breakdowns and recently-read
+  list need `ReadEvent.Title`/`ContentType`/`Level`/`Category` - new fields, so anything marked read before
+  this shipped won't have them and those sections just say so rather than showing blank/wrong data.
+- Explore's tabs are reordered to GitHub Trending → Models & Datasets → Try a Model → Benchmarks (GitHub
+  first, matching what's asked for most), and the page now lands on GitHub Trending by default instead of
+  Models & Datasets.
+- Hugging Face model/dataset cards on Explore now carry real data the Hub API already returns but wasn't
+  being shown: author, library (transformers/diffusers/etc.), license, last-modified date, and non-taxonomy
+  tags - fetched via `&full=true` on the existing trending/search/GGUF calls (no extra requests). Each card
+  has a "Downloads, license, use this model…" toggle that expands to those details plus copy-to-clipboard
+  code snippets: a `transformers`/`AutoModel(ForCausalLM)` Python snippet (datasets get `datasets.load_dataset`),
+  an `ollama run hf.co/{id}` line (works when the repo has GGUF weights - Ollama says so plainly if it
+  doesn't), and a Hosted Inference API cURL command. Reuses the existing `window.copyText` clipboard helper
+  from `playground.js` rather than adding a new one.
 
 > **GitHub Trending scrape reality check:** `GitHubTrendingService` scrapes `github.com/trending` and
 > `github.com/trending/developers` directly for the repo/developer views above - GitHub has no API for

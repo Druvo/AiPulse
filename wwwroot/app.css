@@ -407,6 +407,9 @@ a.card:hover { transform: translateY(-1px); }
     border-radius: 4px;
 }
 
+/* Dashboard: keeps the "Biggest stories" list from growing far taller than "Day by day" next to it */
+.biggest-stories-scroll { max-height: 420px; overflow-y: auto; padding-right: 4px; }
+
 /* Learning Hub progress */
 .progress { background-color: var(--ap-surface-2); border-radius: 999px; }
 .progress-bar { background-color: var(--ap-accent); }
@@ -559,6 +562,16 @@ a.card:hover { transform: translateY(-1px); }
     background: var(--ap-surface-2, rgba(127,127,127,.06));
     border-radius: .4rem;
     padding: .6rem .75rem;
+}
+
+/* "Use this model/dataset" code snippets on Explore */
+.model-snippet {
+    white-space: pre-wrap;
+    word-break: break-all;
+    background: var(--ap-surface-2, rgba(127,127,127,.06));
+    border-radius: .4rem;
+    padding: .5rem .6rem;
+    font-size: .75rem;
 }
 
 /* Top bar */

@@ -54,6 +54,11 @@ public sealed class ReadEvent
     public string SourceName { get; init; } = "";
     public int ReadingMinutes { get; init; }
     public DateTimeOffset At { get; init; } = DateTimeOffset.Now;
+    /// <summary>Added after the original release - null/empty for events recorded before this field existed.</summary>
+    public string Title { get; init; } = "";
+    public string ContentType { get; init; } = "";
+    public string Level { get; init; } = "";
+    public string Category { get; init; } = "";
 }
 
 /// <summary>
