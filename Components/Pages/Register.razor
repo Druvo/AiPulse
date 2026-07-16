@@ -5,9 +5,12 @@
 
 <PageTitle>AiPulse · Register</PageTitle>
 
+<div class="login-shell-inner">
 <div class="login-card">
-    <div class="login-brand"><Icon Name="zap" Size="22" /> AiPulse</div>
-    <p class="text-muted mb-4">Create an account</p>
+    <div class="login-logo-wrap">
+        <img src="/img/logo-v1.png" alt="AiPulse" class="app-logo login-logo" />
+    </div>
+    <p class="text-muted text-center mb-4">Create an account</p>
 
     @if (_registered)
     {
@@ -42,6 +45,8 @@
             Already have an account? <a href="/login">Sign in</a>
         </p>
     }
+</div>
+<p class="login-signature">Made with <span class="text-danger">♥</span> by <a href="https://github.com/Druvo" target="_blank" rel="noopener">Druvo</a></p>
 </div>
 
 @code {

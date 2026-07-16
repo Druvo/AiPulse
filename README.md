@@ -228,3 +228,7 @@ PRs welcome — especially **new sources** and **glossary terms**. The lowest-fr
 ## 📄 License
 
 [MIT](LICENSE).
+
+---
+
+<p align="center">Made with ❤️ by <a href="https://github.com/Druvo"><strong>Druvo</strong></a><br/>If AiPulse is useful to you, consider starring the repo ⭐</p>

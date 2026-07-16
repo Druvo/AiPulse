@@ -118,6 +118,13 @@
             <button class="accent-swatch" style="background:#059669" title="Emerald" @onclick='() => SetAccent("emerald")'></button>
         </div>
 
+        <h6 class="mb-2">Logo</h6>
+        <p class="text-muted x-small mb-2">Shown in the sidebar and on the sign-in page. Remembered on this browser.</p>
+        <div class="d-flex gap-2 mb-3">
+            <button class="logo-swatch" title="Logo V1" @onclick='() => SetLogo("v1")'><img src="/img/logo-v1.png" alt="Logo V1" /></button>
+            <button class="logo-swatch" title="Logo V2" @onclick='() => SetLogo("v2")'><img src="/img/logo-v2.png" alt="Logo V2" /></button>
+        </div>
+
         <details>
             <summary class="small text-muted mb-2" style="cursor:pointer">Advanced: custom CSS</summary>
             <textarea class="form-control form-control-sm font-monospace mt-2" rows="6" placeholder="e.g. .stat-num { font-size: 2.5rem; }" @bind="_customCss"></textarea>
@@ -423,6 +430,11 @@
     private async Task SetAccent(string name)
     {
         try { await JS.InvokeVoidAsync("setAccent", name); } catch { }
+    }
+
+    private async Task SetLogo(string version)
+    {
+        try { await JS.InvokeVoidAsync("setLogo", version); } catch { }
     }
 
     private async Task SaveCustomCss()

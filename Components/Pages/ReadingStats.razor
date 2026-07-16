@@ -2,12 +2,14 @@
 @attribute [Authorize]
 @rendermode InteractiveServer
 @inject ReadingStateService Reading
+@inject ObsidianExportService Export
+@inject NavigationManager Nav
 
 <PageTitle>AiPulse · Reading Stats</PageTitle>
 
 <div class="page-header">
     <h1><Icon Name="activity" Size="22" /> Reading Stats</h1>
-    <p class="lead">How much of the feed you've actually gotten through - built from your own "mark read" history.</p>
+    <p class="lead">How much of the feed you've actually gotten through, and everything you've saved to read later - all in one place.</p>
 </div>
 
 @if (_history.Count == 0)
@@ -68,6 +70,55 @@ else
 
     <div class="row g-4 mb-4">
         <div class="col-md-6">
+            <h6 class="section-title mb-2">Last 14 days</h6>
+            <div class="d-flex align-items-end gap-1 chart-bars">
+                @foreach (var day in Last14Days())
+                {
+                    <a class="chart-bar-col" href="@($"news?date={day.Date:yyyy-MM-dd}")" title="@day.Date.ToString("MMM d"): @day.Count read">
+                        <span class="chart-bar" style="height: @(day.Count == 0 ? 2 : Math.Max(6, day.Count * 100 / MaxDayCount()))%"></span>
+                        <span class="chart-bar-label">@day.Date.ToString("d")</span>
+                    </a>
+                }
+            </div>
+        </div>
+        <div class="col-md-6">
+            <h6 class="section-title mb-2">By content type</h6>
+            @if (ByContentType().Count == 0)
+            {
+                <p class="text-muted small">Not available for items marked read before this breakdown was added.</p>
+            }
+            else
+            {
+                <div class="d-flex align-items-center gap-3">
+                    <svg viewBox="0 0 42 42" class="donut-chart" role="img" aria-label="Reading breakdown by content type">
+                        <circle class="donut-ring" cx="21" cy="21" r="15.9155" fill="transparent"></circle>
+                        @{ var offset = 25.0; }
+                        @foreach (var (type, count) in ByContentType())
+                        {
+                            var pct = count * 100.0 / _history.Count(h => !string.IsNullOrWhiteSpace(h.ContentType));
+                            <circle cx="21" cy="21" r="15.9155" fill="transparent" stroke="@ChartColor(type)" stroke-width="6"
+                                    stroke-dasharray="@(pct.ToString("0.##")) @((100 - pct).ToString("0.##"))"
+                                    stroke-dashoffset="@offset.ToString("0.##")" />
+                            offset -= pct;
+                        }
+                    </svg>
+                    <ul class="list-unstyled small mb-0 flex-grow-1">
+                        @foreach (var (type, count) in ByContentType())
+                        {
+                            <li class="d-flex align-items-center gap-2">
+                                <span class="chart-swatch" style="background: @ChartColor(type)"></span>
+                                <span class="flex-grow-1">@type</span>
+                                <span class="text-muted">@count</span>
+                            </li>
+                        }
+                    </ul>
+                </div>
+            }
+        </div>
+    </div>
+
+    <div class="row g-4 mb-4">
+        <div class="col-md-4">
             <h6 class="section-title mb-2">Top sources</h6>
             <p class="text-muted x-small mb-2">Click a source to jump into its articles on the News Feed.</p>
             <ul class="list-unstyled small">
@@ -81,49 +132,6 @@ else
                     </li>
                 }
             </ul>
-        </div>
-        <div class="col-md-6">
-            <h6 class="section-title mb-2">Last 14 days</h6>
-            <p class="text-muted x-small mb-2">Click a day to see what was published then.</p>
-            <ul class="list-unstyled small">
-                @foreach (var day in Last14Days())
-                {
-                    <li class="border-bottom py-1">
-                        <a class="d-flex justify-content-between align-items-center text-decoration-none" href="@($"news?date={day.Date:yyyy-MM-dd}")">
-                            <span>@day.Date.ToString("ddd, MMM d")</span>
-                            <span class="d-flex align-items-center gap-2">
-                                <span class="reading-stats-bar" style="--pct: @(day.Count == 0 ? 0 : Math.Max(8, day.Count * 100 / MaxDayCount()))%"></span>
-                                <span class="text-muted">@day.Count</span>
-                            </span>
-                        </a>
-                    </li>
-                }
-            </ul>
-        </div>
-    </div>
-
-    <div class="row g-4 mb-4">
-        <div class="col-md-4">
-            <h6 class="section-title mb-2">By content type</h6>
-            @if (ByContentType().Count == 0)
-            {
-                <p class="text-muted small">Not available for items marked read before this breakdown was added.</p>
-            }
-            else
-            {
-                <ul class="list-unstyled small">
-                    @foreach (var (type, count) in ByContentType())
-                    {
-                        <li class="d-flex justify-content-between align-items-center border-bottom py-1">
-                            <span>@type</span>
-                            <span class="d-flex align-items-center gap-2">
-                                <span class="reading-stats-bar" style="--pct: @(Math.Max(8, count * 100 / ByContentType().Max(x => x.Count)))%"></span>
-                                <span class="text-muted">@count</span>
-                            </span>
-                        </li>
-                    }
-                </ul>
-            }
         </div>
         <div class="col-md-4">
             <h6 class="section-title mb-2">By level</h6>
@@ -172,12 +180,107 @@ else
     </div>
 }
 
+<hr class="my-4" />
+
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2">
+    <h4 class="mb-0"><Icon Name="bookmark" Size="20" /> Reading List</h4>
+    <button class="btn btn-success btn-sm" @onclick="ExportNow"><Icon Name="download" Size="14" /> Export to Obsidian</button>
+</div>
+<p class="text-muted small">Articles you saved from the News Feed. They persist across restarts.</p>
+@if (_exportMsg is not null)
+{
+    <div class="alert alert-success py-2 small">@_exportMsg</div>
+}
+
+@{
+    var allBookmarks = Reading.Bookmarks;
+    var savedItems = FilteredBookmarks(allBookmarks);
+    var availableTags = allBookmarks.SelectMany(b => b.Tags).Distinct(StringComparer.OrdinalIgnoreCase).OrderBy(t => t).ToList();
+}
+
+@if (allBookmarks.Count == 0)
+{
+    <p>Nothing saved yet. Open the <a href="news">News Feed</a> and click the bookmark icon on any article to save it here.</p>
+}
+else
+{
+    <div class="d-flex flex-wrap gap-2 mb-2">
+        <select class="form-select form-select-sm w-auto" @bind="_savedContentType" @bind:after="SyncUrl">
+            <option value="">All content types</option>
+            @foreach (var ct in allBookmarks.Select(b => b.ContentType).Distinct().OrderBy(c => c))
+            {
+                <option value="@ct">@ct</option>
+            }
+        </select>
+        <select class="form-select form-select-sm w-auto" @bind="_savedLevel" @bind:after="SyncUrl">
+            <option value="">All levels</option>
+            @foreach (var lvl in allBookmarks.Select(b => b.Level).Distinct().OrderBy(l => l))
+            {
+                <option value="@lvl">@lvl</option>
+            }
+        </select>
+        @if (!string.IsNullOrEmpty(_savedTag))
+        {
+            <button class="btn btn-sm btn-warning" @onclick="() => SetSavedTag(string.Empty)">Tag: @_savedTag ✕</button>
+        }
+    </div>
+
+    @if (availableTags.Count > 0)
+    {
+        <div class="d-flex flex-wrap gap-1 mb-3">
+            @foreach (var t in availableTags.Take(20))
+            {
+                <button class="btn btn-sm tag-chip @(_savedTag == t ? "active" : "")" @onclick="() => SetSavedTag(_savedTag == t ? string.Empty : t)">@t</button>
+            }
+        </div>
+    }
+
+    <p class="text-muted small">@savedItems.Count of @allBookmarks.Count saved</p>
+    @foreach (var b in savedItems)
+    {
+        var bItem = ToFeedItem(b);
+        <div class="mb-2 position-relative">
+            <FeedItemCard Item="bItem" Layout="List"
+                          IsRead="Reading.IsRead(bItem.Link)"
+                          OnToggleRead="() => Reading.ToggleRead(bItem)"
+                          OnOpened="() => Reading.EnsureRead(bItem)" />
+            <button class="btn btn-sm btn-outline-danger position-absolute" style="top:.5rem; right:.5rem;" @onclick="() => RemoveBookmark(b.Link)">Remove</button>
+        </div>
+    }
+
+    @if (savedItems.Count == 0)
+    {
+        <p class="text-muted">Nothing matches the current filter.</p>
+    }
+}
+
 @code {
+    [SupplyParameterFromQuery(Name = "contentType")]
+    public string? ContentTypeParam { get; set; }
+
+    [SupplyParameterFromQuery(Name = "level")]
+    public string? LevelParam { get; set; }
+
+    [SupplyParameterFromQuery(Name = "tag")]
+    public string? TagParam { get; set; }
+
     private IReadOnlyList<ReadEvent> _history = new List<ReadEvent>();
+
+    private string? _exportMsg;
+    private string _savedContentType = "";
+    private string _savedLevel = "";
+    private string _savedTag = "";
 
     private static DateOnly Today => DateOnly.FromDateTime(DateTime.Today);
 
-    protected override void OnInitialized() => _history = Reading.ReadHistory;
+    protected override void OnInitialized()
+    {
+        _history = Reading.ReadHistory;
+
+        if (!string.IsNullOrWhiteSpace(ContentTypeParam)) _savedContentType = ContentTypeParam;
+        if (!string.IsNullOrWhiteSpace(LevelParam)) _savedLevel = LevelParam;
+        if (!string.IsNullOrWhiteSpace(TagParam)) _savedTag = TagParam;
+    }
 
     private int CountSince(DateOnly date) =>
         _history.Count(h => DateOnly.FromDateTime(h.At.ToLocalTime().Date) >= date);
@@ -202,6 +305,18 @@ else
             .OrderByDescending(x => x.Item2)
             .ToList();
 
+    /// <summary>Deterministic color per content type, matching the badge palette where one exists and falling back to a hash-based hue for anything else.</summary>
+    private static string ChartColor(string contentType) => contentType.ToLowerInvariant() switch
+    {
+        "tutorial" => "#0e7490",
+        "paper" => "#6d28d9",
+        "discussion" => "#d97706",
+        "video" => "#be185d",
+        "release" => "#1d4ed8",
+        "news" => "#64748b",
+        _ => $"hsl({Math.Abs(contentType.GetHashCode()) % 360}, 55%, 45%)"
+    };
+
     private List<(DateOnly Date, int Count)> Last14Days()
     {
         var byDay = _history
@@ -211,7 +326,6 @@ else
         var days = new List<(DateOnly, int)>();
         for (var d = Today.AddDays(-13); d <= Today; d = d.AddDays(1))
             days.Add((d, byDay.GetValueOrDefault(d)));
-        days.Reverse();
         return days;
     }
 
@@ -259,4 +373,61 @@ else
 
     private static string FormatMinutes(int minutes) =>
         minutes < 60 ? $"{minutes} min" : $"{minutes / 60}h {minutes % 60}m";
+
+    // --- Reading List (merged from the former standalone /bookmarks page) ---
+
+    private void SetSavedTag(string tag)
+    {
+        _savedTag = tag;
+        SyncUrl();
+    }
+
+    private void SyncUrl()
+    {
+        var parts = new List<string>();
+        if (!string.IsNullOrEmpty(_savedContentType)) parts.Add($"contentType={Uri.EscapeDataString(_savedContentType)}");
+        if (!string.IsNullOrEmpty(_savedLevel)) parts.Add($"level={Uri.EscapeDataString(_savedLevel)}");
+        if (!string.IsNullOrEmpty(_savedTag)) parts.Add($"tag={Uri.EscapeDataString(_savedTag)}");
+        var qs = parts.Count > 0 ? "?" + string.Join("&", parts) : "";
+        Nav.NavigateTo($"reading-stats{qs}", replace: true);
+    }
+
+    private List<BookmarkItem> FilteredBookmarks(IReadOnlyList<BookmarkItem> all)
+    {
+        IEnumerable<BookmarkItem> q = all;
+
+        if (!string.IsNullOrEmpty(_savedContentType))
+            q = q.Where(b => b.ContentType == _savedContentType);
+
+        if (!string.IsNullOrEmpty(_savedLevel))
+            q = q.Where(b => b.Level == _savedLevel);
+
+        if (!string.IsNullOrEmpty(_savedTag))
+            q = q.Where(b => b.Tags.Contains(_savedTag, StringComparer.OrdinalIgnoreCase));
+
+        return q.ToList();
+    }
+
+    private void RemoveBookmark(string link) => Reading.RemoveBookmark(link);
+
+    /// <summary>Adapts a saved BookmarkItem to a FeedItem so it can render through the shared FeedItemCard.</summary>
+    private static FeedItem ToFeedItem(BookmarkItem b) => new()
+    {
+        Title = b.Title,
+        Link = b.Link,
+        SourceName = b.SourceName,
+        Category = b.Category,
+        ContentType = b.ContentType,
+        Level = b.Level,
+        Tags = b.Tags,
+        Published = b.SavedAt,
+        Summary = b.Summary ?? "",
+        ImageUrl = b.ImageUrl
+    };
+
+    private void ExportNow()
+    {
+        var path = Export.ExportReadingList();
+        _exportMsg = $"Exported {Reading.Bookmarks.Count} item(s) to {path}";
+    }
 }

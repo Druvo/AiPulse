@@ -25,8 +25,19 @@
             if (accent) document.documentElement.setAttribute('data-accent', accent);
             else document.documentElement.removeAttribute('data-accent');
             applyCustomCss();
+            applyLogo();
         }
         applyTheme();
+        function applyLogo() {
+            var logo = localStorage.getItem('aipulse-logo') || 'v1';
+            document.querySelectorAll('.app-logo').forEach(function (img) {
+                img.src = '/img/logo-' + logo + '.png';
+            });
+        }
+        function setLogo(v) {
+            localStorage.setItem('aipulse-logo', v);
+            applyLogo();
+        }
         function toggleTheme() {
             var cur = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
             document.documentElement.setAttribute('data-theme', cur);

@@ -432,6 +432,33 @@ a.card:hover { transform: translateY(-1px); }
     border-radius: 4px;
 }
 
+/* Reading Stats: "Last 14 days" bar chart */
+.chart-bars { height: 140px; }
+.chart-bar-col {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-end;
+    height: 100%;
+    text-decoration: none;
+    gap: 4px;
+}
+.chart-bar {
+    width: 60%;
+    min-height: 2px;
+    background: var(--ap-accent, #6d5efc);
+    border-radius: .2rem .2rem 0 0;
+}
+.chart-bar-col:hover .chart-bar { background: var(--ap-accent-hover, #5b4de0); }
+.chart-bar-label { font-size: .65rem; color: var(--ap-text-secondary); }
+
+/* Reading Stats: "By content type" donut chart */
+.donut-chart { width: 110px; height: 110px; flex-shrink: 0; transform: rotate(-90deg); }
+.donut-chart circle { transition: stroke-dasharray .3s ease; }
+.donut-ring { stroke: var(--ap-surface-2); stroke-width: 6; }
+.chart-swatch { display: inline-block; width: 10px; height: 10px; border-radius: 2px; flex-shrink: 0; }
+
 /* Dashboard: keeps the "Biggest stories" list from growing far taller than "Day by day" next to it */
 .biggest-stories-scroll { max-height: 420px; overflow-y: auto; padding-right: 4px; }
 
@@ -478,15 +505,8 @@ a.card:hover { transform: translateY(-1px); }
     gap: .55rem;
     font-weight: 600;
 }
-.sidebar .navbar-brand .ap-icon,
-.login-brand .ap-icon {
-    color: var(--ap-accent);
-    background: var(--ap-accent-soft);
-    border-radius: 8px;
-    padding: 4px;
-    box-sizing: content-box;
-}
-[data-theme="dark"] .login-brand .ap-icon { background: var(--ap-accent-soft); }
+.brand-logo { height: 28px; width: auto; }
+.login-logo { height: 64px; width: auto; }
 
 .nav-section-label {
     font-size: .68rem;
@@ -528,33 +548,50 @@ a.card:hover { transform: translateY(-1px); }
 [data-theme="dark"] .theme-toggle .icon-light { display: none; }
 [data-theme="dark"] .theme-toggle .icon-dark { display: inline-block; }
 .nav-user { color: var(--ap-sidebar-text); font-size: .8rem; margin-bottom: .5rem; display: flex; align-items: center; gap: .4rem; }
+.nav-signature { color: var(--ap-sidebar-text); font-size: .68rem; opacity: .7; margin: .5rem 0 0; text-align: center; }
+.nav-signature a { color: inherit; text-decoration: underline; }
+.nav-signature a:hover { opacity: 1; }
 
-/* Login screen */
+/* Login/Register screens */
 .login-shell {
     min-height: 100vh;
     display: flex;
     align-items: center;
     justify-content: center;
-    background: var(--ap-bg);
     padding: 1rem;
+    background:
+        radial-gradient(circle at 12% 15%, rgba(14, 165, 233, .16), transparent 40%),
+        radial-gradient(circle at 88% 85%, rgba(124, 58, 237, .18), transparent 40%),
+        var(--ap-bg);
 }
+.login-shell-inner { display: flex; flex-direction: column; align-items: center; width: 100%; max-width: 400px; }
 .login-card {
     background: var(--ap-surface);
     color: var(--ap-text);
     width: 100%;
-    max-width: 380px;
-    padding: 2rem;
-    border-radius: var(--ap-radius-lg);
+    padding: 2.25rem 2rem;
+    border-radius: 18px;
     border: 1px solid var(--ap-border);
-    box-shadow: var(--ap-shadow-md);
+    box-shadow: 0 24px 60px -24px rgba(76, 29, 199, .35), var(--ap-shadow-md);
+    position: relative;
+    overflow: hidden;
 }
-.login-brand {
-    font-size: 1.3rem;
-    font-weight: 600;
-    display: flex;
-    align-items: center;
-    gap: .5rem;
+.login-card::before {
+    content: "";
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, #0ea5e9, #6d5efc, #7c3aed);
 }
+.login-logo-wrap { display: flex; justify-content: center; margin-bottom: .5rem; }
+.login-signature {
+    margin-top: 1.25rem;
+    text-align: center;
+    font-size: .78rem;
+    color: var(--ap-text-secondary);
+}
+.login-signature a { color: var(--ap-text-secondary); text-decoration: underline; }
+.login-signature a:hover { color: var(--ap-accent); }
 
 /* Watchlist-matched feed items */
 .watched-item { box-shadow: inset 3px 0 0 var(--ap-warning); }
@@ -571,6 +608,14 @@ a.card:hover { transform: translateY(-1px); }
     cursor: pointer; padding: 0;
 }
 .accent-swatch:hover { border-color: var(--ap-text); transform: scale(1.08); }
+
+/* Logo picker swatches (Settings > Appearance) */
+.logo-swatch {
+    width: 72px; height: 44px; border-radius: 8px; border: 2px solid var(--ap-border);
+    cursor: pointer; padding: 4px; background: #fff; display: flex; align-items: center; justify-content: center;
+}
+.logo-swatch img { max-width: 100%; max-height: 100%; }
+.logo-swatch:hover { border-color: var(--ap-accent); }
 
 /* Custom Dashboard widgets (Settings > Dashboard widgets) */
 .dashboard-widget-frame { width: 100%; height: 320px; border: 0; border-radius: 0 0 var(--ap-radius, 8px) var(--ap-radius, 8px); }
@@ -753,12 +798,16 @@ button.tag-chip.active { background: var(--ap-accent-soft); color: var(--ap-acce
 }
 .timeline-bar-wrap:hover .timeline-bar { background: var(--ap-accent-hover); }
 
-/* Full Timeline page: contribution-style heatmap */
+/* Full Timeline page: contribution-style heatmap. Cell height (not width) flexes to fill whatever
+   height its card ends up at (e.g. stretched to match taller siblings in a row) instead of a fixed
+   pixel guess - width stays fixed since only cell height is unbounded (always exactly 7 rows). */
 .heatmap-scroll { overflow-x: auto; padding-bottom: 2px; }
 .heatmap-grid { display: grid; gap: 6px; width: max-content; min-width: 100%; }
+.heatmap-col { min-height: 0; }
 .heatmap-cell {
     width: 100%;
-    aspect-ratio: 1 / 1;
+    flex: 1 1 0;
+    min-height: 10px;
     border-radius: 3px;
     display: block;
     background: var(--ap-surface-2);

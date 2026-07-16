@@ -23,11 +23,11 @@
 }
 else
 {
-    <div class="heatmap-scroll">
-        <div class="heatmap-grid" style="grid-template-columns: repeat(@weeks, 20px);">
+    <div class="heatmap-scroll flex-grow-1 d-flex flex-column">
+        <div class="heatmap-grid flex-grow-1" style="grid-template-columns: repeat(@weeks, 22px);">
             @for (var w = 0; w < weeks; w++)
             {
-                <div class="d-flex flex-column gap-1">
+                <div class="d-flex flex-column gap-1 heatmap-col">
                     @for (var d = 0; d < 7; d++)
                     {
                         var day = startDay.AddDays(w * 7 + d);

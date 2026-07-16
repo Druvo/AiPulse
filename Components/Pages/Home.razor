@@ -66,7 +66,7 @@
         </a>
     </div>
     <div class="col">
-        <a class="stat-card" href="bookmarks">
+        <a class="stat-card" href="reading-stats">
             <div class="stat-num">@Reading.Bookmarks.Count</div>
             <div class="stat-label"><Icon Name="bookmark" Size="14" /> Saved to read</div>
         </a>
@@ -135,7 +135,12 @@
                 @foreach (var item in _biggestStories)
                 {
                     <div class="mb-2">
-                        <FeedItemCard Item="item" Layout="Compact" />
+                        <FeedItemCard Item="item" Layout="Compact"
+                                      IsRead="Reading.IsRead(item.Link)"
+                                      IsBookmarked="Reading.IsBookmarked(item.Link)"
+                                      OnToggleRead="() => ToggleRead(item)"
+                                      OnToggleBookmark="() => ToggleBookmark(item)"
+                                      OnOpened="() => MarkAsRead(item)" />
                     </div>
                 }
             </div>
@@ -245,11 +250,17 @@
         {
             @foreach (var b in Reading.Bookmarks.Take(4))
             {
+                var bItem = ToFeedItem(b);
                 <div class="mb-2">
-                    <FeedItemCard Item="ToFeedItem(b)" Layout="Compact" />
+                    <FeedItemCard Item="bItem" Layout="Compact"
+                                  IsRead="Reading.IsRead(bItem.Link)"
+                                  IsBookmarked="true"
+                                  OnToggleRead="() => ToggleRead(bItem)"
+                                  OnToggleBookmark="() => Reading.RemoveBookmark(bItem.Link)"
+                                  OnOpened="() => MarkAsRead(bItem)" />
                 </div>
             }
-            <a href="bookmarks" class="btn btn-sm btn-outline-primary mt-1">Open reading list →</a>
+            <a href="reading-stats" class="btn btn-sm btn-outline-primary mt-1">Open reading list →</a>
         }
 
         <div class="alert @(Ai.Enabled ? "alert-success" : "alert-secondary") mt-3 small">
@@ -430,6 +441,12 @@
         Reading.DismissWelcome();
         _welcomeDismissed = true;
     }
+
+    private void ToggleRead(FeedItem item) => Reading.ToggleRead(item);
+    private void ToggleBookmark(FeedItem item) => Reading.ToggleBookmark(item);
+
+    /// <summary>Opening an item marks it read - mirrors the same behavior on the News Feed, so read state stays consistent everywhere FeedItemCard appears.</summary>
+    private void MarkAsRead(FeedItem item) => Reading.EnsureRead(item);
 
     /// <summary>Adapts a saved BookmarkItem to a FeedItem so it can render through the shared FeedItemCard.</summary>
     private static FeedItem ToFeedItem(BookmarkItem b) => new()

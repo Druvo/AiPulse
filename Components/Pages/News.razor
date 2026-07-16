@@ -95,6 +95,17 @@
     }
 </div>
 
+@if (_pendingNewCount > 0)
+{
+    <div class="alert alert-info d-flex flex-wrap justify-content-between align-items-center gap-2 py-2 mb-3">
+        <span><Icon Name="rss" Size="14" /> @_pendingNewCount new item@(_pendingNewCount == 1 ? "" : "s") ready</span>
+        <span class="d-flex gap-2">
+            <button class="btn btn-sm btn-primary" @onclick="ApplyPending">Show</button>
+            <button class="btn btn-sm btn-outline-secondary" @onclick="DismissPending">Dismiss</button>
+        </span>
+    </div>
+}
+
 @if (_loading && _result is null)
 {
     <p><em>Fetching the latest from across the AI world…</em></p>
@@ -291,6 +302,8 @@ else
     public string? SortParam { get; set; }
 
     private FeedResult? _result;
+    private FeedResult? _pendingResult;
+    private int _pendingNewCount;
     private bool _loading;
     private string _filter = "All";
     private string _search = "";
@@ -380,10 +393,51 @@ else
             // Only while a live fetch is actually in flight - once Load() finishes, its own fully-deduped
             // result should stand rather than a stray late progress tick from some other page's refresh.
             if (!_loading) return;
-            _result = new FeedResult { Items = items.ToList(), Errors = _result?.Errors ?? new(), FetchedAt = DateTimeOffset.Now };
-            _newCount = items.Count(i => i.Published > _sinceVisit);
+            BufferOrApply(new FeedResult { Items = items.ToList(), Errors = _result?.Errors ?? new(), FetchedAt = DateTimeOffset.Now });
             StateHasChanged();
         });
+    }
+
+    /// <summary>
+    /// The visible list only ever changes when the user asks it to - it used to reshuffle live on every
+    /// progressive tick (and on every Refresh), which with 100+ sources completing at different times meant
+    /// the list could visibly jump several times while someone was mid-read. Still on the History-preloaded
+    /// placeholder (nothing real shown yet, nothing to disrupt)? Apply immediately - that's what makes the
+    /// cold-start fill-in feel fast. Otherwise, buffer the incoming data and surface it as a "N new items"
+    /// banner instead, same for a progressive tick or a completed Refresh.
+    /// </summary>
+    private void BufferOrApply(FeedResult candidate)
+    {
+        if (_result is null || _result.FetchedAt == DateTimeOffset.MinValue)
+        {
+            ApplyResult(candidate);
+            return;
+        }
+
+        _pendingResult = candidate;
+        var currentLinks = new HashSet<string>(_result.Items.Select(i => i.Link), StringComparer.OrdinalIgnoreCase);
+        _pendingNewCount = candidate.Items.Count(i => !currentLinks.Contains(i.Link));
+    }
+
+    private void ApplyResult(FeedResult result)
+    {
+        _result = result;
+        _newCount = result.Items.Count(i => i.Published > _sinceVisit);
+    }
+
+    private void ApplyPending()
+    {
+        if (_pendingResult is null) return;
+        ApplyResult(_pendingResult);
+        _pendingResult = null;
+        _pendingNewCount = 0;
+        _page = 1;
+    }
+
+    private void DismissPending()
+    {
+        _pendingResult = null;
+        _pendingNewCount = 0;
     }
 
     private void SetView(string view) { _view = view; SyncUrl(); }
@@ -430,8 +484,7 @@ else
         _loading = true;
         try
         {
-            _result = await Feeds.GetAsync(force);
-            _newCount = _result.Items.Count(i => i.Published > _sinceVisit);
+            BufferOrApply(await Feeds.GetAsync(force));
         }
         finally
         {

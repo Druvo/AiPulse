@@ -10,6 +10,7 @@
 @inject NavigationManager Nav
 @inject IJSRuntime JS
 @inject FeedHistoryService History
+@inject ReadingStateService Reading
 
 <PageTitle>AiPulse · Explore</PageTitle>
 
@@ -369,7 +370,10 @@ else if (_section == "github")
             @foreach (var r in releases)
             {
                 <div class="col-md-6">
-                    <FeedItemCard Item="r" Layout="Compact" />
+                    <FeedItemCard Item="r" Layout="Compact"
+                                  IsRead="Reading.IsRead(r.Link)"
+                                  OnToggleRead="() => Reading.ToggleRead(r)"
+                                  OnOpened="() => Reading.EnsureRead(r)" />
                 </div>
             }
         </div>

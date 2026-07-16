@@ -463,6 +463,35 @@ Status tags: ✅ done · 🟢 fits philosophy, no AI needed · 🟡 needs a desi
   double-fire). Also added a "Read" filter tab (mirroring the existing "Unread" one) so read items have
   somewhere to go, and a "Mark all as read" button that applies to every item in the current filter/
   search/sort view, not just the current page.
+- Fixed read/unread inconsistency across the app - `IsRead`/`OnToggleRead`/`OnOpened` were only ever wired
+  up on the News Feed's own `FeedItemCard` usages; everywhere else (`Home`'s "Biggest stories" and "Read
+  later" panels, the old Bookmarks page, Explore's "Recent releases") silently defaulted to unread and had
+  no way to change it, so the same article could show read on the News Feed and unread everywhere else it
+  appeared. Every `FeedItemCard` usage now wires the same read-state plumbing consistently.
+- News Feed: the visible list no longer reshuffles live while you're reading it. Previously, every
+  progressive-loading tick during a fetch (and every completed Refresh) replaced `_result` directly - with
+  100+ sources completing at different times, that meant the list could visibly jump several times during
+  a single refresh. It now only auto-applies while still on the History-preloaded placeholder (nothing real
+  shown yet, nothing to disrupt - keeps the cold-start fill-in feeling fast); once a real result has been
+  shown, further updates are buffered and surfaced as a small "N new items ready - Show / Dismiss" banner
+  instead, so the list only changes when you tell it to.
+- Reading List moved off its own page and into Reading Stats - one page for "how much have I read" and
+  "what have I saved to read," rather than two. Added a bar chart for the last 14 days of reading activity
+  and an SVG donut chart for the content-type breakdown (both hand-rolled, no charting library - matches
+  the existing "no heavy deps" pattern already used for the day-bars and heatmap). `/bookmarks` now
+  redirects to `/reading-stats`, same pattern as the earlier `/digest` redirect.
+- Dashboard: the Activity timeline's heatmap cell height (not width) now flexes to fill whatever height its
+  card ends up at via `flex: 1 1 0`, instead of a fixed pixel guess - so it automatically matches its taller
+  row siblings (e.g. Trending models & repos) without needing another manual resize next time that changes.
+- Added the user's own `AI_PULSE_LOGO_V1`/`V2` artwork (`wwwroot/img/logo-v1.png`/`logo-v2.png`), shown in
+  the sidebar brand and on the sign-in/register pages. A new "Logo" picker in Settings > Appearance switches
+  between them via `localStorage` (`aipulse-logo`), mirroring the existing accent-color/custom-CSS pattern
+  exactly - applied instantly on load and re-applied after Blazor's enhanced-navigation swaps, same as theme.
+- Redesigned the Login/Register pages: a soft blue-to-violet radial gradient background, a gradient top
+  accent bar on the card, and the new logo replacing the old icon+text brand.
+- Added a project signature - "Made with ♥ by Druvo" - in the sidebar footer, the sign-in/register pages,
+  and the bottom of `README.md` (with a "star this repo" link), so the project carries a clear, consistent
+  mark of authorship wherever someone lands.
 
 > **GitHub Trending scrape reality check:** `GitHubTrendingService` scrapes `github.com/trending` and
 > `github.com/trending/developers` directly for the repo/developer views above - GitHub has no API for

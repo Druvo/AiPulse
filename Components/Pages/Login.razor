@@ -9,9 +9,12 @@
 
 <PageTitle>AiPulse · Sign in</PageTitle>
 
+<div class="login-shell-inner">
 <div class="login-card">
-    <div class="login-brand"><Icon Name="zap" Size="22" /> AiPulse</div>
-    <p class="text-muted mb-4">Your AI reading &amp; learning station</p>
+    <div class="login-logo-wrap">
+        <img src="/img/logo-v1.png" alt="AiPulse" class="app-logo login-logo" />
+    </div>
+    <p class="text-muted text-center mb-4">Your AI reading &amp; learning station</p>
 
     <EditForm Model="Input" OnValidSubmit="SignIn" FormName="login" method="post">
         <DataAnnotationsValidator />
@@ -37,6 +40,8 @@
     <p class="text-center text-muted small mt-3 mb-0">
         Don't have an account? <a href="/register">Register</a>
     </p>
+</div>
+<p class="login-signature">Made with <span class="text-danger">♥</span> by <a href="https://github.com/Druvo" target="_blank" rel="noopener">Druvo</a> · <a href="https://github.com/Druvo/AiPulse" target="_blank" rel="noopener">Star this repo</a></p>
 </div>
 
 @code {
