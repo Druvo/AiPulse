@@ -8,6 +8,7 @@ public sealed class NotificationOptions
     public int PollMinutes { get; set; } = 15;
     public bool NotifyReleases { get; set; } = true;
     public bool NotifyWatchlist { get; set; } = true;
+    public bool NotifyTrends { get; set; } = true;
     /// <summary>Max alerts created in a single poll, to avoid floods.</summary>
     public int MaxPerPoll { get; set; } = 15;
 }
@@ -31,6 +32,13 @@ public sealed class FeedWatcherService : BackgroundService
 
     private static readonly TimeSpan ReleaseThrottleWindow = TimeSpan.FromHours(1);
     private readonly Dictionary<string, DateTimeOffset> _lastReleaseAlertBySource = new();
+
+    // A tag needs at least this many items today to be worth flagging at all - stops a rare tag going 1->4
+    // from counting as a "spike" just because 4/1 clears the multiplier below.
+    private const int MinSpikeCount = 8;
+    // ...and today's count needs to be at least this multiple of its recent daily average.
+    private const double SpikeMultiplier = 3.0;
+    private readonly Dictionary<string, DateOnly> _lastTrendAlertDate = new();
 
     public FeedWatcherService(
         FeedAggregatorService feeds,
@@ -155,12 +163,78 @@ public sealed class FeedWatcherService : BackgroundService
             _lastReleaseAlertBySource[sourceName] = DateTimeOffset.Now;
         }
 
+        if (_opt.NotifyTrends && newAlerts.Count < _opt.MaxPerPoll)
+            newAlerts.AddRange(DetectTrendingSpikes().Take(_opt.MaxPerPoll - newAlerts.Count));
+
         if (newAlerts.Count > 0)
         {
             _log.LogInformation("Feed watcher raising {Count} alert(s)", newAlerts.Count);
             _notify.Add(newAlerts);
             await FanOutWebhooksAsync(newAlerts, ct);
         }
+    }
+
+    /// <summary>
+    /// Flags a tag whose item count today is a real spike against its own recent history - e.g. "Agent"
+    /// going from ~50/day to 500 in one day. Plain arithmetic on FeedHistoryService's already-persisted
+    /// items (no AI): group by (tag, day), compare today's count to the average of the last 7 days.
+    /// Requires at least 3 of those days to have any activity at all, so a tag's very first day of
+    /// existence doesn't read as an infinite "spike" against a baseline of zero. Throttled to one alert per
+    /// tag per calendar day.
+    /// </summary>
+    private List<Alert> DetectTrendingSpikes()
+    {
+        var today = DateOnly.FromDateTime(DateTime.Now);
+        var countsByTagAndDay = _history.Items
+            .Where(i => i.Tags.Length > 0)
+            .SelectMany(i => i.Tags.Select(t => (Tag: t, Day: DateOnly.FromDateTime(i.Published.LocalDateTime.Date))))
+            .GroupBy(x => (x.Tag, x.Day), TagDayComparer.Instance)
+            .ToDictionary(g => g.Key, g => g.Count(), TagDayComparer.Instance);
+
+        var alerts = new List<Alert>();
+        var allTags = _history.Items.SelectMany(i => i.Tags).Distinct(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var tag in allTags)
+        {
+            if (_lastTrendAlertDate.TryGetValue(tag, out var lastAlerted) && lastAlerted == today)
+                continue; // already flagged this tag today
+
+            var todayCount = countsByTagAndDay.GetValueOrDefault((tag, today));
+            if (todayCount < MinSpikeCount) continue;
+
+            var recentDays = Enumerable.Range(1, 7)
+                .Select(n => countsByTagAndDay.GetValueOrDefault((tag, today.AddDays(-n))))
+                .ToList();
+            if (recentDays.Count(c => c > 0) < 3) continue; // not enough history to call this a spike yet
+
+            var baseline = recentDays.Average();
+            if (baseline <= 0 || todayCount < baseline * SpikeMultiplier) continue;
+
+            _lastTrendAlertDate[tag] = today;
+            alerts.Add(new Alert
+            {
+                Title = tag,
+                Link = $"/news?tag={Uri.EscapeDataString(tag)}",
+                SourceName = "Trending",
+                Kind = "Trend",
+                // Count is left at its default (1) rather than todayCount - NotificationBell renders it as
+                // "(+N more)", grouped-alert phrasing that doesn't fit a plain "here's today's raw total"
+                // number. The actual figures already live in Details.
+                Details = $"{todayCount} items today vs ~{baseline:0.#}/day recently"
+            });
+        }
+
+        return alerts;
+    }
+
+    /// <summary>Value-tuple keys with a string component need an explicit case-insensitive comparer, or "MCP" and "mcp" become different dictionary entries.</summary>
+    private sealed class TagDayComparer : IEqualityComparer<(string Tag, DateOnly Day)>
+    {
+        public static readonly TagDayComparer Instance = new();
+        public bool Equals((string Tag, DateOnly Day) x, (string Tag, DateOnly Day) y) =>
+            x.Day == y.Day && string.Equals(x.Tag, y.Tag, StringComparison.OrdinalIgnoreCase);
+        public int GetHashCode((string Tag, DateOnly Day) obj) =>
+            HashCode.Combine(obj.Tag.ToLowerInvariant(), obj.Day);
     }
 
     /// <summary>

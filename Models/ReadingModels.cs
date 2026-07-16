@@ -129,7 +129,7 @@ public sealed class Alert
     public required string Title { get; init; }
     public required string Link { get; init; }
     public string SourceName { get; init; } = "";
-    public required string Kind { get; init; } // "Release" or "Watchlist"
+    public required string Kind { get; init; } // "Release", "Watchlist", or "Trend"
     public DateTimeOffset CreatedAt { get; init; } = DateTimeOffset.Now;
     public bool Read { get; set; }
     /// <summary>The underlying item's own title/version text (e.g. the actual release name) - richer than the alert's own Title, which for a grouped Release alert is just the source name.</summary>

@@ -651,6 +651,7 @@ a.card:hover { transform: translateY(-1px); }
 }
 .kind-release { background: var(--ap-accent-soft); color: var(--ap-accent-soft-text); }
 .kind-watchlist { background: var(--ap-warning-soft); color: var(--ap-warning-soft-text); }
+.kind-trend { background: var(--ap-success-soft); color: var(--ap-success-soft-text); }
 .notif-title { display: block; font-size: .85rem; margin-top: .15rem; font-weight: 600; }
 .notif-detail { display: block; font-size: .78rem; color: var(--ap-text-secondary); margin-top: .1rem; }
 .notif-meta { display: block; font-size: .7rem; color: var(--ap-muted); margin-top: .1rem; }

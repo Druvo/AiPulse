@@ -292,6 +292,22 @@ Status tags: ✅ done · 🟢 fits philosophy, no AI needed · 🟡 needs a desi
   sites advertise this); a handful of conventional paths (`/feed`, `/rss.xml`, etc.) for platforms that
   don't bother declaring one. Verified live against a real site (simonwillison.net) - pasted the bare
   homepage, it correctly found and filled in the real Atom feed URL.
+- Cross-source dedup now catches near-duplicates, not just exact ones: `Deduplicate()` already grouped
+  items by an exact normalized-title key (significant words, sorted); it now also fuzzy-merges *different*
+  keys whose word sets overlap heavily (e.g. "OpenAI releases GPT-5 with improved reasoning" vs "OpenAI's
+  GPT-5 launches with better reasoning capabilities" - different wording, same story) and whose earliest
+  items are within 3 days, same window as the exact-match path. Uses an overlap coefficient
+  (intersection / smaller-set size), not Jaccard (intersection / union) - traced concrete header examples
+  and Jaccard punishes headlines of different lengths too hard even when every word in the shorter one
+  also appears in the longer one. Landed on an 0.5 threshold after tracing "same story reworded" (~0.5-0.67
+  overlap) against "different stories sharing a couple of generic terms" (~0.3) examples by hand.
+- New trending-topic spike alerts (`Kind = "Trend"`) - flags a tag whose item count today is at least 3x
+  its own average over the last 7 days (and at least 8 items, so a rare tag going 1->4 doesn't count),
+  computed from `FeedHistoryService`'s already-persisted items grouped by (tag, day) - no new tracking
+  needed. Requires 3+ of the last 7 days to have had any activity at all, so a tag's very first day of
+  existence doesn't read as an infinite spike against a zero baseline. Throttled to one alert per tag per
+  calendar day, links to `/news?tag=X`, fans out through the same webhook routes (including per-keyword
+  ones) as Release/Watchlist alerts. Toggle: `Notifications:NotifyTrends` (default on).
 
 > **GitHub Trending scrape reality check:** `GitHubTrendingService` scrapes `github.com/trending` and
 > `github.com/trending/developers` directly for the repo/developer views above - GitHub has no API for
