@@ -323,6 +323,38 @@ Status tags: ✅ done · 🟢 fits philosophy, no AI needed · 🟡 needs a desi
 > live: muted a source via a hand-edited state file, confirmed it showed in Settings with an unmute chip,
 > unmuted it, confirmed the round-trip persisted correctly to disk both ways.
 
+- Dashboard: fixed the "Biggest story" section appearing to duplicate itself - the hero card above the
+  ranked list was always literally the same item as the list's own first entry (`_biggestStory` was
+  `_biggestStories.FirstOrDefault(...)`). The ranked list below the hero card now excludes whichever story
+  is already shown there. Also moved "Biggest story" and "Day by day" into one row (50/50, `col-md-6` each)
+  per request, ahead of the full "Biggest stories" ranked list.
+- News Feed: Grid is now the default view (was List).
+- Fixed two more pages with the same cold-start-blocking bug as the News Feed fix earlier this session -
+  **Glossary** and **Learn** both awaited a live feed/trending fetch directly in `OnInitializedAsync`,
+  so with the 100-source Reddit batch now in the mix, both could take 10+ minutes to render anything at
+  all on a cold cache. Same fix as before: fire-and-forget the fetch from a synchronous `OnInitialized()`,
+  render immediately, fill in once it resolves.
+- News Feed no longer shows a blank "Fetching the latest…" state on a cold cache - it now preloads
+  `FeedHistoryService`'s already-persisted items instantly (same source Home/Timeline already use), and
+  fills in progressively as each individual source finishes during the live fetch, instead of one atomic
+  swap once the entire ~150-source batch completes. Required a new `FeedAggregatorService.PartialProgress`
+  event, raised after every source (success or failure) with a running snapshot of items fetched so far;
+  the page subscribes to it while a fetch is in flight and swaps in the fully-deduped result from
+  `GetAsync()` once that resolves. The underlying fetch concurrency is unchanged (still 5 sources in
+  flight at once, not strictly one-at-a-time - going fully sequential would make the whole ~150-source
+  cycle even slower) - what changed is that the *display* updates incrementally instead of waiting for
+  the last source to finish before showing anything past the preloaded history.
+- Shrunk the Dashboard's Activity timeline heatmap - its grid columns were `minmax(11px, 1fr)`, so on a
+  wide card they stretched to fill all available width instead of staying compact; changed to a fixed
+  `11px` per column (GitHub's own contribution graph doesn't stretch either - it scrolls horizontally
+  instead, which `.heatmap-scroll` already supports).
+
+> **Which machine does "Try a Model" detect?** `SystemInfoService.Detect()` reads whatever machine the
+> `dotnet` process is actually running on (`GC.GetGCMemoryInfo().TotalAvailableMemoryBytes` for RAM,
+> `nvidia-smi` for GPU/VRAM - silently finds nothing on a non-NVIDIA box, which is correct behavior, not a
+> bug). Checked directly on this dev machine: Dell Inspiron 5570, 16 GB RAM, Intel UHD Graphics 620
+> (integrated, no discrete GPU) - so Explore's compatibility badges are reporting this machine's real specs.
+
 > **GitHub Trending scrape reality check:** `GitHubTrendingService` scrapes `github.com/trending` and
 > `github.com/trending/developers` directly for the repo/developer views above - GitHub has no API for
 > either, and "stars today" and contributor avatars only exist on those unofficial pages, so there's no

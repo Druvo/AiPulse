@@ -182,14 +182,22 @@
     private List<TrendingModel> _trendingModels = new();
     private List<TrendingRepo> _trendingRepos = new();
 
-    protected override async Task OnInitializedAsync()
+    protected override void OnInitialized()
     {
         if (!string.IsNullOrWhiteSpace(LevelParam) && _levels.Contains(LevelParam))
             _level = LevelParam;
 
+        // Fire-and-forget: the learning roadmap itself is static data and should render instantly - the
+        // trending models/repos panel just fills in once these resolve instead of holding up the page.
+        _ = LoadTrendingAsync();
+    }
+
+    private async Task LoadTrendingAsync()
+    {
         var (models, _) = await HuggingFace.GetTrendingAsync();
         _trendingModels = models;
         _trendingRepos = await GitHub.GetTrendingReposAsync();
+        StateHasChanged();
     }
 
     private void SetLevel(string level)

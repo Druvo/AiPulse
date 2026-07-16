@@ -134,15 +134,24 @@
     private readonly Dictionary<string, string> _explanations = new();
     private IReadOnlyList<FeedItem> _feedItems = Array.Empty<FeedItem>();
 
-    protected override async Task OnInitializedAsync()
+    protected override void OnInitialized()
     {
         if (!string.IsNullOrWhiteSpace(QueryParam))
             _search = QueryParam;
         if (!string.IsNullOrWhiteSpace(CategoryParam) && _categories.Contains(CategoryParam))
             _filter = CategoryParam;
 
+        // Fire-and-forget: the glossary itself renders instantly from static data - it shouldn't block on
+        // Feeds.GetAsync(), which on a cold cache can take 10+ minutes with the Reddit source batch. The
+        // "emerging terms" panel just fades in once this resolves instead of holding up the whole page.
+        _ = LoadFeedItemsAsync();
+    }
+
+    private async Task LoadFeedItemsAsync()
+    {
         var result = await Feeds.GetAsync();
         _feedItems = result.Items;
+        StateHasChanged();
     }
 
     private void SetCategory(string cat)

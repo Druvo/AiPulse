@@ -3,6 +3,7 @@
 @rendermode InteractiveServer
 @implements IAsyncDisposable
 @inject FeedAggregatorService Feeds
+@inject FeedHistoryService History
 @inject ReadingStateService Reading
 @inject NavigationManager Nav
 @inject IJSRuntime JS
@@ -16,7 +17,14 @@
     <div class="d-flex align-items-center gap-2">
         @if (_result is not null)
         {
-            <span class="text-muted small">Updated @_result.FetchedAt.ToLocalTime().ToString("g")</span>
+            @if (_result.FetchedAt == DateTimeOffset.MinValue)
+            {
+                <span class="text-muted small">Showing saved history @(_loading ? "— fetching live data…" : "")</span>
+            }
+            else
+            {
+                <span class="text-muted small">Updated @_result.FetchedAt.ToLocalTime().ToString("g")</span>
+            }
         }
         <div class="btn-group view-toggle" role="group">
             <button class="btn btn-sm @(_view == "List" ? "btn-dark" : "btn-outline-dark")" @onclick='() => SetView("List")'><Icon Name="list" Size="15" /> List</button>
@@ -293,7 +301,7 @@ else
     private string _tag = "";
     private DateOnly? _dateFrom;
     private DateOnly? _dateTo;
-    private string _view = "List";
+    private string _view = "Grid";
     private bool _showFilters;
     private int _page = 1;
     private int _pageSize = 20;
@@ -343,11 +351,40 @@ else
         // once in the real circuit; doing the mutate-on-read here would let the interactive pass read back
         // the timestamp the prerender pass had just written, collapsing "New" to ~0 items every time.
         _sinceVisit = Reading.LastNewsVisit;
-        // Fire-and-forget: this page must render immediately (spinner state) instead of blocking behind
-        // Feeds.GetAsync() on a cold cache - with 100+ Reddit sources now in the mix sharing one
-        // rate-limited host, a first-ever fetch after a restart can take 10+ minutes, and a blocking
-        // OnInitializedAsync would leave the page showing nothing at all for that entire time.
+
+        // Show what we already know instantly instead of a blank "Fetching..." state - FeedHistoryService's
+        // persisted items are already on disk and available with no network wait, even right after a
+        // restart. Load() below still runs and replaces this with the live, fully-deduped result once it
+        // resolves; in the meantime this is at least real (if slightly stale, and not fuzzy-deduped) data.
+        var historyItems = History.Items;
+        if (historyItems.Count > 0)
+        {
+            _result = new FeedResult { Items = historyItems.ToList(), Errors = new(), FetchedAt = DateTimeOffset.MinValue };
+            _newCount = historyItems.Count(i => i.Published > _sinceVisit);
+        }
+
+        // Progressive fill-in: as each source finishes during the live fetch, update the list instead of
+        // waiting for the entire batch - with 100+ Reddit sources sharing one rate-limited host, "the whole
+        // batch" can take 10+ minutes, so a one-shot swap at the end would leave the page looking frozen.
+        Feeds.PartialProgress += OnPartialProgress;
+
+        // Fire-and-forget: this page must render immediately instead of blocking behind Feeds.GetAsync()
+        // on a cold cache - a blocking OnInitializedAsync would leave the page showing nothing at all for
+        // however long the live fetch takes.
         _ = Load(false);
+    }
+
+    private void OnPartialProgress(IReadOnlyList<FeedItem> items)
+    {
+        _ = InvokeAsync(() =>
+        {
+            // Only while a live fetch is actually in flight - once Load() finishes, its own fully-deduped
+            // result should stand rather than a stray late progress tick from some other page's refresh.
+            if (!_loading) return;
+            _result = new FeedResult { Items = items.ToList(), Errors = _result?.Errors ?? new(), FetchedAt = DateTimeOffset.Now };
+            _newCount = items.Count(i => i.Published > _sinceVisit);
+            StateHasChanged();
+        });
     }
 
     private void SetView(string view) { _view = view; SyncUrl(); }
@@ -373,7 +410,7 @@ else
         _page = 1; // any filter/sort/view change invalidates the current page
 
         var query = new List<string>();
-        if (_view != "List") query.Add($"view={_view}");
+        if (_view != "Grid") query.Add($"view={_view}");
         if (_filter != "All") query.Add($"filter={Uri.EscapeDataString(_filter)}");
         if (!string.IsNullOrEmpty(_tag)) query.Add($"tag={Uri.EscapeDataString(_tag)}");
         if (_dateFrom is not null && _dateTo is not null)
@@ -612,6 +649,7 @@ else
 
     public async ValueTask DisposeAsync()
     {
+        Feeds.PartialProgress -= OnPartialProgress;
         if (_dotNetRef is null) return;
         try { await JS.InvokeVoidAsync("aipulseKeyboard.unregister"); } catch { /* circuit may already be gone */ }
         _dotNetRef.Dispose();

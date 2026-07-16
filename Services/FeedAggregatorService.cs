@@ -52,6 +52,15 @@ public sealed class FeedAggregatorService
 
     public DateTimeOffset? LastFetched => _cache?.FetchedAt;
 
+    /// <summary>
+    /// Raised as each individual source finishes during a fetch, with a running (not yet deduped) snapshot
+    /// of every item fetched so far - lets a page render progressively (source by source) instead of
+    /// waiting for the entire batch via <see cref="GetAsync"/>, which with 100+ sources sharing a
+    /// rate-limited host can take many minutes. Snapshot items may briefly include near-duplicates across
+    /// sources; the final result from GetAsync() is still the properly-deduped one.
+    /// </summary>
+    public event Action<IReadOnlyList<FeedItem>>? PartialProgress;
+
     /// <summary>Consecutive failed fetches for a source since its last success (0 = healthy or unknown).</summary>
     public int GetFailureStreak(string sourceName) => _failureStreaks.GetValueOrDefault(sourceName);
 
@@ -122,6 +131,10 @@ public sealed class FeedAggregatorService
             finally
             {
                 gate.Release();
+                // Snapshot after every source (success or failure) so subscribers see steady, real progress
+                // rather than long silent gaps while a rate-limited source retries.
+                try { PartialProgress?.Invoke(items.OrderByDescending(i => i.Published).ToList()); }
+                catch (Exception ex) { _log.LogDebug(ex, "PartialProgress subscriber threw"); }
             }
         });
 

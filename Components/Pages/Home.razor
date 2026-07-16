@@ -121,70 +121,81 @@
     </div>
 </div>
 
-@if (_biggestStory is not null)
-{
-    <div class="mb-4">
-        <div class="x-small text-muted text-uppercase mb-1"><Icon Name="star" Size="12" /> Biggest story @RangeLabel</div>
-        <FeedItemCard Item="_biggestStory" Layout="Compact" CssClass="biggest-story-card" />
+<div class="row g-4 mb-4">
+    <div class="col-md-6">
+        <h4 class="section-title"><Icon Name="star" /> Biggest story @RangeLabel</h4>
+        @if (_biggestStory is not null)
+        {
+            <FeedItemCard Item="_biggestStory" Layout="Compact" CssClass="biggest-story-card" />
+        }
+        else
+        {
+            <p class="text-muted">Not enough data yet — check back after AiPulse has been running a few days.</p>
+        }
     </div>
-}
+    <div class="col-md-6">
+        @if (_range != "today")
+        {
+            <h4 class="section-title"><Icon Name="calendar" /> Day by day</h4>
+
+            <div class="mb-2">
+                <input class="form-control form-control-sm" style="max-width:280px" placeholder="Search by category…"
+                       value="@_search" @oninput="e => { _search = (string)e.Value!; _dayPage = 1; }" />
+            </div>
+
+            var (pageDays, totalDays) = GetDayPage();
+
+            <div class="table-responsive">
+                <table class="table table-sm align-middle">
+                    <thead>
+                        <tr>
+                            <SortableHeader Column="date" Label="Day" SortColumn="@_sortColumn" SortAscending="@_sortAscending" OnSort="ToggleSort" />
+                            <SortableHeader Column="count" Label="Items" SortColumn="@_sortColumn" SortAscending="@_sortAscending" OnSort="ToggleSort" />
+                            <th>Top categories</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var day in pageDays)
+                        {
+                            <tr>
+                                <td>@day.Date.ToString("ddd, MMM d")</td>
+                                <td>@day.Count</td>
+                                <td>
+                                    @foreach (var (cat, count) in day.TopCategories)
+                                    {
+                                        <span class="badge bg-secondary me-1">@cat @count</span>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+
+            <Pager TotalItems="totalDays" @bind-CurrentPage="_dayPage" @bind-PageSize="_dayPageSize" PageSizeOptions="new[] { 7, 14, 30 }" />
+        }
+    </div>
+</div>
 
 <h4 class="section-title"><Icon Name="star" /> Biggest stories @RangeLabel</h4>
 <p class="text-muted">Ranked by how many of your sources covered the same story — the more sources reporting it, the bigger the signal.</p>
 
-@if (_biggestStories.Count == 0)
+@{
+    // The single biggest story already got its own hero card above - don't repeat it as the list's first entry too.
+    var otherBiggestStories = _biggestStories.Where(i => i.Link != _biggestStory?.Link).ToList();
+}
+@if (otherBiggestStories.Count == 0)
 {
     <p class="text-muted">Not enough data yet — check back after AiPulse has been running a few days.</p>
 }
 else
 {
-    @foreach (var item in _biggestStories)
+    @foreach (var item in otherBiggestStories)
     {
         <div class="mb-2">
             <FeedItemCard Item="item" Layout="Compact" />
         </div>
     }
-}
-
-@if (_range != "today")
-{
-    <h4 class="section-title mt-4"><Icon Name="calendar" /> Day by day</h4>
-
-    <div class="mb-2">
-        <input class="form-control form-control-sm" style="max-width:280px" placeholder="Search by category…"
-               value="@_search" @oninput="e => { _search = (string)e.Value!; _dayPage = 1; }" />
-    </div>
-
-    var (pageDays, totalDays) = GetDayPage();
-
-    <div class="table-responsive">
-        <table class="table table-sm align-middle">
-            <thead>
-                <tr>
-                    <SortableHeader Column="date" Label="Day" SortColumn="@_sortColumn" SortAscending="@_sortAscending" OnSort="ToggleSort" />
-                    <SortableHeader Column="count" Label="Items" SortColumn="@_sortColumn" SortAscending="@_sortAscending" OnSort="ToggleSort" />
-                    <th>Top categories</th>
-                </tr>
-            </thead>
-            <tbody>
-                @foreach (var day in pageDays)
-                {
-                    <tr>
-                        <td>@day.Date.ToString("ddd, MMM d")</td>
-                        <td>@day.Count</td>
-                        <td>
-                            @foreach (var (cat, count) in day.TopCategories)
-                            {
-                                <span class="badge bg-secondary me-1">@cat @count</span>
-                            }
-                        </td>
-                    </tr>
-                }
-            </tbody>
-        </table>
-    </div>
-
-    <Pager TotalItems="totalDays" @bind-CurrentPage="_dayPage" @bind-PageSize="_dayPageSize" PageSizeOptions="new[] { 7, 14, 30 }" />
 }
 
 @if (Reading.DashboardWidgets.Count > 0)
