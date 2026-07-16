@@ -14,16 +14,21 @@ namespace AiPulse.Services;
 /// letter of GitHub's ToS, though not their API) - see the ROADMAP for the full reality check. Keyword
 /// search (<see cref="SearchAsync"/>) stays on the official Search API since trending pages aren't
 /// searchable, and single-repo star lookups (<see cref="GetRepoStatsAsync"/>) use the official REST API
-/// too - only the two trending views scrape HTML.
+/// too - only the two trending views scrape HTML. Both caches persist to disk
+/// (App_Data/github-trending-cache.json) so a scrape failure falls back to the last successfully-scraped
+/// data - even across restarts - instead of an empty result.
 /// </summary>
 public sealed class GitHubTrendingService
 {
     private static readonly TimeSpan CacheFor = TimeSpan.FromHours(1);
     private static readonly TimeSpan RepoStatsCacheFor = TimeSpan.FromHours(6);
     private static readonly JsonSerializerOptions JsonOpts = new() { PropertyNameCaseInsensitive = true };
+    private static readonly JsonSerializerOptions PersistOpts = new() { WriteIndented = true };
 
     private readonly IHttpClientFactory _httpFactory;
     private readonly ILogger<GitHubTrendingService> _log;
+    private readonly string _cachePath;
+    private readonly object _persistLock = new();
 
     private static readonly string[] ValidSince = { "daily", "weekly", "monthly" };
 
@@ -35,28 +40,38 @@ public sealed class GitHubTrendingService
 
     private readonly ConcurrentDictionary<string, (DateTimeOffset At, int? Stars)> _repoStatsCache = new();
 
-    public GitHubTrendingService(IHttpClientFactory httpFactory, ILogger<GitHubTrendingService> log)
+    public GitHubTrendingService(IHttpClientFactory httpFactory, IWebHostEnvironment env, ILogger<GitHubTrendingService> log)
     {
         _httpFactory = httpFactory;
         _log = log;
+        var dir = Path.Combine(env.ContentRootPath, "App_Data");
+        Directory.CreateDirectory(dir);
+        _cachePath = Path.Combine(dir, "github-trending-cache.json");
+        LoadPersisted();
     }
 
-    /// <summary>Same "since" values as github.com/trending itself: "daily" (default), "weekly", "monthly".</summary>
-    public async Task<List<TrendingRepo>> GetTrendingReposAsync(string since = "daily", CancellationToken ct = default)
+    /// <summary>When the trending repos for this "since" were last successfully scraped (possibly from before this run) - null if never.</summary>
+    public DateTimeOffset? GetRepoLastUpdated(string since) => _repoCache.TryGetValue(since, out var c) ? c.At : null;
+    /// <summary>When the trending developers for this "since" were last successfully scraped - null if never.</summary>
+    public DateTimeOffset? GetDevLastUpdated(string since) => _devCache.TryGetValue(since, out var c) ? c.At : null;
+
+    /// <summary>Same "since" values as github.com/trending itself: "daily" (default), "weekly", "monthly". Pass force:true to bypass the freshness window (manual "Refresh" buttons).</summary>
+    public async Task<List<TrendingRepo>> GetTrendingReposAsync(string since = "daily", bool force = false, CancellationToken ct = default)
     {
         since = ValidSince.Contains(since) ? since : "daily";
-        if (_repoCache.TryGetValue(since, out var cached) && DateTimeOffset.Now - cached.At < CacheFor)
+        if (!force && _repoCache.TryGetValue(since, out var cached) && DateTimeOffset.Now - cached.At < CacheFor)
             return cached.Repos;
 
         var gate = _repoLocks.GetOrAdd(since, _ => new SemaphoreSlim(1, 1));
         await gate.WaitAsync(ct);
         try
         {
-            if (_repoCache.TryGetValue(since, out var cached2) && DateTimeOffset.Now - cached2.At < CacheFor)
+            if (!force && _repoCache.TryGetValue(since, out var cached2) && DateTimeOffset.Now - cached2.At < CacheFor)
                 return cached2.Repos;
 
             var repos = await ScrapeTrendingReposAsync(since, ct);
             _repoCache[since] = (DateTimeOffset.Now, repos);
+            SavePersisted();
             return repos;
         }
         catch (Exception ex)
@@ -70,22 +85,23 @@ public sealed class GitHubTrendingService
         }
     }
 
-    /// <summary>Same "since" values as github.com/trending/developers itself: "daily" (default), "weekly", "monthly".</summary>
-    public async Task<List<TrendingDeveloper>> GetTrendingDevelopersAsync(string since = "daily", CancellationToken ct = default)
+    /// <summary>Same "since" values as github.com/trending/developers itself: "daily" (default), "weekly", "monthly". Pass force:true to bypass the freshness window (manual "Refresh" buttons).</summary>
+    public async Task<List<TrendingDeveloper>> GetTrendingDevelopersAsync(string since = "daily", bool force = false, CancellationToken ct = default)
     {
         since = ValidSince.Contains(since) ? since : "daily";
-        if (_devCache.TryGetValue(since, out var cached) && DateTimeOffset.Now - cached.At < CacheFor)
+        if (!force && _devCache.TryGetValue(since, out var cached) && DateTimeOffset.Now - cached.At < CacheFor)
             return cached.Devs;
 
         var gate = _devLocks.GetOrAdd(since, _ => new SemaphoreSlim(1, 1));
         await gate.WaitAsync(ct);
         try
         {
-            if (_devCache.TryGetValue(since, out var cached2) && DateTimeOffset.Now - cached2.At < CacheFor)
+            if (!force && _devCache.TryGetValue(since, out var cached2) && DateTimeOffset.Now - cached2.At < CacheFor)
                 return cached2.Devs;
 
             var devs = await ScrapeTrendingDevelopersAsync(since, ct);
             _devCache[since] = (DateTimeOffset.Now, devs);
+            SavePersisted();
             return devs;
         }
         catch (Exception ex)
@@ -301,5 +317,53 @@ public sealed class GitHubTrendingService
         [JsonPropertyName("stargazers_count")] public int StargazersCount { get; set; }
         public string? Language { get; set; }
         [JsonPropertyName("html_url")] public string? HtmlUrl { get; set; }
+    }
+
+    private void LoadPersisted()
+    {
+        try
+        {
+            if (!File.Exists(_cachePath)) return;
+            var data = JsonSerializer.Deserialize<PersistedCache>(File.ReadAllText(_cachePath), JsonOpts);
+            if (data is null) return;
+
+            foreach (var (since, entry) in data.Repos)
+                _repoCache[since] = (entry.At, entry.Items);
+            foreach (var (since, entry) in data.Devs)
+                _devCache[since] = (entry.At, entry.Items);
+        }
+        catch { /* corrupt file -> start fresh, next successful scrape overwrites it */ }
+    }
+
+    private void SavePersisted()
+    {
+        lock (_persistLock)
+        {
+            var data = new PersistedCache
+            {
+                Repos = _repoCache.ToDictionary(kv => kv.Key, kv => new PersistedRepoEntry { At = kv.Value.At, Items = kv.Value.Repos }),
+                Devs = _devCache.ToDictionary(kv => kv.Key, kv => new PersistedDevEntry { At = kv.Value.At, Items = kv.Value.Devs })
+            };
+            try { File.WriteAllText(_cachePath, JsonSerializer.Serialize(data, PersistOpts)); }
+            catch { /* best-effort - losing the persisted fallback isn't fatal, just less resilient */ }
+        }
+    }
+
+    private sealed class PersistedCache
+    {
+        public Dictionary<string, PersistedRepoEntry> Repos { get; set; } = new();
+        public Dictionary<string, PersistedDevEntry> Devs { get; set; } = new();
+    }
+
+    private sealed class PersistedRepoEntry
+    {
+        public DateTimeOffset At { get; set; }
+        public List<TrendingRepo> Items { get; set; } = new();
+    }
+
+    private sealed class PersistedDevEntry
+    {
+        public DateTimeOffset At { get; set; }
+        public List<TrendingDeveloper> Items { get; set; } = new();
     }
 }

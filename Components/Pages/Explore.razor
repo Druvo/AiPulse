@@ -33,6 +33,13 @@
 
 @if (_section == "models")
 {
+    <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-2">
+        <span class="text-muted x-small">Hugging Face - @LastUpdatedLabel(HuggingFace.LastUpdated)</span>
+        <button class="btn btn-sm btn-outline-secondary" disabled="@_modelsLoading" @onclick="() => LoadModelsAsync(force: true)">
+            @if (_modelsLoading) { <span class="spinner"></span> } else { <Icon Name="refresh" Size="13" /> }
+            Refresh
+        </button>
+    </div>
     <div class="input-group mb-3" style="max-width: 420px;">
         <input class="form-control" placeholder="Search Hugging Face by keyword…" @bind="_hfQuery"
                @onkeydown="@(async e => { if (e.Key == "Enter") await SearchHuggingFace(); })" />
@@ -148,7 +155,16 @@ else if (_section == "github")
 
     <div class="row g-4">
         <div class="col-lg-6">
-            <h6 class="section-title mb-2"><Icon Name="code" Size="16" /> Repositories</h6>
+            <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-2">
+                <h6 class="section-title mb-0"><Icon Name="code" Size="16" /> Repositories</h6>
+                <div class="d-flex align-items-center gap-2">
+                    <span class="text-muted x-small">@LastUpdatedLabel(GitHubTrending.GetRepoLastUpdated(_since))</span>
+                    <button class="btn btn-sm btn-outline-secondary" disabled="@_reposLoading" @onclick="() => LoadReposAsync(force: true)">
+                        @if (_reposLoading) { <span class="spinner"></span> } else { <Icon Name="refresh" Size="13" /> }
+                        Refresh
+                    </button>
+                </div>
+            </div>
             <div class="input-group mb-3">
                 <input class="form-control" placeholder="Search GitHub repos by keyword…" @bind="_repoQuery"
                        @onkeydown="@(async e => { if (e.Key == "Enter") await SearchRepos(); })" />
@@ -222,7 +238,16 @@ else if (_section == "github")
             }
         </div>
         <div class="col-lg-6">
-            <h6 class="section-title mb-2"><Icon Name="user" Size="16" /> Trending Developers</h6>
+            <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-2">
+                <h6 class="section-title mb-0"><Icon Name="user" Size="16" /> Trending Developers</h6>
+                <div class="d-flex align-items-center gap-2">
+                    <span class="text-muted x-small">@LastUpdatedLabel(GitHubTrending.GetDevLastUpdated(_since))</span>
+                    <button class="btn btn-sm btn-outline-secondary" disabled="@_developersLoading" @onclick="() => LoadDevelopersAsync(force: true)">
+                        @if (_developersLoading) { <span class="spinner"></span> } else { <Icon Name="refresh" Size="13" /> }
+                        Refresh
+                    </button>
+                </div>
+            </div>
             @foreach (var d in _developers.Skip((_devPage - 1) * _devPageSize).Take(_devPageSize))
             {
                 <div class="card mb-2">
@@ -396,7 +421,16 @@ else if (_section == "try")
             </div>
         }
 
-        <h6 class="section-title mt-4 mb-2"><Icon Name="sparkle" Size="16" /> Discover more models</h6>
+        <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mt-4 mb-2">
+            <h6 class="section-title mb-0"><Icon Name="sparkle" Size="16" /> Discover more models</h6>
+            <div class="d-flex align-items-center gap-2">
+                <span class="text-muted x-small">@LastUpdatedLabel(HuggingFace.GgufLastUpdated)</span>
+                <button class="btn btn-sm btn-outline-secondary" disabled="@_ggufLoading" @onclick="() => LoadGgufAsync(force: true)">
+                    @if (_ggufLoading) { <span class="spinner"></span> } else { <Icon Name="refresh" Size="13" /> }
+                    Refresh
+                </button>
+            </div>
+        </div>
         <p class="text-muted x-small mb-2">
             Live from Hugging Face, filtered to GGUF-packaged models — the format Ollama can actually run — sorted by downloads.
             These include official releases and community re-quantizations (bartowski, unsloth, mradermacher…),
@@ -554,29 +588,40 @@ else if (_section == "try")
         _ = CheckOllama();
     }
 
-    private async Task LoadModelsAsync()
+    private async Task LoadModelsAsync(bool force = false)
     {
-        try { (_models, _datasets) = await HuggingFace.GetTrendingAsync(); }
+        _modelsLoading = true;
+        StateHasChanged();
+        try { (_models, _datasets) = await HuggingFace.GetTrendingAsync(force); }
         finally { _modelsLoading = false; StateHasChanged(); }
     }
 
-    private async Task LoadReposAsync()
+    private async Task LoadReposAsync(bool force = false)
     {
-        try { _repos = await GitHubTrending.GetTrendingReposAsync(_since); }
+        _reposLoading = true;
+        StateHasChanged();
+        try { _repos = await GitHubTrending.GetTrendingReposAsync(_since, force); }
         finally { _reposLoading = false; StateHasChanged(); }
     }
 
-    private async Task LoadDevelopersAsync()
+    private async Task LoadDevelopersAsync(bool force = false)
     {
-        try { _developers = await GitHubTrending.GetTrendingDevelopersAsync(_since); }
+        _developersLoading = true;
+        StateHasChanged();
+        try { _developers = await GitHubTrending.GetTrendingDevelopersAsync(_since, force); }
         finally { _developersLoading = false; StateHasChanged(); }
     }
 
-    private async Task LoadGgufAsync()
+    private async Task LoadGgufAsync(bool force = false)
     {
-        try { _ggufModels = await HuggingFace.GetTrendingGgufAsync(); }
+        _ggufLoading = true;
+        StateHasChanged();
+        try { _ggufModels = await HuggingFace.GetTrendingGgufAsync(force); }
         finally { _ggufLoading = false; StateHasChanged(); }
     }
+
+    private string LastUpdatedLabel(DateTimeOffset? at) =>
+        at is null ? "never fetched yet" : $"updated {at.Value.ToLocalTime():g}";
 
     private RenderFragment SystemBanner() => @<div>
         <div class="alert alert-light border py-2 small mb-2 d-flex align-items-center gap-2">
@@ -684,24 +729,16 @@ else if (_section == "try")
         _repos = await GitHubTrending.GetTrendingReposAsync(_since);
     }
 
-    private async Task OnSinceChanged(ChangeEventArgs e)
+    private Task OnSinceChanged(ChangeEventArgs e)
     {
         _since = e.Value?.ToString() ?? "daily";
         _repoPage = 1;
         _devPage = 1;
 
-        var devsTask = GitHubTrending.GetTrendingDevelopersAsync(_since);
+        var tasks = new List<Task> { LoadDevelopersAsync() };
         if (string.IsNullOrWhiteSpace(_repoActiveQuery))
-        {
-            var reposTask = GitHubTrending.GetTrendingReposAsync(_since);
-            await Task.WhenAll(reposTask, devsTask);
-            _repos = reposTask.Result;
-        }
-        else
-        {
-            await devsTask;
-        }
-        _developers = devsTask.Result;
+            tasks.Add(LoadReposAsync());
+        return Task.WhenAll(tasks);
     }
 
     private async Task SearchGguf()

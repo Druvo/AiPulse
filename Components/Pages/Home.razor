@@ -117,7 +117,7 @@
         <MiniTimeline Items="_historyItems ?? Array.Empty<FeedItem>()" MaxDays="_heatmapDays" />
     </div>
     <div class="col-lg-4">
-        <ExploreTrendingPanel Models="_trendingModels" Repos="_trendingRepos" Developers="_trendingDevelopers" Loading="_trendingLoading" />
+        <ExploreTrendingPanel Models="_trendingModels" Repos="_trendingRepos" Developers="_trendingDevelopers" Loading="_trendingLoading" OnRefresh="() => LoadTrendingAsync(force: true)" />
     </div>
 </div>
 
@@ -319,13 +319,15 @@ else
         StateHasChanged();
     }
 
-    private async Task LoadTrendingAsync()
+    private async Task LoadTrendingAsync(bool force = false)
     {
+        _trendingLoading = true;
+        StateHasChanged();
         try
         {
-            var hfTask = HuggingFace.GetTrendingAsync();
-            var reposTask = GitHubTrending.GetTrendingReposAsync();
-            var devsTask = GitHubTrending.GetTrendingDevelopersAsync();
+            var hfTask = HuggingFace.GetTrendingAsync(force);
+            var reposTask = GitHubTrending.GetTrendingReposAsync(force: force);
+            var devsTask = GitHubTrending.GetTrendingDevelopersAsync(force: force);
             await Task.WhenAll(hfTask, reposTask, devsTask);
             (_trendingModels, _) = hfTask.Result;
             _trendingRepos = reposTask.Result;

@@ -3,7 +3,15 @@
 
 <div class="card mb-3">
     <div class="card-body">
-        <h6 class="section-title mb-2"><Icon Name="sparkle" Size="16" /> Trending models &amp; repos</h6>
+        <div class="d-flex align-items-center justify-content-between mb-2">
+            <h6 class="section-title mb-0"><Icon Name="sparkle" Size="16" /> Trending models &amp; repos</h6>
+            @if (OnRefresh.HasDelegate)
+            {
+                <button class="btn btn-sm btn-outline-secondary" disabled="@Loading" @onclick="OnRefresh" title="Refresh live data">
+                    @if (Loading) { <span class="spinner"></span> } else { <Icon Name="refresh" Size="13" /> }
+                </button>
+            }
+        </div>
         @if (Loading)
         {
             <p class="text-muted small mb-0"><span class="spinner"></span> Loading…</p>
@@ -70,4 +78,8 @@
 
     [Parameter]
     public bool Loading { get; set; }
+
+    /// <summary>Manual "Refresh" button, only shown when the caller wires this up.</summary>
+    [Parameter]
+    public EventCallback OnRefresh { get; set; }
 }

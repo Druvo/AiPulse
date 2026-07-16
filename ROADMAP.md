@@ -194,6 +194,21 @@ Status tags: ✅ done · 🟢 fits philosophy, no AI needed · 🟡 needs a desi
   showing its own "Loading…" beside it, and the Dashboard's stat cards/digest/trending panel/biggest
   stories (all sourced from already-persisted history, no network wait needed) rendered instantly with
   only the small "Trending models & repos" panel waiting on the network.
+- Hugging Face and GitHub Trending fixed properly this time: both services now persist their last
+  successful fetch to disk (`App_Data/huggingface-cache.json`, `App_Data/github-trending-cache.json`), so a
+  fetch failure - or a cold start right after Hugging Face happened to be unreachable - falls back to the
+  last good data (with a visible "updated <time>" label) instead of an empty "couldn't reach" panel, even
+  across restarts. Every trending panel across Explore, the Dashboard, and Tools & Tips (Hugging Face
+  models/datasets/GGUF, GitHub repos/developers on all three `since` windows) got its own manual Refresh
+  button that force-bypasses the cache. Root cause of the original "why isn't this loading" report:
+  Hugging Face is genuinely, intermittently unreachable from this network (confirmed directly via `curl` -
+  one attempt timed out completely, the next succeeded in under a second) - not an app bug, so the fix is
+  resilience (cache + manual refresh) rather than chasing a network issue outside AiPulse's control.
+- Added 100 Reddit sources in one batch (AI/agents, coding assistants, dev tools/homelab, and a long tail of
+  general-interest subreddits) via the existing OPML importer - no new code needed, `OpmlService` already
+  dedupes by URL and does a best-effort reachability check. All 100 were new (0 skipped as duplicates of
+  the existing 7 Reddit sources); see the reality-check note below for what actually happens when this many
+  Reddit sources get polled together.
 
 > **GitHub Trending scrape reality check:** `GitHubTrendingService` scrapes `github.com/trending` and
 > `github.com/trending/developers` directly for the repo/developer views above - GitHub has no API for
@@ -204,17 +219,22 @@ Status tags: ✅ done · 🟢 fits philosophy, no AI needed · 🟡 needs a desi
 > notice and break the selectors. Verified against the live page at time of writing - same repos, same
 > star/fork counts, same "Built by" avatars.
 
-> **Reddit reality check:** Reddit's unauthenticated `.rss` endpoint rate-limits hard and per-IP, not
-> per-subreddit - fetching several Reddit sources in the same poll cycle (AiPulse fetches all sources
-> roughly together) reliably exhausts the shared budget after just 1-2 successful requests, so most of them
-> come back `429` on any given poll. Verified directly: manually spacing requests ~15-30s apart, all 7
-> current Reddit sources return real content individually, but a live force-refresh through the app got 5 of
-> 6 new ones rate-limited at once. This isn't a config problem - it self-heals over multiple poll cycles
-> (the two original Reddit sources already have 152 and 32 items respectively in the history despite
-> frequent failures) - but it does mean uptime % on the Sources page will look worse for Reddit than for
-> everything else, and it gets worse the more Reddit sources you add. A real fix would mean staggering
-> Reddit-domain fetches with a delay inside `FeedAggregatorService` instead of fetching every source
-> together; not done here since it wasn't asked for.
+> **Reddit reality check (updated - now 107 Reddit sources: the original 7 plus a 100-subreddit batch
+> imported via OPML):** `FeedAggregatorService` since gained a per-domain cooldown (3s between requests to
+> the same host) plus a per-source retry with backoff (5s, then 10s) on a `429` before giving up for that
+> poll - a real improvement over the original "not done" gap this note used to describe. It still isn't
+> enough for 107 sources sharing one host: the cooldown check-then-set isn't atomic under the 5-way
+> concurrency gate, so several Reddit requests can slip past it in the same instant, and Reddit's actual
+> anonymous-RSS budget is tighter than 3s/request anyway. Verified live via a full force-refresh right after
+> the import: the large majority of the 100 new subreddits came back `429` on the first attempt, some
+> recovered on the 5s/10s retry, most didn't and were left for the next poll cycle. Same conclusion as
+> before, just at 15x the scale - this self-heals over multiple poll cycles rather than in one refresh (a
+> handful of individually-tested subreddits, e.g. r/LocalLLaMA and r/AskReddit, return real content fine
+> when requested on their own, confirming the sources themselves are correctly configured). A real fix would
+> mean a dedicated slower stagger for the `reddit.com` host specifically (or a shared cross-poll rate
+> budget) instead of the generic per-domain cooldown; not done here since it wasn't asked for, and 107
+> same-host sources is an unusually large batch compared to what the rest of AiPulse's source list looks
+> like.
 
 > **WebSub reality check:** none of AiPulse's ~40 default sources currently declare a hub (checked YouTube,
 > WordPress.com, Feedburner, Blogger - all previously reliable examples, none do anymore). The subscribe/
