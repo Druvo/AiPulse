@@ -6,6 +6,7 @@
 @inject SourceHealthService Health
 @inject WebSubService WebSub
 @inject OpmlService Opml
+@inject FeedDiscoveryService Discovery
 @inject IJSRuntime JS
 
 <PageTitle>AiPulse · Sources</PageTitle>
@@ -72,7 +73,19 @@ else if (OpmlAdded is not null)
             <EditForm Model="_form" OnValidSubmit="AddSource">
                 <div class="row g-2">
                     <div class="col-md-4"><input class="form-control" placeholder="Name" @bind="_form.Name" /></div>
-                    <div class="col-md-8"><input class="form-control" placeholder="Feed URL (RSS/Atom)" @bind="_form.Url" /></div>
+                    <div class="col-md-8">
+                        <div class="input-group">
+                            <input class="form-control" placeholder="Feed URL (RSS/Atom) - or just paste the site's homepage" @bind="_form.Url" />
+                            <button type="button" class="btn btn-outline-secondary" disabled="@(_discovering || string.IsNullOrWhiteSpace(_form.Url))" @onclick="DiscoverFeed">
+                                @if (_discovering) { <span class="spinner"></span> } else { <Icon Name="search" Size="14" /> }
+                                Find feed
+                            </button>
+                        </div>
+                        @if (_discoveryMessage is not null)
+                        {
+                            <div class="x-small @(_discoveryFound ? "text-success" : "text-danger") mt-1">@_discoveryMessage</div>
+                        }
+                    </div>
                     <div class="col-md-3">
                         <select class="form-select" @bind="_form.Category">
                             @foreach (var c in _categories) { <option value="@c">@c</option> }
@@ -543,6 +556,36 @@ else
     }
 
     private void CancelEdit() => _editingId = null;
+
+    private bool _discovering;
+    private bool _discoveryFound;
+    private string? _discoveryMessage;
+
+    private async Task DiscoverFeed()
+    {
+        _discovering = true;
+        _discoveryMessage = null;
+        StateHasChanged();
+        try
+        {
+            var found = await Discovery.DiscoverFeedUrlAsync(_form.Url);
+            if (found is not null)
+            {
+                _discoveryFound = true;
+                _discoveryMessage = found == _form.Url.Trim() ? "That's already a feed URL." : $"Found: {found}";
+                _form.Url = found;
+            }
+            else
+            {
+                _discoveryFound = false;
+                _discoveryMessage = "Couldn't find a feed on that page - paste the RSS/Atom URL directly if you know it.";
+            }
+        }
+        finally
+        {
+            _discovering = false;
+        }
+    }
 
     private async Task AddSource()
     {

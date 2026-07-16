@@ -286,6 +286,12 @@ Status tags: ✅ done · 🟢 fits philosophy, no AI needed · 🟡 needs a desi
   `<article>`/`<main>` exists on that page at all, so the generic density heuristic would happily grab the
   metadata sidebar instead) - a defensive improvement for any future source that links to arXiv abs pages
   without arXiv's own complete-abstract RSS.
+- New **FeedDiscoveryService**: the Add Source form's URL field now has a "Find feed" button - paste a
+  site's plain homepage instead of already knowing its feed URL. Tries, in order: is this URL already a
+  feed; does the page declare `<link rel="alternate" type="rss|atom">` in its `<head>` (the standard way
+  sites advertise this); a handful of conventional paths (`/feed`, `/rss.xml`, etc.) for platforms that
+  don't bother declaring one. Verified live against a real site (simonwillison.net) - pasted the bare
+  homepage, it correctly found and filled in the real Atom feed URL.
 
 > **GitHub Trending scrape reality check:** `GitHubTrendingService` scrapes `github.com/trending` and
 > `github.com/trending/developers` directly for the repo/developer views above - GitHub has no API for

@@ -66,6 +66,7 @@ builder.Services.AddSingleton<BackupService>();
 builder.Services.AddSingleton<OpmlService>();
 builder.Services.AddSingleton<SourceHealthService>();
 builder.Services.AddSingleton<ContentExtractorService>();
+builder.Services.AddSingleton<FeedDiscoveryService>();
 builder.Services.AddSingleton<FaviconService>();
 builder.Services.AddHttpContextAccessor();
 
