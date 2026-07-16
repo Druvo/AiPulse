@@ -21,7 +21,7 @@ public sealed class FeedAggregatorService
 
     /// <summary>Per-domain throttle: tracks last fetch time per host to avoid rate-limiting (e.g. Reddit 429s).</summary>
     private static readonly ConcurrentDictionary<string, DateTime> _lastDomainFetch = new();
-    private static readonly TimeSpan DomainCooldown = TimeSpan.FromSeconds(2);
+    private static readonly TimeSpan DomainCooldown = TimeSpan.FromSeconds(3);
     private readonly SourceHealthService _health;
     private readonly ContentExtractorService _extractor;
     private readonly WebSubService _webSub;
@@ -224,8 +224,24 @@ public sealed class FeedAggregatorService
         else
         {
             var client = _httpFactory.CreateClient("feeds");
-            using var resp = await client.GetAsync(source.Url, HttpCompletionOption.ResponseHeadersRead, ct);
-            resp.EnsureSuccessStatusCode();
+
+            // Retry on 429 (Too Many Requests) with exponential backoff.
+            HttpResponseMessage? resp = null;
+            for (int attempt = 0; attempt < 3; attempt++)
+            {
+                resp?.Dispose();
+                resp = await client.GetAsync(source.Url, HttpCompletionOption.ResponseHeadersRead, ct);
+                if ((int)resp.StatusCode != 429) break;
+
+                if (attempt < 2) // don't wait on last attempt
+                {
+                    var retryAfter = resp.Headers.RetryAfter?.Delta ?? TimeSpan.FromSeconds(5 * (attempt + 1));
+                    _log.LogWarning("Rate-limited (429) on {Source}, waiting {Wait}s (attempt {Attempt})", source.Name, retryAfter.TotalSeconds, attempt + 1);
+                    await Task.Delay(retryAfter, ct);
+                }
+            }
+
+            resp!.EnsureSuccessStatusCode();
             var xml = await resp.Content.ReadAsStringAsync(ct);
 
             // Primary: strict RSS/Atom parsing. Fallback: lenient XDocument parse for feeds
