@@ -429,6 +429,17 @@ Status tags: ✅ done · 🟢 fits philosophy, no AI needed · 🟡 needs a desi
   regardless of fetch progress, and arguably more correct anyway (a source with zero recent items should
   still be there to filter by). Also gave the chip list its own `max-height: 220px` scrollable container -
   with 150+ sources it had grown taller than the page and effectively unreachable in the sidebar.
+- Added 12 curated YouTube channels to `Data/sources.json` (Category `News` for AI-focused channels,
+  `Tools` for general engineering ones - matching the existing `Two Minute Papers`/`Fireship` precedent):
+  IBM Technology, Andrej Karpathy, 3Blue1Brown, AssemblyAI, LangChain, Hussein Nasser, ByteByteGo, Nick
+  Chapsas, Milan Jovanović, CodeOpinion, ThePrimeagen, and TechWorld with Nana. Each channel's real
+  `channel_id` was resolved live from `youtube.com/@<handle>` (canonical link, `externalId`, and `og:url`
+  all cross-checked and agreeing - not guessed), and every resulting `/feeds/videos.xml?channel_id=...`
+  URL was fetched and confirmed to return the right channel's title before being added. `@TwoMinutePapers`
+  and `@Fireship` were skipped - both already existed in `sources.json` under slightly different display
+  names. Since `sources.json` only seeds an empty DB (`KnowledgeBaseService.SeedAsync`), and this dev
+  machine's `App_Data/aipulse.db` already existed, the same 12 rows were also inserted directly into the
+  live DB so they show up without a fresh-DB reset.
 
 > **GitHub Trending scrape reality check:** `GitHubTrendingService` scrapes `github.com/trending` and
 > `github.com/trending/developers` directly for the repo/developer views above - GitHub has no API for

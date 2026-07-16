@@ -1601,5 +1601,153 @@
       "Career",
       "Data"
     ]
+  },
+  {
+    "Name": "IBM Technology (YouTube)",
+    "Url": "https://www.youtube.com/feeds/videos.xml?channel_id=UCKWaEZ-_VweaEx1j62do_vQ",
+    "Category": "News",
+    "Note": "AI and cloud concept explainers.",
+    "ContentType": "Video",
+    "Level": "Beginner",
+    "Tags": [
+      "AI",
+      "Cloud"
+    ]
+  },
+  {
+    "Name": "Andrej Karpathy (YouTube)",
+    "Url": "https://www.youtube.com/feeds/videos.xml?channel_id=UCXUPKJO5MZQN11PqgIvyuvQ",
+    "Category": "News",
+    "Note": "LLM internals explained from first principles.",
+    "ContentType": "Video",
+    "Level": "Advanced",
+    "Tags": [
+      "AI",
+      "LLM",
+      "Deep Learning"
+    ]
+  },
+  {
+    "Name": "3Blue1Brown (YouTube)",
+    "Url": "https://www.youtube.com/feeds/videos.xml?channel_id=UCYO_jab_esuFRV4b17AJtAw",
+    "Category": "News",
+    "Note": "Math intuition behind ML and transformers.",
+    "ContentType": "Video",
+    "Level": "Intermediate",
+    "Tags": [
+      "AI",
+      "Math"
+    ]
+  },
+  {
+    "Name": "AssemblyAI (YouTube)",
+    "Url": "https://www.youtube.com/feeds/videos.xml?channel_id=UCtatfZMf-8EkIwASXM4ts0A",
+    "Category": "News",
+    "Note": "Practical tutorials for building LLM apps.",
+    "ContentType": "Video",
+    "Level": "Intermediate",
+    "Tags": [
+      "AI",
+      "LLM",
+      "Tutorial"
+    ]
+  },
+  {
+    "Name": "LangChain (YouTube)",
+    "Url": "https://www.youtube.com/feeds/videos.xml?channel_id=UCC-lyoTfSrcJzA1ab3APAgw",
+    "Category": "News",
+    "Note": "Official LangChain channel: agents and RAG tutorials.",
+    "ContentType": "Video",
+    "Level": "Intermediate",
+    "Tags": [
+      "AI",
+      "Agents",
+      "RAG"
+    ]
+  },
+  {
+    "Name": "Hussein Nasser (YouTube)",
+    "Url": "https://www.youtube.com/feeds/videos.xml?channel_id=UC_ML5xP23TOWKUcc-oAE_Eg",
+    "Category": "Tools",
+    "Note": "Backend, database, and system design deep dives.",
+    "ContentType": "Video",
+    "Level": "Advanced",
+    "Tags": [
+      "Backend",
+      "System Design"
+    ]
+  },
+  {
+    "Name": "ByteByteGo (YouTube)",
+    "Url": "https://www.youtube.com/feeds/videos.xml?channel_id=UCZgt6AzoyjslHTC9dz0UoTw",
+    "Category": "Tools",
+    "Note": "Visual system design breakdowns.",
+    "ContentType": "Video",
+    "Level": "Intermediate",
+    "Tags": [
+      "System Design"
+    ]
+  },
+  {
+    "Name": "Nick Chapsas (YouTube)",
+    "Url": "https://www.youtube.com/feeds/videos.xml?channel_id=UCrkPsvLGln62OMZRO6K-llg",
+    "Category": "Tools",
+    "Note": ".NET/C# ecosystem news and tutorials.",
+    "ContentType": "Video",
+    "Level": "Intermediate",
+    "Tags": [
+      ".NET",
+      "C#"
+    ]
+  },
+  {
+    "Name": "Milan Jovanović (YouTube)",
+    "Url": "https://www.youtube.com/feeds/videos.xml?channel_id=UCC_dVe-RI-vgCZfls06mDZQ",
+    "Category": "Tools",
+    "Note": "DDD, CQRS, and Clean Architecture in .NET.",
+    "ContentType": "Video",
+    "Level": "Advanced",
+    "Tags": [
+      ".NET",
+      "Architecture",
+      "DDD"
+    ]
+  },
+  {
+    "Name": "CodeOpinion (YouTube)",
+    "Url": "https://www.youtube.com/feeds/videos.xml?channel_id=UC3RKA4vunFAfrfxiJhPEplw",
+    "Category": "Tools",
+    "Note": "Software architecture patterns in .NET.",
+    "ContentType": "Video",
+    "Level": "Advanced",
+    "Tags": [
+      ".NET",
+      "Architecture"
+    ]
+  },
+  {
+    "Name": "ThePrimeagen (YouTube)",
+    "Url": "https://www.youtube.com/feeds/videos.xml?channel_id=UC8ENHE5xdFSwx71u3fDH5Xw",
+    "Category": "Tools",
+    "Note": "Systems programming, performance, and engineering mindset.",
+    "ContentType": "Video",
+    "Level": "Advanced",
+    "Tags": [
+      "Systems",
+      "Performance"
+    ]
+  },
+  {
+    "Name": "TechWorld with Nana (YouTube)",
+    "Url": "https://www.youtube.com/feeds/videos.xml?channel_id=UCdngmbVKX1Tgre699-XLlUA",
+    "Category": "Tools",
+    "Note": "Docker, Kubernetes, and CI/CD tutorials.",
+    "ContentType": "Video",
+    "Level": "Intermediate",
+    "Tags": [
+      "DevOps",
+      "Docker",
+      "Kubernetes"
+    ]
   }
 ]
