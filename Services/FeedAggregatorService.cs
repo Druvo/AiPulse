@@ -16,6 +16,13 @@ public sealed class FeedAggregatorService
     private static readonly TimeSpan CacheFor = TimeSpan.FromMinutes(15);
     private static readonly Regex HtmlTags = new("<[^>]+>", RegexOptions.Compiled);
 
+    // A feed's own <description>/<content:encoded> is sometimes already the full article (arXiv's abstract,
+    // some Medium publications' export) - well past a mere teaser. When it's this long, use it directly as
+    // FullText instead of live-fetching the page: skips a redundant request, and some sites (Medium) reject
+    // non-browser fetches outright, so this is the only way their content shows up at all.
+    private const int FeedContentSubstantialThreshold = 500;
+    private const int FullTextFromFeedMaxChars = 6000;
+
     private readonly IHttpClientFactory _httpFactory;
     private readonly KnowledgeBaseService _kb;
 
@@ -343,7 +350,10 @@ public sealed class FeedAggregatorService
     /// <summary>Fetches the full article for the newest few items and attaches it as FullText, so summary-only feeds become readable in-app.</summary>
     private async Task<List<FeedItem>> ApplyFullTextAsync(List<FeedItem> items, CancellationToken ct)
     {
-        var targets = items.OrderByDescending(i => i.Published).Take(FullTextFetchLimit).ToList();
+        // Items whose own feed content was already substantial got FullText set at parse time (see
+        // FeedContentSubstantialThreshold) - no need to hit the network for those, and skipping them means
+        // more of the FullTextFetchLimit budget goes to items that actually need a live fetch.
+        var targets = items.Where(i => i.FullText is null).OrderByDescending(i => i.Published).Take(FullTextFetchLimit).ToList();
         var fullTexts = new Dictionary<string, string?>();
 
         using var gate = new SemaphoreSlim(3);
@@ -497,6 +507,8 @@ public sealed class FeedAggregatorService
                 Title = DeriveTitle(item.Title?.Text, summary, source.Name),
                 Link = CleanUrl(link),
                 Summary = summary,
+                FullText = source.FullTextFetch && rawSummary.Length > FeedContentSubstantialThreshold
+                    ? CleanText(rawSummary, FullTextFromFeedMaxChars) : null,
                 Published = published,
                 SourceName = source.Name,
                 Category = source.Category,
@@ -626,6 +638,8 @@ public sealed class FeedAggregatorService
                 Title = DeriveTitle(title, summary, source.Name),
                 Link = CleanUrl(link ?? ""),
                 Summary = summary,
+                FullText = source.FullTextFetch && summaryRaw.Length > FeedContentSubstantialThreshold
+                    ? CleanText(summaryRaw, FullTextFromFeedMaxChars) : null,
                 Published = published == default ? DateTimeOffset.Now : published,
                 SourceName = source.Name,
                 Category = source.Category,

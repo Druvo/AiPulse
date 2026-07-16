@@ -269,6 +269,23 @@ Status tags: ✅ done · 🟢 fits philosophy, no AI needed · 🟡 needs a desi
   `WebhookUrl` is now represented internally via `GetAllWebhookRoutes` - no behavior change for anyone who
   hasn't added a keyword-scoped route). Verified live: added a route, confirmed it round-tripped to
   `App_Data/users/{name}/reading-state.json` correctly, removed it.
+- ContentExtractorService fix, grounded in directly fetching both sites for real rather than guessing:
+  arXiv's own RSS `<description>` already carries the complete abstract (confirmed - a real item's
+  description ran several hundred words, ending in a full sentence, not truncated), so nothing was actually
+  broken there; Medium, on the other hand, serves a bot-detection/captcha shell with no article content at
+  all to a plain server-side fetch (confirmed - the response was a ~150KB app shell containing "captcha"/
+  "sign up", not the post) - no amount of smarter HTML parsing fixes that, since there's no content to
+  parse. The real, useful fix for both: `ApplyFullTextAsync` was unconditionally re-fetching every item's
+  page even when the feed's own `<description>`/`<content:encoded>` already had substantial content (over
+  500 chars, well past a teaser) - now that content is used directly as `FullText` at parse time, and
+  `ApplyFullTextAsync` skips those items. This is exactly what makes *whatever* a Medium publication's own
+  feed happens to include show up, since a live fetch of the page itself never will; arXiv sources don't
+  need `FullTextFetch` enabled at all given the finding above, but if enabled, now behaves correctly instead
+  of wastefully re-fetching a page that only repeats what the feed already said. Also added a direct
+  `//blockquote[@class~='abstract']` selector to the page-scrape path specifically for arxiv.org URLs (no
+  `<article>`/`<main>` exists on that page at all, so the generic density heuristic would happily grab the
+  metadata sidebar instead) - a defensive improvement for any future source that links to arXiv abs pages
+  without arXiv's own complete-abstract RSS.
 
 > **GitHub Trending scrape reality check:** `GitHubTrendingService` scrapes `github.com/trending` and
 > `github.com/trending/developers` directly for the repo/developer views above - GitHub has no API for

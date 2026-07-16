@@ -45,7 +45,7 @@ public sealed class ContentExtractorService
             using var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
             cts.CancelAfter(TimeSpan.FromSeconds(10));
             var html = await client.GetStringAsync(url, cts.Token);
-            extracted = Extract(html);
+            extracted = Extract(html, url);
         }
         catch (Exception ex)
         {
@@ -64,7 +64,7 @@ public sealed class ContentExtractorService
             _cache.TryRemove(oldest, out _);
     }
 
-    private static string? Extract(string html)
+    private static string? Extract(string html, string url)
     {
         var doc = new HtmlDocument();
         doc.LoadHtml(html);
@@ -77,6 +77,25 @@ public sealed class ContentExtractorService
                 node.Remove();
         }
 
+        // arXiv's abstract page has no <article>/<main> at all, and the generic density heuristic below
+        // would just as happily grab the metadata sidebar (authors/subjects/comments) as the actual
+        // abstract - go straight to the one selector arXiv has used for years instead of guessing.
+        // (Its own RSS feed already carries the full abstract too, so this mainly matters if a page like
+        // this gets fetched via a different route than the RSS description - e.g. a citation aggregator.)
+        var host = Uri.TryCreate(url, UriKind.Absolute, out var u) ? u.Host : "";
+        if (host.EndsWith("arxiv.org", StringComparison.OrdinalIgnoreCase))
+        {
+            var abstractNode = doc.DocumentNode.SelectSingleNode("//blockquote[contains(@class,'abstract')]");
+            if (abstractNode is not null)
+            {
+                var descriptor = abstractNode.SelectSingleNode(".//span[contains(@class,'descriptor')]");
+                descriptor?.Remove();
+                var abstractText = CleanExtracted(abstractNode.InnerText);
+                if (abstractText is not null)
+                    return abstractText;
+            }
+        }
+
         // Prefer semantic containers if present.
         var candidate = doc.DocumentNode.SelectSingleNode("//article")
             ?? doc.DocumentNode.SelectSingleNode("//main")
@@ -87,8 +106,12 @@ public sealed class ContentExtractorService
             ?.OrderByDescending(n => n.InnerText.Length)
             .FirstOrDefault();
 
-        var text = (candidate ?? doc.DocumentNode).InnerText;
-        text = System.Net.WebUtility.HtmlDecode(text);
+        return CleanExtracted((candidate ?? doc.DocumentNode).InnerText);
+    }
+
+    private static string? CleanExtracted(string raw)
+    {
+        var text = System.Net.WebUtility.HtmlDecode(raw);
         text = System.Text.RegularExpressions.Regex.Replace(text, @"[ \t]+", " ");
         text = System.Text.RegularExpressions.Regex.Replace(text, @"\n\s*\n+", "\n\n");
         text = text.Trim();
