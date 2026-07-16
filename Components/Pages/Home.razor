@@ -114,7 +114,7 @@
         <TrendingPanel Items="_rangeItems" DaysWindow="_daysWindow" />
     </div>
     <div class="col-lg-4">
-        <MiniTimeline Items="_historyItems ?? Array.Empty<FeedItem>()" MaxDays="_heatmapDays" />
+        <MiniTimeline Items="_historyItems ?? Array.Empty<FeedItem>()" MaxDays="365" /> @* Always this year, independent of the Today/Week/Month digest range above. *@
     </div>
     <div class="col-lg-4">
         <ExploreTrendingPanel Models="_trendingModels" Repos="_trendingRepos" Developers="_trendingDevelopers" Loading="_trendingLoading" OnRefresh="() => LoadTrendingAsync(force: true)" />
@@ -123,14 +123,20 @@
 
 <div class="row g-4 mb-4">
     <div class="col-md-6">
-        <h4 class="section-title"><Icon Name="star" /> Biggest story @RangeLabel</h4>
-        @if (_biggestStory is not null)
+        <h4 class="section-title"><Icon Name="star" /> Biggest stories @RangeLabel</h4>
+        <p class="text-muted small">Ranked by how many of your sources covered the same story — the more sources reporting it, the bigger the signal.</p>
+        @if (_biggestStories.Count == 0)
         {
-            <FeedItemCard Item="_biggestStory" Layout="Compact" CssClass="biggest-story-card" />
+            <p class="text-muted">Not enough data yet — check back after AiPulse has been running a few days.</p>
         }
         else
         {
-            <p class="text-muted">Not enough data yet — check back after AiPulse has been running a few days.</p>
+            @foreach (var item in _biggestStories)
+            {
+                <div class="mb-2">
+                    <FeedItemCard Item="item" Layout="Compact" />
+                </div>
+            }
         }
     </div>
     <div class="col-md-6">
@@ -176,27 +182,6 @@
         }
     </div>
 </div>
-
-<h4 class="section-title"><Icon Name="star" /> Biggest stories @RangeLabel</h4>
-<p class="text-muted">Ranked by how many of your sources covered the same story — the more sources reporting it, the bigger the signal.</p>
-
-@{
-    // The single biggest story already got its own hero card above - don't repeat it as the list's first entry too.
-    var otherBiggestStories = _biggestStories.Where(i => i.Link != _biggestStory?.Link).ToList();
-}
-@if (otherBiggestStories.Count == 0)
-{
-    <p class="text-muted">Not enough data yet — check back after AiPulse has been running a few days.</p>
-}
-else
-{
-    @foreach (var item in otherBiggestStories)
-    {
-        <div class="mb-2">
-            <FeedItemCard Item="item" Layout="Compact" />
-        </div>
-    }
-}
 
 @if (Reading.DashboardWidgets.Count > 0)
 {
@@ -285,7 +270,6 @@ else
     private List<TrendingDeveloper> _trendingDevelopers = new();
     private bool _trendingLoading = true;
     private int _newSinceVisit;
-    private FeedItem? _biggestStory;
 
     private string _range = "week";
     private List<FeedItem> _rangeItems = new();
@@ -384,7 +368,6 @@ else
             .ThenByDescending(i => i.Published)
             .Take(10)
             .ToList();
-        _biggestStory = _biggestStories.FirstOrDefault(i => i.AlsoSeenOn.Length > 0);
 
         _byDay = _rangeItems
             .GroupBy(i => i.Published.LocalDateTime.Date)

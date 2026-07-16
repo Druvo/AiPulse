@@ -75,13 +75,6 @@
             </button>
         }
     </div>
-    <button class="btn btn-sm btn-outline-dark" @onclick="() => _showFilters = !_showFilters">
-        <Icon Name="tool" Size="14" /> Filters
-        @if (ActiveFilterCount() > 0)
-        {
-            <span class="badge bg-info ms-1">@ActiveFilterCount()</span>
-        }
-    </button>
     @if (!string.IsNullOrEmpty(_tag))
     {
         <button class="btn btn-sm btn-warning" @onclick='() => SetTag("")'>Tag: @_tag ✕</button>
@@ -97,82 +90,6 @@
         <button class="btn btn-sm btn-warning" @onclick="ClearSources">Sources (@_sources.Count) ✕</button>
     }
 </div>
-
-@if (_showFilters)
-{
-    <div class="d-flex flex-wrap gap-2 mb-2">
-        <select class="form-select form-select-sm w-auto" @bind="_contentType" @bind:after="SyncUrl">
-            <option value="">All content types</option>
-            @foreach (var ct in _contentTypes)
-            {
-                <option value="@ct">@ct</option>
-            }
-        </select>
-        <select class="form-select form-select-sm w-auto" @bind="_level" @bind:after="SyncUrl">
-            <option value="">All levels</option>
-            @foreach (var lvl in _levels)
-            {
-                <option value="@lvl">@lvl</option>
-            }
-        </select>
-        <select class="form-select form-select-sm w-auto" @bind="_sort" @bind:after="SyncUrl">
-            <option value="newest">Newest first</option>
-            <option value="oldest">Oldest first</option>
-            <option value="source">Source A-Z</option>
-            <option value="title">Title A-Z</option>
-        </select>
-    </div>
-
-    @if (AvailableSources().Count > 0)
-    {
-        <div class="mb-2">
-            <div class="x-small text-muted text-uppercase mb-1">Sources (select any number)</div>
-            <div class="d-flex flex-wrap gap-1 mb-3">
-                @foreach (var src in AvailableSources())
-                {
-                    <button class="btn btn-sm tag-chip @(_sources.Contains(src) ? "active" : "")" @onclick="() => ToggleSource(src)">@src</button>
-                }
-            </div>
-        </div>
-    }
-
-    @if (_result is not null && AvailableTags().Count > 0)
-    {
-        <div class="d-flex flex-wrap gap-1 mb-3">
-            @foreach (var t in AvailableTags().Take(20))
-            {
-                <button class="btn btn-sm tag-chip @(_tag == t ? "active" : "")" @onclick='() => SetTag(_tag == t ? "" : t)'>@t</button>
-            }
-        </div>
-    }
-
-    <div class="mb-3">
-        <div class="x-small text-muted text-uppercase mb-1">Saved searches</div>
-        <div class="d-flex flex-wrap gap-2 align-items-center">
-            @foreach (var saved in Reading.SavedSearches)
-            {
-                <div class="btn-group btn-group-sm">
-                    <button class="btn btn-outline-dark" title="@SavedSearchSummary(saved)" @onclick="() => ApplySavedSearch(saved)">@saved.Name</button>
-                    <button class="btn btn-outline-danger" title="Delete this saved search" @onclick="() => Reading.RemoveSavedSearch(saved.Id)"><Icon Name="trash" Size="12" /></button>
-                </div>
-            }
-            @if (_savingSearch)
-            {
-                <input class="form-control form-control-sm" style="max-width:180px" placeholder="Name this search…"
-                       value="@_savedSearchName" @oninput="e => _savedSearchName = (string)e.Value!"
-                       @onkeydown="@(e => { if (e.Key == "Enter") SaveCurrentSearch(); })" />
-                <button class="btn btn-sm btn-success" @onclick="SaveCurrentSearch" disabled="@string.IsNullOrWhiteSpace(_savedSearchName)">Save</button>
-                <button class="btn btn-sm btn-outline-secondary" @onclick="() => _savingSearch = false">Cancel</button>
-            }
-            else if (HasSaveableFilters())
-            {
-                <button class="btn btn-sm btn-outline-primary" @onclick="() => _savingSearch = true">
-                    <Icon Name="star" Size="12" /> Save current filters…
-                </button>
-            }
-        </div>
-    </div>
-}
 
 @if (_loading && _result is null)
 {
@@ -256,6 +173,92 @@ else
 <div class="news-calendar-panel">
     <h6 class="mb-2"><Icon Name="calendar" Size="16" /> Calendar</h6>
     <MonthCalendar Items="_result?.Items ?? new()" RangeStart="_dateFrom" RangeEnd="_dateTo" OnRangeChanged="OnCalendarRangeChanged" />
+
+    <hr class="my-3" />
+
+    <button class="btn btn-sm btn-outline-dark w-100" @onclick="() => _showFilters = !_showFilters">
+        <Icon Name="tool" Size="14" /> Filters
+        @if (ActiveFilterCount() > 0)
+        {
+            <span class="badge bg-info ms-1">@ActiveFilterCount()</span>
+        }
+    </button>
+
+    @if (_showFilters)
+    {
+        <div class="d-flex flex-column gap-2 mt-2">
+            <select class="form-select form-select-sm" @bind="_contentType" @bind:after="SyncUrl">
+                <option value="">All content types</option>
+                @foreach (var ct in _contentTypes)
+                {
+                    <option value="@ct">@ct</option>
+                }
+            </select>
+            <select class="form-select form-select-sm" @bind="_level" @bind:after="SyncUrl">
+                <option value="">All levels</option>
+                @foreach (var lvl in _levels)
+                {
+                    <option value="@lvl">@lvl</option>
+                }
+            </select>
+            <select class="form-select form-select-sm" @bind="_sort" @bind:after="SyncUrl">
+                <option value="newest">Newest first</option>
+                <option value="oldest">Oldest first</option>
+                <option value="source">Source A-Z</option>
+                <option value="title">Title A-Z</option>
+            </select>
+        </div>
+
+        @if (AvailableSources().Count > 0)
+        {
+            <div class="mt-2">
+                <div class="x-small text-muted text-uppercase mb-1">Sources (select any number)</div>
+                <div class="d-flex flex-wrap gap-1">
+                    @foreach (var src in AvailableSources())
+                    {
+                        <button class="btn btn-sm tag-chip @(_sources.Contains(src) ? "active" : "")" @onclick="() => ToggleSource(src)">@src</button>
+                    }
+                </div>
+            </div>
+        }
+
+        @if (_result is not null && AvailableTags().Count > 0)
+        {
+            <div class="d-flex flex-wrap gap-1 mt-2">
+                @foreach (var t in AvailableTags().Take(20))
+                {
+                    <button class="btn btn-sm tag-chip @(_tag == t ? "active" : "")" @onclick='() => SetTag(_tag == t ? "" : t)'>@t</button>
+                }
+            </div>
+        }
+
+        <div class="mt-2">
+            <div class="x-small text-muted text-uppercase mb-1">Saved searches</div>
+            <div class="d-flex flex-wrap gap-2 align-items-center">
+                @foreach (var saved in Reading.SavedSearches)
+                {
+                    <div class="btn-group btn-group-sm">
+                        <button class="btn btn-outline-dark" title="@SavedSearchSummary(saved)" @onclick="() => ApplySavedSearch(saved)">@saved.Name</button>
+                        <button class="btn btn-outline-danger" title="Delete this saved search" @onclick="() => Reading.RemoveSavedSearch(saved.Id)"><Icon Name="trash" Size="12" /></button>
+                    </div>
+                }
+                @if (_savingSearch)
+                {
+                    <input class="form-control form-control-sm" style="max-width:180px" placeholder="Name this search…"
+                           value="@_savedSearchName" @oninput="e => _savedSearchName = (string)e.Value!"
+                           @onkeydown="@(e => { if (e.Key == "Enter") SaveCurrentSearch(); })" />
+                    <button class="btn btn-sm btn-success" @onclick="SaveCurrentSearch" disabled="@string.IsNullOrWhiteSpace(_savedSearchName)">Save</button>
+                    <button class="btn btn-sm btn-outline-secondary" @onclick="() => _savingSearch = false">Cancel</button>
+                }
+                else if (HasSaveableFilters())
+                {
+                    <button class="btn btn-sm btn-outline-primary" @onclick="() => _savingSearch = true">
+                        <Icon Name="star" Size="12" /> Save current filters…
+                    </button>
+                }
+            </div>
+        </div>
+    }
 </div>
 </div>
 
@@ -304,7 +307,7 @@ else
     private string _view = "Grid";
     private bool _showFilters;
     private int _page = 1;
-    private int _pageSize = 20;
+    private int _pageSize = 100;
     private DateTimeOffset _sinceVisit = DateTimeOffset.MinValue;
     private int _newCount;
     private List<FeedItem> _visibleItems = new();

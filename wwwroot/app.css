@@ -533,9 +533,6 @@ a.card:hover { transform: translateY(-1px); }
 /* First-visit welcome banner on the Dashboard */
 .welcome-banner { border-left: 4px solid var(--ap-accent, #6d5efc); }
 
-/* "Biggest story this week" highlight on the Dashboard */
-.biggest-story-card { border-left: 4px solid var(--ap-accent, #6d5efc); }
-
 /* Accent color picker swatches (Settings > Appearance) */
 .accent-swatch {
     width: 28px; height: 28px; border-radius: 50%; border: 2px solid var(--ap-border);
@@ -712,7 +709,7 @@ button.tag-chip.active { background: var(--ap-accent-soft); color: var(--ap-acce
 
 /* Full Timeline page: contribution-style heatmap */
 .heatmap-scroll { overflow-x: auto; padding-bottom: 2px; }
-.heatmap-grid { display: grid; gap: 4px; width: max-content; min-width: 100%; }
+.heatmap-grid { display: grid; gap: 5px; width: max-content; min-width: 100%; }
 .heatmap-cell {
     width: 100%;
     aspect-ratio: 1 / 1;

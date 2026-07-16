@@ -355,6 +355,19 @@ Status tags: ✅ done · 🟢 fits philosophy, no AI needed · 🟡 needs a desi
 > bug). Checked directly on this dev machine: Dell Inspiron 5570, 16 GB RAM, Intel UHD Graphics 620
 > (integrated, no discrete GPU) - so Explore's compatibility badges are reporting this machine's real specs.
 
+- Dashboard's Activity timeline now always shows a full year (`MaxDays="365"`, decoupled from the
+  Today/Week/Month digest range toggle above it) and the heatmap cells themselves are a little bigger
+  (11px → 14px per column, grid gap 4px → 5px) - a follow-up after last round's shrink-to-fit went further
+  than wanted; `.heatmap-scroll`'s horizontal scroll still handles the wider year-long grid.
+- Merged the Dashboard's two separate "Biggest story" blocks into one - there used to be a standalone
+  hero card for the single biggest story *and* a full ranked list below it (which still included that
+  same story as its first entry after the previous round's dedup fix). Removed the hero card entirely and
+  put the full "Biggest stories" ranked list in its place, paired 50/50 with "Day by day" in the same row.
+- News Feed's default page size is now 100 (was 20).
+- Moved the News Feed's Filters panel (content type/level/sort, source chips, tag chips, saved searches)
+  out of the main content column and into the always-visible calendar sidebar, directly below the month
+  calendar - keeps the primary feed column focused on items while filtering controls live in one place.
+
 > **GitHub Trending scrape reality check:** `GitHubTrendingService` scrapes `github.com/trending` and
 > `github.com/trending/developers` directly for the repo/developer views above - GitHub has no API for
 > either, and "stars today" and contributor avatars only exist on those unofficial pages, so there's no
