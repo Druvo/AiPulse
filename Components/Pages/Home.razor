@@ -294,28 +294,48 @@ else
     private int _heatmapDays => _range switch { "today" => 7, "month" => 90, _ => 30 };
     private string RangeLabel => _range switch { "today" => "today", "month" => "this month", _ => "this week" };
 
-    protected override async Task OnInitializedAsync()
+    protected override void OnInitialized()
     {
         if (!string.IsNullOrWhiteSpace(RangeParam) && ValidRanges.Contains(RangeParam))
             _range = RangeParam;
 
         _welcomeDismissed = Reading.WelcomeDismissed;
-        var feedsTask = Feeds.GetAsync(); // warms the shared cache other pages read from
-        var hfTask = HuggingFace.GetTrendingAsync();
-        var reposTask = GitHubTrending.GetTrendingReposAsync();
-        var devsTask = GitHubTrending.GetTrendingDevelopersAsync();
-        await Task.WhenAll(feedsTask, hfTask, reposTask, devsTask);
-        _historyItems = History.Items;
-        (_trendingModels, _) = hfTask.Result;
-        _trendingRepos = reposTask.Result;
-        _trendingDevelopers = devsTask.Result;
-        _trendingLoading = false;
+        _historyItems = History.Items; // already-persisted (FeedHistoryService) - no async needed, renders immediately
+        RecomputeRange();
 
+        // Both third-party lookups load independently in the background instead of gating the whole
+        // Dashboard behind one shared wait - a slow/unreachable Hugging Face or GitHub no longer holds up
+        // everything else on the page (stat cards, trending panel, biggest stories all render right away).
+        _ = LoadNewSinceVisitAsync();
+        _ = LoadTrendingAsync();
+    }
+
+    private async Task LoadNewSinceVisitAsync()
+    {
+        var result = await Feeds.GetAsync(); // warms the shared cache other pages read from
         // Same live-cache source News.razor's own "New" filter counts against - History.Items (90-day
         // persisted log) would disagree with what clicking through to News actually shows.
-        _newSinceVisit = feedsTask.Result.Items.Count(i => i.Published > Reading.LastNewsVisit);
+        _newSinceVisit = result.Items.Count(i => i.Published > Reading.LastNewsVisit);
+        StateHasChanged();
+    }
 
-        RecomputeRange();
+    private async Task LoadTrendingAsync()
+    {
+        try
+        {
+            var hfTask = HuggingFace.GetTrendingAsync();
+            var reposTask = GitHubTrending.GetTrendingReposAsync();
+            var devsTask = GitHubTrending.GetTrendingDevelopersAsync();
+            await Task.WhenAll(hfTask, reposTask, devsTask);
+            (_trendingModels, _) = hfTask.Result;
+            _trendingRepos = reposTask.Result;
+            _trendingDevelopers = devsTask.Result;
+        }
+        finally
+        {
+            _trendingLoading = false;
+            StateHasChanged();
+        }
     }
 
     private void SetRange(string range)

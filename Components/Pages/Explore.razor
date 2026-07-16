@@ -31,11 +31,7 @@
     </button>
 </div>
 
-@if (_loading)
-{
-    <p class="text-muted"><span class="spinner"></span> Loading live data…</p>
-}
-else if (_section == "models")
+@if (_section == "models")
 {
     <div class="input-group mb-3" style="max-width: 420px;">
         <input class="form-control" placeholder="Search Hugging Face by keyword…" @bind="_hfQuery"
@@ -72,7 +68,11 @@ else if (_section == "models")
                     </div>
                 </a>
             }
-            @if (_models.Count == 0)
+            @if (_modelsLoading)
+            {
+                <p class="text-muted small"><span class="spinner"></span> Loading…</p>
+            }
+            else if (_models.Count == 0)
             {
                 <p class="text-muted small">@(string.IsNullOrWhiteSpace(_hfActiveQuery) ? "Couldn't reach Hugging Face right now — try refreshing shortly." : "No matches.")</p>
             }
@@ -93,7 +93,11 @@ else if (_section == "models")
                     </div>
                 </a>
             }
-            @if (_datasets.Count == 0)
+            @if (_modelsLoading)
+            {
+                <p class="text-muted small"><span class="spinner"></span> Loading…</p>
+            }
+            else if (_datasets.Count == 0)
             {
                 <p class="text-muted small">@(string.IsNullOrWhiteSpace(_hfActiveQuery) ? "Couldn't reach Hugging Face right now — try refreshing shortly." : "No matches.")</p>
             }
@@ -204,7 +208,11 @@ else if (_section == "github")
                     </div>
                 </div>
             }
-            @if (_repos.Count == 0)
+            @if (_reposLoading)
+            {
+                <p class="text-muted small"><span class="spinner"></span> Loading…</p>
+            }
+            else if (_repos.Count == 0)
             {
                 <p class="text-muted small">@(string.IsNullOrWhiteSpace(_repoActiveQuery) ? "Couldn't reach GitHub right now — try refreshing shortly." : "No matches.")</p>
             }
@@ -236,7 +244,11 @@ else if (_section == "github")
                     </div>
                 </div>
             }
-            @if (_developers.Count == 0)
+            @if (_developersLoading)
+            {
+                <p class="text-muted small"><span class="spinner"></span> Loading…</p>
+            }
+            else if (_developers.Count == 0)
             {
                 <p class="text-muted small">Couldn't reach GitHub right now — try refreshing shortly.</p>
             }
@@ -455,7 +467,11 @@ else if (_section == "try")
                 </div>
             }
         </div>
-        @if (_ggufModels.Count == 0)
+        @if (_ggufLoading)
+        {
+            <p class="text-muted small"><span class="spinner"></span> Loading…</p>
+        }
+        else if (_ggufModels.Count == 0)
         {
             <p class="text-muted small">@(string.IsNullOrWhiteSpace(_ggufActiveQuery) ? "Couldn't reach Hugging Face right now — try refreshing shortly." : "No matches.")</p>
         }
@@ -473,7 +489,10 @@ else if (_section == "try")
     private static readonly HashSet<string> ValidSections = new() { "models", "benchmarks", "github", "try" };
 
     private string _section = "models";
-    private bool _loading = true;
+    private bool _modelsLoading = true;
+    private bool _reposLoading = true;
+    private bool _developersLoading = true;
+    private bool _ggufLoading = true;
     private List<TrendingModel> _models = new();
     private List<TrendingDataset> _datasets = new();
     private List<TrendingRepo> _repos = new();
@@ -517,7 +536,7 @@ else if (_section == "try")
     private string _storagePath = "";
     private double? _storageFreeGb;
 
-    protected override async Task OnInitializedAsync()
+    protected override void OnInitialized()
     {
         if (TabParam is not null && ValidSections.Contains(TabParam))
             _section = TabParam;
@@ -525,17 +544,38 @@ else if (_section == "try")
         (_ramGb, _vramGb, _gpuName) = SystemInfo.Detect();
         (_storagePath, _storageFreeGb) = SystemInfo.DetectOllamaStorage();
 
-        var hf = HuggingFace.GetTrendingAsync();
-        var repos = GitHubTrending.GetTrendingReposAsync(_since);
-        var developers = GitHubTrending.GetTrendingDevelopersAsync(_since);
-        var gguf = HuggingFace.GetTrendingGgufAsync();
-        var ollamaCheck = CheckOllama();
-        await Task.WhenAll(hf, repos, developers, gguf, ollamaCheck);
-        (_models, _datasets) = hf.Result;
-        _repos = repos.Result;
-        _developers = developers.Result;
-        _ggufModels = gguf.Result;
-        _loading = false;
+        // Each data source loads and renders independently - a slow/unreachable one (Hugging Face and
+        // GitHub are both third parties outside our control) no longer blocks the whole page behind one
+        // shared "Loading..." gate; every panel shows its own state instead.
+        _ = LoadModelsAsync();
+        _ = LoadReposAsync();
+        _ = LoadDevelopersAsync();
+        _ = LoadGgufAsync();
+        _ = CheckOllama();
+    }
+
+    private async Task LoadModelsAsync()
+    {
+        try { (_models, _datasets) = await HuggingFace.GetTrendingAsync(); }
+        finally { _modelsLoading = false; StateHasChanged(); }
+    }
+
+    private async Task LoadReposAsync()
+    {
+        try { _repos = await GitHubTrending.GetTrendingReposAsync(_since); }
+        finally { _reposLoading = false; StateHasChanged(); }
+    }
+
+    private async Task LoadDevelopersAsync()
+    {
+        try { _developers = await GitHubTrending.GetTrendingDevelopersAsync(_since); }
+        finally { _developersLoading = false; StateHasChanged(); }
+    }
+
+    private async Task LoadGgufAsync()
+    {
+        try { _ggufModels = await HuggingFace.GetTrendingGgufAsync(); }
+        finally { _ggufLoading = false; StateHasChanged(); }
     }
 
     private RenderFragment SystemBanner() => @<div>

@@ -185,6 +185,15 @@ Status tags: ✅ done · 🟢 fits philosophy, no AI needed · 🟡 needs a desi
     code change made since the underlying feature wasn't actually broken. If this recurs, the likely real
     gap is that there's no recovery path for a forgotten admin password today (admins can't reset their own
     account via the Users page by design, to avoid stale-cookie confusion) - flagged, not built speculatively.
+- Fixed Explore and Dashboard both appearing to hang on load when Hugging Face or GitHub responded slowly
+  (traced live via server logs to a real `HttpClient.Timeout of 15 seconds elapsing` against
+  `huggingface.co`) - both pages used to await every data source together before rendering anything, so
+  one slow third party held up the entire page behind a single spinner. Each panel now loads and renders
+  independently (own loading state per source) - confirmed live: with Hugging Face genuinely slow, GitHub
+  Trending's column still rendered immediately and was fully usable while Hugging Face's panel kept
+  showing its own "Loading…" beside it, and the Dashboard's stat cards/digest/trending panel/biggest
+  stories (all sourced from already-persisted history, no network wait needed) rendered instantly with
+  only the small "Trending models & repos" panel waiting on the network.
 
 > **GitHub Trending scrape reality check:** `GitHubTrendingService` scrapes `github.com/trending` and
 > `github.com/trending/developers` directly for the repo/developer views above - GitHub has no API for
