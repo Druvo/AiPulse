@@ -47,7 +47,7 @@
                 }
             </div>
         </div>
-        <a href="@Item.Link" target="_blank" rel="noopener" class="h6 mb-1 d-block text-decoration-none @(IsNew ? "feed-card-title-new" : "")" @onclick:stopPropagation="true">
+        <a href="@Item.Link" target="_blank" rel="noopener" class="h6 mb-1 d-block text-decoration-none @(IsNew ? "feed-card-title-new" : "")" @onclick="NotifyOpened" @onclick:stopPropagation="true">
             @if (IsNew) { <span class="new-dot me-1" title="New since your last visit"></span> }
             @if (WatchedKeyword is not null) { <span class="badge bg-warning me-1" title="Watchlist: @WatchedKeyword"><Icon Name="star" Size="11" Filled="true" /></span> }
             @Item.Title
@@ -132,6 +132,8 @@
     [Parameter] public bool IsBookmarked { get; set; }
     [Parameter] public EventCallback OnToggleRead { get; set; }
     [Parameter] public EventCallback OnToggleBookmark { get; set; }
+    /// <summary>Invoked whenever this item is opened (whole-card click or the title link itself) - callers use this to mark it read, separately from the explicit OnToggleRead button.</summary>
+    [Parameter] public EventCallback OnOpened { get; set; }
     /// <summary>Optional - only News.razor wires this up. Invoked with the item's SourceName when the user asks to hide that source from their own feed.</summary>
     [Parameter] public EventCallback<string> OnMuteSource { get; set; }
     [Parameter] public bool ShowFullTextToggle { get; set; }
@@ -144,7 +146,16 @@
     private string _accentColor = "";
     private bool _shareMenuOpen;
 
-    private async Task OpenItem() => await JS.InvokeVoidAsync("aipulseKeyboard.openLink", Item.Link);
+    private async Task OpenItem()
+    {
+        await NotifyOpened();
+        await JS.InvokeVoidAsync("aipulseKeyboard.openLink", Item.Link);
+    }
+
+    private async Task NotifyOpened()
+    {
+        if (OnOpened.HasDelegate) await OnOpened.InvokeAsync();
+    }
 
     private string TwitterShareUrl() => $"https://twitter.com/intent/tweet?text={Uri.EscapeDataString(Item.Title)}&url={Uri.EscapeDataString(Item.Link)}";
     private string LinkedInShareUrl() => $"https://www.linkedin.com/sharing/share-offsite/?url={Uri.EscapeDataString(Item.Link)}";

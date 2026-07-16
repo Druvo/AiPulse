@@ -454,6 +454,15 @@ Status tags: ✅ done · 🟢 fits philosophy, no AI needed · 🟡 needs a desi
   `@MLOpsCommunity`, `@MLflow`, `@SnowflakeComputing`, and notably `@ThePrimeTimeagen` - which does resolve,
   but to an unrelated channel (not ThePrimeagen; the correct handle, `@ThePrimeagen`, was already added in
   the previous batch). These need the real handle found manually before they can be added.
+- News Feed: opening an item (clicking anywhere on the card, or the title link itself) now marks it read
+  automatically, on top of the existing explicit eye-icon toggle - added `ReadingStateService.EnsureRead`,
+  which unlike `ToggleRead` only ever moves an item from unread to read (never flips an already-read one
+  back), so re-opening something already read doesn't undo it or double up its `ReadHistory` entry for
+  Reading Stats. `FeedItemCard` gained an `OnOpened` callback fired from both click surfaces (whole-card
+  click and the title `<a>`, each still `stopPropagation`'d against the other so a single open doesn't
+  double-fire). Also added a "Read" filter tab (mirroring the existing "Unread" one) so read items have
+  somewhere to go, and a "Mark all as read" button that applies to every item in the current filter/
+  search/sort view, not just the current page.
 
 > **GitHub Trending scrape reality check:** `GitHubTrendingService` scrapes `github.com/trending` and
 > `github.com/trending/developers` directly for the repo/developer views above - GitHub has no API for

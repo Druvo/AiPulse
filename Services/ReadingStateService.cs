@@ -130,6 +130,32 @@ public sealed class ReadingStateService
         }
     }
 
+    /// <summary>
+    /// Marks an item read - safe to call every time it's opened (e.g. clicking through to the original
+    /// article), unlike <see cref="ToggleRead"/> which would flip an already-read item back to unread.
+    /// Appends a <see cref="ReadEvent"/> only on the actual unread-to-read transition, so re-opening an
+    /// already-read item doesn't inflate Reading Stats.
+    /// </summary>
+    public void EnsureRead(FeedItem item)
+    {
+        EnsureLoaded();
+        lock (_lock)
+        {
+            if (!_state!.ReadLinks.Add(item.Link)) return;
+            _state.ReadHistory.Add(new ReadEvent
+            {
+                Link = item.Link,
+                SourceName = item.SourceName,
+                ReadingMinutes = item.ReadingMinutes ?? 0,
+                Title = item.Title,
+                ContentType = item.ContentType,
+                Level = item.Level,
+                Category = item.Category
+            });
+            Save();
+        }
+    }
+
     /// <summary>Toggles read state and returns the new value. Appends a <see cref="ReadEvent"/> when transitioning to read, for the Reading Stats page.</summary>
     public bool ToggleRead(FeedItem item)
     {

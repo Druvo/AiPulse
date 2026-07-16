@@ -42,6 +42,9 @@
             }
             @(_loading ? "Refreshing…" : "Refresh")
         </button>
+        <button class="btn btn-sm btn-outline-dark" title="Mark every item in the current view as read" @onclick="MarkAllAsRead">
+            <Icon Name="check" Size="14" /> Mark all as read
+        </button>
         <button class="btn btn-sm btn-outline-dark" title="Keyboard shortcuts" @onclick="() => _showShortcutsHelp = !_showShortcutsHelp">?</button>
     </div>
 </div>
@@ -130,6 +133,7 @@ else
                                   IsBookmarked="Reading.IsBookmarked(item.Link)"
                                   OnToggleRead="() => ToggleRead(item)"
                                   OnToggleBookmark="() => Toggle(item)"
+                                  OnOpened="() => MarkAsRead(item)"
                                   OnMuteSource="MuteSource"
                                   ShowFullTextToggle="true"
                                   Expanded="_expandedLinks.Contains(item.Link)"
@@ -151,6 +155,7 @@ else
                               IsBookmarked="Reading.IsBookmarked(item.Link)"
                               OnToggleRead="() => ToggleRead(item)"
                               OnToggleBookmark="() => Toggle(item)"
+                              OnOpened="() => MarkAsRead(item)"
                               OnMuteSource="MuteSource"
                               ShowFullTextToggle="true"
                               Expanded="_expandedLinks.Contains(item.Link)"
@@ -307,7 +312,7 @@ else
     private bool _showShortcutsHelp;
     private DotNetObjectReference<News>? _dotNetRef;
 
-    private readonly string[] _filters = { "All", "New", "Unread", "Today", "News", "Research", "Tools", "Community" };
+    private readonly string[] _filters = { "All", "New", "Unread", "Read", "Today", "News", "Research", "Tools", "Community" };
     private readonly string[] _contentTypes = { "News", "Tutorial", "Paper", "Discussion", "Video" };
     private readonly string[] _levels = { "Beginner", "Intermediate", "Advanced" };
     private readonly string[] _sortOptions = { "newest", "oldest", "source", "title" };
@@ -535,6 +540,7 @@ else
         {
             "New" => q.Where(i => i.Published > _sinceVisit),
             "Unread" => q.Where(i => !Reading.IsRead(i.Link)),
+            "Read" => q.Where(i => Reading.IsRead(i.Link)),
             "Today" => q.Where(i => i.Published.LocalDateTime.Date == DateTime.Today),
             "All" => q,
             _ => q.Where(i => i.Category == _filter)
@@ -590,6 +596,17 @@ else
 
     private void ToggleRead(FeedItem item) => Reading.ToggleRead(item);
 
+    /// <summary>Opening an item (whole-card click or the title link) marks it read - unlike the explicit
+    /// eye-icon toggle, this never flips an already-read item back to unread.</summary>
+    private void MarkAsRead(FeedItem item) => Reading.EnsureRead(item);
+
+    /// <summary>Marks every item in the current filter/search/sort view as read, not just the current page.</summary>
+    private void MarkAllAsRead()
+    {
+        foreach (var item in Filtered())
+            Reading.EnsureRead(item);
+    }
+
     private void MuteSource(string sourceName) => Reading.ToggleMutedSource(sourceName);
 
     private void ToggleExpanded(string link)
@@ -628,7 +645,11 @@ else
             case "o":
             case "Enter":
                 if (_focusedIndex >= 0 && _focusedIndex < _visibleItems.Count)
-                    await JS.InvokeVoidAsync("aipulseKeyboard.openLink", _visibleItems[_focusedIndex].Link);
+                {
+                    var opened = _visibleItems[_focusedIndex];
+                    MarkAsRead(opened);
+                    await JS.InvokeVoidAsync("aipulseKeyboard.openLink", opened.Link);
+                }
                 break;
             case "m":
                 if (_focusedIndex >= 0 && _focusedIndex < _visibleItems.Count)
