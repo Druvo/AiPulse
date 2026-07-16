@@ -50,8 +50,10 @@ public sealed class OpmlService
     /// folder outline's title if present, otherwise defaults to "News". Every new URL gets a quick
     /// reachability check so a bad import doesn't silently add dead links - unreachable ones are still
     /// added (a feed can be down momentarily) but counted separately so the admin can review them.
+    /// <paramref name="onProgress"/> is optional and reports Done/Total as each URL's reachability check
+    /// completes - this is the slow part for a large import, so it's the only phase worth reporting on.
     /// </summary>
-    public async Task<(int Added, int Skipped, int Unreachable)> ImportOpmlAsync(Stream opmlStream)
+    public async Task<(int Added, int Skipped, int Unreachable)> ImportOpmlAsync(Stream opmlStream, Func<OpmlImportProgress, Task>? onProgress = null)
     {
         var doc = await XDocument.LoadAsync(opmlStream, LoadOptions.None, default);
         var existingUrls = new HashSet<string>(_kb.SourceRecords.Select(s => s.Url), StringComparer.OrdinalIgnoreCase);
@@ -69,7 +71,7 @@ public sealed class OpmlService
             toAdd.Add(entry);
         }
 
-        var reachability = await CheckReachabilityAsync(toAdd.Select(e => e.Url));
+        var reachability = await CheckReachabilityAsync(toAdd, onProgress);
 
         var added = 0;
         var unreachable = 0;
@@ -93,28 +95,36 @@ public sealed class OpmlService
     }
 
     /// <summary>Quick, concurrency-limited GET per URL (5s timeout each) - just enough to flag dead links, not a full fetch.</summary>
-    private async Task<Dictionary<string, bool>> CheckReachabilityAsync(IEnumerable<string> urls)
+    private async Task<Dictionary<string, bool>> CheckReachabilityAsync(
+        List<(string Name, string Url, string? Category)> entries, Func<OpmlImportProgress, Task>? onProgress)
     {
         var client = _httpFactory.CreateClient("feeds");
         var results = new System.Collections.Concurrent.ConcurrentDictionary<string, bool>();
         using var gate = new SemaphoreSlim(5);
+        var total = entries.Count;
+        var done = 0;
 
-        var tasks = urls.Select(async url =>
+        var tasks = entries.Select(async entry =>
         {
             await gate.WaitAsync();
             try
             {
                 using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
-                using var resp = await client.GetAsync(url, HttpCompletionOption.ResponseHeadersRead, cts.Token);
-                results[url] = resp.IsSuccessStatusCode;
+                using var resp = await client.GetAsync(entry.Url, HttpCompletionOption.ResponseHeadersRead, cts.Token);
+                results[entry.Url] = resp.IsSuccessStatusCode;
             }
             catch
             {
-                results[url] = false;
+                results[entry.Url] = false;
             }
             finally
             {
                 gate.Release();
+                if (onProgress is not null)
+                {
+                    var n = Interlocked.Increment(ref done);
+                    await onProgress(new OpmlImportProgress { Done = n, Total = total, CurrentName = entry.Name });
+                }
             }
         });
 

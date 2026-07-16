@@ -1,4 +1,4 @@
-// News Feed keyboard navigation: j/k move focus, o/Enter open, m mark read, b bookmark, ? help.
+// News Feed keyboard navigation: j/k move focus, o/Enter open, m mark read, b bookmark, r refresh, ? help.
 window.aipulseKeyboard = {
     _dotNetRef: null,
     _handler: null,
@@ -12,7 +12,7 @@ window.aipulseKeyboard = {
             if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
             if (e.ctrlKey || e.metaKey || e.altKey) return;
 
-            if (['j', 'k', 'o', 'm', 'b', '?', 'Enter', 'Escape'].includes(e.key)) {
+            if (['j', 'k', 'o', 'm', 'b', 'r', '?', 'Enter', 'Escape'].includes(e.key)) {
                 e.preventDefault();
                 this._dotNetRef.invokeMethodAsync('HandleKey', e.key);
             }

@@ -45,6 +45,7 @@
         <code>o</code>/<code>Enter</code> open focused item ·
         <code>m</code> toggle read ·
         <code>b</code> toggle bookmark ·
+        <code>r</code> refresh ·
         <code>?</code> toggle this help ·
         <code>Esc</code> clear focus
     </div>
@@ -280,7 +281,7 @@ else
     private readonly string[] _levels = { "Beginner", "Intermediate", "Advanced" };
     private readonly string[] _sortOptions = { "newest", "oldest", "source", "title" };
 
-    protected override async Task OnInitializedAsync()
+    protected override void OnInitialized()
     {
         if (!string.IsNullOrWhiteSpace(TagParam))
             _tag = TagParam;
@@ -313,7 +314,11 @@ else
         // once in the real circuit; doing the mutate-on-read here would let the interactive pass read back
         // the timestamp the prerender pass had just written, collapsing "New" to ~0 items every time.
         _sinceVisit = Reading.LastNewsVisit;
-        await Load(false);
+        // Fire-and-forget: this page must render immediately (spinner state) instead of blocking behind
+        // Feeds.GetAsync() on a cold cache - with 100+ Reddit sources now in the mix sharing one
+        // rate-limited host, a first-ever fetch after a restart can take 10+ minutes, and a blocking
+        // OnInitializedAsync would leave the page showing nothing at all for that entire time.
+        _ = Load(false);
     }
 
     private void SetView(string view) { _view = view; SyncUrl(); }
@@ -366,6 +371,7 @@ else
         finally
         {
             _loading = false;
+            StateHasChanged(); // Load() is fire-and-forget from OnInitialized(), so this is what tells the circuit to push the finished state.
         }
     }
 
@@ -462,10 +468,14 @@ else
     [JSInvokable]
     public async Task HandleKey(string key)
     {
-        if (_visibleItems.Count == 0 && key is not ("?" or "Escape")) return;
+        if (_visibleItems.Count == 0 && key is not ("?" or "Escape" or "r")) return;
 
         switch (key)
         {
+            case "r":
+                if (!_loading)
+                    _ = Load(true);
+                break;
             case "j":
                 _focusedIndex = Math.Min(_focusedIndex + 1, _visibleItems.Count - 1);
                 await JS.InvokeVoidAsync("aipulseKeyboard.scrollToFocused", _focusedIndex);

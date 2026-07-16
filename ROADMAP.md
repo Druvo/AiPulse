@@ -209,6 +209,40 @@ Status tags: ✅ done · 🟢 fits philosophy, no AI needed · 🟡 needs a desi
   dedupes by URL and does a best-effort reachability check. All 100 were new (0 skipped as duplicates of
   the existing 7 Reddit sources); see the reality-check note below for what actually happens when this many
   Reddit sources get polled together.
+- OPML import now reports live progress ("Checking N of M — sourcename") instead of a blank wait followed
+  by a full-page redirect - the Sources page's file input now uploads through `OpmlService` directly (an
+  in-process Blazor call, not the old plain `<form>` POST) with a progress callback threaded through the
+  per-URL reachability check, the part that's actually slow for a large import. The `/opml/import` HTTP
+  endpoint stays as-is for non-interactive/scripted imports.
+- New **Source Health** page (`/source-health`, Admin) - a dedicated dashboard for all sources' uptime,
+  average response time, last-attempt time, and last error message, with summary counts
+  (healthy/degraded/broken) and a "problems only" filter. Required extending `SourceHealthService` to track
+  response time (a simple exponential moving average, not a full time series) and the most recent error per
+  source, and `FeedAggregatorService` to time each fetch attempt and pass both through. The persisted
+  `App_Data/source-health.json` format changed shape (day-buckets only -> day-buckets + last-attempt/error/
+  response-time fields) - old data doesn't migrate, same "corrupt file -> start fresh" fallback as everywhere
+  else in this app treats its own cache files, since a few days of lost health history isn't worth writing
+  a one-time migration for.
+- Sources page: added a "grouped by category" view (default) - each of the 4 categories is a collapsible
+  `<details>` section (native HTML, no JS) showing source count/enabled count/currently-failing count,
+  auto-expanded only when small (<=15 sources) so News/Tools/Community (107 Reddit sources landed in
+  Community) start collapsed and Research doesn't. A "Flat list" toggle switches back to the original
+  sortable/searchable/paginated table (unchanged) for full inline editing - the grouped view's Edit button
+  switches to flat mode with that row already open for edit, since the inline edit form only exists there.
+- News Feed: added `r` to refresh (alongside the existing j/k/o/Enter/m/b/?/Esc), both in the Razor
+  key-handling switch and the client-side key allow-list in `wwwroot/js/keyboard.js` (a duplicate list -
+  easy to miss updating just one of them).
+- **Found and fixed a real regression caused by the 100-source Reddit batch above:** News Feed's
+  `OnInitializedAsync` awaited `Feeds.GetAsync()` directly, which on a cold cache runs a full fetch of every
+  enabled source before returning anything - fine with a handful of Reddit sources, but with 107 sharing one
+  rate-limited host and each retrying with backoff, a first-ever load after any restart now took 10-15+
+  minutes, and since this also blocks Blazor Server's SSR prerender, the browser saw nothing at all (not
+  even a spinner) until it finished - directly observed live, a `navigate` call to `/news` right after a
+  fresh restart timed out completely. Fixed with the same progressive-loading pattern already used for
+  Explore/Dashboard this session: `OnInitializedAsync` -> synchronous `OnInitialized()` firing `Load()`
+  fire-and-forget, with `StateHasChanged()` added to `Load()`'s `finally` block (needed now that it's not
+  directly awaited by the lifecycle method). Verified live: a fresh restart's `/news` visit now renders the
+  "Fetching the latest…" state and the calendar sidebar immediately instead of hanging.
 
 > **GitHub Trending scrape reality check:** `GitHubTrendingService` scrapes `github.com/trending` and
 > `github.com/trending/developers` directly for the repo/developer views above - GitHub has no API for

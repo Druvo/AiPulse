@@ -1,0 +1,211 @@
+@page "/source-health"
+@attribute [Authorize(Roles = "Admin")]
+@rendermode InteractiveServer
+@inject KnowledgeBaseService Kb
+@inject SourceHealthService Health
+@inject FeedAggregatorService Feeds
+
+<PageTitle>AiPulse · Source Health</PageTitle>
+
+<div class="page-header">
+    <h1><Icon Name="activity" Size="22" /> Source Health</h1>
+    <p class="lead">
+        Uptime, response time, and the latest error for every source in one place - the Sources page shows
+        uptime per-row too, but this is the dedicated view for spotting what's actually broken.
+    </p>
+</div>
+
+<div class="row g-2 mb-3">
+    <div class="col-6 col-md-3">
+        <div class="card h-100"><div class="card-body py-2 text-center">
+            <div class="fs-4 fw-bold">@_summary.Total</div>
+            <div class="x-small text-muted">Total sources</div>
+        </div></div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="card h-100"><div class="card-body py-2 text-center">
+            <div class="fs-4 fw-bold text-success">@_summary.Healthy</div>
+            <div class="x-small text-muted">Healthy (&ge;90% uptime)</div>
+        </div></div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="card h-100"><div class="card-body py-2 text-center">
+            <div class="fs-4 fw-bold text-warning">@_summary.Degraded</div>
+            <div class="x-small text-muted">Degraded (60-89%)</div>
+        </div></div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="card h-100"><div class="card-body py-2 text-center">
+            <div class="fs-4 fw-bold text-danger">@_summary.Broken</div>
+            <div class="x-small text-muted">Broken (&lt;60% or no data yet)</div>
+        </div></div>
+    </div>
+</div>
+
+<div class="d-flex flex-wrap gap-2 mb-3">
+    <input class="form-control form-control-sm" style="max-width:280px" placeholder="Search sources…"
+           value="@_search" @oninput="e => { _search = (string)e.Value!; _page = 1; }" />
+    <button class="btn btn-sm btn-outline-secondary" @onclick="() => _onlyProblems = !_onlyProblems">
+        @(_onlyProblems ? "Showing broken/degraded only" : "Show all sources")
+    </button>
+</div>
+
+@{
+    var (pageRows, totalRows) = GetPage();
+}
+<div class="table-responsive">
+    <table class="table table-sm align-middle">
+        <thead>
+            <tr>
+                <SortableHeader Column="name" Label="Source" SortColumn="@_sortColumn" SortAscending="@_sortAscending" OnSort="ToggleSort" />
+                <SortableHeader Column="uptime" Label="Uptime (30d)" SortColumn="@_sortColumn" SortAscending="@_sortAscending" OnSort="ToggleSort" />
+                <SortableHeader Column="avgms" Label="Avg response" SortColumn="@_sortColumn" SortAscending="@_sortAscending" OnSort="ToggleSort" />
+                <SortableHeader Column="lastattempt" Label="Last attempt" SortColumn="@_sortColumn" SortAscending="@_sortAscending" OnSort="ToggleSort" />
+                <th>Last error</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var row in pageRows)
+            {
+                <tr>
+                    <td>
+                        <a href="@row.Source.Url" target="_blank" rel="noopener">@row.Source.Name</a>
+                        <div class="x-small text-muted">@row.Source.Category</div>
+                    </td>
+                    <td class="small">
+                        @if (row.Snapshot is not { TotalDays: > 0 })
+                        {
+                            <span class="text-muted">no data yet</span>
+                        }
+                        else
+                        {
+                            var pct = row.Snapshot.UptimePercent!.Value;
+                            <span class="@(pct >= 90 ? "text-success" : pct >= 60 ? "text-warning" : "text-danger")">
+                                @pct.ToString("0")% (@row.Snapshot.HealthyDays/@row.Snapshot.TotalDays d)
+                            </span>
+                        }
+                        @if (row.FailStreak > 0)
+                        {
+                            <div><span class="badge bg-warning" title="@row.FailStreak consecutive failed fetch(es)">@row.FailStreak failing</span></div>
+                        }
+                    </td>
+                    <td class="small">
+                        @if (row.Snapshot?.AvgResponseMs is { } avg)
+                        {
+                            <span title="@(row.Snapshot.LastResponseMs is { } last ? $"Last: {last:0} ms" : "")">@FormatMs(avg)</span>
+                        }
+                        else
+                        {
+                            <span class="text-muted">—</span>
+                        }
+                    </td>
+                    <td class="small text-muted">
+                        @(row.Snapshot?.LastAttempt is { } at ? at.ToLocalTime().ToString("g") : "never")
+                    </td>
+                    <td class="small text-danger" style="max-width:320px;">
+                        @if (!string.IsNullOrWhiteSpace(row.Snapshot?.LastError))
+                        {
+                            <span class="text-truncate d-inline-block" style="max-width:320px;" title="@row.Snapshot.LastError">@row.Snapshot.LastError</span>
+                        }
+                        else if (row.Snapshot?.LastSuccess == true)
+                        {
+                            <span class="text-success">ok</span>
+                        }
+                        else
+                        {
+                            <span class="text-muted">—</span>
+                        }
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>
+
+@if (totalRows == 0)
+{
+    <p class="text-muted">No sources match the current filter.</p>
+}
+
+<Pager TotalItems="totalRows" @bind-CurrentPage="_page" @bind-PageSize="_pageSize" />
+
+@code {
+    private string _search = "";
+    private bool _onlyProblems;
+    private string? _sortColumn = "uptime";
+    private bool _sortAscending = true;
+    private int _page = 1;
+    private int _pageSize = 20;
+
+    private (int Total, int Healthy, int Degraded, int Broken) _summary;
+
+    protected override void OnInitialized() => _summary = ComputeSummary();
+
+    private sealed class HealthRow
+    {
+        public required SourceRecord Source { get; init; }
+        public SourceHealthSnapshot? Snapshot { get; init; }
+        public int FailStreak { get; init; }
+    }
+
+    private (int Total, int Healthy, int Degraded, int Broken) ComputeSummary()
+    {
+        int healthy = 0, degraded = 0, broken = 0;
+        foreach (var s in Kb.SourceRecords)
+        {
+            var snap = Health.GetSnapshot(s.Name);
+            if (snap is not { TotalDays: > 0 }) { broken++; continue; }
+            var pct = snap.UptimePercent!.Value;
+            if (pct >= 90) healthy++;
+            else if (pct >= 60) degraded++;
+            else broken++;
+        }
+        return (Kb.SourceRecords.Count, healthy, degraded, broken);
+    }
+
+    private void ToggleSort(string column)
+    {
+        if (_sortColumn == column) _sortAscending = !_sortAscending;
+        else { _sortColumn = column; _sortAscending = true; }
+        _page = 1;
+    }
+
+    private (List<HealthRow> Rows, int Total) GetPage()
+    {
+        IEnumerable<HealthRow> q = Kb.SourceRecords.Select(s => new HealthRow
+        {
+            Source = s,
+            Snapshot = Health.GetSnapshot(s.Name),
+            FailStreak = Feeds.GetFailureStreak(s.Name)
+        });
+
+        if (!string.IsNullOrWhiteSpace(_search))
+        {
+            var needle = _search.Trim();
+            q = q.Where(r =>
+                r.Source.Name.Contains(needle, StringComparison.OrdinalIgnoreCase) ||
+                r.Source.Category.Contains(needle, StringComparison.OrdinalIgnoreCase));
+        }
+
+        if (_onlyProblems)
+            q = q.Where(r => r.FailStreak > 0 || r.Snapshot is not { TotalDays: > 0 } || r.Snapshot.UptimePercent < 90);
+
+        q = (_sortColumn, _sortAscending) switch
+        {
+            ("uptime", true) => q.OrderBy(r => r.Snapshot?.UptimePercent ?? -1),
+            ("uptime", false) => q.OrderByDescending(r => r.Snapshot?.UptimePercent ?? -1),
+            ("avgms", true) => q.OrderBy(r => r.Snapshot?.AvgResponseMs ?? double.MaxValue),
+            ("avgms", false) => q.OrderByDescending(r => r.Snapshot?.AvgResponseMs ?? -1),
+            ("lastattempt", true) => q.OrderBy(r => r.Snapshot?.LastAttempt ?? DateTimeOffset.MinValue),
+            ("lastattempt", false) => q.OrderByDescending(r => r.Snapshot?.LastAttempt ?? DateTimeOffset.MinValue),
+            (_, false) => q.OrderByDescending(r => r.Source.Name),
+            _ => q.OrderBy(r => r.Source.Name),
+        };
+
+        var list = q.ToList();
+        var page = list.Skip((_page - 1) * _pageSize).Take(_pageSize).ToList();
+        return (page, list.Count);
+    }
+
+    private static string FormatMs(double ms) => ms >= 1000 ? $"{ms / 1000:0.#}s" : $"{ms:0}ms";
+}

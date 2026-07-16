@@ -5,6 +5,7 @@
 @inject FeedAggregatorService Feeds
 @inject SourceHealthService Health
 @inject WebSubService WebSub
+@inject OpmlService Opml
 @inject IJSRuntime JS
 
 <PageTitle>AiPulse · Sources</PageTitle>
@@ -16,7 +17,17 @@
     </p>
 </div>
 
-@if (OpmlAdded is not null)
+@if (_opmlResult is { } r)
+{
+    <div class="alert @(r.Unreachable > 0 ? "alert-warning" : "alert-success") py-2 small">
+        OPML import: added @r.Added new source(s)@(r.Skipped > 0 ? $", skipped {r.Skipped} already-present" : "").
+        @if (r.Unreachable > 0)
+        {
+            <text> @r.Unreachable of them didn't respond to a quick check just now — still added, but worth a look below.</text>
+        }
+    </div>
+}
+else if (OpmlAdded is not null)
 {
     <div class="alert @(OpmlUnreachable is > 0 ? "alert-warning" : "alert-success") py-2 small">
         OPML import: added @OpmlAdded new source(s)@(OpmlSkipped is > 0 ? $", skipped {OpmlSkipped} already-present" : "").
@@ -27,19 +38,31 @@
     </div>
 }
 
-<div class="d-flex flex-wrap gap-2 mb-3">
+<div class="d-flex flex-wrap gap-2 align-items-center mb-3">
     <button class="btn btn-primary" @onclick="ToggleAddForm">
         <Icon Name="@(_showAddForm ? "check" : "database")" Size="15" /> @(_showAddForm ? "Close" : "Add source")
     </button>
     <a class="btn btn-outline-secondary" href="/opml/export">
         <Icon Name="download" Size="15" /> Export OPML
     </a>
-    <form method="post" action="/opml/import" enctype="multipart/form-data" class="d-flex gap-2">
-        <input type="file" name="file" accept=".opml,.xml" class="form-control form-control-sm" required style="max-width:220px" />
-        <button type="submit" class="btn btn-outline-secondary">
-            <Icon Name="database" Size="15" /> Import OPML
-        </button>
-    </form>
+    <div class="d-flex gap-2 align-items-center">
+        <InputFile OnChange="HandleOpmlFileSelected" accept=".opml,.xml" class="form-control form-control-sm" style="max-width:220px" disabled="@_opmlImporting" />
+        @if (!_opmlImporting)
+        {
+            <Icon Name="database" Size="15" />
+        }
+    </div>
+    @if (_opmlImporting)
+    {
+        <div class="d-flex align-items-center gap-2">
+            <div class="progress" style="width:160px;height:8px;">
+                <div class="progress-bar" style="width:@(_opmlProgress?.PercentComplete ?? 0)%"></div>
+            </div>
+            <span class="text-muted x-small">
+                Checking @(_opmlProgress?.Done ?? 0)/@(_opmlProgress?.Total ?? 0)@(string.IsNullOrWhiteSpace(_opmlProgress?.CurrentName) ? "" : $" — {_opmlProgress!.CurrentName}")
+            </span>
+        </div>
+    }
 </div>
 
 @if (_showAddForm)
@@ -115,11 +138,72 @@
            value="@_search" @oninput="e => { _search = (string)e.Value!; _page = 1; }" />
 </div>
 
-@{
-    var (pageRows, totalRows) = GetPage();
-}
+<div class="d-flex justify-content-end mb-2">
+    <button class="btn btn-sm btn-outline-secondary" @onclick="() => _grouped = !_grouped">
+        <Icon Name="@(_grouped ? "list" : "database")" Size="14" /> @(_grouped ? "Flat list" : "Grouped by category")
+    </button>
+</div>
 
-<div class="table-responsive">
+@if (_grouped)
+{
+    @foreach (var group in GetGroups())
+    {
+        <details class="card mb-2" @key="group.Category" open="@(group.Rows.Count <= 15)">
+            <summary class="card-body py-2 d-flex align-items-center gap-2" style="cursor:pointer;">
+                <strong>@group.Category</strong>
+                <span class="text-muted small">@group.Rows.Count source(s) - @group.Rows.Count(r => r.Source.Enabled) enabled</span>
+                @{
+                    var failing = group.Rows.Count(r => r.FailStreak > 0);
+                }
+                @if (failing > 0)
+                {
+                    <span class="badge bg-warning">@failing failing</span>
+                }
+            </summary>
+            <div class="table-responsive">
+                <table class="table table-sm align-middle mb-0">
+                    <tbody>
+                        @foreach (var row in group.Rows)
+                        {
+                            var s = row.Source;
+                            <tr>
+                                <td><a href="@s.Url" target="_blank" rel="noopener">@s.Name</a></td>
+                                <td>
+                                    @if (s.Enabled) { <span class="text-success">● enabled</span> }
+                                    else { <span class="text-muted">○ disabled</span> }
+                                    @if (row.FailStreak > 0)
+                                    {
+                                        <span class="badge bg-warning ms-1" title="@row.FailStreak consecutive failed fetch(es)">@row.FailStreak failed</span>
+                                    }
+                                </td>
+                                <td class="small">
+                                    @if (row.HealthTotal == 0)
+                                    {
+                                        <span class="text-muted">no data yet</span>
+                                    }
+                                    else
+                                    {
+                                        var pct = row.Healthy * 100 / row.HealthTotal;
+                                        <span class="@(pct >= 90 ? "text-success" : pct >= 60 ? "text-warning" : "text-danger")">@pct% (@row.Healthy/@row.HealthTotal d)</span>
+                                    }
+                                </td>
+                                <td class="text-end">
+                                    <button class="btn btn-sm btn-link p-0 me-2" title="Edit" @onclick="() => EditFromGroup(s)"><Icon Name="settings" Size="15" /></button>
+                                    <button class="btn btn-sm btn-link p-0 text-danger" title="Delete" @onclick="() => DeleteSource(s.Id)"><Icon Name="trash" Size="15" /></button>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </details>
+    }
+}
+else
+{
+    var (pageRows, totalRows) = GetPage();
+
+    <div class="table-responsive">
     <table class="table table-sm align-middle">
         <thead>
             <tr>
@@ -279,6 +363,7 @@
 </div>
 
 <Pager TotalItems="totalRows" @bind-CurrentPage="_page" @bind-PageSize="_pageSize" />
+}
 
 <div class="alert alert-light border small">
     <strong>Tip:</strong> any RSS/Atom URL works. Handy ones:
@@ -291,6 +376,38 @@
     [SupplyParameterFromQuery(Name = "opmlAdded")] private int? OpmlAdded { get; set; }
     [SupplyParameterFromQuery(Name = "opmlSkipped")] private int? OpmlSkipped { get; set; }
     [SupplyParameterFromQuery(Name = "opmlUnreachable")] private int? OpmlUnreachable { get; set; }
+
+    private bool _opmlImporting;
+    private OpmlImportProgress? _opmlProgress;
+    private (int Added, int Skipped, int Unreachable)? _opmlResult;
+
+    /// <summary>
+    /// Imports directly through OpmlService (in-process, same as the /opml/import endpoint uses) instead
+    /// of a plain form POST - lets the page report live "checking N of M" progress instead of a blank wait
+    /// followed by a full-page redirect, since reachability-checking every new URL is genuinely slow for a
+    /// large import.
+    /// </summary>
+    private async Task HandleOpmlFileSelected(InputFileChangeEventArgs e)
+    {
+        _opmlImporting = true;
+        _opmlProgress = null;
+        _opmlResult = null;
+        StateHasChanged();
+        try
+        {
+            await using var stream = e.File.OpenReadStream(maxAllowedSize: 10_000_000);
+            _opmlResult = await Opml.ImportOpmlAsync(stream, progress =>
+            {
+                _opmlProgress = progress;
+                return InvokeAsync(StateHasChanged);
+            });
+        }
+        finally
+        {
+            _opmlImporting = false;
+            StateHasChanged();
+        }
+    }
 
     private bool _showAddForm;
     private int? _editingId;
@@ -323,7 +440,10 @@
         _page = 1;
     }
 
-    private (List<SourceRow> Rows, int Total) GetPage()
+    private bool _grouped = true;
+
+    /// <summary>Base projection + search filter shared by both the flat table and the grouped-by-category view.</summary>
+    private IEnumerable<SourceRow> FilteredRows()
     {
         IEnumerable<SourceRow> q = Kb.SourceRecords.Select(s =>
         {
@@ -342,6 +462,28 @@
                 r.Source.TagsCsv.Contains(needle, StringComparison.OrdinalIgnoreCase) ||
                 (r.Source.Note ?? "").Contains(needle, StringComparison.OrdinalIgnoreCase));
         }
+
+        return q;
+    }
+
+    /// <summary>Collapsible-groups view: same filtered rows as the flat table, partitioned by category (folders), sorted by name within each.</summary>
+    private List<(string Category, List<SourceRow> Rows)> GetGroups() =>
+        FilteredRows()
+            .GroupBy(r => r.Source.Category)
+            .OrderBy(g => g.Key)
+            .Select(g => (g.Key, g.OrderBy(r => r.Source.Name).ToList()))
+            .ToList();
+
+    /// <summary>The grouped view has no inline edit form of its own - switch to the flat table (which does) with this row already in edit mode.</summary>
+    private void EditFromGroup(SourceRecord s)
+    {
+        _grouped = false;
+        StartEdit(s);
+    }
+
+    private (List<SourceRow> Rows, int Total) GetPage()
+    {
+        var q = FilteredRows();
 
         q = (_sortColumn, _sortAscending) switch
         {

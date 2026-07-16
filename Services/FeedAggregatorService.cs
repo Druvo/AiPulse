@@ -82,6 +82,7 @@ public sealed class FeedAggregatorService
         var tasks = sources.Select(async source =>
         {
             await gate.WaitAsync(ct);
+            var sw = new System.Diagnostics.Stopwatch();
             try
             {
                 // Per-domain throttle: wait if another request to the same host just fired.
@@ -98,17 +99,18 @@ public sealed class FeedAggregatorService
                     _lastDomainFetch[host] = DateTime.UtcNow;
                 }
 
+                sw.Start(); // only measures the actual fetch, not the domain-cooldown wait above
                 foreach (var item in await FetchOneAsync(source, ct))
                     items.Add(item);
                 _failureStreaks[source.Name] = 0;
-                _health.RecordResult(source.Name, true);
+                _health.RecordResult(source.Name, true, sw.Elapsed);
             }
             catch (Exception ex)
             {
                 _log.LogWarning(ex, "Feed failed: {Source}", source.Name);
                 errors.Add($"{source.Name}: {ex.Message}");
                 _failureStreaks.AddOrUpdate(source.Name, 1, (_, n) => n + 1);
-                _health.RecordResult(source.Name, false);
+                _health.RecordResult(source.Name, false, sw.IsRunning ? sw.Elapsed : null, ex.Message);
             }
             finally
             {
