@@ -64,6 +64,7 @@ builder.Services.AddSingleton<BackupService>();
 builder.Services.AddSingleton<OpmlService>();
 builder.Services.AddSingleton<SourceHealthService>();
 builder.Services.AddSingleton<ContentExtractorService>();
+builder.Services.AddSingleton<FaviconService>();
 builder.Services.AddHttpContextAccessor();
 
 // WebSub (PubSubHubbub): subscribe to feeds that push updates instead of polling. Inert unless
@@ -155,6 +156,17 @@ app.MapPost("/backup/restore", async (HttpRequest request, BackupService backup)
     await backup.RestoreFromZipAsync(stream);
     return Results.Redirect("/settings?restored=true");
 }).RequireAuthorization(policy => policy.RequireRole("Admin"));
+
+// Per-source favicon, fetched and cached by AiPulse itself (never a third-party favicon CDN - see
+// FaviconService for why). {host} is validated as a bare hostname before any fetch happens.
+app.MapGet("/favicon-proxy/{host}", async (string host, FaviconService favicons) =>
+{
+    if (Uri.CheckHostName(host) is UriHostNameType.Unknown or UriHostNameType.Basic)
+        return Results.BadRequest();
+
+    var favicon = await favicons.GetFaviconAsync(host);
+    return favicon is null ? Results.NotFound() : Results.File(favicon.Value.Bytes, favicon.Value.ContentType);
+}).RequireAuthorization();
 
 // Bulk import/export of sources via OPML - the standard RSS-reader interchange format.
 app.MapGet("/opml/export", (OpmlService opml) =>

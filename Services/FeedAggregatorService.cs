@@ -447,7 +447,14 @@ public sealed class FeedAggregatorService
                 : item.LastUpdatedTime != default ? item.LastUpdatedTime
                 : DateTimeOffset.Now;
 
-            var summary = CleanText(ExtractSummary(item), 320);
+            var rawSummary = ExtractSummary(item);
+            var summary = CleanText(rawSummary, 320);
+            var imageUrl = ResolveImageUrl(
+                ExtractMediaImage(item.ElementExtensions)
+                    ?? item.Links.FirstOrDefault(l => l.RelationshipType == "enclosure" && (l.MediaType?.StartsWith("image/", StringComparison.OrdinalIgnoreCase) ?? false))?.Uri?.ToString()
+                    ?? ExtractImgTag(rawSummary),
+                source.Url);
+
             result.Add(new FeedItem
             {
                 Title = DeriveTitle(item.Title?.Text, summary, source.Name),
@@ -458,10 +465,64 @@ public sealed class FeedAggregatorService
                 Category = source.Category,
                 ContentType = source.ContentType,
                 Level = source.Level,
-                Tags = source.Tags
+                Tags = source.Tags,
+                ImageUrl = imageUrl
             });
         }
         return (result, hubUrl);
+    }
+
+    private static readonly System.Xml.Linq.XNamespace MediaNs = "http://search.yahoo.com/mrss/";
+
+    /// <summary>Looks for a media:thumbnail or media:content(medium=image) anywhere inside the item's raw extension XML (covers media:group-wrapped thumbnails, e.g. YouTube's feed format).</summary>
+    private static string? ExtractMediaImage(SyndicationElementExtensionCollection extensions)
+    {
+        foreach (var ext in extensions)
+        {
+            System.Xml.Linq.XElement el;
+            try { el = ext.GetObject<System.Xml.Linq.XElement>(); }
+            catch { continue; }
+
+            var thumb = el.DescendantsAndSelf().FirstOrDefault(e => e.Name == MediaNs + "thumbnail");
+            var thumbUrl = thumb?.Attribute("url")?.Value;
+            if (!string.IsNullOrWhiteSpace(thumbUrl)) return thumbUrl;
+
+            var content = el.DescendantsAndSelf().FirstOrDefault(e => e.Name == MediaNs + "content"
+                && ((string?)e.Attribute("medium") == "image" || ((string?)e.Attribute("type"))?.StartsWith("image/", StringComparison.OrdinalIgnoreCase) == true));
+            var contentUrl = content?.Attribute("url")?.Value;
+            if (!string.IsNullOrWhiteSpace(contentUrl)) return contentUrl;
+        }
+        return null;
+    }
+
+    /// <summary>Same media:thumbnail/media:content lookup as <see cref="ExtractMediaImage(SyndicationElementExtensionCollection)"/>, for the lenient XDocument parse path.</summary>
+    private static string? ExtractMediaImage(System.Xml.Linq.XElement entry)
+    {
+        var thumbUrl = entry.Descendants(MediaNs + "thumbnail").FirstOrDefault()?.Attribute("url")?.Value;
+        if (!string.IsNullOrWhiteSpace(thumbUrl)) return thumbUrl;
+
+        var content = entry.Descendants(MediaNs + "content").FirstOrDefault(e =>
+            (string?)e.Attribute("medium") == "image" || ((string?)e.Attribute("type"))?.StartsWith("image/", StringComparison.OrdinalIgnoreCase) == true);
+        return content?.Attribute("url")?.Value;
+    }
+
+    private static readonly Regex ImgTagRegex = new(@"<img[^>]+src=[""']([^""'>]+)[""']", RegexOptions.Compiled | RegexOptions.IgnoreCase);
+
+    /// <summary>Fallback when the feed has no media/enclosure image: grabs the first &lt;img&gt; embedded in the item's raw (unstripped) summary/content HTML.</summary>
+    private static string? ExtractImgTag(string rawHtml)
+    {
+        if (string.IsNullOrEmpty(rawHtml)) return null;
+        var m = ImgTagRegex.Match(rawHtml);
+        return m.Success ? m.Groups[1].Value : null;
+    }
+
+    /// <summary>Resolves a possibly-relative image URL against the feed's own URL, same approach ScrapeAsync uses for links.</summary>
+    private static string? ResolveImageUrl(string? raw, string feedUrl)
+    {
+        if (string.IsNullOrWhiteSpace(raw)) return null;
+        if (Uri.TryCreate(feedUrl, UriKind.Absolute, out var baseUri) && Uri.TryCreate(baseUri, raw, out var resolved))
+            return resolved.ToString();
+        return Uri.IsWellFormedUriString(raw, UriKind.Absolute) ? raw : null;
     }
 
     /// <summary>Tolerant parser used when the strict reader rejects a feed. Handles RSS items and Atom entries.</summary>
@@ -493,6 +554,12 @@ public sealed class FeedAggregatorService
                 ?? e.Element(atom + "published")?.Value;
             DateTimeOffset.TryParse(dateStr, out var published);
 
+            var enclosure = e.Element("enclosure");
+            var enclosureUrl = (string?)enclosure?.Attribute("type") is { } encType && encType.StartsWith("image/", StringComparison.OrdinalIgnoreCase)
+                ? (string?)enclosure.Attribute("url")
+                : null;
+            var imageUrl = ResolveImageUrl(ExtractMediaImage(e) ?? enclosureUrl ?? ExtractImgTag(summaryRaw), source.Url);
+
             result.Add(new FeedItem
             {
                 Title = DeriveTitle(title, summary, source.Name),
@@ -503,7 +570,8 @@ public sealed class FeedAggregatorService
                 Category = source.Category,
                 ContentType = source.ContentType,
                 Level = source.Level,
-                Tags = source.Tags
+                Tags = source.Tags,
+                ImageUrl = imageUrl
             });
         }
         return (result, hubUrl);

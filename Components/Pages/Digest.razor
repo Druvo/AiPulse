@@ -59,25 +59,8 @@ else
 {
     @foreach (var item in _biggestStories)
     {
-        var coverage = 1 + item.AlsoSeenOn.Length;
-        <div class="card mb-2">
-            <div class="card-body py-2">
-                <div class="d-flex justify-content-between align-items-start gap-2">
-                    <a href="@item.Link" target="_blank" rel="noopener" class="h6 mb-1 text-decoration-none">@item.Title</a>
-                    @if (coverage > 1)
-                    {
-                        <span class="badge bg-secondary text-nowrap">@coverage sources</span>
-                    }
-                </div>
-                <div class="x-small text-muted">
-                    @item.SourceName
-                    @if (item.AlsoSeenOn.Length > 0)
-                    {
-                        <span> + @string.Join(", ", item.AlsoSeenOn)</span>
-                    }
-                    · @item.Published.ToLocalTime().ToString("MMM d")
-                </div>
-            </div>
+        <div class="mb-2">
+            <FeedItemCard Item="item" Layout="Compact" />
         </div>
     }
 }

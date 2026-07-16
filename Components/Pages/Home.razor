@@ -89,19 +89,13 @@
 
 @if (_biggestStory is not null)
 {
-    <div class="card mb-4 biggest-story-card">
-        <div class="card-body py-2">
-            <div class="d-flex justify-content-between align-items-start gap-3">
-                <div>
-                    <div class="x-small text-muted text-uppercase mb-1"><Icon Name="star" Size="12" /> Biggest story this week</div>
-                    <a href="@_biggestStory.Link" target="_blank" rel="noopener" class="h6 mb-1 text-decoration-none d-block">@_biggestStory.Title</a>
-                    <div class="text-muted x-small">
-                        @_biggestStory.SourceName
-                        <span> + @_biggestStory.AlsoSeenOn.Length more source@(_biggestStory.AlsoSeenOn.Length == 1 ? "" : "s")</span>
-                    </div>
-                </div>
-                <a href="digest" class="btn btn-sm btn-outline-primary text-nowrap">Full digest →</a>
+    <div class="mb-4">
+        <div class="x-small text-muted text-uppercase mb-1"><Icon Name="star" Size="12" /> Biggest story this week</div>
+        <div class="d-flex align-items-start gap-3">
+            <div class="flex-grow-1">
+                <FeedItemCard Item="_biggestStory" Layout="Compact" CssClass="biggest-story-card" />
             </div>
+            <a href="digest" class="btn btn-sm btn-outline-primary text-nowrap">Full digest →</a>
         </div>
     </div>
 }
@@ -166,11 +160,8 @@
         {
             @foreach (var b in Reading.Bookmarks.Take(6))
             {
-                <div class="card mb-2">
-                    <div class="card-body py-2">
-                        <a href="@b.Link" target="_blank" rel="noopener" class="text-decoration-none small fw-bold">@b.Title</a>
-                        <div class="text-muted x-small">@b.SourceName</div>
-                    </div>
+                <div class="mb-2">
+                    <FeedItemCard Item="ToFeedItem(b)" Layout="Compact" />
                 </div>
             }
             <a href="bookmarks" class="btn btn-sm btn-outline-primary mt-1">Open reading list →</a>
@@ -221,4 +212,19 @@
         Reading.DismissWelcome();
         _welcomeDismissed = true;
     }
+
+    /// <summary>Adapts a saved BookmarkItem to a FeedItem so it can render through the shared FeedItemCard.</summary>
+    private static FeedItem ToFeedItem(BookmarkItem b) => new()
+    {
+        Title = b.Title,
+        Link = b.Link,
+        SourceName = b.SourceName,
+        Category = b.Category,
+        ContentType = b.ContentType,
+        Level = b.Level,
+        Tags = b.Tags,
+        Published = b.SavedAt,
+        Summary = b.Summary ?? "",
+        ImageUrl = b.ImageUrl
+    };
 }

@@ -89,7 +89,9 @@ public sealed class ReadingStateService
                 ContentType = item.ContentType,
                 Level = item.Level,
                 Tags = item.Tags,
-                SavedAt = DateTimeOffset.Now
+                SavedAt = DateTimeOffset.Now,
+                Summary = item.Summary,
+                ImageUrl = item.ImageUrl
             });
             Save();
             return true;
@@ -503,7 +505,9 @@ public sealed class ReadingStateService
                     ContentType = b.ContentType,
                     Level = b.Level,
                     Tags = b.Tags,
-                    SavedAt = b.SavedAt
+                    SavedAt = b.SavedAt,
+                    Summary = b.Summary,
+                    ImageUrl = b.ImageUrl
                 };
                 fixedCount++;
                 changed = true;
@@ -611,7 +615,9 @@ public sealed class ReadingStateService
                     ContentType = item.ContentType,
                     Level = item.Level,
                     Tags = item.Tags,
-                    SavedAt = DateTimeOffset.Now
+                    SavedAt = DateTimeOffset.Now,
+                    Summary = item.Summary,
+                    ImageUrl = item.ImageUrl
                 });
             }
             else if (!saved && existing is not null)

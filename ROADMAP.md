@@ -110,6 +110,27 @@ Status tags: ✅ done · 🟢 fits philosophy, no AI needed · 🟡 needs a desi
   link XPath matters here since the default `.//a` would grab a Sponsor/Star button link before the actual
   repo link). Verified live: both Trending sources return correctly-titled/linked repo items (e.g.
   `dotnet/aspnetcore`, `bitwarden/server`) on the very first fetch.
+- Redesigned feed item cards so every post carries its source's visual identity instead of looking like a
+  flat text link, consistently across News, Bookmarks, Digest, and Home (a new shared `FeedItemCard`
+  component replaces four near-duplicate inline card implementations):
+  - **Thumbnail images** - extracted from data the feed already carries (media:thumbnail/media:content,
+    RSS enclosures, or the first `<img>` in the raw summary HTML) - zero extra network calls. This covers
+    YouTube sources for free (their feed format always includes `media:thumbnail`) plus many blogs/Reddit
+    link posts. Falls back to a subtle gradient placeholder, never a broken-image icon, when a source has
+    no image (e.g. the GitHub Trending scrape sources).
+  - **Per-source identity avatar** - a small favicon next to the source name, fetched and cached by AiPulse
+    itself (new `FaviconService` + `/favicon-proxy/{host}` endpoint, same in-memory caching pattern as the
+    full-text extractor) rather than an external favicon CDN, which would otherwise reveal your whole
+    source list to a third party on every page load. Falls back to a deterministic colored-initial circle
+    (hash the source name to a hue) if a site has no favicon or the fetch fails.
+  - **Calmer "new since last visit" indicator** - replaced the thick red left-border + red "NEW" badge with
+    a small accent-colored dot and semibold title text (the same language YouTube/Feedly use for unread
+    items), since the app's own red already means "excluded/error" elsewhere - reusing it for "new" was a
+    mismatch. The "New" filter tab's count badge switched from red to the existing accent-tinted badge for
+    the same reason.
+  - Bookmarks now snapshot the original item's summary/thumbnail at save time (`BookmarkItem.Summary`/
+    `ImageUrl`, both nullable for bookmarks saved before this change) so the Reading List renders the same
+    rich card as the News Feed instead of a bare title.
 
 > **Reddit reality check:** Reddit's unauthenticated `.rss` endpoint rate-limits hard and per-IP, not
 > per-subreddit - fetching several Reddit sources in the same poll cycle (AiPulse fetches all sources

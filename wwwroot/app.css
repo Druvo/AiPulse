@@ -666,6 +666,10 @@ button.tag-chip.active { background: var(--ap-accent-soft); color: var(--ap-acce
 .feed-grid-card { display: flex; }
 .feed-grid-card .card-body { display: flex; flex-direction: column; }
 
+/* FeedItemCard List/Compact layouts: image-on-the-left row instead of Bootstrap's default column card */
+.feed-card-row { flex-direction: row; }
+.feed-card-row .card-body { min-width: 0; }
+
 /* Mini timeline (Home) */
 .timeline-bars { height: 90px; }
 .timeline-bar-wrap { display: flex; flex-direction: column; justify-content: flex-end; align-items: center; flex: 1; height: 100%; }
@@ -715,6 +719,62 @@ a.heatmap-cell:hover { outline: 2px solid var(--ap-accent-hover); }
 .month-calendar-cell.month-calendar-today { box-shadow: inset 0 0 0 2px var(--ap-accent); }
 .month-calendar-cell.month-calendar-selected { outline: 2px solid var(--ap-accent); font-weight: bold; }
 .month-calendar-dot { position: absolute; bottom: 3px; width: 4px; height: 4px; border-radius: 50%; background: currentColor; opacity: 0.6; }
+
+/* ============================================================
+   Feed item cards (News/Bookmarks/Digest/Home share FeedItemCard.razor)
+   ============================================================ */
+
+/* Thumbnail image - gradient placeholder when the item has no ImageUrl, so a missing image never
+   shows a broken-image glyph. Size/shape varies by layout via the modifier classes below. */
+.feed-card-thumb {
+    display: block;
+    overflow: hidden;
+    background: linear-gradient(135deg, var(--ap-accent-soft), var(--ap-surface-2));
+    flex-shrink: 0;
+}
+.feed-card-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.feed-card-thumb-grid { width: 100%; aspect-ratio: 16 / 9; border-radius: var(--ap-radius-md) var(--ap-radius-md) 0 0; }
+.feed-card-thumb-list { width: 108px; height: 108px; border-radius: var(--ap-radius-md) 0 0 var(--ap-radius-md); }
+.feed-card-thumb-compact { width: 64px; height: 64px; border-radius: var(--ap-radius-sm); }
+
+/* Per-source identity avatar: a colored-initial circle as the base layer, with the site's own favicon
+   (fetched/cached by AiPulse itself, never a third-party favicon CDN) layered on top. If the favicon
+   404s, its onerror hides the <img>, revealing the initial underneath - no broken-image icon either way. */
+.source-avatar {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    overflow: hidden;
+    flex-shrink: 0;
+    background: var(--avatar-color, var(--ap-accent));
+}
+.source-avatar-initial { color: #fff; font-size: .62rem; font-weight: 700; line-height: 1; }
+.source-avatar img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.source-identity { display: inline-flex; align-items: center; gap: .4rem; }
+
+/* "New since last visit" - a small accent dot + semibold title instead of a red border/badge, so it
+   reads as "here's what's fresh" rather than a warning (red elsewhere in the app means excluded/error). */
+.new-dot {
+    display: inline-block;
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: var(--ap-accent);
+    flex-shrink: 0;
+}
+.feed-card-title-new { font-weight: 700; }
+
+/* Line-clamp so Grid/Compact card summaries don't produce ragged card heights */
+.line-clamp-2, .line-clamp-3 {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+.line-clamp-2 { -webkit-line-clamp: 2; }
+.line-clamp-3 { -webkit-line-clamp: 3; }
 
 /* Calendar slide-out panel (News Feed) - anchored to the right edge instead of inline in the page flow */
 .calendar-panel-backdrop {

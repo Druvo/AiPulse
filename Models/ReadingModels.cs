@@ -11,6 +11,9 @@ public sealed class BookmarkItem
     public string Level { get; init; } = "Intermediate";
     public string[] Tags { get; init; } = Array.Empty<string>();
     public DateTimeOffset SavedAt { get; init; } = DateTimeOffset.Now;
+    /// <summary>Snapshot of the original item's summary/thumbnail at save time, so the Reading List can render the same card as the News Feed. Null for bookmarks saved before this field existed.</summary>
+    public string? Summary { get; init; }
+    public string? ImageUrl { get; init; }
 }
 
 /// <summary>A rule that hides matching items from the News feed - the inverse of the watchlist.</summary>

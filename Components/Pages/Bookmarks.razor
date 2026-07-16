@@ -63,31 +63,9 @@ else
     <p class="text-muted small">@items.Count of @all.Count saved</p>
     @foreach (var b in items)
     {
-        <div class="card mb-2">
-            <div class="card-body py-2">
-                <div class="d-flex justify-content-between align-items-start gap-2">
-                    <a href="@b.Link" target="_blank" rel="noopener" class="h6 mb-1 text-decoration-none">@b.Title</a>
-                    <div class="d-flex align-items-center gap-2">
-                        <span class="badge level-@b.Level.ToLower()">@b.Level</span>
-                        <span class="badge ctype-@b.ContentType.ToLower()">@b.ContentType</span>
-                        <button class="btn btn-sm btn-outline-danger" @onclick="() => Remove(b.Link)">Remove</button>
-                    </div>
-                </div>
-                @if (b.Tags.Length > 0)
-                {
-                    <div class="d-flex flex-wrap gap-1 mb-1">
-                        @foreach (var t in b.Tags.Take(6))
-                        {
-                            <span class="tag-chip small">@t</span>
-                        }
-                    </div>
-                }
-                <div class="x-small text-muted">
-                    @b.SourceName
-                    @if (!string.IsNullOrWhiteSpace(b.Category)) { <span>· @b.Category</span> }
-                    · saved @b.SavedAt.ToLocalTime().ToString("g")
-                </div>
-            </div>
+        <div class="mb-2 position-relative">
+            <FeedItemCard Item="ToFeedItem(b)" Layout="List" />
+            <button class="btn btn-sm btn-outline-danger position-absolute" style="top:.5rem; right:.5rem;" @onclick="() => Remove(b.Link)">Remove</button>
         </div>
     }
 
@@ -152,6 +130,21 @@ else
     }
 
     private void Remove(string link) => Reading.RemoveBookmark(link);
+
+    /// <summary>Adapts a saved BookmarkItem to a FeedItem so it can render through the shared FeedItemCard.</summary>
+    private static FeedItem ToFeedItem(BookmarkItem b) => new()
+    {
+        Title = b.Title,
+        Link = b.Link,
+        SourceName = b.SourceName,
+        Category = b.Category,
+        ContentType = b.ContentType,
+        Level = b.Level,
+        Tags = b.Tags,
+        Published = b.SavedAt,
+        Summary = b.Summary ?? "",
+        ImageUrl = b.ImageUrl
+    };
 
     private void ExportNow()
     {

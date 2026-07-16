@@ -47,6 +47,8 @@ public sealed record FeedItem
     public string[] AlsoSeenOn { get; init; } = Array.Empty<string>();
     /// <summary>Full article text, when the source has FullTextFetch enabled and extraction succeeded. Null otherwise.</summary>
     public string? FullText { get; init; }
+    /// <summary>Thumbnail/banner image URL, when the feed itself carries one (media:thumbnail, enclosure, or an inline &lt;img&gt; in the summary). Null if none found - no extra fetch is made to find one.</summary>
+    public string? ImageUrl { get; init; }
 }
 
 /// <summary>Result of one aggregation run, including any sources that failed.</summary>
