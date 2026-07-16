@@ -180,7 +180,7 @@
                 </table>
             </div>
 
-            <Pager TotalItems="totalDays" @bind-CurrentPage="_dayPage" @bind-PageSize="_dayPageSize" PageSizeOptions="new[] { 7, 14, 30 }" />
+            <Pager TotalItems="totalDays" @bind-CurrentPage="_dayPage" @bind-PageSize="_dayPageSize" PageSizeOptions="new[] { 10, 14, 30 }" />
         }
     </div>
 </div>
@@ -285,7 +285,7 @@
     private string? _sortColumn = "date";
     private bool _sortAscending = false;
     private int _dayPage = 1;
-    private int _dayPageSize = 7;
+    private int _dayPageSize = 10;
 
     private int _daysWindow => _range switch { "today" => 1, "month" => 30, _ => 7 };
     private int _heatmapDays => _range switch { "today" => 7, "month" => 90, _ => 30 };

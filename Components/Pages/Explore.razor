@@ -9,6 +9,7 @@
 @inject ModelUsageService ModelUsage
 @inject NavigationManager Nav
 @inject IJSRuntime JS
+@inject FeedHistoryService History
 
 <PageTitle>AiPulse · Explore</PageTitle>
 
@@ -352,6 +353,27 @@ else if (_section == "github")
             }
         </div>
     </div>
+
+    <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mt-4 mb-2">
+        <h6 class="section-title mb-0"><Icon Name="rss" Size="16" /> Recent releases</h6>
+        <span class="text-muted x-small">From the GitHub release feeds you track on the Sources page - no longer mixed into the News Feed.</span>
+    </div>
+    var releases = History.Items.Where(i => i.ContentType == "Release").OrderByDescending(i => i.Published).Take(10).ToList();
+    @if (releases.Count == 0)
+    {
+        <p class="text-muted small">No release feeds tracked yet - add one from the <a href="sources">Sources page</a> (e.g. <code>https://github.com/&lt;owner&gt;/&lt;repo&gt;/releases.atom</code>).</p>
+    }
+    else
+    {
+        <div class="row g-2">
+            @foreach (var r in releases)
+            {
+                <div class="col-md-6">
+                    <FeedItemCard Item="r" Layout="Compact" />
+                </div>
+            }
+        </div>
+    }
 }
 else if (_section == "try")
 {

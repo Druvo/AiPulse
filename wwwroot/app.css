@@ -709,6 +709,10 @@ button.tag-chip.active { background: var(--ap-accent-soft); color: var(--ap-acce
 .feed-card-row { flex-direction: row; }
 .feed-card-row .card-body { min-width: 0; }
 
+/* Whole card opens the article - interactive controls inside stop propagation so they still work on their own */
+.feed-card-clickable { cursor: pointer; }
+.feed-card-clickable:hover { box-shadow: 0 0 0 1px var(--ap-accent, #6d5efc); }
+
 /* Mini timeline (Home) */
 .timeline-bars { height: 90px; }
 .timeline-bar-wrap { display: flex; flex-direction: column; justify-content: flex-end; align-items: center; flex: 1; height: 100%; }
@@ -722,7 +726,7 @@ button.tag-chip.active { background: var(--ap-accent-soft); color: var(--ap-acce
 
 /* Full Timeline page: contribution-style heatmap */
 .heatmap-scroll { overflow-x: auto; padding-bottom: 2px; }
-.heatmap-grid { display: grid; gap: 5px; width: max-content; min-width: 100%; }
+.heatmap-grid { display: grid; gap: 6px; width: max-content; min-width: 100%; }
 .heatmap-cell {
     width: 100%;
     aspect-ratio: 1 / 1;

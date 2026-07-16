@@ -4,8 +4,10 @@
    reimplementing its own card markup. *@
 @using AiPulse.Models
 @inject FaviconService Favicons
+@inject IJSRuntime JS
 
-<div class="card h-100 @(Layout == "Grid" ? "feed-grid-card" : "feed-card-row") feed-card-accent @(IsRead ? "read-item" : "") @(WatchedKeyword is not null ? "watched-item" : "") @CssClass" style="--card-accent: @_accentColor">
+<div class="card h-100 feed-card-clickable @(Layout == "Grid" ? "feed-grid-card" : "feed-card-row") feed-card-accent @(IsRead ? "read-item" : "") @(WatchedKeyword is not null ? "watched-item" : "") @CssClass"
+     style="--card-accent: @_accentColor" @onclick="OpenItem">
     @if (Layout != "Compact" || !string.IsNullOrWhiteSpace(Item.ImageUrl))
     {
         <div class="feed-card-thumb feed-card-thumb-@Layout.ToLowerInvariant()">
@@ -25,19 +27,19 @@
             {
                 <button class="btn btn-sm btn-link p-0 read-btn"
                         title="@(IsRead ? "Mark unread" : "Mark read")"
-                        @onclick="OnToggleRead"><Icon Name="@(IsRead ? "check" : "eye")" Size="16" /></button>
+                        @onclick="OnToggleRead" @onclick:stopPropagation="true"><Icon Name="@(IsRead ? "check" : "eye")" Size="16" /></button>
             }
             @if (OnToggleBookmark.HasDelegate)
             {
                 <button class="btn btn-sm btn-link p-0 bookmark-btn @(IsBookmarked ? "saved" : "")"
                         title="@(IsBookmarked ? "Remove bookmark" : "Save to read later")"
-                        @onclick="OnToggleBookmark"><Icon Name="bookmark" Size="16" Filled="@IsBookmarked" /></button>
+                        @onclick="OnToggleBookmark" @onclick:stopPropagation="true"><Icon Name="bookmark" Size="16" Filled="@IsBookmarked" /></button>
             }
             <div class="share-menu-wrapper">
-                <button class="btn btn-sm btn-link p-0" title="Share" @onclick="() => _shareMenuOpen = !_shareMenuOpen"><Icon Name="share" Size="16" /></button>
+                <button class="btn btn-sm btn-link p-0" title="Share" @onclick="() => _shareMenuOpen = !_shareMenuOpen" @onclick:stopPropagation="true"><Icon Name="share" Size="16" /></button>
                 @if (_shareMenuOpen)
                 {
-                    <div class="dropdown-menu show share-menu">
+                    <div class="dropdown-menu show share-menu" @onclick:stopPropagation="true">
                         <a class="dropdown-item small" href="@TwitterShareUrl()" target="_blank" rel="noopener" @onclick="() => _shareMenuOpen = false">Share on X</a>
                         <a class="dropdown-item small" href="@LinkedInShareUrl()" target="_blank" rel="noopener" @onclick="() => _shareMenuOpen = false">Share on LinkedIn</a>
                         <a class="dropdown-item small" href="@HackerNewsShareUrl()" target="_blank" rel="noopener" @onclick="() => _shareMenuOpen = false">Submit to Hacker News</a>
@@ -45,7 +47,7 @@
                 }
             </div>
         </div>
-        <a href="@Item.Link" target="_blank" rel="noopener" class="h6 mb-1 d-block text-decoration-none @(IsNew ? "feed-card-title-new" : "")">
+        <a href="@Item.Link" target="_blank" rel="noopener" class="h6 mb-1 d-block text-decoration-none @(IsNew ? "feed-card-title-new" : "")" @onclick:stopPropagation="true">
             @if (IsNew) { <span class="new-dot me-1" title="New since your last visit"></span> }
             @if (WatchedKeyword is not null) { <span class="badge bg-warning me-1" title="Watchlist: @WatchedKeyword"><Icon Name="star" Size="11" Filled="true" /></span> }
             @Item.Title
@@ -58,12 +60,12 @@
 
         @if (ShowFullTextToggle && !string.IsNullOrWhiteSpace(Item.FullText))
         {
-            <button class="btn btn-sm btn-outline-secondary mb-2 align-self-start" @onclick="OnToggleExpanded">
+            <button class="btn btn-sm btn-outline-secondary mb-2 align-self-start" @onclick="OnToggleExpanded" @onclick:stopPropagation="true">
                 @(Expanded ? "Hide full text" : "Read full text")
             </button>
             @if (Expanded)
             {
-                <p class="card-text small full-text-panel mb-2">@Item.FullText</p>
+                <p class="card-text small full-text-panel mb-2" @onclick:stopPropagation="true">@Item.FullText</p>
             }
         }
 
@@ -141,6 +143,8 @@
     private string? _host;
     private string _accentColor = "";
     private bool _shareMenuOpen;
+
+    private async Task OpenItem() => await JS.InvokeVoidAsync("aipulseKeyboard.openLink", Item.Link);
 
     private string TwitterShareUrl() => $"https://twitter.com/intent/tweet?text={Uri.EscapeDataString(Item.Title)}&url={Uri.EscapeDataString(Item.Link)}";
     private string LinkedInShareUrl() => $"https://www.linkedin.com/sharing/share-offsite/?url={Uri.EscapeDataString(Item.Link)}";

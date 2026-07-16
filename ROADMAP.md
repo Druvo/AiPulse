@@ -390,6 +390,25 @@ Status tags: ✅ done · 🟢 fits philosophy, no AI needed · 🟡 needs a desi
   an `ollama run hf.co/{id}` line (works when the repo has GGUF weights - Ollama says so plainly if it
   doesn't), and a Hosted Inference API cURL command. Reuses the existing `window.copyText` clipboard helper
   from `playground.js` rather than adding a new one.
+- Dashboard's "Trending this week" panel now surfaces more at a glance - top tags 8 → 20, most active
+  sources 5 → 10 - and the Activity timeline's heatmap cells are bigger again (14px → 20px per column,
+  gap 6px), a further follow-up on top of the two previous "make it bigger"/"make it smaller" rounds.
+  "Day by day"'s default page size is now 10 (was 7).
+- GitHub release items (the `ContentType: "Release"` sources like "Claude Code releases", "Ollama
+  releases") no longer show up in the News Feed - Explore's GitHub Trending tab already covers the
+  GitHub ecosystem, so a separate release stream in News was redundant. They're removed from News's
+  content-type filter list and now surface as a "Recent releases" section at the bottom of Explore's
+  GitHub Trending tab instead, reusing `FeedHistoryService` (the same persisted history Home's timeline
+  reads) rather than a new fetch path.
+- The News Feed's Filters panel (moved into the calendar sidebar last round) is no longer a
+  collapse/expand toggle - it's always shown now, per request. Removed the now-dead `_showFilters` field
+  and `ActiveFilterCount()` badge helper along with it.
+- `FeedItemCard` - used on News, Home, Bookmarks, and now Explore's release list - previously only opened
+  the article if you clicked the title text itself; clicking anywhere else on the card did nothing, which
+  read as broken. The whole card is now clickable (opens the link in a new tab, same as the title always
+  did), with every interactive control inside it - read/bookmark/share buttons, the share dropdown, mute
+  source, "read full text" - using `@onclick:stopPropagation` so they keep working as their own separate
+  actions instead of also triggering the card-wide open.
 
 > **GitHub Trending scrape reality check:** `GitHubTrendingService` scrapes `github.com/trending` and
 > `github.com/trending/developers` directly for the repo/developer views above - GitHub has no API for

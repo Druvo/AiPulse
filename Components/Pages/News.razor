@@ -176,89 +176,80 @@ else
 
     <hr class="my-3" />
 
-    <button class="btn btn-sm btn-outline-dark w-100" @onclick="() => _showFilters = !_showFilters">
-        <Icon Name="tool" Size="14" /> Filters
-        @if (ActiveFilterCount() > 0)
-        {
-            <span class="badge bg-info ms-1">@ActiveFilterCount()</span>
-        }
-    </button>
+    <h6 class="mb-2"><Icon Name="tool" Size="14" /> Filters</h6>
 
-    @if (_showFilters)
+    <div class="d-flex flex-column gap-2">
+        <select class="form-select form-select-sm" @bind="_contentType" @bind:after="SyncUrl">
+            <option value="">All content types</option>
+            @foreach (var ct in _contentTypes)
+            {
+                <option value="@ct">@ct</option>
+            }
+        </select>
+        <select class="form-select form-select-sm" @bind="_level" @bind:after="SyncUrl">
+            <option value="">All levels</option>
+            @foreach (var lvl in _levels)
+            {
+                <option value="@lvl">@lvl</option>
+            }
+        </select>
+        <select class="form-select form-select-sm" @bind="_sort" @bind:after="SyncUrl">
+            <option value="newest">Newest first</option>
+            <option value="oldest">Oldest first</option>
+            <option value="source">Source A-Z</option>
+            <option value="title">Title A-Z</option>
+        </select>
+    </div>
+
+    @if (AvailableSources().Count > 0)
     {
-        <div class="d-flex flex-column gap-2 mt-2">
-            <select class="form-select form-select-sm" @bind="_contentType" @bind:after="SyncUrl">
-                <option value="">All content types</option>
-                @foreach (var ct in _contentTypes)
-                {
-                    <option value="@ct">@ct</option>
-                }
-            </select>
-            <select class="form-select form-select-sm" @bind="_level" @bind:after="SyncUrl">
-                <option value="">All levels</option>
-                @foreach (var lvl in _levels)
-                {
-                    <option value="@lvl">@lvl</option>
-                }
-            </select>
-            <select class="form-select form-select-sm" @bind="_sort" @bind:after="SyncUrl">
-                <option value="newest">Newest first</option>
-                <option value="oldest">Oldest first</option>
-                <option value="source">Source A-Z</option>
-                <option value="title">Title A-Z</option>
-            </select>
-        </div>
-
-        @if (AvailableSources().Count > 0)
-        {
-            <div class="mt-2">
-                <div class="x-small text-muted text-uppercase mb-1">Sources (select any number)</div>
-                <div class="d-flex flex-wrap gap-1">
-                    @foreach (var src in AvailableSources())
-                    {
-                        <button class="btn btn-sm tag-chip @(_sources.Contains(src) ? "active" : "")" @onclick="() => ToggleSource(src)">@src</button>
-                    }
-                </div>
-            </div>
-        }
-
-        @if (_result is not null && AvailableTags().Count > 0)
-        {
-            <div class="d-flex flex-wrap gap-1 mt-2">
-                @foreach (var t in AvailableTags().Take(20))
-                {
-                    <button class="btn btn-sm tag-chip @(_tag == t ? "active" : "")" @onclick='() => SetTag(_tag == t ? "" : t)'>@t</button>
-                }
-            </div>
-        }
-
         <div class="mt-2">
-            <div class="x-small text-muted text-uppercase mb-1">Saved searches</div>
-            <div class="d-flex flex-wrap gap-2 align-items-center">
-                @foreach (var saved in Reading.SavedSearches)
+            <div class="x-small text-muted text-uppercase mb-1">Sources (select any number)</div>
+            <div class="d-flex flex-wrap gap-1">
+                @foreach (var src in AvailableSources())
                 {
-                    <div class="btn-group btn-group-sm">
-                        <button class="btn btn-outline-dark" title="@SavedSearchSummary(saved)" @onclick="() => ApplySavedSearch(saved)">@saved.Name</button>
-                        <button class="btn btn-outline-danger" title="Delete this saved search" @onclick="() => Reading.RemoveSavedSearch(saved.Id)"><Icon Name="trash" Size="12" /></button>
-                    </div>
-                }
-                @if (_savingSearch)
-                {
-                    <input class="form-control form-control-sm" style="max-width:180px" placeholder="Name this search…"
-                           value="@_savedSearchName" @oninput="e => _savedSearchName = (string)e.Value!"
-                           @onkeydown="@(e => { if (e.Key == "Enter") SaveCurrentSearch(); })" />
-                    <button class="btn btn-sm btn-success" @onclick="SaveCurrentSearch" disabled="@string.IsNullOrWhiteSpace(_savedSearchName)">Save</button>
-                    <button class="btn btn-sm btn-outline-secondary" @onclick="() => _savingSearch = false">Cancel</button>
-                }
-                else if (HasSaveableFilters())
-                {
-                    <button class="btn btn-sm btn-outline-primary" @onclick="() => _savingSearch = true">
-                        <Icon Name="star" Size="12" /> Save current filters…
-                    </button>
+                    <button class="btn btn-sm tag-chip @(_sources.Contains(src) ? "active" : "")" @onclick="() => ToggleSource(src)">@src</button>
                 }
             </div>
         </div>
     }
+
+    @if (_result is not null && AvailableTags().Count > 0)
+    {
+        <div class="d-flex flex-wrap gap-1 mt-2">
+            @foreach (var t in AvailableTags().Take(20))
+            {
+                <button class="btn btn-sm tag-chip @(_tag == t ? "active" : "")" @onclick='() => SetTag(_tag == t ? "" : t)'>@t</button>
+            }
+        </div>
+    }
+
+    <div class="mt-2">
+        <div class="x-small text-muted text-uppercase mb-1">Saved searches</div>
+        <div class="d-flex flex-wrap gap-2 align-items-center">
+            @foreach (var saved in Reading.SavedSearches)
+            {
+                <div class="btn-group btn-group-sm">
+                    <button class="btn btn-outline-dark" title="@SavedSearchSummary(saved)" @onclick="() => ApplySavedSearch(saved)">@saved.Name</button>
+                    <button class="btn btn-outline-danger" title="Delete this saved search" @onclick="() => Reading.RemoveSavedSearch(saved.Id)"><Icon Name="trash" Size="12" /></button>
+                </div>
+            }
+            @if (_savingSearch)
+            {
+                <input class="form-control form-control-sm" style="max-width:180px" placeholder="Name this search…"
+                       value="@_savedSearchName" @oninput="e => _savedSearchName = (string)e.Value!"
+                       @onkeydown="@(e => { if (e.Key == "Enter") SaveCurrentSearch(); })" />
+                <button class="btn btn-sm btn-success" @onclick="SaveCurrentSearch" disabled="@string.IsNullOrWhiteSpace(_savedSearchName)">Save</button>
+                <button class="btn btn-sm btn-outline-secondary" @onclick="() => _savingSearch = false">Cancel</button>
+            }
+            else if (HasSaveableFilters())
+            {
+                <button class="btn btn-sm btn-outline-primary" @onclick="() => _savingSearch = true">
+                    <Icon Name="star" Size="12" /> Save current filters…
+                </button>
+            }
+        </div>
+    </div>
 </div>
 </div>
 
@@ -305,7 +296,6 @@ else
     private DateOnly? _dateFrom;
     private DateOnly? _dateTo;
     private string _view = "Grid";
-    private bool _showFilters;
     private int _page = 1;
     private int _pageSize = 100;
     private DateTimeOffset _sinceVisit = DateTimeOffset.MinValue;
@@ -317,7 +307,7 @@ else
     private DotNetObjectReference<News>? _dotNetRef;
 
     private readonly string[] _filters = { "All", "New", "Unread", "Today", "News", "Research", "Tools", "Community" };
-    private readonly string[] _contentTypes = { "News", "Tutorial", "Release", "Paper", "Discussion", "Video" };
+    private readonly string[] _contentTypes = { "News", "Tutorial", "Paper", "Discussion", "Video" };
     private readonly string[] _levels = { "Beginner", "Intermediate", "Advanced" };
     private readonly string[] _sortOptions = { "newest", "oldest", "source", "title" };
 
@@ -444,9 +434,6 @@ else
         }
     }
 
-    private int ActiveFilterCount() =>
-        (string.IsNullOrEmpty(_contentType) ? 0 : 1) + (string.IsNullOrEmpty(_level) ? 0 : 1) + (_sources.Count > 0 ? 1 : 0);
-
     private bool _savingSearch;
     private string _savedSearchName = "";
 
@@ -525,6 +512,11 @@ else
     {
         if (_result is null) return new();
         IEnumerable<FeedItem> q = _result.Items;
+
+        // GitHub release items now live on Explore's GitHub Trending tab instead of the News feed -
+        // it already has a dedicated trending-repos section, so a separate release stream here was
+        // redundant noise for the same ecosystem.
+        q = q.Where(i => i.ContentType != "Release");
 
         if (Reading.ExcludeFilters.Count > 0)
             q = q.Where(i => !Reading.IsExcluded(i.Title + " " + i.Summary));
