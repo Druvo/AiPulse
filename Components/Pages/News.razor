@@ -5,6 +5,7 @@
 @inject FeedAggregatorService Feeds
 @inject FeedHistoryService History
 @inject ReadingStateService Reading
+@inject KnowledgeBaseService Kb
 @inject NavigationManager Nav
 @inject IJSRuntime JS
 
@@ -205,7 +206,7 @@ else
     {
         <div class="mt-2">
             <div class="x-small text-muted text-uppercase mb-1">Sources (select any number)</div>
-            <div class="d-flex flex-wrap gap-1">
+            <div class="d-flex flex-wrap gap-1 source-chip-scroll">
                 @foreach (var src in AvailableSources())
                 {
                     <button class="btn btn-sm tag-chip @(_sources.Contains(src) ? "active" : "")" @onclick="() => ToggleSource(src)">@src</button>
@@ -505,8 +506,14 @@ else
     private List<string> AvailableTags() =>
         _result?.Items.SelectMany(i => i.Tags).Distinct(StringComparer.OrdinalIgnoreCase).OrderBy(t => t).ToList() ?? new();
 
+    /// <summary>
+    /// The configured (enabled) source list, not "sources seen in the current item snapshot" - the latter
+    /// used to grow/shrink/reorder visibly as progressive loading streamed in more items and the preload
+    /// placeholder swapped for the live result, making the chip list look like it was constantly changing.
+    /// The full source list is stable regardless of fetch progress.
+    /// </summary>
     private List<string> AvailableSources() =>
-        _result?.Items.Select(i => i.SourceName).Distinct(StringComparer.OrdinalIgnoreCase).OrderBy(s => s).ToList() ?? new();
+        Kb.Sources.Where(s => s.Enabled).Select(s => s.Name).Distinct(StringComparer.OrdinalIgnoreCase).OrderBy(s => s).ToList();
 
     private List<FeedItem> Filtered()
     {

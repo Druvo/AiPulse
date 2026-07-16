@@ -421,6 +421,14 @@ Status tags: ✅ done · 🟢 fits philosophy, no AI needed · 🟡 needs a desi
   since they were added via the Sources UI in an earlier session rather than seeded from `sources.json`.
 - Fixed the real bug behind Reddit's persistent 429s - see the updated Reddit reality check below for the
   full story (an actual concurrency race, not just "Reddit is strict").
+- Fixed the News Feed's "Sources (select any number)" chip list visibly growing/shrinking/reordering on
+  its own - it was derived from `_result.Items` (the current fetch snapshot), which legitimately changes
+  several times during progressive loading (preload placeholder -> partial-progress snapshots as each
+  source finishes -> the final deduped result), so the set of "sources with items so far" kept changing
+  underneath the user. It's now derived from the configured (enabled) source list instead - stable
+  regardless of fetch progress, and arguably more correct anyway (a source with zero recent items should
+  still be there to filter by). Also gave the chip list its own `max-height: 220px` scrollable container -
+  with 150+ sources it had grown taller than the page and effectively unreachable in the sidebar.
 
 > **GitHub Trending scrape reality check:** `GitHubTrendingService` scrapes `github.com/trending` and
 > `github.com/trending/developers` directly for the repo/developer views above - GitHub has no API for

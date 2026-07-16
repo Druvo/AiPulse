@@ -435,6 +435,10 @@ a.card:hover { transform: translateY(-1px); }
 /* Dashboard: keeps the "Biggest stories" list from growing far taller than "Day by day" next to it */
 .biggest-stories-scroll { max-height: 420px; overflow-y: auto; padding-right: 4px; }
 
+/* News Feed sidebar: the source chip list can run to 100+ entries (e.g. a large Reddit batch) - cap it
+   and let it scroll on its own instead of pushing the rest of the calendar panel out of reach. */
+.source-chip-scroll { max-height: 220px; overflow-y: auto; padding-right: 4px; align-content: flex-start; }
+
 /* Learning Hub progress */
 .progress { background-color: var(--ap-surface-2); border-radius: 999px; }
 .progress-bar { background-color: var(--ap-accent); }
