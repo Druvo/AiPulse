@@ -137,6 +137,33 @@
             }
         </div>
     }
+
+    <div class="mb-3">
+        <div class="x-small text-muted text-uppercase mb-1">Saved searches</div>
+        <div class="d-flex flex-wrap gap-2 align-items-center">
+            @foreach (var saved in Reading.SavedSearches)
+            {
+                <div class="btn-group btn-group-sm">
+                    <button class="btn btn-outline-dark" title="@SavedSearchSummary(saved)" @onclick="() => ApplySavedSearch(saved)">@saved.Name</button>
+                    <button class="btn btn-outline-danger" title="Delete this saved search" @onclick="() => Reading.RemoveSavedSearch(saved.Id)"><Icon Name="trash" Size="12" /></button>
+                </div>
+            }
+            @if (_savingSearch)
+            {
+                <input class="form-control form-control-sm" style="max-width:180px" placeholder="Name this search…"
+                       value="@_savedSearchName" @oninput="e => _savedSearchName = (string)e.Value!"
+                       @onkeydown="@(e => { if (e.Key == "Enter") SaveCurrentSearch(); })" />
+                <button class="btn btn-sm btn-success" @onclick="SaveCurrentSearch" disabled="@string.IsNullOrWhiteSpace(_savedSearchName)">Save</button>
+                <button class="btn btn-sm btn-outline-secondary" @onclick="() => _savingSearch = false">Cancel</button>
+            }
+            else if (HasSaveableFilters())
+            {
+                <button class="btn btn-sm btn-outline-primary" @onclick="() => _savingSearch = true">
+                    <Icon Name="star" Size="12" /> Save current filters…
+                </button>
+            }
+        </div>
+    </div>
 }
 
 @if (_loading && _result is null)
@@ -377,6 +404,74 @@ else
 
     private int ActiveFilterCount() =>
         (string.IsNullOrEmpty(_contentType) ? 0 : 1) + (string.IsNullOrEmpty(_level) ? 0 : 1) + (_sources.Count > 0 ? 1 : 0);
+
+    private bool _savingSearch;
+    private string _savedSearchName = "";
+
+    private bool HasSaveableFilters() =>
+        !string.IsNullOrWhiteSpace(_search) || !string.IsNullOrEmpty(_tag) || !string.IsNullOrEmpty(_contentType) ||
+        !string.IsNullOrEmpty(_level) || _sources.Count > 0 || (_dateFrom is not null && _dateTo is not null);
+
+    private void SaveCurrentSearch()
+    {
+        if (string.IsNullOrWhiteSpace(_savedSearchName)) return;
+
+        // Only capture the date range as a reusable relative window when it trails up to today (e.g. "last
+        // 7 days") - an arbitrary fixed historical range wouldn't mean the same thing next time this is applied.
+        int? windowDays = null;
+        if (_dateFrom is not null && _dateTo is not null && _dateTo == DateOnly.FromDateTime(DateTime.Today))
+            windowDays = _dateTo.Value.DayNumber - _dateFrom.Value.DayNumber + 1;
+
+        Reading.AddSavedSearch(new SavedSearch
+        {
+            Name = _savedSearchName.Trim(),
+            Search = _search,
+            Tag = _tag,
+            ContentType = _contentType,
+            Level = _level,
+            Sources = _sources.ToList(),
+            Sort = _sort,
+            DateWindowDays = windowDays
+        });
+
+        _savingSearch = false;
+        _savedSearchName = "";
+    }
+
+    private void ApplySavedSearch(SavedSearch saved)
+    {
+        _search = saved.Search;
+        _tag = saved.Tag;
+        _contentType = saved.ContentType;
+        _level = saved.Level;
+        _sources = new HashSet<string>(saved.Sources, StringComparer.OrdinalIgnoreCase);
+        _sort = saved.Sort;
+
+        if (saved.DateWindowDays is { } days)
+        {
+            _dateTo = DateOnly.FromDateTime(DateTime.Today);
+            _dateFrom = _dateTo.Value.AddDays(-(days - 1));
+        }
+        else
+        {
+            _dateFrom = null;
+            _dateTo = null;
+        }
+
+        SyncUrl();
+    }
+
+    private static string SavedSearchSummary(SavedSearch s)
+    {
+        var parts = new List<string>();
+        if (!string.IsNullOrWhiteSpace(s.Search)) parts.Add($"\"{s.Search}\"");
+        if (!string.IsNullOrEmpty(s.Tag)) parts.Add($"tag: {s.Tag}");
+        if (!string.IsNullOrEmpty(s.ContentType)) parts.Add(s.ContentType);
+        if (!string.IsNullOrEmpty(s.Level)) parts.Add(s.Level);
+        if (s.Sources.Count > 0) parts.Add($"{s.Sources.Count} source(s)");
+        if (s.DateWindowDays is { } d) parts.Add(d == 1 ? "today" : $"last {d} days");
+        return parts.Count > 0 ? string.Join(" · ", parts) : "No filters";
+    }
 
     private List<string> AvailableTags() =>
         _result?.Items.SelectMany(i => i.Tags).Distinct(StringComparer.OrdinalIgnoreCase).OrderBy(t => t).ToList() ?? new();

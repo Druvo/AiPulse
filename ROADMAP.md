@@ -243,6 +243,15 @@ Status tags: ✅ done · 🟢 fits philosophy, no AI needed · 🟡 needs a desi
   fire-and-forget, with `StateHasChanged()` added to `Load()`'s `finally` block (needed now that it's not
   directly awaited by the lifecycle method). Verified live: a fresh restart's `/news` visit now renders the
   "Fetching the latest…" state and the calendar sidebar immediately instead of hanging.
+- News Feed: saved searches ("smart folders") - name and save the current search text/tag/content-type/
+  level/sources/sort combination, per-user (same `App_Data/users/{name}/reading-state.json` this app
+  already uses for bookmarks/watchlist). A saved search's date range, if any, is only captured when it
+  trails up to today (e.g. "last 7 days") and stored as a day-count rather than fixed dates, so re-applying
+  it later always means "the last N days from now" instead of a frozen historical range that'd go stale.
+- Share buttons on every feed card (News, Bookmarks, Digest, Home) - Share on X/LinkedIn/submit to Hacker
+  News, via plain share-intent URLs (no API keys, no new external dependency). Deliberately generic share
+  icon rather than brand logos, matching the rest of the icon set (self-contained inline SVG, no external
+  icon font).
 
 > **GitHub Trending scrape reality check:** `GitHubTrendingService` scrapes `github.com/trending` and
 > `github.com/trending/developers` directly for the repo/developer views above - GitHub has no API for

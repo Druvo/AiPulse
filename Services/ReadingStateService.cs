@@ -207,6 +207,33 @@ public sealed class ReadingStateService
         }
     }
 
+    // --- Saved searches ("smart folders") ---
+
+    public IReadOnlyList<SavedSearch> SavedSearches
+    {
+        get { EnsureLoaded(); lock (_lock) return _state!.SavedSearches.ToList(); }
+    }
+
+    public void AddSavedSearch(SavedSearch search)
+    {
+        EnsureLoaded();
+        lock (_lock)
+        {
+            _state!.SavedSearches.Add(search);
+            Save();
+        }
+    }
+
+    public void RemoveSavedSearch(Guid id)
+    {
+        EnsureLoaded();
+        lock (_lock)
+        {
+            _state!.SavedSearches.RemoveAll(s => s.Id == id);
+            Save();
+        }
+    }
+
     // --- Exclude filters ---
 
     public IReadOnlyList<ExcludeFilter> ExcludeFilters

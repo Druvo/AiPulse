@@ -380,6 +380,10 @@ a.card:hover { transform: translateY(-1px); }
 .read-item { opacity: .55; }
 .read-item:hover { opacity: .85; }
 
+/* Share menu (feed cards) */
+.share-menu-wrapper { position: relative; }
+.share-menu { position: absolute; right: 0; top: 100%; z-index: 20; min-width: 180px; margin-top: 2px; }
+
 /* Learning Hub progress */
 .progress { background-color: var(--ap-surface-2); border-radius: 999px; }
 .progress-bar { background-color: var(--ap-accent); }

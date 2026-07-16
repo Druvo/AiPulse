@@ -25,6 +25,25 @@ public sealed class ExcludeFilter
     public bool IsRegex { get; set; }
 }
 
+/// <summary>
+/// A named, reusable News Feed filter combination ("smart folder") - e.g. "Agent news this week" = a
+/// keyword plus a relative date window. The date window is stored as a day-count (not fixed dates) so
+/// re-applying it later always means "the last N days from now," not a frozen historical range.
+/// </summary>
+public sealed class SavedSearch
+{
+    public Guid Id { get; init; } = Guid.NewGuid();
+    public required string Name { get; set; }
+    public string Search { get; set; } = "";
+    public string Tag { get; set; } = "";
+    public string ContentType { get; set; } = "";
+    public string Level { get; set; } = "";
+    public List<string> Sources { get; set; } = new();
+    public string Sort { get; set; } = "newest";
+    /// <summary>Null = no date filter; otherwise "items from the last N days" re-evaluated at apply time.</summary>
+    public int? DateWindowDays { get; set; }
+}
+
 /// <summary>A simple embed on the Dashboard - either an iframe (external page) or raw HTML/text.</summary>
 public sealed class DashboardWidget
 {
@@ -60,6 +79,9 @@ public sealed class ReadingState
 
     /// <summary>Custom Dashboard embeds (iframes or raw HTML snippets), user-managed.</summary>
     public List<DashboardWidget> DashboardWidgets { get; set; } = new();
+
+    /// <summary>Named, reusable News Feed filter combinations ("smart folders").</summary>
+    public List<SavedSearch> SavedSearches { get; set; } = new();
 
     /// <summary>
     /// MD5("username:password") for the Fever API (a separate password from the main login, chosen by the

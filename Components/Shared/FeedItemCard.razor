@@ -20,23 +20,31 @@
         </div>
     }
     <div class="card-body @(Layout == "Grid" ? "d-flex flex-column" : "") py-2">
-        @if (OnToggleRead.HasDelegate || OnToggleBookmark.HasDelegate)
-        {
-            <div class="d-flex justify-content-end align-items-start gap-2 mb-1">
-                @if (OnToggleRead.HasDelegate)
+        <div class="d-flex justify-content-end align-items-start gap-2 mb-1">
+            @if (OnToggleRead.HasDelegate)
+            {
+                <button class="btn btn-sm btn-link p-0 read-btn"
+                        title="@(IsRead ? "Mark unread" : "Mark read")"
+                        @onclick="OnToggleRead"><Icon Name="@(IsRead ? "check" : "eye")" Size="16" /></button>
+            }
+            @if (OnToggleBookmark.HasDelegate)
+            {
+                <button class="btn btn-sm btn-link p-0 bookmark-btn @(IsBookmarked ? "saved" : "")"
+                        title="@(IsBookmarked ? "Remove bookmark" : "Save to read later")"
+                        @onclick="OnToggleBookmark"><Icon Name="bookmark" Size="16" Filled="@IsBookmarked" /></button>
+            }
+            <div class="share-menu-wrapper">
+                <button class="btn btn-sm btn-link p-0" title="Share" @onclick="() => _shareMenuOpen = !_shareMenuOpen"><Icon Name="share" Size="16" /></button>
+                @if (_shareMenuOpen)
                 {
-                    <button class="btn btn-sm btn-link p-0 read-btn"
-                            title="@(IsRead ? "Mark unread" : "Mark read")"
-                            @onclick="OnToggleRead"><Icon Name="@(IsRead ? "check" : "eye")" Size="16" /></button>
-                }
-                @if (OnToggleBookmark.HasDelegate)
-                {
-                    <button class="btn btn-sm btn-link p-0 bookmark-btn @(IsBookmarked ? "saved" : "")"
-                            title="@(IsBookmarked ? "Remove bookmark" : "Save to read later")"
-                            @onclick="OnToggleBookmark"><Icon Name="bookmark" Size="16" Filled="@IsBookmarked" /></button>
+                    <div class="dropdown-menu show share-menu">
+                        <a class="dropdown-item small" href="@TwitterShareUrl()" target="_blank" rel="noopener" @onclick="() => _shareMenuOpen = false">Share on X</a>
+                        <a class="dropdown-item small" href="@LinkedInShareUrl()" target="_blank" rel="noopener" @onclick="() => _shareMenuOpen = false">Share on LinkedIn</a>
+                        <a class="dropdown-item small" href="@HackerNewsShareUrl()" target="_blank" rel="noopener" @onclick="() => _shareMenuOpen = false">Submit to Hacker News</a>
+                    </div>
                 }
             </div>
-        }
+        </div>
         <a href="@Item.Link" target="_blank" rel="noopener" class="h6 mb-1 d-block text-decoration-none @(IsNew ? "feed-card-title-new" : "")">
             @if (IsNew) { <span class="new-dot me-1" title="New since your last visit"></span> }
             @if (WatchedKeyword is not null) { <span class="badge bg-warning me-1" title="Watchlist: @WatchedKeyword"><Icon Name="star" Size="11" Filled="true" /></span> }
@@ -123,6 +131,11 @@
 
     private string? _host;
     private string _accentColor = "";
+    private bool _shareMenuOpen;
+
+    private string TwitterShareUrl() => $"https://twitter.com/intent/tweet?text={Uri.EscapeDataString(Item.Title)}&url={Uri.EscapeDataString(Item.Link)}";
+    private string LinkedInShareUrl() => $"https://www.linkedin.com/sharing/share-offsite/?url={Uri.EscapeDataString(Item.Link)}";
+    private string HackerNewsShareUrl() => $"https://news.ycombinator.com/submitlink?u={Uri.EscapeDataString(Item.Link)}&t={Uri.EscapeDataString(Item.Title)}";
 
     protected override void OnParametersSet()
     {
