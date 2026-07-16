@@ -416,6 +416,11 @@ Status tags: ✅ done · 🟢 fits philosophy, no AI needed · 🟡 needs a desi
   either the show/hide check or the click itself. Since it lives in `MainLayout` (not `@Body`), it
   persists across Blazor Server's in-app navigation, so the script only needs to wire up its listeners
   once per real page load. Added a new "arrow-up" case to the shared `Icon` component for it.
+- Removed three leftover "Test A/B/C" sources pointing at `example.com/feed-test-*.xml` placeholder URLs
+  (404 by design - `example.com` doesn't serve those paths) - deleted directly from `App_Data/aipulse.db`,
+  since they were added via the Sources UI in an earlier session rather than seeded from `sources.json`.
+- Fixed the real bug behind Reddit's persistent 429s - see the updated Reddit reality check below for the
+  full story (an actual concurrency race, not just "Reddit is strict").
 
 > **GitHub Trending scrape reality check:** `GitHubTrendingService` scrapes `github.com/trending` and
 > `github.com/trending/developers` directly for the repo/developer views above - GitHub has no API for
@@ -426,22 +431,26 @@ Status tags: ✅ done · 🟢 fits philosophy, no AI needed · 🟡 needs a desi
 > notice and break the selectors. Verified against the live page at time of writing - same repos, same
 > star/fork counts, same "Built by" avatars.
 
-> **Reddit reality check (updated - now 107 Reddit sources: the original 7 plus a 100-subreddit batch
-> imported via OPML):** `FeedAggregatorService` since gained a per-domain cooldown (3s between requests to
-> the same host) plus a per-source retry with backoff (5s, then 10s) on a `429` before giving up for that
-> poll - a real improvement over the original "not done" gap this note used to describe. It still isn't
-> enough for 107 sources sharing one host: the cooldown check-then-set isn't atomic under the 5-way
-> concurrency gate, so several Reddit requests can slip past it in the same instant, and Reddit's actual
-> anonymous-RSS budget is tighter than 3s/request anyway. Verified live via a full force-refresh right after
-> the import: the large majority of the 100 new subreddits came back `429` on the first attempt, some
-> recovered on the 5s/10s retry, most didn't and were left for the next poll cycle. Same conclusion as
-> before, just at 15x the scale - this self-heals over multiple poll cycles rather than in one refresh (a
-> handful of individually-tested subreddits, e.g. r/LocalLLaMA and r/AskReddit, return real content fine
-> when requested on their own, confirming the sources themselves are correctly configured). A real fix would
-> mean a dedicated slower stagger for the `reddit.com` host specifically (or a shared cross-poll rate
-> budget) instead of the generic per-domain cooldown; not done here since it wasn't asked for, and 107
-> same-host sources is an unusually large batch compared to what the rest of AiPulse's source list looks
-> like.
+> **Reddit reality check (updated - the real fix from the previous note's "not done" list is now in):**
+> two bugs, both fixed. First, the old per-domain cooldown's check-then-set wasn't atomic under the 5-way
+> concurrency gate - several requests to the same host could read the same "last fetch" timestamp and all
+> decide to proceed together, which is what let bursts of simultaneous Reddit requests through despite a
+> nominal cooldown. `WaitForDomainSlotAsync` now wraps the whole read-wait-write in a per-host lock, and is
+> called before *every* actual HTTP attempt (including 429 retries), not just once per source - a source
+> backing off from a 429 no longer leaves the shared host's cooldown stale while sibling sources race past
+> it. Second, and more consequential: live testing (both through the app and with standalone `curl` calls
+> using different User-Agents from the same machine) showed this is a genuine per-IP rate limit on Reddit's
+> side, not just a pacing problem - a single request can already come back with
+> `x-ratelimit-remaining: 0.0`, `x-ratelimit-reset: 13`. Reddit sends that header on every response (429 or
+> not) but never sends the standard `Retry-After`, so the old blind "5s, then 10s" backoff was guessing
+> where a real answer was available. `FetchOneAsync` now reads `x-ratelimit-reset` and uses it as that
+> host's cooldown going forward (clamped 2-60s), shared across every source hitting that host - confirmed
+> live: sources that got a 429 with a 9s reset successfully retried and returned 200 a few seconds later,
+> while sources hit during a deeper exhaustion window (accumulated from a full day of repeated testing
+> against 107 subreddits) correctly backed off much longer (42-51s) instead of hammering a budget that
+> wasn't going to refill in 10s anyway. This is real, honest self-healing driven by what Reddit's own
+> servers report - not a client-side trick, and it can't make an already-exhausted IP-wide budget refill
+> any faster, only avoid making it worse and recover as soon as the budget genuinely allows it.
 
 > **WebSub reality check:** none of AiPulse's ~40 default sources currently declare a hub (checked YouTube,
 > WordPress.com, Feedburner, Blogger - all previously reliable examples, none do anymore). The subscribe/

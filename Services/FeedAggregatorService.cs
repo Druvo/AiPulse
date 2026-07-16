@@ -28,7 +28,23 @@ public sealed class FeedAggregatorService
 
     /// <summary>Per-domain throttle: tracks last fetch time per host to avoid rate-limiting (e.g. Reddit 429s).</summary>
     private static readonly ConcurrentDictionary<string, DateTime> _lastDomainFetch = new();
+    /// <summary>Serializes the read-wait-write around <see cref="_lastDomainFetch"/> per host, so concurrent
+    /// requests to the same host can't all read the same stale timestamp and fire together (the previous
+    /// check-then-set was not atomic under the concurrency gate below, which is what actually let bursts of
+    /// simultaneous Reddit requests through despite the "cooldown").</summary>
+    private static readonly ConcurrentDictionary<string, SemaphoreSlim> _domainLocks = new();
     private static readonly TimeSpan DomainCooldown = TimeSpan.FromSeconds(3);
+    /// <summary>Reddit's anonymous/unauthenticated RSS rate limit is tighter than most other hosts, and this
+    /// app can have 100+ subreddit sources sharing the one host - give it a longer, dedicated cooldown.</summary>
+    private static readonly TimeSpan RedditCooldown = TimeSpan.FromSeconds(6);
+    /// <summary>
+    /// Reddit's responses (429 or not) carry real "x-ratelimit-remaining"/"x-ratelimit-reset" headers -
+    /// verified live: a single request can already show remaining=0, reset=13s, i.e. its actual budget is
+    /// tighter and more specific than any hardcoded guess. Learned per host from the most recent response
+    /// and used instead of <see cref="RedditCooldown"/> once available, so every source sharing that host
+    /// benefits from what the last one just learned rather than each guessing independently.
+    /// </summary>
+    private static readonly ConcurrentDictionary<string, TimeSpan> _learnedCooldown = new();
     private readonly SourceHealthService _health;
     private readonly ContentExtractorService _extractor;
     private readonly WebSubService _webSub;
@@ -101,21 +117,7 @@ public sealed class FeedAggregatorService
             var sw = new System.Diagnostics.Stopwatch();
             try
             {
-                // Per-domain throttle: wait if another request to the same host just fired.
-                if (source.Url is not null && Uri.TryCreate(source.Url, UriKind.Absolute, out var uri))
-                {
-                    var host = uri.Host;
-                    var now = DateTime.UtcNow;
-                    if (_lastDomainFetch.TryGetValue(host, out var last))
-                    {
-                        var elapsed = now - last;
-                        if (elapsed < DomainCooldown)
-                            await Task.Delay(DomainCooldown - elapsed, ct);
-                    }
-                    _lastDomainFetch[host] = DateTime.UtcNow;
-                }
-
-                sw.Start(); // only measures the actual fetch, not the domain-cooldown wait above
+                sw.Start(); // only measures the actual fetch - FetchOneAsync awaits its own per-host cooldown slot first
                 foreach (var item in await FetchOneAsync(source, ct))
                     items.Add(item);
                 _failureStreaks[source.Name] = 0;
@@ -294,6 +296,53 @@ public sealed class FeedAggregatorService
     /// <summary>How many of a source's newest items get a full-text fetch each poll - bounded so a big feed doesn't hammer its own site.</summary>
     private const int FullTextFetchLimit = 5;
 
+    /// <summary>
+    /// Atomically reserves the next cooldown slot for a URL's host: waits if another request to the same
+    /// host fetched too recently, then records this attempt's time - all under a per-host lock, so two
+    /// concurrent callers can't both read the same stale "last fetch" timestamp and slip through together.
+    /// Called before every actual HTTP attempt (including 429 retries), not just once per source, so a
+    /// source backing off from a rate limit doesn't leave the shared host's cooldown stale while sibling
+    /// sources for the same host race past it.
+    /// </summary>
+    private static async Task WaitForDomainSlotAsync(string? url, CancellationToken ct)
+    {
+        if (url is null || !Uri.TryCreate(url, UriKind.Absolute, out var uri)) return;
+        var host = uri.Host;
+        var cooldown = _learnedCooldown.TryGetValue(host, out var learned) ? learned
+            : host.EndsWith("reddit.com", StringComparison.OrdinalIgnoreCase) ? RedditCooldown
+            : DomainCooldown;
+
+        var hostLock = _domainLocks.GetOrAdd(host, _ => new SemaphoreSlim(1, 1));
+        await hostLock.WaitAsync(ct);
+        try
+        {
+            if (_lastDomainFetch.TryGetValue(host, out var last))
+            {
+                var elapsed = DateTime.UtcNow - last;
+                if (elapsed < cooldown)
+                    await Task.Delay(cooldown - elapsed, ct);
+            }
+            _lastDomainFetch[host] = DateTime.UtcNow;
+        }
+        finally
+        {
+            hostLock.Release();
+        }
+    }
+
+    /// <summary>
+    /// Reads "x-ratelimit-reset" (seconds until the host's own rate-limit window refills) off a response,
+    /// when present, and uses it as that host's cooldown going forward - clamped to a sane range since it's
+    /// an unofficial header and shouldn't be trusted blindly (e.g. a rogue 0 or an absurdly large value).
+    /// </summary>
+    private static void LearnCooldownFromResponse(string host, HttpResponseMessage resp)
+    {
+        if (!resp.Headers.TryGetValues("x-ratelimit-reset", out var values)) return;
+        if (!double.TryParse(values.FirstOrDefault(), out var resetSeconds) || resetSeconds <= 0) return;
+
+        _learnedCooldown[host] = TimeSpan.FromSeconds(Math.Clamp(resetSeconds, 2, 60));
+    }
+
     private async Task<List<FeedItem>> FetchOneAsync(FeedSource source, CancellationToken ct)
     {
         List<FeedItem> items;
@@ -301,23 +350,32 @@ public sealed class FeedAggregatorService
 
         if (source.IsScrape)
         {
+            await WaitForDomainSlotAsync(source.Url, ct);
             items = await ScrapeAsync(source, ct);
         }
         else
         {
             var client = _httpFactory.CreateClient("feeds");
+            var host = Uri.TryCreate(source.Url, UriKind.Absolute, out var srcUri) ? srcUri.Host : null;
 
             // Retry on 429 (Too Many Requests) with exponential backoff.
             HttpResponseMessage? resp = null;
             for (int attempt = 0; attempt < 3; attempt++)
             {
+                await WaitForDomainSlotAsync(source.Url, ct);
                 resp?.Dispose();
                 resp = await client.GetAsync(source.Url, HttpCompletionOption.ResponseHeadersRead, ct);
+                if (host is not null) LearnCooldownFromResponse(host, resp);
                 if ((int)resp.StatusCode != 429) break;
 
                 if (attempt < 2) // don't wait on last attempt
                 {
-                    var retryAfter = resp.Headers.RetryAfter?.Delta ?? TimeSpan.FromSeconds(5 * (attempt + 1));
+                    // Prefer the host's own stated reset time (standard Retry-After, or Reddit's
+                    // "x-ratelimit-reset") over a blind guess - verified live that Reddit sends the latter
+                    // with a genuinely useful value even though it never sends Retry-After.
+                    var retryAfter = resp.Headers.RetryAfter?.Delta
+                        ?? (host is not null && _learnedCooldown.TryGetValue(host, out var learned) ? learned : (TimeSpan?)null)
+                        ?? TimeSpan.FromSeconds(5 * (attempt + 1));
                     _log.LogWarning("Rate-limited (429) on {Source}, waiting {Wait}s (attempt {Attempt})", source.Name, retryAfter.TotalSeconds, attempt + 1);
                     await Task.Delay(retryAfter, ct);
                 }
