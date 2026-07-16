@@ -22,7 +22,10 @@ public sealed class WebhookService
 
     public async Task<(bool Success, string? Error)> SendAsync(string webhookUrl, Alert alert, CancellationToken ct = default)
     {
-        var text = $"[{alert.Kind}] {alert.Title} — {alert.SourceName}\n{alert.Link}";
+        var detail = string.IsNullOrWhiteSpace(alert.Details)
+            ? ""
+            : $"\n{alert.Details}" + (alert.Count > 1 ? $" (+{alert.Count - 1} more)" : "");
+        var text = $"[{alert.Kind}] {alert.Title} — {alert.SourceName}{detail}\n{alert.Link}";
         return await PostAsync(webhookUrl, text, ct);
     }
 

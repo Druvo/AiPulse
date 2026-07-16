@@ -8,6 +8,7 @@
 @inject FeedHistoryService History
 @inject HuggingFaceService HuggingFace
 @inject GitHubTrendingService GitHubTrending
+@inject NavigationManager Nav
 
 <PageTitle>AiPulse · Dashboard</PageTitle>
 
@@ -72,32 +73,118 @@
     </div>
 </div>
 
-@if (_historyItems is not null)
-{
-    <div class="row g-4 mb-4">
-        <div class="col-lg-4">
-            <TrendingPanel Items="_historyItems" />
-        </div>
-        <div class="col-lg-4">
-            <MiniTimeline Items="_historyItems" />
-        </div>
-        <div class="col-lg-4">
-            <ExploreTrendingPanel Models="_trendingModels" Repos="_trendingRepos" Loading="_trendingLoading" />
+<div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+    <h4 class="section-title mb-0"><Icon Name="calendar" /> Digest</h4>
+    <div class="btn-group btn-group-sm" role="group">
+        <button class="btn @(_range == "today" ? "btn-dark" : "btn-outline-dark")" @onclick='() => SetRange("today")'>Today</button>
+        <button class="btn @(_range == "week" ? "btn-dark" : "btn-outline-dark")" @onclick='() => SetRange("week")'>This Week</button>
+        <button class="btn @(_range == "month" ? "btn-dark" : "btn-outline-dark")" @onclick='() => SetRange("month")'>This Month</button>
+    </div>
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-6 col-lg-3">
+        <div class="stat-card">
+            <div class="stat-num">@_rangeItems.Count</div>
+            <div class="stat-label"><Icon Name="rss" Size="14" /> Items @RangeLabel</div>
         </div>
     </div>
-}
+    <div class="col-6 col-lg-3">
+        <div class="stat-card">
+            <div class="stat-num">@_activeSourceCount</div>
+            <div class="stat-label"><Icon Name="database" Size="14" /> Active sources</div>
+        </div>
+    </div>
+    <div class="col-6 col-lg-3">
+        <div class="stat-card">
+            <div class="stat-num">@(_topCategory ?? "—")</div>
+            <div class="stat-label"><Icon Name="trending-up" Size="14" /> Top category</div>
+        </div>
+    </div>
+    <div class="col-6 col-lg-3">
+        <div class="stat-card">
+            <div class="stat-num">@_multiSourceStories.Count</div>
+            <div class="stat-label"><Icon Name="star" Size="14" /> Multi-source stories</div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-4 mb-4">
+    <div class="col-lg-4">
+        <TrendingPanel Items="_rangeItems" DaysWindow="_daysWindow" />
+    </div>
+    <div class="col-lg-4">
+        <MiniTimeline Items="_historyItems ?? Array.Empty<FeedItem>()" MaxDays="_heatmapDays" />
+    </div>
+    <div class="col-lg-4">
+        <ExploreTrendingPanel Models="_trendingModels" Repos="_trendingRepos" Developers="_trendingDevelopers" Loading="_trendingLoading" />
+    </div>
+</div>
 
 @if (_biggestStory is not null)
 {
     <div class="mb-4">
-        <div class="x-small text-muted text-uppercase mb-1"><Icon Name="star" Size="12" /> Biggest story this week</div>
-        <div class="d-flex align-items-start gap-3">
-            <div class="flex-grow-1">
-                <FeedItemCard Item="_biggestStory" Layout="Compact" CssClass="biggest-story-card" />
-            </div>
-            <a href="digest" class="btn btn-sm btn-outline-primary text-nowrap">Full digest →</a>
-        </div>
+        <div class="x-small text-muted text-uppercase mb-1"><Icon Name="star" Size="12" /> Biggest story @RangeLabel</div>
+        <FeedItemCard Item="_biggestStory" Layout="Compact" CssClass="biggest-story-card" />
     </div>
+}
+
+<h4 class="section-title"><Icon Name="star" /> Biggest stories @RangeLabel</h4>
+<p class="text-muted">Ranked by how many of your sources covered the same story — the more sources reporting it, the bigger the signal.</p>
+
+@if (_biggestStories.Count == 0)
+{
+    <p class="text-muted">Not enough data yet — check back after AiPulse has been running a few days.</p>
+}
+else
+{
+    @foreach (var item in _biggestStories)
+    {
+        <div class="mb-2">
+            <FeedItemCard Item="item" Layout="Compact" />
+        </div>
+    }
+}
+
+@if (_range != "today")
+{
+    <h4 class="section-title mt-4"><Icon Name="calendar" /> Day by day</h4>
+
+    <div class="mb-2">
+        <input class="form-control form-control-sm" style="max-width:280px" placeholder="Search by category…"
+               value="@_search" @oninput="e => { _search = (string)e.Value!; _dayPage = 1; }" />
+    </div>
+
+    var (pageDays, totalDays) = GetDayPage();
+
+    <div class="table-responsive">
+        <table class="table table-sm align-middle">
+            <thead>
+                <tr>
+                    <SortableHeader Column="date" Label="Day" SortColumn="@_sortColumn" SortAscending="@_sortAscending" OnSort="ToggleSort" />
+                    <SortableHeader Column="count" Label="Items" SortColumn="@_sortColumn" SortAscending="@_sortAscending" OnSort="ToggleSort" />
+                    <th>Top categories</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var day in pageDays)
+                {
+                    <tr>
+                        <td>@day.Date.ToString("ddd, MMM d")</td>
+                        <td>@day.Count</td>
+                        <td>
+                            @foreach (var (cat, count) in day.TopCategories)
+                            {
+                                <span class="badge bg-secondary me-1">@cat @count</span>
+                            }
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+
+    <Pager TotalItems="totalDays" @bind-CurrentPage="_dayPage" @bind-PageSize="_dayPageSize" PageSizeOptions="new[] { 7, 14, 30 }" />
 }
 
 @if (Reading.DashboardWidgets.Count > 0)
@@ -175,36 +262,149 @@
 </div>
 
 @code {
+    [SupplyParameterFromQuery(Name = "range")]
+    public string? RangeParam { get; set; }
+
+    private static readonly HashSet<string> ValidRanges = new() { "today", "week", "month" };
+
     private IReadOnlyList<FeedItem>? _historyItems;
     private bool _welcomeDismissed;
     private List<TrendingModel> _trendingModels = new();
     private List<TrendingRepo> _trendingRepos = new();
+    private List<TrendingDeveloper> _trendingDevelopers = new();
     private bool _trendingLoading = true;
     private int _newSinceVisit;
     private FeedItem? _biggestStory;
 
+    private string _range = "week";
+    private List<FeedItem> _rangeItems = new();
+    private int _activeSourceCount;
+    private string? _topCategory;
+    private List<FeedItem> _multiSourceStories = new();
+    private List<FeedItem> _biggestStories = new();
+    private List<DayRow> _byDay = new();
+
+    private string _search = "";
+    private string? _sortColumn = "date";
+    private bool _sortAscending = false;
+    private int _dayPage = 1;
+    private int _dayPageSize = 7;
+
+    private int _daysWindow => _range switch { "today" => 1, "month" => 30, _ => 7 };
+    private int _heatmapDays => _range switch { "today" => 7, "month" => 90, _ => 30 };
+    private string RangeLabel => _range switch { "today" => "today", "month" => "this month", _ => "this week" };
+
     protected override async Task OnInitializedAsync()
     {
+        if (!string.IsNullOrWhiteSpace(RangeParam) && ValidRanges.Contains(RangeParam))
+            _range = RangeParam;
+
         _welcomeDismissed = Reading.WelcomeDismissed;
         var feedsTask = Feeds.GetAsync(); // warms the shared cache other pages read from
         var hfTask = HuggingFace.GetTrendingAsync();
         var reposTask = GitHubTrending.GetTrendingReposAsync();
-        await Task.WhenAll(feedsTask, hfTask, reposTask);
+        var devsTask = GitHubTrending.GetTrendingDevelopersAsync();
+        await Task.WhenAll(feedsTask, hfTask, reposTask, devsTask);
         _historyItems = History.Items;
         (_trendingModels, _) = hfTask.Result;
         _trendingRepos = reposTask.Result;
+        _trendingDevelopers = devsTask.Result;
         _trendingLoading = false;
 
         // Same live-cache source News.razor's own "New" filter counts against - History.Items (90-day
         // persisted log) would disagree with what clicking through to News actually shows.
         _newSinceVisit = feedsTask.Result.Items.Count(i => i.Published > Reading.LastNewsVisit);
 
-        var cutoff = DateTimeOffset.Now.AddDays(-7);
-        _biggestStory = _historyItems
-            .Where(i => i.Published >= cutoff && i.AlsoSeenOn.Length > 0)
+        RecomputeRange();
+    }
+
+    private void SetRange(string range)
+    {
+        _range = range;
+        _dayPage = 1;
+        RecomputeRange();
+        Nav.NavigateTo(range == "week" ? "/" : $"/?range={range}", replace: true);
+    }
+
+    /// <summary>Re-derives every range-scoped section (stat cards, trending panel, biggest stories, day-by-day) from the currently selected Today/Week/Month range - mirrors what Digest.razor used to compute for a hardcoded 7 days.</summary>
+    private void RecomputeRange()
+    {
+        if (_historyItems is null) return;
+
+        var cutoff = _range switch
+        {
+            "today" => new DateTimeOffset(DateTime.Today),
+            "month" => DateTimeOffset.Now.AddDays(-30),
+            _ => DateTimeOffset.Now.AddDays(-7),
+        };
+        _rangeItems = _historyItems.Where(i => i.Published >= cutoff).ToList();
+
+        _activeSourceCount = _rangeItems.Select(i => i.SourceName).Distinct(StringComparer.OrdinalIgnoreCase).Count();
+        _topCategory = _rangeItems.GroupBy(i => i.Category)
+            .OrderByDescending(g => g.Count())
+            .Select(g => g.Key)
+            .FirstOrDefault();
+
+        _multiSourceStories = _rangeItems.Where(i => i.AlsoSeenOn.Length > 0).ToList();
+        _biggestStories = _rangeItems
             .OrderByDescending(i => i.AlsoSeenOn.Length)
             .ThenByDescending(i => i.Published)
-            .FirstOrDefault();
+            .Take(10)
+            .ToList();
+        _biggestStory = _biggestStories.FirstOrDefault(i => i.AlsoSeenOn.Length > 0);
+
+        _byDay = _rangeItems
+            .GroupBy(i => i.Published.LocalDateTime.Date)
+            .OrderByDescending(g => g.Key)
+            .Select(g => new DayRow
+            {
+                Date = g.Key,
+                Count = g.Count(),
+                TopCategories = g.GroupBy(i => i.Category)
+                    .OrderByDescending(c => c.Count())
+                    .Take(3)
+                    .Select(c => (c.Key, c.Count()))
+                    .ToList()
+            })
+            .ToList();
+    }
+
+    private void ToggleSort(string column)
+    {
+        if (_sortColumn == column) _sortAscending = !_sortAscending;
+        else { _sortColumn = column; _sortAscending = true; }
+        _dayPage = 1;
+    }
+
+    private (List<DayRow> Rows, int Total) GetDayPage()
+    {
+        IEnumerable<DayRow> q = _byDay;
+
+        if (!string.IsNullOrWhiteSpace(_search))
+        {
+            var needle = _search.Trim();
+            q = q.Where(d => d.TopCategories.Any(c => c.Category.Contains(needle, StringComparison.OrdinalIgnoreCase)));
+        }
+
+        q = (_sortColumn, _sortAscending) switch
+        {
+            ("date", true) => q.OrderBy(d => d.Date),
+            ("count", true) => q.OrderBy(d => d.Count),
+            ("count", false) => q.OrderByDescending(d => d.Count),
+            (_, false) => q.OrderByDescending(d => d.Date),
+            _ => q.OrderBy(d => d.Date),
+        };
+
+        var list = q.ToList();
+        var page = list.Skip((_dayPage - 1) * _dayPageSize).Take(_dayPageSize).ToList();
+        return (page, list.Count);
+    }
+
+    private sealed class DayRow
+    {
+        public DateTime Date { get; set; }
+        public int Count { get; set; }
+        public List<(string Category, int Count)> TopCategories { get; set; } = new();
     }
 
     private void DismissWelcome()

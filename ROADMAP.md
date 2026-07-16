@@ -150,6 +150,41 @@ Status tags: ✅ done · 🟢 fits philosophy, no AI needed · 🟡 needs a desi
   "Popularity" sort and its "★ 12.3k" badges come from `GetRepoStatsAsync` for any tool whose URL resolves
   to a github.com repo - proprietary tools (Claude Code, GitHub Copilot, etc.) simply sort last with no
   badge, same as before.
+- Nine fixes/changes from a round of live use:
+  - Explore's GitHub Repos and Trending Devs tabs merged into one **GitHub Trending** section, two columns
+    side by side (mirrors how github.com itself presents it), sharing a Today/This week/This month filter -
+    `GitHubTrendingService`'s two scrape methods now take a `since` parameter, cached per value.
+  - **Dashboard and Weekly Digest merged** - the Digest page is gone (redirects `/digest` → `/`, nav entry
+    removed) and folded into the Dashboard behind a Today/This Week/This Month range toggle: the range-scoped
+    stat cards, trending panel, mini-timeline, biggest-stories list, and day-by-day table (hidden for
+    "Today", nothing to break down over one day) all react together. `TrendingPanel`/`MiniTimeline` gained
+    `DaysWindow`/`MaxDays` parameters instead of a hardcoded 7/90 days so the same components serve both
+    the old Dashboard and the folded-in Digest content. The Dashboard's trending panel also now surfaces the
+    top 5 GitHub repos and top 5 developers (was top 3 repos only).
+  - News Feed's Calendar is now a permanent right-hand column instead of a click-to-open slide-out - no
+    more toggle button/backdrop.
+  - News Feed's source filter is now a multi-select chip row (matching how topic tags already look) instead
+    of a single-select dropdown, so you can filter to several sources at once.
+  - Feed cards show a byline (`Author`, from Atom/RSS `<author>` or the common non-standard `<dc:creator>`)
+    and a computed "~N min read" estimate when there's enough text to bother, plus a faint background tint
+    (in addition to the existing top accent stripe) from the same per-source color for a stronger sense of
+    per-source identity at a glance. Investigated a claim that scraping each source's actual page design was
+    possible - not attempted at that scope (arbitrary per-site scrapers for video-duration/upvote-style
+    fields aren't reliably obtainable from RSS/Atom and would mean bespoke per-source code, working against
+    the standalone/self-hosted model everywhere else in the app).
+  - **Notification flood fixed**: every new Release-type item used to fire its own alert with no cap per
+    source - a source rotating in several "new" items in one poll (the GitHub Trending scrapes especially)
+    could flood the bell. `FeedWatcherService` now groups new Release items by source per poll and raises
+    at most one alert per source per hour (`Alert` gained `Details`/`Count`); the alert shows the source as
+    its title and the newest item's own title/version as a detail line with a "(+N more)" suffix when more
+    than one new item arrived, both in the bell panel and in outbound webhook text. Watchlist alerts are
+    untouched (per-item, no throttling - a deliberate keyword hit is a different signal than a release
+    flood).
+  - Investigated a report that Settings' self-service password change didn't work - reproduced the flow
+    live (typed current/new/confirm, clicked Change password) and it worked correctly both times tested; no
+    code change made since the underlying feature wasn't actually broken. If this recurs, the likely real
+    gap is that there's no recovery path for a forgotten admin password today (admins can't reset their own
+    account via the Users page by design, to avoid stale-cookie confusion) - flagged, not built speculatively.
 
 > **GitHub Trending scrape reality check:** `GitHubTrendingService` scrapes `github.com/trending` and
 > `github.com/trending/developers` directly for the repo/developer views above - GitHub has no API for

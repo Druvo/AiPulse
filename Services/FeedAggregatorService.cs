@@ -454,6 +454,7 @@ public sealed class FeedAggregatorService
                     ?? item.Links.FirstOrDefault(l => l.RelationshipType == "enclosure" && (l.MediaType?.StartsWith("image/", StringComparison.OrdinalIgnoreCase) ?? false))?.Uri?.ToString()
                     ?? ExtractImgTag(rawSummary),
                 source.Url);
+            var author = ExtractAuthor(item);
 
             result.Add(new FeedItem
             {
@@ -466,13 +467,33 @@ public sealed class FeedAggregatorService
                 ContentType = source.ContentType,
                 Level = source.Level,
                 Tags = source.Tags,
-                ImageUrl = imageUrl
+                ImageUrl = imageUrl,
+                Author = author
             });
         }
         return (result, hubUrl);
     }
 
     private static readonly System.Xml.Linq.XNamespace MediaNs = "http://search.yahoo.com/mrss/";
+    private static readonly System.Xml.Linq.XNamespace DcNs = "http://purl.org/dc/elements/1.1/";
+
+    /// <summary>Byline from Atom/RSS &lt;author&gt; (mapped natively by the syndication API) or the common non-standard &lt;dc:creator&gt; (not natively mapped - read from the item's raw extension XML, same technique as the media-thumbnail lookup).</summary>
+    private static string? ExtractAuthor(SyndicationItem item)
+    {
+        var direct = item.Authors.FirstOrDefault()?.Name;
+        if (!string.IsNullOrWhiteSpace(direct)) return direct.Trim();
+
+        foreach (var ext in item.ElementExtensions)
+        {
+            System.Xml.Linq.XElement el;
+            try { el = ext.GetObject<System.Xml.Linq.XElement>(); }
+            catch { continue; }
+
+            if (el.Name == DcNs + "creator" && !string.IsNullOrWhiteSpace(el.Value))
+                return el.Value.Trim();
+        }
+        return null;
+    }
 
     /// <summary>Looks for a media:thumbnail or media:content(medium=image) anywhere inside the item's raw extension XML (covers media:group-wrapped thumbnails, e.g. YouTube's feed format).</summary>
     private static string? ExtractMediaImage(SyndicationElementExtensionCollection extensions)
@@ -560,6 +581,10 @@ public sealed class FeedAggregatorService
                 : null;
             var imageUrl = ResolveImageUrl(ExtractMediaImage(e) ?? enclosureUrl ?? ExtractImgTag(summaryRaw), source.Url);
 
+            var author = ((string?)e.Element(DcNs + "creator"))?.Trim()
+                ?? ((string?)e.Element("author"))?.Trim()
+                ?? e.Element(atom + "author")?.Element(atom + "name")?.Value?.Trim();
+
             result.Add(new FeedItem
             {
                 Title = DeriveTitle(title, summary, source.Name),
@@ -571,7 +596,8 @@ public sealed class FeedAggregatorService
                 ContentType = source.ContentType,
                 Level = source.Level,
                 Tags = source.Tags,
-                ImageUrl = imageUrl
+                ImageUrl = imageUrl,
+                Author = string.IsNullOrWhiteSpace(author) ? null : author
             });
         }
         return (result, hubUrl);

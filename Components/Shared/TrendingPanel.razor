@@ -1,8 +1,8 @@
-@* Top tags and active sources over the last 7 days, as clickable links into the News feed. *@
+@* Top tags and active sources over the last DaysWindow days, as clickable links into the News feed. *@
 
 <div class="card mb-3">
     <div class="card-body">
-        <h6 class="section-title mb-2"><Icon Name="trending-up" Size="16" /> Trending this week</h6>
+        <h6 class="section-title mb-2"><Icon Name="trending-up" Size="16" /> Trending @WindowLabel</h6>
         @if (TopTags.Count == 0)
         {
             <p class="text-muted small mb-0">Not enough data yet.</p>
@@ -33,8 +33,19 @@
     [Parameter, EditorRequired]
     public IReadOnlyList<FeedItem> Items { get; set; } = Array.Empty<FeedItem>();
 
+    /// <summary>How many trailing days to look back over. Default 7 (matches the original "this week" behavior).</summary>
+    [Parameter]
+    public int DaysWindow { get; set; } = 7;
+
+    private string WindowLabel => DaysWindow switch
+    {
+        <= 1 => "today",
+        <= 7 => "this week",
+        _ => "this month"
+    };
+
     private List<(string Tag, int Count)> TopTags => Items
-        .Where(i => i.Published >= DateTimeOffset.Now.AddDays(-7))
+        .Where(i => i.Published >= DateTimeOffset.Now.AddDays(-DaysWindow))
         .SelectMany(i => i.Tags)
         .GroupBy(t => t, StringComparer.OrdinalIgnoreCase)
         .OrderByDescending(g => g.Count())
@@ -43,7 +54,7 @@
         .ToList();
 
     private List<(string Source, int Count)> TopSources => Items
-        .Where(i => i.Published >= DateTimeOffset.Now.AddDays(-7))
+        .Where(i => i.Published >= DateTimeOffset.Now.AddDays(-DaysWindow))
         .GroupBy(i => i.SourceName)
         .OrderByDescending(g => g.Count())
         .Take(5)

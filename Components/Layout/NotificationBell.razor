@@ -30,6 +30,10 @@
                     <a class="notif-item @(a.Read ? "" : "unread")" href="@a.Link" target="_blank" rel="noopener">
                         <span class="notif-kind kind-@a.Kind.ToLower()">@a.Kind</span>
                         <span class="notif-title">@a.Title</span>
+                        @if (!string.IsNullOrWhiteSpace(a.Details))
+                        {
+                            <span class="notif-detail">@a.Details@(a.Count > 1 ? $" (+{a.Count - 1} more)" : "")</span>
+                        }
                         <span class="notif-meta">@a.SourceName · @a.CreatedAt.ToLocalTime().ToString("t")</span>
                     </a>
                 }
@@ -67,7 +71,10 @@
                 foreach (var a in newAlerts)
                 {
                     if (_shown.Add(a.Id))
-                        await JS.InvokeVoidAsync("aipulseNotify.show", $"{a.Kind} · {a.SourceName}", a.Title, a.Link);
+                    {
+                        var body = string.IsNullOrWhiteSpace(a.Details) ? a.Title : $"{a.Details}{(a.Count > 1 ? $" (+{a.Count - 1} more)" : "")}";
+                        await JS.InvokeVoidAsync("aipulseNotify.show", $"{a.Kind} · {a.Title}", body, a.Link);
+                    }
                 }
                 _unread = Notify.UnreadCount;
                 StateHasChanged();

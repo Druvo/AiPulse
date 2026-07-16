@@ -9,6 +9,8 @@
 
 <PageTitle>AiPulse · News Feed</PageTitle>
 
+<div class="news-layout">
+<div class="news-main">
 <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
     <h1 class="mb-0"><Icon Name="rss" Size="22" /> News Feed</h1>
     <div class="d-flex align-items-center gap-2">
@@ -71,9 +73,6 @@
             <span class="badge bg-info ms-1">@ActiveFilterCount()</span>
         }
     </button>
-    <button class="btn btn-sm btn-outline-dark" @onclick="() => _showCalendar = !_showCalendar">
-        <Icon Name="calendar" Size="14" /> Calendar
-    </button>
     @if (!string.IsNullOrEmpty(_tag))
     {
         <button class="btn btn-sm btn-warning" @onclick='() => SetTag("")'>Tag: @_tag ✕</button>
@@ -84,23 +83,11 @@
             @(_dateFrom == _dateTo ? $"Day: {_dateFrom.Value:MMM d}" : $"{_dateFrom.Value:MMM d} – {_dateTo.Value:MMM d}") ✕
         </button>
     }
-    @if (!string.IsNullOrEmpty(_source))
+    @if (_sources.Count > 0)
     {
-        <button class="btn btn-sm btn-warning" @onclick='() => { _source = ""; SyncUrl(); }'>Source: @_source ✕</button>
+        <button class="btn btn-sm btn-warning" @onclick="ClearSources">Sources (@_sources.Count) ✕</button>
     }
 </div>
-
-@if (_showCalendar)
-{
-    <div class="calendar-panel-backdrop" @onclick="() => _showCalendar = false"></div>
-    <div class="calendar-panel">
-        <div class="d-flex justify-content-between align-items-center mb-2">
-            <h6 class="mb-0"><Icon Name="calendar" Size="16" /> Calendar</h6>
-            <button class="btn btn-sm btn-link p-0" title="Close" @onclick="() => _showCalendar = false">✕</button>
-        </div>
-        <MonthCalendar Items="_result?.Items ?? new()" RangeStart="_dateFrom" RangeEnd="_dateTo" OnRangeChanged="OnCalendarRangeChanged" />
-    </div>
-}
 
 @if (_showFilters)
 {
@@ -119,13 +106,6 @@
                 <option value="@lvl">@lvl</option>
             }
         </select>
-        <select class="form-select form-select-sm w-auto" @bind="_source" @bind:after="SyncUrl">
-            <option value="">All sources</option>
-            @foreach (var src in AvailableSources())
-            {
-                <option value="@src">@src</option>
-            }
-        </select>
         <select class="form-select form-select-sm w-auto" @bind="_sort" @bind:after="SyncUrl">
             <option value="newest">Newest first</option>
             <option value="oldest">Oldest first</option>
@@ -133,6 +113,19 @@
             <option value="title">Title A-Z</option>
         </select>
     </div>
+
+    @if (AvailableSources().Count > 0)
+    {
+        <div class="mb-2">
+            <div class="x-small text-muted text-uppercase mb-1">Sources (select any number)</div>
+            <div class="d-flex flex-wrap gap-1 mb-3">
+                @foreach (var src in AvailableSources())
+                {
+                    <button class="btn btn-sm tag-chip @(_sources.Contains(src) ? "active" : "")" @onclick="() => ToggleSource(src)">@src</button>
+                }
+            </div>
+        </div>
+    }
 
     @if (_result is not null && AvailableTags().Count > 0)
     {
@@ -220,6 +213,13 @@ else
         <Pager TotalItems="totalItems" @bind-CurrentPage="_page" @bind-PageSize="_pageSize" />
     }
 }
+</div>
+
+<div class="news-calendar-panel">
+    <h6 class="mb-2"><Icon Name="calendar" Size="16" /> Calendar</h6>
+    <MonthCalendar Items="_result?.Items ?? new()" RangeStart="_dateFrom" RangeEnd="_dateTo" OnRangeChanged="OnCalendarRangeChanged" />
+</div>
+</div>
 
 @code {
     [SupplyParameterFromQuery(Name = "tag")]
@@ -258,14 +258,13 @@ else
     private string _search = "";
     private string _contentType = "";
     private string _level = "";
-    private string _source = "";
+    private HashSet<string> _sources = new(StringComparer.OrdinalIgnoreCase);
     private string _sort = "newest";
     private string _tag = "";
     private DateOnly? _dateFrom;
     private DateOnly? _dateTo;
     private string _view = "List";
     private bool _showFilters;
-    private bool _showCalendar;
     private int _page = 1;
     private int _pageSize = 20;
     private DateTimeOffset _sinceVisit = DateTimeOffset.MinValue;
@@ -304,7 +303,7 @@ else
         if (!string.IsNullOrWhiteSpace(LevelParam) && _levels.Contains(LevelParam))
             _level = LevelParam;
         if (!string.IsNullOrWhiteSpace(SourceParam))
-            _source = SourceParam;
+            _sources = new HashSet<string>(SourceParam.Split(',').Select(Uri.UnescapeDataString), StringComparer.OrdinalIgnoreCase);
         if (!string.IsNullOrWhiteSpace(SortParam) && _sortOptions.Contains(SortParam))
             _sort = SortParam;
 
@@ -325,6 +324,15 @@ else
     private void SetDateRange(DateOnly start, DateOnly end) { _dateFrom = start; _dateTo = end; SyncUrl(); }
     private void OnCalendarRangeChanged((DateOnly Start, DateOnly End) range) => SetDateRange(range.Start, range.End);
 
+    private void ToggleSource(string source)
+    {
+        if (!_sources.Remove(source))
+            _sources.Add(source);
+        SyncUrl();
+    }
+
+    private void ClearSources() { _sources.Clear(); SyncUrl(); }
+
     /// <summary>Reflects the current filter/view state into the URL so a refresh (or a shared link) lands back in the same place.</summary>
     private void SyncUrl()
     {
@@ -341,7 +349,7 @@ else
         }
         if (!string.IsNullOrEmpty(_contentType)) query.Add($"contentType={Uri.EscapeDataString(_contentType)}");
         if (!string.IsNullOrEmpty(_level)) query.Add($"level={Uri.EscapeDataString(_level)}");
-        if (!string.IsNullOrEmpty(_source)) query.Add($"source={Uri.EscapeDataString(_source)}");
+        if (_sources.Count > 0) query.Add($"source={string.Join(",", _sources.Select(Uri.EscapeDataString))}");
         if (_sort != "newest") query.Add($"sort={_sort}");
         var qs = query.Count > 0 ? "?" + string.Join("&", query) : "";
         Nav.NavigateTo($"news{qs}", replace: true);
@@ -362,7 +370,7 @@ else
     }
 
     private int ActiveFilterCount() =>
-        (string.IsNullOrEmpty(_contentType) ? 0 : 1) + (string.IsNullOrEmpty(_level) ? 0 : 1) + (string.IsNullOrEmpty(_source) ? 0 : 1);
+        (string.IsNullOrEmpty(_contentType) ? 0 : 1) + (string.IsNullOrEmpty(_level) ? 0 : 1) + (_sources.Count > 0 ? 1 : 0);
 
     private List<string> AvailableTags() =>
         _result?.Items.SelectMany(i => i.Tags).Distinct(StringComparer.OrdinalIgnoreCase).OrderBy(t => t).ToList() ?? new();
@@ -393,8 +401,8 @@ else
         if (!string.IsNullOrEmpty(_level))
             q = q.Where(i => i.Level == _level);
 
-        if (!string.IsNullOrEmpty(_source))
-            q = q.Where(i => i.SourceName == _source);
+        if (_sources.Count > 0)
+            q = q.Where(i => _sources.Contains(i.SourceName));
 
         if (!string.IsNullOrEmpty(_tag))
             q = q.Where(i => i.Tags.Contains(_tag, StringComparer.OrdinalIgnoreCase));

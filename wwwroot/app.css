@@ -628,7 +628,8 @@ a.card:hover { transform: translateY(-1px); }
 }
 .kind-release { background: var(--ap-accent-soft); color: var(--ap-accent-soft-text); }
 .kind-watchlist { background: var(--ap-warning-soft); color: var(--ap-warning-soft-text); }
-.notif-title { display: block; font-size: .85rem; margin-top: .15rem; }
+.notif-title { display: block; font-size: .85rem; margin-top: .15rem; font-weight: 600; }
+.notif-detail { display: block; font-size: .78rem; color: var(--ap-text-secondary); margin-top: .1rem; }
 .notif-meta { display: block; font-size: .7rem; color: var(--ap-muted); margin-top: .1rem; }
 
 /* Content-type badges — soft tint per type */
@@ -752,7 +753,10 @@ a.heatmap-cell:hover { outline: 2px solid var(--ap-accent-hover); }
 
 /* Per-source accent stripe along the card's top edge - the source's own declared brand color when it has
    one (see FaviconService), falling back to the generated per-source color otherwise. */
-.feed-card-accent { border-top: 3px solid var(--card-accent, transparent); }
+.feed-card-accent {
+    border-top: 3px solid var(--card-accent, transparent);
+    background-color: color-mix(in srgb, var(--card-accent, transparent) 4%, var(--ap-surface));
+}
 
 /* Per-source identity avatar: a colored-initial circle as the base layer, with the site's own favicon
    (fetched/cached by AiPulse itself, never a third-party favicon CDN) layered on top. If the favicon
@@ -798,25 +802,28 @@ a.heatmap-cell:hover { outline: 2px solid var(--ap-accent-hover); }
 .contributor-avatar { width: 20px; height: 20px; border-radius: 50%; margin-left: -6px; border: 2px solid var(--ap-surface); vertical-align: middle; }
 .contributor-avatar:first-child { margin-left: 0; }
 .dev-avatar { width: 48px; height: 48px; border-radius: 50%; flex-shrink: 0; }
+.dev-avatar-sm { width: 22px; height: 22px; border-radius: 50%; flex-shrink: 0; }
 
-/* Calendar slide-out panel (News Feed) - anchored to the right edge instead of inline in the page flow */
-.calendar-panel-backdrop {
-    position: fixed;
-    inset: 0;
-    background: rgba(0, 0, 0, .3);
-    z-index: 1040;
+/* News Feed layout - main column + an always-visible calendar sidebar (no toggle/overlay anymore) */
+.news-layout {
+    display: flex;
+    align-items: flex-start;
+    gap: 1.5rem;
+    flex-wrap: wrap;
 }
-.calendar-panel {
-    position: fixed;
-    top: 0;
-    right: 0;
-    height: 100vh;
-    width: min(380px, 92vw);
+.news-main {
+    flex: 1 1 480px;
+    min-width: 0;
+}
+.news-calendar-panel {
+    flex: 0 0 320px;
+    max-width: 100%;
     background: var(--ap-surface);
     color: var(--ap-text);
-    border-left: 1px solid var(--ap-border);
-    box-shadow: var(--ap-shadow-md);
-    z-index: 1050;
-    overflow-y: auto;
+    border: 1px solid var(--ap-border);
+    border-radius: var(--ap-radius-md);
+    box-shadow: var(--ap-shadow-sm);
     padding: 1.25rem;
+    position: sticky;
+    top: 1rem;
 }

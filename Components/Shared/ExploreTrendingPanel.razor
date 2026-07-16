@@ -1,4 +1,4 @@
-@* Top Hugging Face models + GitHub repos, mirrored from the Explore page, for an at-a-glance Dashboard view. *@
+@* Top Hugging Face models + GitHub repos/developers, mirrored from the Explore page, for an at-a-glance Dashboard view. *@
 @using AiPulse.Models
 
 <div class="card mb-3">
@@ -8,7 +8,7 @@
         {
             <p class="text-muted small mb-0"><span class="spinner"></span> Loading…</p>
         }
-        else if (Models.Count == 0 && Repos.Count == 0)
+        else if (Models.Count == 0 && Repos.Count == 0 && Developers.Count == 0)
         {
             <p class="text-muted small mb-0">Couldn't reach Hugging Face/GitHub right now.</p>
         }
@@ -18,7 +18,7 @@
             {
                 <h6 class="mb-1 x-small text-muted text-uppercase">Hugging Face</h6>
                 <ul class="list-unstyled mb-2 small">
-                    @foreach (var m in Models.Take(3))
+                    @foreach (var m in Models.Take(5))
                     {
                         <li class="d-flex justify-content-between align-items-center border-bottom py-1 gap-2">
                             <a href="@m.Url" target="_blank" rel="noopener" class="text-truncate">@m.Id</a>
@@ -29,9 +29,9 @@
             }
             @if (Repos.Count > 0)
             {
-                <h6 class="mb-1 x-small text-muted text-uppercase">GitHub</h6>
+                <h6 class="mb-1 x-small text-muted text-uppercase">GitHub repos</h6>
                 <ul class="list-unstyled mb-2 small">
-                    @foreach (var r in Repos.Take(3))
+                    @foreach (var r in Repos.Take(5))
                     {
                         <li class="d-flex justify-content-between align-items-center border-bottom py-1 gap-2">
                             <a href="@r.Url" target="_blank" rel="noopener" class="text-truncate">@r.FullName</a>
@@ -40,7 +40,20 @@
                     }
                 </ul>
             }
-            <a href="explore" class="btn btn-sm btn-outline-primary mt-1">See more on Explore →</a>
+            @if (Developers.Count > 0)
+            {
+                <h6 class="mb-1 x-small text-muted text-uppercase">GitHub developers</h6>
+                <ul class="list-unstyled mb-2 small">
+                    @foreach (var d in Developers.Take(5))
+                    {
+                        <li class="d-flex align-items-center gap-2 border-bottom py-1">
+                            <img src="@d.AvatarUrl" alt="@d.Username" class="dev-avatar-sm" />
+                            <a href="@d.ProfileUrl" target="_blank" rel="noopener" class="text-truncate">@d.Username</a>
+                        </li>
+                    }
+                </ul>
+            }
+            <a href="explore?tab=github" class="btn btn-sm btn-outline-primary mt-1">See more on Explore →</a>
         }
     </div>
 </div>
@@ -51,6 +64,9 @@
 
     [Parameter, EditorRequired]
     public List<TrendingRepo> Repos { get; set; } = new();
+
+    [Parameter]
+    public List<TrendingDeveloper> Developers { get; set; } = new();
 
     [Parameter]
     public bool Loading { get; set; }

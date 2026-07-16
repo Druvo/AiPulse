@@ -23,11 +23,8 @@
     <button class="btn btn-sm @(_section == "benchmarks" ? "btn-dark" : "btn-outline-dark")" @onclick='() => SetSection("benchmarks")'>
         <Icon Name="trending-up" Size="14" /> Benchmarks
     </button>
-    <button class="btn btn-sm @(_section == "repos" ? "btn-dark" : "btn-outline-dark")" @onclick='() => SetSection("repos")'>
-        <Icon Name="code" Size="14" /> GitHub Repos
-    </button>
-    <button class="btn btn-sm @(_section == "developers" ? "btn-dark" : "btn-outline-dark")" @onclick='() => SetSection("developers")'>
-        <Icon Name="user" Size="14" /> Trending Devs
+    <button class="btn btn-sm @(_section == "github" ? "btn-dark" : "btn-outline-dark")" @onclick='() => SetSection("github")'>
+        <Icon Name="code" Size="14" /> GitHub Trending
     </button>
     <button class="btn btn-sm @(_section == "try" ? "btn-dark" : "btn-outline-dark")" @onclick='() => SetSection("try")'>
         <Icon Name="play" Size="14" /> Try a Model
@@ -130,113 +127,125 @@ else if (_section == "benchmarks")
         }
     </div>
 }
-else if (_section == "repos")
+else if (_section == "github")
 {
-    <p class="text-muted small">
-        @(string.IsNullOrWhiteSpace(_repoActiveQuery)
-            ? "Live from github.com/trending — same page GitHub itself shows, refreshed hourly."
-            : "Keyword search uses GitHub's official Search API instead (trending pages aren't searchable).")
-    </p>
-    <div class="input-group mb-3" style="max-width: 420px;">
-        <input class="form-control" placeholder="Search GitHub repos by keyword…" @bind="_repoQuery"
-               @onkeydown="@(async e => { if (e.Key == "Enter") await SearchRepos(); })" />
-        <button class="btn btn-primary" disabled="@_repoSearching" @onclick="SearchRepos">
-            @if (_repoSearching) { <span class="spinner"></span> }
-            <Icon Name="search" Size="14" />
-        </button>
-        @if (!string.IsNullOrWhiteSpace(_repoActiveQuery))
-        {
-            <button class="btn btn-outline-secondary" @onclick="ClearRepoSearch">✕ Clear</button>
-        }
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+        <p class="text-muted small mb-0">
+            @(string.IsNullOrWhiteSpace(_repoActiveQuery)
+                ? "Live from github.com/trending — same page GitHub itself shows, refreshed hourly."
+                : "Repo keyword search uses GitHub's official Search API instead (trending pages aren't searchable).")
+        </p>
+        <select class="form-select form-select-sm w-auto" value="@_since" @onchange="OnSinceChanged">
+            <option value="daily">Today</option>
+            <option value="weekly">This week</option>
+            <option value="monthly">This month</option>
+        </select>
     </div>
-    @if (!string.IsNullOrWhiteSpace(_repoActiveQuery))
-    {
-        <p class="text-muted small">Results for "@_repoActiveQuery" — @_repos.Count repo(s).</p>
-    }
-    @foreach (var r in _repos.Skip((_repoPage - 1) * _repoPageSize).Take(_repoPageSize))
-    {
-        <div class="card mb-2">
-            <div class="card-body py-2">
-                <div class="d-flex justify-content-between align-items-start gap-2">
-                    <a href="@r.Url" target="_blank" rel="noopener" class="fw-bold text-decoration-none"><Icon Name="code" Size="14" /> @r.FullName</a>
-                    @if (r.StarsToday > 0)
-                    {
-                        <span class="badge bg-warning text-nowrap">✨ @r.StarsToday.ToString("N0") stars today</span>
-                    }
-                </div>
-                @if (!string.IsNullOrWhiteSpace(r.Description))
+
+    <div class="row g-4">
+        <div class="col-lg-6">
+            <h6 class="section-title mb-2"><Icon Name="code" Size="16" /> Repositories</h6>
+            <div class="input-group mb-3">
+                <input class="form-control" placeholder="Search GitHub repos by keyword…" @bind="_repoQuery"
+                       @onkeydown="@(async e => { if (e.Key == "Enter") await SearchRepos(); })" />
+                <button class="btn btn-primary" disabled="@_repoSearching" @onclick="SearchRepos">
+                    @if (_repoSearching) { <span class="spinner"></span> }
+                    <Icon Name="search" Size="14" />
+                </button>
+                @if (!string.IsNullOrWhiteSpace(_repoActiveQuery))
                 {
-                    <p class="small text-muted mb-2">@r.Description</p>
+                    <button class="btn btn-outline-secondary" @onclick="ClearRepoSearch">✕</button>
                 }
-                <div class="d-flex flex-wrap align-items-center gap-3 small text-muted">
-                    @if (!string.IsNullOrWhiteSpace(r.Language))
-                    {
-                        <span class="d-inline-flex align-items-center gap-1">
-                            <span class="lang-dot" style="background-color:@(r.LanguageColor ?? "#8b949e")"></span>@r.Language
-                        </span>
-                    }
-                    <span>★ @r.Stars.ToString("N0")</span>
-                    @if (r.Forks > 0)
-                    {
-                        <span>⑂ @r.Forks.ToString("N0")</span>
-                    }
-                    @if (r.Contributors.Count > 0)
-                    {
-                        <span class="d-inline-flex align-items-center gap-1">
-                            Built by
-                            @foreach (var c in r.Contributors.Take(6))
-                            {
-                                <a href="@c.ProfileUrl" target="_blank" rel="noopener" title="@c.Username">
-                                    <img src="@c.AvatarUrl" alt="@c.Username" class="contributor-avatar" />
-                                </a>
-                            }
-                        </span>
-                    }
-                </div>
             </div>
-        </div>
-    }
-    @if (_repos.Count == 0)
-    {
-        <p class="text-muted small">@(string.IsNullOrWhiteSpace(_repoActiveQuery) ? "Couldn't reach GitHub right now — try refreshing shortly." : "No matches.")</p>
-    }
-    else
-    {
-        <Pager TotalItems="_repos.Count" @bind-CurrentPage="_repoPage" @bind-PageSize="_repoPageSize" />
-    }
-}
-else if (_section == "developers")
-{
-    <p class="text-muted small">Live from github.com/trending/developers — developers with the most-followed new activity today.</p>
-    @foreach (var d in _developers.Skip((_devPage - 1) * _devPageSize).Take(_devPageSize))
-    {
-        <div class="card mb-2">
-            <div class="card-body py-2 d-flex align-items-center gap-3">
-                <img src="@d.AvatarUrl" alt="@d.Username" class="dev-avatar" />
-                <div class="flex-grow-1">
-                    <a href="@d.ProfileUrl" target="_blank" rel="noopener" class="fw-bold text-decoration-none">@d.Username</a>
-                    @if (!string.IsNullOrWhiteSpace(d.PopularRepoName))
-                    {
-                        <div class="small text-muted">
-                            Popular repo: <a href="@d.PopularRepoUrl" target="_blank" rel="noopener">@d.PopularRepoName</a>
-                            @if (!string.IsNullOrWhiteSpace(d.PopularRepoDescription))
+            @if (!string.IsNullOrWhiteSpace(_repoActiveQuery))
+            {
+                <p class="text-muted small">Results for "@_repoActiveQuery" — @_repos.Count repo(s).</p>
+            }
+            @foreach (var r in _repos.Skip((_repoPage - 1) * _repoPageSize).Take(_repoPageSize))
+            {
+                <div class="card mb-2">
+                    <div class="card-body py-2">
+                        <div class="d-flex justify-content-between align-items-start gap-2">
+                            <a href="@r.Url" target="_blank" rel="noopener" class="fw-bold text-decoration-none"><Icon Name="code" Size="14" /> @r.FullName</a>
+                            @if (r.StarsToday > 0)
                             {
-                                <span> — @d.PopularRepoDescription</span>
+                                <span class="badge bg-warning text-nowrap">✨ @r.StarsToday.ToString("N0") stars today</span>
                             }
                         </div>
-                    }
+                        @if (!string.IsNullOrWhiteSpace(r.Description))
+                        {
+                            <p class="small text-muted mb-2">@r.Description</p>
+                        }
+                        <div class="d-flex flex-wrap align-items-center gap-3 small text-muted">
+                            @if (!string.IsNullOrWhiteSpace(r.Language))
+                            {
+                                <span class="d-inline-flex align-items-center gap-1">
+                                    <span class="lang-dot" style="background-color:@(r.LanguageColor ?? "#8b949e")"></span>@r.Language
+                                </span>
+                            }
+                            <span>★ @r.Stars.ToString("N0")</span>
+                            @if (r.Forks > 0)
+                            {
+                                <span>⑂ @r.Forks.ToString("N0")</span>
+                            }
+                            @if (r.Contributors.Count > 0)
+                            {
+                                <span class="d-inline-flex align-items-center gap-1">
+                                    Built by
+                                    @foreach (var c in r.Contributors.Take(6))
+                                    {
+                                        <a href="@c.ProfileUrl" target="_blank" rel="noopener" title="@c.Username">
+                                            <img src="@c.AvatarUrl" alt="@c.Username" class="contributor-avatar" />
+                                        </a>
+                                    }
+                                </span>
+                            }
+                        </div>
+                    </div>
                 </div>
-            </div>
+            }
+            @if (_repos.Count == 0)
+            {
+                <p class="text-muted small">@(string.IsNullOrWhiteSpace(_repoActiveQuery) ? "Couldn't reach GitHub right now — try refreshing shortly." : "No matches.")</p>
+            }
+            else
+            {
+                <Pager TotalItems="_repos.Count" @bind-CurrentPage="_repoPage" @bind-PageSize="_repoPageSize" />
+            }
         </div>
-    }
-    @if (_developers.Count == 0)
-    {
-        <p class="text-muted small">Couldn't reach GitHub right now — try refreshing shortly.</p>
-    }
-    else
-    {
-        <Pager TotalItems="_developers.Count" @bind-CurrentPage="_devPage" @bind-PageSize="_devPageSize" />
-    }
+        <div class="col-lg-6">
+            <h6 class="section-title mb-2"><Icon Name="user" Size="16" /> Trending Developers</h6>
+            @foreach (var d in _developers.Skip((_devPage - 1) * _devPageSize).Take(_devPageSize))
+            {
+                <div class="card mb-2">
+                    <div class="card-body py-2 d-flex align-items-center gap-3">
+                        <img src="@d.AvatarUrl" alt="@d.Username" class="dev-avatar" />
+                        <div class="flex-grow-1">
+                            <a href="@d.ProfileUrl" target="_blank" rel="noopener" class="fw-bold text-decoration-none">@d.Username</a>
+                            @if (!string.IsNullOrWhiteSpace(d.PopularRepoName))
+                            {
+                                <div class="small text-muted">
+                                    Popular repo: <a href="@d.PopularRepoUrl" target="_blank" rel="noopener">@d.PopularRepoName</a>
+                                    @if (!string.IsNullOrWhiteSpace(d.PopularRepoDescription))
+                                    {
+                                        <span> — @d.PopularRepoDescription</span>
+                                    }
+                                </div>
+                            }
+                        </div>
+                    </div>
+                </div>
+            }
+            @if (_developers.Count == 0)
+            {
+                <p class="text-muted small">Couldn't reach GitHub right now — try refreshing shortly.</p>
+            }
+            else
+            {
+                <Pager TotalItems="_developers.Count" @bind-CurrentPage="_devPage" @bind-PageSize="_devPageSize" />
+            }
+        </div>
+    </div>
 }
 else if (_section == "try")
 {
@@ -461,7 +470,7 @@ else if (_section == "try")
     [SupplyParameterFromQuery(Name = "tab")]
     public string? TabParam { get; set; }
 
-    private static readonly HashSet<string> ValidSections = new() { "models", "benchmarks", "repos", "developers", "try" };
+    private static readonly HashSet<string> ValidSections = new() { "models", "benchmarks", "github", "try" };
 
     private string _section = "models";
     private bool _loading = true;
@@ -487,6 +496,7 @@ else if (_section == "try")
     private string _repoQuery = "";
     private string _repoActiveQuery = "";
     private bool _repoSearching;
+    private string _since = "daily";
 
     private bool _ollamaChecked;
     private bool _ollamaRunning;
@@ -516,8 +526,8 @@ else if (_section == "try")
         (_storagePath, _storageFreeGb) = SystemInfo.DetectOllamaStorage();
 
         var hf = HuggingFace.GetTrendingAsync();
-        var repos = GitHubTrending.GetTrendingReposAsync();
-        var developers = GitHubTrending.GetTrendingDevelopersAsync();
+        var repos = GitHubTrending.GetTrendingReposAsync(_since);
+        var developers = GitHubTrending.GetTrendingDevelopersAsync(_since);
         var gguf = HuggingFace.GetTrendingGgufAsync();
         var ollamaCheck = CheckOllama();
         await Task.WhenAll(hf, repos, developers, gguf, ollamaCheck);
@@ -631,7 +641,27 @@ else if (_section == "try")
     {
         _repoQuery = "";
         _repoActiveQuery = "";
-        _repos = await GitHubTrending.GetTrendingReposAsync();
+        _repos = await GitHubTrending.GetTrendingReposAsync(_since);
+    }
+
+    private async Task OnSinceChanged(ChangeEventArgs e)
+    {
+        _since = e.Value?.ToString() ?? "daily";
+        _repoPage = 1;
+        _devPage = 1;
+
+        var devsTask = GitHubTrending.GetTrendingDevelopersAsync(_since);
+        if (string.IsNullOrWhiteSpace(_repoActiveQuery))
+        {
+            var reposTask = GitHubTrending.GetTrendingReposAsync(_since);
+            await Task.WhenAll(reposTask, devsTask);
+            _repos = reposTask.Result;
+        }
+        else
+        {
+            await devsTask;
+        }
+        _developers = devsTask.Result;
     }
 
     private async Task SearchGguf()

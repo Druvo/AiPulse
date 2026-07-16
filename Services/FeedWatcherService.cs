@@ -29,6 +29,9 @@ public sealed class FeedWatcherService : BackgroundService
     private readonly ILogger<FeedWatcherService> _log;
     private bool _seeded;
 
+    private static readonly TimeSpan ReleaseThrottleWindow = TimeSpan.FromHours(1);
+    private readonly Dictionary<string, DateTimeOffset> _lastReleaseAlertBySource = new();
+
     public FeedWatcherService(
         FeedAggregatorService feeds,
         IWebHostEnvironment env,
@@ -106,25 +109,50 @@ public sealed class FeedWatcherService : BackgroundService
         // Union of every user's watchlist - background alerts aren't scoped to one user (see the
         // GetAllUsersWatchlist doc comment for why this differs from the per-user News-page highlighting).
         var watchlist = _opt.NotifyWatchlist ? ReadingStateService.GetAllUsersWatchlist(_env) : Array.Empty<string>();
+        var newReleasesBySource = new Dictionary<string, List<FeedItem>>();
 
         foreach (var item in result.Items)
         {
             if (string.IsNullOrEmpty(item.Link) || !alreadyKnown.Add(item.Link))
                 continue; // already seen (or a duplicate link within this same batch)
 
-            if (newAlerts.Count >= _opt.MaxPerPoll)
-                continue;
-
             var text = item.Title + " " + item.Summary;
             var match = watchlist.FirstOrDefault(k => text.Contains(k, StringComparison.OrdinalIgnoreCase));
             if (match is not null)
             {
-                newAlerts.Add(new Alert { Title = item.Title, Link = item.Link, SourceName = item.SourceName, Kind = "Watchlist" });
+                if (newAlerts.Count < _opt.MaxPerPoll)
+                    newAlerts.Add(new Alert { Title = item.Title, Link = item.Link, SourceName = item.SourceName, Kind = "Watchlist" });
             }
             else if (_opt.NotifyReleases && item.ContentType == "Release")
             {
-                newAlerts.Add(new Alert { Title = item.Title, Link = item.Link, SourceName = item.SourceName, Kind = "Release" });
+                // Grouped below instead of alerting per-item - a source rotating in several "new" releases in
+                // one poll (e.g. the GitHub Trending scrapes) would otherwise flood the bell with one alert each.
+                if (!newReleasesBySource.TryGetValue(item.SourceName, out var bucket))
+                    newReleasesBySource[item.SourceName] = bucket = new List<FeedItem>();
+                bucket.Add(item);
             }
+        }
+
+        // One alert per source per poll, and only if that source hasn't already alerted within the last hour -
+        // "same repo notification should show once in an hour" instead of once per new release item.
+        foreach (var (sourceName, items) in newReleasesBySource)
+        {
+            if (newAlerts.Count >= _opt.MaxPerPoll) break;
+
+            if (_lastReleaseAlertBySource.TryGetValue(sourceName, out var last) && DateTimeOffset.Now - last < ReleaseThrottleWindow)
+                continue; // already notified about this source recently - items are still recorded as known above, just not re-alerted
+
+            var newest = items.OrderByDescending(i => i.Published).First();
+            newAlerts.Add(new Alert
+            {
+                Title = sourceName,
+                Link = newest.Link,
+                SourceName = sourceName,
+                Kind = "Release",
+                Details = newest.Title,
+                Count = items.Count
+            });
+            _lastReleaseAlertBySource[sourceName] = DateTimeOffset.Now;
         }
 
         if (newAlerts.Count > 0)

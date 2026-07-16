@@ -49,6 +49,20 @@ public sealed record FeedItem
     public string? FullText { get; init; }
     /// <summary>Thumbnail/banner image URL, when the feed itself carries one (media:thumbnail, enclosure, or an inline &lt;img&gt; in the summary). Null if none found - no extra fetch is made to find one.</summary>
     public string? ImageUrl { get; init; }
+    /// <summary>Byline, when the feed declares one (Atom/RSS &lt;author&gt; or the common non-standard &lt;dc:creator&gt;). Null if the feed doesn't carry one.</summary>
+    public string? Author { get; init; }
+
+    /// <summary>Rough reading-time estimate from Summary/FullText word count at ~200wpm - null when there's too little text to bother estimating. Computed, not stored, so bookmarks/etc. get it automatically from whatever text they already carry.</summary>
+    public int? ReadingMinutes
+    {
+        get
+        {
+            var text = FullText ?? Summary;
+            if (string.IsNullOrWhiteSpace(text)) return null;
+            var words = text.Split(' ', StringSplitOptions.RemoveEmptyEntries).Length;
+            return words < 40 ? null : Math.Max(1, (int)Math.Round(words / 200.0));
+        }
+    }
 }
 
 /// <summary>Result of one aggregation run, including any sources that failed.</summary>

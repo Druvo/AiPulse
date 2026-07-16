@@ -25,11 +25,13 @@ public sealed class GitHubTrendingService
     private readonly IHttpClientFactory _httpFactory;
     private readonly ILogger<GitHubTrendingService> _log;
 
-    private (DateTimeOffset At, List<TrendingRepo> Repos)? _repoCache;
-    private readonly SemaphoreSlim _repoLock = new(1, 1);
+    private static readonly string[] ValidSince = { "daily", "weekly", "monthly" };
 
-    private (DateTimeOffset At, List<TrendingDeveloper> Devs)? _devCache;
-    private readonly SemaphoreSlim _devLock = new(1, 1);
+    private readonly ConcurrentDictionary<string, (DateTimeOffset At, List<TrendingRepo> Repos)> _repoCache = new();
+    private readonly ConcurrentDictionary<string, SemaphoreSlim> _repoLocks = new();
+
+    private readonly ConcurrentDictionary<string, (DateTimeOffset At, List<TrendingDeveloper> Devs)> _devCache = new();
+    private readonly ConcurrentDictionary<string, SemaphoreSlim> _devLocks = new();
 
     private readonly ConcurrentDictionary<string, (DateTimeOffset At, int? Stars)> _repoStatsCache = new();
 
@@ -39,55 +41,61 @@ public sealed class GitHubTrendingService
         _log = log;
     }
 
-    public async Task<List<TrendingRepo>> GetTrendingReposAsync(CancellationToken ct = default)
+    /// <summary>Same "since" values as github.com/trending itself: "daily" (default), "weekly", "monthly".</summary>
+    public async Task<List<TrendingRepo>> GetTrendingReposAsync(string since = "daily", CancellationToken ct = default)
     {
-        if (_repoCache is { } c && DateTimeOffset.Now - c.At < CacheFor)
-            return c.Repos;
+        since = ValidSince.Contains(since) ? since : "daily";
+        if (_repoCache.TryGetValue(since, out var cached) && DateTimeOffset.Now - cached.At < CacheFor)
+            return cached.Repos;
 
-        await _repoLock.WaitAsync(ct);
+        var gate = _repoLocks.GetOrAdd(since, _ => new SemaphoreSlim(1, 1));
+        await gate.WaitAsync(ct);
         try
         {
-            if (_repoCache is { } c2 && DateTimeOffset.Now - c2.At < CacheFor)
-                return c2.Repos;
+            if (_repoCache.TryGetValue(since, out var cached2) && DateTimeOffset.Now - cached2.At < CacheFor)
+                return cached2.Repos;
 
-            var repos = await ScrapeTrendingReposAsync("daily", ct);
-            _repoCache = (DateTimeOffset.Now, repos);
+            var repos = await ScrapeTrendingReposAsync(since, ct);
+            _repoCache[since] = (DateTimeOffset.Now, repos);
             return repos;
         }
         catch (Exception ex)
         {
-            _log.LogWarning(ex, "GitHub trending-repo scrape failed");
-            return _repoCache?.Repos ?? new();
+            _log.LogWarning(ex, "GitHub trending-repo scrape failed for since={Since}", since);
+            return _repoCache.TryGetValue(since, out var stale) ? stale.Repos : new();
         }
         finally
         {
-            _repoLock.Release();
+            gate.Release();
         }
     }
 
-    public async Task<List<TrendingDeveloper>> GetTrendingDevelopersAsync(CancellationToken ct = default)
+    /// <summary>Same "since" values as github.com/trending/developers itself: "daily" (default), "weekly", "monthly".</summary>
+    public async Task<List<TrendingDeveloper>> GetTrendingDevelopersAsync(string since = "daily", CancellationToken ct = default)
     {
-        if (_devCache is { } c && DateTimeOffset.Now - c.At < CacheFor)
-            return c.Devs;
+        since = ValidSince.Contains(since) ? since : "daily";
+        if (_devCache.TryGetValue(since, out var cached) && DateTimeOffset.Now - cached.At < CacheFor)
+            return cached.Devs;
 
-        await _devLock.WaitAsync(ct);
+        var gate = _devLocks.GetOrAdd(since, _ => new SemaphoreSlim(1, 1));
+        await gate.WaitAsync(ct);
         try
         {
-            if (_devCache is { } c2 && DateTimeOffset.Now - c2.At < CacheFor)
-                return c2.Devs;
+            if (_devCache.TryGetValue(since, out var cached2) && DateTimeOffset.Now - cached2.At < CacheFor)
+                return cached2.Devs;
 
-            var devs = await ScrapeTrendingDevelopersAsync(ct);
-            _devCache = (DateTimeOffset.Now, devs);
+            var devs = await ScrapeTrendingDevelopersAsync(since, ct);
+            _devCache[since] = (DateTimeOffset.Now, devs);
             return devs;
         }
         catch (Exception ex)
         {
-            _log.LogWarning(ex, "GitHub trending-developers scrape failed");
-            return _devCache?.Devs ?? new();
+            _log.LogWarning(ex, "GitHub trending-developers scrape failed for since={Since}", since);
+            return _devCache.TryGetValue(since, out var stale) ? stale.Devs : new();
         }
         finally
         {
-            _devLock.Release();
+            gate.Release();
         }
     }
 
@@ -186,10 +194,10 @@ public sealed class GitHubTrendingService
         return repos;
     }
 
-    private async Task<List<TrendingDeveloper>> ScrapeTrendingDevelopersAsync(CancellationToken ct)
+    private async Task<List<TrendingDeveloper>> ScrapeTrendingDevelopersAsync(string since, CancellationToken ct)
     {
         var client = _httpFactory.CreateClient("explore");
-        var html = await client.GetStringAsync("https://github.com/trending/developers", ct);
+        var html = await client.GetStringAsync($"https://github.com/trending/developers?since={since}", ct);
         var doc = new HtmlDocument();
         doc.LoadHtml(html);
 
