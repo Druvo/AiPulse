@@ -161,6 +161,31 @@
             </div>
         }
 
+        <h6 class="mt-4 mb-2">Per-keyword webhooks</h6>
+        <p class="text-muted small">
+            Route specific topics to a different webhook than the catch-all above - e.g. "MCP" alerts to one
+            Slack channel, everything else left to the catch-all. An alert matches if its title, details, or
+            source contains any of the keywords.
+        </p>
+        @foreach (var route in Reading.WebhookRoutes)
+        {
+            <div class="d-flex align-items-center gap-2 mb-1 small">
+                <span class="text-truncate" style="max-width:320px;" title="@route.Url">@route.Url</span>
+                <span class="d-flex flex-wrap gap-1">
+                    @foreach (var k in route.Keywords)
+                    {
+                        <span class="tag-chip small">@k</span>
+                    }
+                </span>
+                <button class="btn btn-sm btn-outline-danger ms-auto" @onclick="() => RemoveWebhookRoute(route.Id)">Remove</button>
+            </div>
+        }
+        <div class="input-group input-group-sm mt-2" style="max-width:600px">
+            <input class="form-control" placeholder="Webhook URL" @bind="_newRouteUrl" />
+            <input class="form-control" placeholder="Keywords, comma-separated (e.g. MCP, agent)" @bind="_newRouteKeywords" />
+            <button class="btn btn-primary" @onclick="AddWebhookRoute" disabled="@(string.IsNullOrWhiteSpace(_newRouteUrl) || string.IsNullOrWhiteSpace(_newRouteKeywords))">Add</button>
+        </div>
+
         <hr class="my-4" />
 
         <h4 class="section-title"><Icon Name="rss" /> Mobile apps (Fever API)</h4>
@@ -345,6 +370,19 @@
         var (success, error) = await Webhooks.SendTestAsync(_webhookUrl);
         _webhookTestResult = success ? "ok" : (error ?? "unknown error");
     }
+
+    private string _newRouteUrl = "";
+    private string _newRouteKeywords = "";
+
+    private void AddWebhookRoute()
+    {
+        var keywords = _newRouteKeywords.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        Reading.AddWebhookRoute(_newRouteUrl, keywords);
+        _newRouteUrl = "";
+        _newRouteKeywords = "";
+    }
+
+    private void RemoveWebhookRoute(Guid id) => Reading.RemoveWebhookRoute(id);
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {

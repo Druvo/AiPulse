@@ -56,6 +56,19 @@ public sealed class ReadEvent
     public DateTimeOffset At { get; init; } = DateTimeOffset.Now;
 }
 
+/// <summary>
+/// An additional outgoing webhook scoped to specific keywords - lets different topics route to different
+/// channels (e.g. "MCP" alerts to one Slack channel, everything else to another) instead of every alert
+/// going to the single global <see cref="ReadingState.WebhookUrl"/>.
+/// </summary>
+public sealed class WebhookRoute
+{
+    public Guid Id { get; init; } = Guid.NewGuid();
+    public required string Url { get; set; }
+    /// <summary>Matched against the alert's title/details/source, case-insensitive substring. Empty = catch-all (fires for every alert).</summary>
+    public List<string> Keywords { get; set; } = new();
+}
+
 /// <summary>A simple embed on the Dashboard - either an iframe (external page) or raw HTML/text.</summary>
 public sealed class DashboardWidget
 {
@@ -97,6 +110,9 @@ public sealed class ReadingState
 
     /// <summary>Append-only "marked as read" history, for the Reading Stats page.</summary>
     public List<ReadEvent> ReadHistory { get; set; } = new();
+
+    /// <summary>Additional keyword-scoped webhooks, alongside the single catch-all <see cref="WebhookUrl"/>.</summary>
+    public List<WebhookRoute> WebhookRoutes { get; set; } = new();
 
     /// <summary>
     /// MD5("username:password") for the Fever API (a separate password from the main login, chosen by the

@@ -163,17 +163,27 @@ public sealed class FeedWatcherService : BackgroundService
         }
     }
 
-    /// <summary>Posts each new alert to every user's configured webhook, if any. Best-effort - a failed webhook never breaks the poll.</summary>
+    /// <summary>
+    /// Posts each new alert to every matching webhook route. A route with no keywords is a catch-all
+    /// (matches everything, including every user's plain single webhook URL); a route with keywords only
+    /// fires when the alert's title/details/source contains one of them - lets different topics (e.g. "MCP")
+    /// go to a different channel than everything else. Best-effort - a failed webhook never breaks the poll.
+    /// </summary>
     private async Task FanOutWebhooksAsync(List<Alert> alerts, CancellationToken ct)
     {
-        var urls = ReadingStateService.GetAllWebhookUrls(_env);
-        if (urls.Count == 0) return;
+        var routes = ReadingStateService.GetAllWebhookRoutes(_env);
+        if (routes.Count == 0) return;
 
-        foreach (var url in urls)
+        foreach (var alert in alerts)
         {
-            foreach (var alert in alerts)
+            var haystack = $"{alert.Title} {alert.Details} {alert.SourceName}";
+            foreach (var route in routes)
             {
-                try { await _webhooks.SendAsync(url, alert, ct); }
+                var matches = route.Keywords.Count == 0 ||
+                    route.Keywords.Any(k => haystack.Contains(k, StringComparison.OrdinalIgnoreCase));
+                if (!matches) continue;
+
+                try { await _webhooks.SendAsync(route.Url, alert, ct); }
                 catch (Exception ex) { _log.LogDebug(ex, "Webhook delivery failed"); }
             }
         }

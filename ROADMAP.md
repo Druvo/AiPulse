@@ -262,6 +262,13 @@ Status tags: ✅ done · 🟢 fits philosophy, no AI needed · 🟡 needs a desi
   (News.razor) was updated. Scoped to the interactive mark-read path only - the Fever API's separate
   `MarkReadForUserKey` (used by mobile RSS readers) doesn't feed this log, a deliberate limitation rather
   than instrumenting a second, less-central code path for the same purpose.
+- Per-keyword webhook routes, additional to the existing single catch-all webhook URL - route specific
+  topics (e.g. "MCP") to a different Slack/Discord/generic URL than everything else, configured in Settings.
+  `FeedWatcherService.FanOutWebhooksAsync` now matches each alert's title/details/source against every
+  route's keywords (a route with no keywords is a catch-all, which is exactly how the old single
+  `WebhookUrl` is now represented internally via `GetAllWebhookRoutes` - no behavior change for anyone who
+  hasn't added a keyword-scoped route). Verified live: added a route, confirmed it round-tripped to
+  `App_Data/users/{name}/reading-state.json` correctly, removed it.
 
 > **GitHub Trending scrape reality check:** `GitHubTrendingService` scrapes `github.com/trending` and
 > `github.com/trending/developers` directly for the repo/developer views above - GitHub has no API for

@@ -333,6 +333,69 @@ public sealed class ReadingStateService
         lock (_lock) { _state!.WebhookUrl = string.IsNullOrWhiteSpace(url) ? null : url.Trim(); Save(); }
     }
 
+    // --- Per-keyword webhook routes (additional to the single catch-all WebhookUrl above) ---
+
+    public IReadOnlyList<WebhookRoute> WebhookRoutes
+    {
+        get { EnsureLoaded(); lock (_lock) return _state!.WebhookRoutes.ToList(); }
+    }
+
+    public void AddWebhookRoute(string url, IEnumerable<string> keywords)
+    {
+        EnsureLoaded();
+        url = url.Trim();
+        if (string.IsNullOrWhiteSpace(url)) return;
+        lock (_lock)
+        {
+            _state!.WebhookRoutes.Add(new WebhookRoute
+            {
+                Url = url,
+                Keywords = keywords.Select(k => k.Trim()).Where(k => k.Length > 0).ToList()
+            });
+            Save();
+        }
+    }
+
+    public void RemoveWebhookRoute(Guid id)
+    {
+        EnsureLoaded();
+        lock (_lock)
+        {
+            _state!.WebhookRoutes.RemoveAll(r => r.Id == id);
+            Save();
+        }
+    }
+
+    /// <summary>
+    /// Every user's webhook routes, including their single legacy <see cref="WebhookUrl"/> represented as
+    /// a catch-all route (empty keywords) - lets <c>FeedWatcherService</c> treat both uniformly. Not scoped
+    /// to one signed-in user's circuit, same rationale as <see cref="GetAllUsersWatchlist"/>.
+    /// </summary>
+    public static IReadOnlyList<WebhookRoute> GetAllWebhookRoutes(IWebHostEnvironment env)
+    {
+        var usersDir = Path.Combine(env.ContentRootPath, "App_Data", "users");
+        var result = new List<WebhookRoute>();
+        if (!Directory.Exists(usersDir))
+            return result;
+
+        foreach (var dir in Directory.GetDirectories(usersDir))
+        {
+            var file = Path.Combine(dir, "reading-state.json");
+            if (!File.Exists(file)) continue;
+            try
+            {
+                var state = JsonSerializer.Deserialize<ReadingState>(File.ReadAllText(file));
+                if (state is null) continue;
+
+                if (!string.IsNullOrWhiteSpace(state.WebhookUrl))
+                    result.Add(new WebhookRoute { Url = state.WebhookUrl, Keywords = new() });
+                result.AddRange(state.WebhookRoutes.Where(r => !string.IsNullOrWhiteSpace(r.Url)));
+            }
+            catch { /* corrupt file for that user -> skip */ }
+        }
+        return result;
+    }
+
     // --- Fever API (mobile RSS client compatibility) ---
 
     public string? FeverApiKey
@@ -552,29 +615,6 @@ public sealed class ReadingStateService
                 File.WriteAllText(path, JsonSerializer.Serialize(state, JsonOpts));
         }
         return fixedCount;
-    }
-
-    /// <summary>Every user's configured webhook URL, for the background watcher to fan alerts out to. Same rationale as GetAllUsersWatchlist.</summary>
-    public static IReadOnlyList<string> GetAllWebhookUrls(IWebHostEnvironment env)
-    {
-        var usersDir = Path.Combine(env.ContentRootPath, "App_Data", "users");
-        var result = new List<string>();
-        if (!Directory.Exists(usersDir))
-            return result;
-
-        foreach (var dir in Directory.GetDirectories(usersDir))
-        {
-            var file = Path.Combine(dir, "reading-state.json");
-            if (!File.Exists(file)) continue;
-            try
-            {
-                var state = JsonSerializer.Deserialize<ReadingState>(File.ReadAllText(file));
-                if (!string.IsNullOrWhiteSpace(state?.WebhookUrl))
-                    result.Add(state.WebhookUrl);
-            }
-            catch { /* corrupt file for that user -> skip */ }
-        }
-        return result;
     }
 
     // --- Fever API cross-user helpers (the Fever protocol authenticates via api_key on each request,
