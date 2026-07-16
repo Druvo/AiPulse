@@ -17,6 +17,8 @@ DeployAiPulse/
 
 # Local deploy automation - reveals internal homelab hostname/IP, not for the public repo
 deploy.sh
+deploy.bat
+aipulse-deploy.tar.gz
 
 # Logs
 *.log
