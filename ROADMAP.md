@@ -131,6 +131,34 @@ Status tags: ✅ done · 🟢 fits philosophy, no AI needed · 🟡 needs a desi
   - Bookmarks now snapshot the original item's summary/thumbnail at save time (`BookmarkItem.Summary`/
     `ImageUrl`, both nullable for bookmarks saved before this change) so the Reading List renders the same
     rich card as the News Feed instead of a bare title.
+- Explore's "GitHub Repos" tab now mirrors github.com/trending exactly instead of approximating it via the
+  Search API - language dot (GitHub's own per-language hex color), stars, forks, "N stars today", and a
+  "Built by" contributor-avatar row, plus a new **Trending Developers** section (github.com/trending/developers)
+  with avatar/handle/popular-repo. `GitHubTrendingService` now scrapes both pages directly (see the reality
+  check below); keyword search still uses the official Search API since trending pages aren't searchable,
+  and a new `GetRepoStatsAsync` does single-repo star lookups via the official REST API (not scraping) for
+  the Tools & Tips popularity badges below. Pagination (`Pager`) added to all five Explore lists (Models,
+  Datasets, Repos, Trending Devs, GGUF models).
+- Feed item cards now carry a per-source accent: AiPulse fetches and caches each source's declared
+  `<meta name="theme-color">` (same self-hosted, no-third-party pattern as the favicon) and uses it as a
+  top-edge stripe on every card from that source, falling back to the existing generated color when a site
+  declares none or the fetch fails/rate-limits - verified live against `dev.to` (declares `#ffffff`) vs.
+  `techcrunch.com` (declares nothing, falls back cleanly). Posts with no thumbnail image now show the
+  source's favicon centered over the placeholder instead of a bare gradient.
+- Tools & Tips' "Right tool for the right task" list is no longer a single static scroll: added search
+  (name/one-liner/best-for), a category filter, a sort (Category/Popularity/Name), and pagination. The
+  "Popularity" sort and its "★ 12.3k" badges come from `GetRepoStatsAsync` for any tool whose URL resolves
+  to a github.com repo - proprietary tools (Claude Code, GitHub Copilot, etc.) simply sort last with no
+  badge, same as before.
+
+> **GitHub Trending scrape reality check:** `GitHubTrendingService` scrapes `github.com/trending` and
+> `github.com/trending/developers` directly for the repo/developer views above - GitHub has no API for
+> either, and "stars today" and contributor avatars only exist on those unofficial pages, so there's no
+> ToS-safe way to get exact parity with the real page. This is a deliberate trade-off made with explicit
+> sign-off: scraping GitHub's website (not their API - keyword search and star lookups still use the
+> official REST/Search APIs) is against the letter of their ToS, and the markup could change without
+> notice and break the selectors. Verified against the live page at time of writing - same repos, same
+> star/fork counts, same "Built by" avatars.
 
 > **Reddit reality check:** Reddit's unauthenticated `.rss` endpoint rate-limits hard and per-IP, not
 > per-subreddit - fetching several Reddit sources in the same poll cycle (AiPulse fetches all sources

@@ -1,29 +1,37 @@
+using System.Collections.Concurrent;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using System.Text.RegularExpressions;
 using AiPulse.Models;
+using HtmlAgilityPack;
 
 namespace AiPulse.Services;
 
 /// <summary>
-/// GitHub has no official "trending repos" API - github.com/trending is an unofficial HTML page and
-/// scraping it is fragile and against the letter of GitHub's ToS. This uses the official Search API
-/// instead: recently-created AI-related repos sorted by stars, as a legitimate (if approximate)
-/// substitute. The Search API has a stricter unauthenticated rate limit (10 req/min), so the trending
-/// view is cached for an hour; keyword searches always hit the API fresh (unbounded query space).
+/// The "trending repos"/"trending developers" views scrape github.com/trending directly - GitHub has no
+/// official API for either, and their unofficial trending page is the only place "stars today" and
+/// contributor avatars exist at all. This is a deliberate trade-off (scraping the site is against the
+/// letter of GitHub's ToS, though not their API) - see the ROADMAP for the full reality check. Keyword
+/// search (<see cref="SearchAsync"/>) stays on the official Search API since trending pages aren't
+/// searchable, and single-repo star lookups (<see cref="GetRepoStatsAsync"/>) use the official REST API
+/// too - only the two trending views scrape HTML.
 /// </summary>
 public sealed class GitHubTrendingService
 {
     private static readonly TimeSpan CacheFor = TimeSpan.FromHours(1);
+    private static readonly TimeSpan RepoStatsCacheFor = TimeSpan.FromHours(6);
     private static readonly JsonSerializerOptions JsonOpts = new() { PropertyNameCaseInsensitive = true };
-    private static readonly string[] Topics = { "llm", "ai-agents", "machine-learning", "generative-ai" };
-    private const int PerTopicResults = 25;
-    private const int TotalResultCap = 60;
 
     private readonly IHttpClientFactory _httpFactory;
     private readonly ILogger<GitHubTrendingService> _log;
 
-    private (DateTimeOffset At, List<TrendingRepo> Repos)? _cache;
-    private readonly SemaphoreSlim _lock = new(1, 1);
+    private (DateTimeOffset At, List<TrendingRepo> Repos)? _repoCache;
+    private readonly SemaphoreSlim _repoLock = new(1, 1);
+
+    private (DateTimeOffset At, List<TrendingDeveloper> Devs)? _devCache;
+    private readonly SemaphoreSlim _devLock = new(1, 1);
+
+    private readonly ConcurrentDictionary<string, (DateTimeOffset At, int? Stars)> _repoStatsCache = new();
 
     public GitHubTrendingService(IHttpClientFactory httpFactory, ILogger<GitHubTrendingService> log)
     {
@@ -33,39 +41,62 @@ public sealed class GitHubTrendingService
 
     public async Task<List<TrendingRepo>> GetTrendingReposAsync(CancellationToken ct = default)
     {
-        if (_cache is { } c && DateTimeOffset.Now - c.At < CacheFor)
+        if (_repoCache is { } c && DateTimeOffset.Now - c.At < CacheFor)
             return c.Repos;
 
-        await _lock.WaitAsync(ct);
+        await _repoLock.WaitAsync(ct);
         try
         {
-            if (_cache is { } c2 && DateTimeOffset.Now - c2.At < CacheFor)
+            if (_repoCache is { } c2 && DateTimeOffset.Now - c2.At < CacheFor)
                 return c2.Repos;
 
-            var since = DateTimeOffset.UtcNow.AddDays(-90).ToString("yyyy-MM-dd");
-            var queries = Topics.Select(t => $"topic:{t}+created:>{since}");
-            var ordered = await RunQueriesAsync(queries, ct);
-
-            _cache = (DateTimeOffset.Now, ordered);
-            return ordered;
+            var repos = await ScrapeTrendingReposAsync("daily", ct);
+            _repoCache = (DateTimeOffset.Now, repos);
+            return repos;
         }
         catch (Exception ex)
         {
-            _log.LogWarning(ex, "GitHub trending-repo search failed");
-            return _cache?.Repos ?? new();
+            _log.LogWarning(ex, "GitHub trending-repo scrape failed");
+            return _repoCache?.Repos ?? new();
         }
         finally
         {
-            _lock.Release();
+            _repoLock.Release();
         }
     }
 
-    /// <summary>Live keyword search across repo name/description/README (not cached - the query space is unbounded).</summary>
+    public async Task<List<TrendingDeveloper>> GetTrendingDevelopersAsync(CancellationToken ct = default)
+    {
+        if (_devCache is { } c && DateTimeOffset.Now - c.At < CacheFor)
+            return c.Devs;
+
+        await _devLock.WaitAsync(ct);
+        try
+        {
+            if (_devCache is { } c2 && DateTimeOffset.Now - c2.At < CacheFor)
+                return c2.Devs;
+
+            var devs = await ScrapeTrendingDevelopersAsync(ct);
+            _devCache = (DateTimeOffset.Now, devs);
+            return devs;
+        }
+        catch (Exception ex)
+        {
+            _log.LogWarning(ex, "GitHub trending-developers scrape failed");
+            return _devCache?.Devs ?? new();
+        }
+        finally
+        {
+            _devLock.Release();
+        }
+    }
+
+    /// <summary>Live keyword search across repo name/description/README (not cached - the query space is unbounded). Uses the official Search API, not scraping.</summary>
     public async Task<List<TrendingRepo>> SearchAsync(string query, CancellationToken ct = default)
     {
         try
         {
-            return await RunQueriesAsync(new[] { Uri.EscapeDataString(query) }, ct);
+            return await RunSearchQueriesAsync(new[] { Uri.EscapeDataString(query) }, ct);
         }
         catch (Exception ex)
         {
@@ -74,7 +105,155 @@ public sealed class GitHubTrendingService
         }
     }
 
-    private async Task<List<TrendingRepo>> RunQueriesAsync(IEnumerable<string> queries, CancellationToken ct)
+    /// <summary>Current star count for one specific repo, via the official REST API (not scraping) - used to show a live popularity badge on the curated Tools &amp; Tips list. Null if the repo doesn't resolve.</summary>
+    public async Task<int?> GetRepoStatsAsync(string owner, string repo, CancellationToken ct = default)
+    {
+        var key = $"{owner}/{repo}".ToLowerInvariant();
+        if (_repoStatsCache.TryGetValue(key, out var cached) && DateTimeOffset.Now - cached.At < RepoStatsCacheFor)
+            return cached.Stars;
+
+        int? stars = null;
+        try
+        {
+            var client = _httpFactory.CreateClient("explore");
+            var json = await client.GetStringAsync($"https://api.github.com/repos/{owner}/{repo}", ct);
+            using var doc = JsonDocument.Parse(json);
+            if (doc.RootElement.TryGetProperty("stargazers_count", out var s))
+                stars = s.GetInt32();
+        }
+        catch (Exception ex)
+        {
+            _log.LogDebug(ex, "GitHub repo stats lookup failed for {Owner}/{Repo}", owner, repo);
+        }
+
+        _repoStatsCache[key] = (DateTimeOffset.Now, stars);
+        return stars;
+    }
+
+    private async Task<List<TrendingRepo>> ScrapeTrendingReposAsync(string since, CancellationToken ct)
+    {
+        var client = _httpFactory.CreateClient("explore");
+        var html = await client.GetStringAsync($"https://github.com/trending?since={since}", ct);
+        var doc = new HtmlDocument();
+        doc.LoadHtml(html);
+
+        var articles = doc.DocumentNode.SelectNodes("//article[contains(@class,'Box-row')]");
+        if (articles is null) return new();
+
+        var repos = new List<TrendingRepo>();
+        foreach (var article in articles)
+        {
+            var nameLink = article.SelectSingleNode(".//h2[contains(@class,'lh-condensed')]//a");
+            var fullName = DecodeAttr(nameLink?.GetAttributeValue("href", ""))?.Trim('/');
+            if (string.IsNullOrWhiteSpace(fullName)) continue;
+
+            var description = CleanInner(article.SelectSingleNode(".//p[contains(@class,'color-fg-muted')]")?.InnerText);
+            var language = CleanInner(article.SelectSingleNode(".//span[@itemprop='programmingLanguage']")?.InnerText);
+            var langStyle = article.SelectSingleNode(".//span[contains(@class,'repo-language-color')]")?.GetAttributeValue("style", "");
+            var languageColor = ExtractHexColor(langStyle);
+
+            var stars = ParseCount(article.SelectSingleNode(".//a[contains(@href,'/stargazers')]")?.InnerText);
+            var forks = ParseCount(article.SelectSingleNode(".//a[contains(@href,'/forks')]")?.InnerText);
+            var starsToday = ParseLeadingNumber(article.SelectSingleNode(".//div[contains(@class,'f6')]//span[contains(@class,'float-sm-right')]")?.InnerText);
+
+            var contributors = new List<RepoContributor>();
+            var contributorNodes = article.SelectNodes(".//a[@data-hovercard-type='user']/img[contains(@class,'avatar')]");
+            if (contributorNodes is not null)
+            {
+                foreach (var img in contributorNodes)
+                {
+                    var username = DecodeAttr(img.GetAttributeValue("alt", ""))?.TrimStart('@') ?? "";
+                    var avatarUrl = DecodeAttr(img.GetAttributeValue("src", "")) ?? "";
+                    if (!string.IsNullOrWhiteSpace(username) && !string.IsNullOrWhiteSpace(avatarUrl))
+                        contributors.Add(new RepoContributor(username, avatarUrl));
+                }
+            }
+
+            repos.Add(new TrendingRepo
+            {
+                FullName = fullName,
+                Description = description,
+                Stars = stars,
+                Forks = forks,
+                StarsToday = starsToday,
+                Language = language,
+                LanguageColor = languageColor,
+                Url = $"https://github.com/{fullName}",
+                Contributors = contributors
+            });
+        }
+
+        return repos;
+    }
+
+    private async Task<List<TrendingDeveloper>> ScrapeTrendingDevelopersAsync(CancellationToken ct)
+    {
+        var client = _httpFactory.CreateClient("explore");
+        var html = await client.GetStringAsync("https://github.com/trending/developers", ct);
+        var doc = new HtmlDocument();
+        doc.LoadHtml(html);
+
+        var articles = doc.DocumentNode.SelectNodes("//article[contains(@class,'Box-row')]");
+        if (articles is null) return new();
+
+        var devs = new List<TrendingDeveloper>();
+        foreach (var article in articles)
+        {
+            var avatarUrl = DecodeAttr(article.SelectSingleNode(".//img[contains(@class,'avatar-user')]")?.GetAttributeValue("src", ""));
+            var username = CleanInner(article.SelectSingleNode(".//h1[contains(@class,'lh-condensed')]/a")?.InnerText);
+            if (string.IsNullOrWhiteSpace(username) || string.IsNullOrWhiteSpace(avatarUrl))
+                continue;
+
+            var repoLink = article.SelectSingleNode(".//h1[contains(@class,'h4') and contains(@class,'lh-condensed')]/a");
+            var repoName = DecodeAttr(repoLink?.GetAttributeValue("href", ""))?.Trim('/');
+            var repoDesc = CleanInner(article.SelectSingleNode(".//div[contains(@class,'f6') and contains(@class,'mt-1')]")?.InnerText);
+
+            devs.Add(new TrendingDeveloper
+            {
+                Username = username,
+                AvatarUrl = avatarUrl,
+                PopularRepoName = string.IsNullOrWhiteSpace(repoName) ? null : repoName,
+                PopularRepoUrl = string.IsNullOrWhiteSpace(repoName) ? null : $"https://github.com/{repoName}",
+                PopularRepoDescription = repoDesc
+            });
+        }
+
+        return devs;
+    }
+
+    /// <summary>HtmlAgilityPack doesn't decode entities in attribute values (e.g. GitHub's own markup writes avatar URLs as "...?s=40&amp;amp;v=4") - decode before treating as a real URL.</summary>
+    private static string? DecodeAttr(string? raw) =>
+        string.IsNullOrEmpty(raw) ? raw : System.Net.WebUtility.HtmlDecode(raw);
+
+    private static string? CleanInner(string? raw)
+    {
+        if (string.IsNullOrWhiteSpace(raw)) return null;
+        var decoded = System.Net.WebUtility.HtmlDecode(raw);
+        var cleaned = Regex.Replace(decoded, @"\s+", " ").Trim();
+        return cleaned.Length == 0 ? null : cleaned;
+    }
+
+    private static int ParseCount(string? raw)
+    {
+        var cleaned = CleanInner(raw)?.Replace(",", "");
+        return int.TryParse(cleaned, out var n) ? n : 0;
+    }
+
+    private static int ParseLeadingNumber(string? raw)
+    {
+        if (raw is null) return 0;
+        var m = Regex.Match(raw.Replace(",", ""), @"\d+");
+        return m.Success ? int.Parse(m.Value) : 0;
+    }
+
+    private static string? ExtractHexColor(string? style)
+    {
+        if (string.IsNullOrWhiteSpace(style)) return null;
+        var m = Regex.Match(style, @"#[0-9a-fA-F]{3,6}");
+        return m.Success ? m.Value : null;
+    }
+
+    private async Task<List<TrendingRepo>> RunSearchQueriesAsync(IEnumerable<string> queries, CancellationToken ct)
     {
         var client = _httpFactory.CreateClient("explore");
         var seen = new HashSet<string>();
@@ -82,7 +261,7 @@ public sealed class GitHubTrendingService
 
         foreach (var q in queries)
         {
-            var url = $"https://api.github.com/search/repositories?q={q}&sort=stars&order=desc&per_page={PerTopicResults}";
+            var url = $"https://api.github.com/search/repositories?q={q}&sort=stars&order=desc&per_page=25";
             var json = await client.GetStringAsync(url, ct);
             var result = JsonSerializer.Deserialize<GhSearchResult>(json, JsonOpts);
             foreach (var item in result?.Items ?? new())
@@ -99,7 +278,7 @@ public sealed class GitHubTrendingService
             }
         }
 
-        return repos.OrderByDescending(r => r.Stars).Take(TotalResultCap).ToList();
+        return repos.OrderByDescending(r => r.Stars).Take(60).ToList();
     }
 
     private sealed class GhSearchResult

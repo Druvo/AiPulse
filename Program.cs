@@ -22,13 +22,15 @@ builder.Services.AddHttpClient("feeds", c =>
     c.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/xml"));
 });
 
-// HttpClient for the Explore page's live lookups (Hugging Face trending, GitHub search).
-// GitHub's API requires a User-Agent on every request or it responds 403.
+// HttpClient for the Explore page's live lookups (Hugging Face trending, GitHub search/API, and the
+// scraped github.com/trending pages - hence both JSON and HTML in Accept). GitHub's API requires a
+// User-Agent on every request or it responds 403.
 builder.Services.AddHttpClient("explore", c =>
 {
     c.Timeout = TimeSpan.FromSeconds(15);
     c.DefaultRequestHeaders.UserAgent.ParseAdd("AiPulse/1.0 (+https://localhost; personal AI news dashboard)");
     c.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+    c.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("text/html", 0.9));
 });
 
 // HttpClient for talking to a locally-running Ollama instance (see OllamaService). No fixed short

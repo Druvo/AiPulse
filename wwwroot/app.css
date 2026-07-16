@@ -727,6 +727,7 @@ a.heatmap-cell:hover { outline: 2px solid var(--ap-accent-hover); }
 /* Thumbnail image - gradient placeholder when the item has no ImageUrl, so a missing image never
    shows a broken-image glyph. Size/shape varies by layout via the modifier classes below. */
 .feed-card-thumb {
+    position: relative;
     display: block;
     overflow: hidden;
     background: linear-gradient(135deg, var(--ap-accent-soft), var(--ap-surface-2));
@@ -736,6 +737,22 @@ a.heatmap-cell:hover { outline: 2px solid var(--ap-accent-hover); }
 .feed-card-thumb-grid { width: 100%; aspect-ratio: 16 / 9; border-radius: var(--ap-radius-md) var(--ap-radius-md) 0 0; }
 .feed-card-thumb-list { width: 108px; height: 108px; border-radius: var(--ap-radius-md) 0 0 var(--ap-radius-md); }
 .feed-card-thumb-compact { width: 64px; height: 64px; border-radius: var(--ap-radius-sm); }
+
+/* When a post has no thumbnail image, its source's favicon sits centered over the gradient placeholder
+   instead of leaving it empty - still recognizable at a glance, not just a blank swatch. */
+.feed-card-thumb-favicon {
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    width: 40% !important;
+    height: 40% !important;
+    object-fit: contain !important;
+    border-radius: 6px;
+}
+
+/* Per-source accent stripe along the card's top edge - the source's own declared brand color when it has
+   one (see FaviconService), falling back to the generated per-source color otherwise. */
+.feed-card-accent { border-top: 3px solid var(--card-accent, transparent); }
 
 /* Per-source identity avatar: a colored-initial circle as the base layer, with the site's own favicon
    (fetched/cached by AiPulse itself, never a third-party favicon CDN) layered on top. If the favicon
@@ -775,6 +792,12 @@ a.heatmap-cell:hover { outline: 2px solid var(--ap-accent-hover); }
 }
 .line-clamp-2 { -webkit-line-clamp: 2; }
 .line-clamp-3 { -webkit-line-clamp: 3; }
+
+/* Explore: GitHub Trending/Trending Developers cards (mirrors github.com/trending) */
+.lang-dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+.contributor-avatar { width: 20px; height: 20px; border-radius: 50%; margin-left: -6px; border: 2px solid var(--ap-surface); vertical-align: middle; }
+.contributor-avatar:first-child { margin-left: 0; }
+.dev-avatar { width: 48px; height: 48px; border-radius: 50%; flex-shrink: 0; }
 
 /* Calendar slide-out panel (News Feed) - anchored to the right edge instead of inline in the page flow */
 .calendar-panel-backdrop {

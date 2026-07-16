@@ -26,6 +26,9 @@
     <button class="btn btn-sm @(_section == "repos" ? "btn-dark" : "btn-outline-dark")" @onclick='() => SetSection("repos")'>
         <Icon Name="code" Size="14" /> GitHub Repos
     </button>
+    <button class="btn btn-sm @(_section == "developers" ? "btn-dark" : "btn-outline-dark")" @onclick='() => SetSection("developers")'>
+        <Icon Name="user" Size="14" /> Trending Devs
+    </button>
     <button class="btn btn-sm @(_section == "try" ? "btn-dark" : "btn-outline-dark")" @onclick='() => SetSection("try")'>
         <Icon Name="play" Size="14" /> Try a Model
     </button>
@@ -56,7 +59,7 @@ else if (_section == "models")
     <div class="row g-4">
         <div class="col-lg-6">
             <h6 class="section-title mb-2">@(string.IsNullOrWhiteSpace(_hfActiveQuery) ? "Trending models" : "Models")</h6>
-            @foreach (var m in _models)
+            @foreach (var m in _models.Skip((_modelPage - 1) * _modelPageSize).Take(_modelPageSize))
             {
                 <a href="@m.Url" target="_blank" rel="noopener" class="card mb-2 text-decoration-none">
                     <div class="card-body py-2">
@@ -76,10 +79,14 @@ else if (_section == "models")
             {
                 <p class="text-muted small">@(string.IsNullOrWhiteSpace(_hfActiveQuery) ? "Couldn't reach Hugging Face right now — try refreshing shortly." : "No matches.")</p>
             }
+            else
+            {
+                <Pager TotalItems="_models.Count" @bind-CurrentPage="_modelPage" @bind-PageSize="_modelPageSize" PageSizeOptions="new[] { 10, 20, 50 }" />
+            }
         </div>
         <div class="col-lg-6">
             <h6 class="section-title mb-2">@(string.IsNullOrWhiteSpace(_hfActiveQuery) ? "Trending datasets" : "Datasets")</h6>
-            @foreach (var d in _datasets)
+            @foreach (var d in _datasets.Skip((_datasetPage - 1) * _datasetPageSize).Take(_datasetPageSize))
             {
                 <a href="@d.Url" target="_blank" rel="noopener" class="card mb-2 text-decoration-none">
                     <div class="card-body py-2">
@@ -92,6 +99,10 @@ else if (_section == "models")
             @if (_datasets.Count == 0)
             {
                 <p class="text-muted small">@(string.IsNullOrWhiteSpace(_hfActiveQuery) ? "Couldn't reach Hugging Face right now — try refreshing shortly." : "No matches.")</p>
+            }
+            else
+            {
+                <Pager TotalItems="_datasets.Count" @bind-CurrentPage="_datasetPage" @bind-PageSize="_datasetPageSize" PageSizeOptions="new[] { 10, 20, 50 }" />
             }
         </div>
     </div>
@@ -122,8 +133,9 @@ else if (_section == "benchmarks")
 else if (_section == "repos")
 {
     <p class="text-muted small">
-        Recently-created AI repos sorted by stars, via GitHub's official Search API — GitHub doesn't publish
-        an API for its unofficial Trending page, so this is the closest legitimate substitute.
+        @(string.IsNullOrWhiteSpace(_repoActiveQuery)
+            ? "Live from github.com/trending — same page GitHub itself shows, refreshed hourly."
+            : "Keyword search uses GitHub's official Search API instead (trending pages aren't searchable).")
     </p>
     <div class="input-group mb-3" style="max-width: 420px;">
         <input class="form-control" placeholder="Search GitHub repos by keyword…" @bind="_repoQuery"
@@ -141,31 +153,89 @@ else if (_section == "repos")
     {
         <p class="text-muted small">Results for "@_repoActiveQuery" — @_repos.Count repo(s).</p>
     }
-    @foreach (var r in _repos)
+    @foreach (var r in _repos.Skip((_repoPage - 1) * _repoPageSize).Take(_repoPageSize))
     {
-        <a href="@r.Url" target="_blank" rel="noopener" class="card mb-2 text-decoration-none">
+        <div class="card mb-2">
             <div class="card-body py-2">
-                <div class="d-flex justify-content-between align-items-center">
-                    <span class="fw-bold small">@r.FullName</span>
-                    <span class="x-small text-muted">★ @r.Stars.ToString("N0")</span>
+                <div class="d-flex justify-content-between align-items-start gap-2">
+                    <a href="@r.Url" target="_blank" rel="noopener" class="fw-bold text-decoration-none"><Icon Name="code" Size="14" /> @r.FullName</a>
+                    @if (r.StarsToday > 0)
+                    {
+                        <span class="badge bg-warning text-nowrap">✨ @r.StarsToday.ToString("N0") stars today</span>
+                    }
                 </div>
                 @if (!string.IsNullOrWhiteSpace(r.Description))
                 {
-                    <div class="x-small text-muted">@r.Description</div>
+                    <p class="small text-muted mb-2">@r.Description</p>
                 }
-                <div class="d-flex gap-1 mt-1">
+                <div class="d-flex flex-wrap align-items-center gap-3 small text-muted">
                     @if (!string.IsNullOrWhiteSpace(r.Language))
                     {
-                        <span class="tag-chip small">@r.Language</span>
+                        <span class="d-inline-flex align-items-center gap-1">
+                            <span class="lang-dot" style="background-color:@(r.LanguageColor ?? "#8b949e")"></span>@r.Language
+                        </span>
                     }
-                    <span class="tag-chip small">via GitHub</span>
+                    <span>★ @r.Stars.ToString("N0")</span>
+                    @if (r.Forks > 0)
+                    {
+                        <span>⑂ @r.Forks.ToString("N0")</span>
+                    }
+                    @if (r.Contributors.Count > 0)
+                    {
+                        <span class="d-inline-flex align-items-center gap-1">
+                            Built by
+                            @foreach (var c in r.Contributors.Take(6))
+                            {
+                                <a href="@c.ProfileUrl" target="_blank" rel="noopener" title="@c.Username">
+                                    <img src="@c.AvatarUrl" alt="@c.Username" class="contributor-avatar" />
+                                </a>
+                            }
+                        </span>
+                    }
                 </div>
             </div>
-        </a>
+        </div>
     }
     @if (_repos.Count == 0)
     {
-        <p class="text-muted small">@(string.IsNullOrWhiteSpace(_repoActiveQuery) ? "Couldn't reach GitHub's Search API right now — try refreshing shortly." : "No matches.")</p>
+        <p class="text-muted small">@(string.IsNullOrWhiteSpace(_repoActiveQuery) ? "Couldn't reach GitHub right now — try refreshing shortly." : "No matches.")</p>
+    }
+    else
+    {
+        <Pager TotalItems="_repos.Count" @bind-CurrentPage="_repoPage" @bind-PageSize="_repoPageSize" />
+    }
+}
+else if (_section == "developers")
+{
+    <p class="text-muted small">Live from github.com/trending/developers — developers with the most-followed new activity today.</p>
+    @foreach (var d in _developers.Skip((_devPage - 1) * _devPageSize).Take(_devPageSize))
+    {
+        <div class="card mb-2">
+            <div class="card-body py-2 d-flex align-items-center gap-3">
+                <img src="@d.AvatarUrl" alt="@d.Username" class="dev-avatar" />
+                <div class="flex-grow-1">
+                    <a href="@d.ProfileUrl" target="_blank" rel="noopener" class="fw-bold text-decoration-none">@d.Username</a>
+                    @if (!string.IsNullOrWhiteSpace(d.PopularRepoName))
+                    {
+                        <div class="small text-muted">
+                            Popular repo: <a href="@d.PopularRepoUrl" target="_blank" rel="noopener">@d.PopularRepoName</a>
+                            @if (!string.IsNullOrWhiteSpace(d.PopularRepoDescription))
+                            {
+                                <span> — @d.PopularRepoDescription</span>
+                            }
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    }
+    @if (_developers.Count == 0)
+    {
+        <p class="text-muted small">Couldn't reach GitHub right now — try refreshing shortly.</p>
+    }
+    else
+    {
+        <Pager TotalItems="_developers.Count" @bind-CurrentPage="_devPage" @bind-PageSize="_devPageSize" />
     }
 }
 else if (_section == "try")
@@ -332,7 +402,7 @@ else if (_section == "try")
             <p class="text-muted small">Results for "@_ggufActiveQuery" — @_ggufModels.Count model(s).</p>
         }
         <div class="row g-2">
-            @foreach (var m in _ggufModels)
+            @foreach (var m in _ggufModels.Skip((_ggufPage - 1) * _ggufPageSize).Take(_ggufPageSize))
             {
                 var hfSlug = $"hf.co/{m.Id}";
                 var installedMatch = _installedModels.FirstOrDefault(im => im.Name.StartsWith(hfSlug, StringComparison.OrdinalIgnoreCase));
@@ -380,6 +450,10 @@ else if (_section == "try")
         {
             <p class="text-muted small">@(string.IsNullOrWhiteSpace(_ggufActiveQuery) ? "Couldn't reach Hugging Face right now — try refreshing shortly." : "No matches.")</p>
         }
+        else
+        {
+            <Pager TotalItems="_ggufModels.Count" @bind-CurrentPage="_ggufPage" @bind-PageSize="_ggufPageSize" PageSizeOptions="new[] { 10, 20, 50 }" />
+        }
     }
 }
 
@@ -387,13 +461,25 @@ else if (_section == "try")
     [SupplyParameterFromQuery(Name = "tab")]
     public string? TabParam { get; set; }
 
-    private static readonly HashSet<string> ValidSections = new() { "models", "benchmarks", "repos", "try" };
+    private static readonly HashSet<string> ValidSections = new() { "models", "benchmarks", "repos", "developers", "try" };
 
     private string _section = "models";
     private bool _loading = true;
     private List<TrendingModel> _models = new();
     private List<TrendingDataset> _datasets = new();
     private List<TrendingRepo> _repos = new();
+    private List<TrendingDeveloper> _developers = new();
+
+    private int _modelPage = 1;
+    private int _modelPageSize = 20;
+    private int _datasetPage = 1;
+    private int _datasetPageSize = 20;
+    private int _repoPage = 1;
+    private int _repoPageSize = 20;
+    private int _devPage = 1;
+    private int _devPageSize = 20;
+    private int _ggufPage = 1;
+    private int _ggufPageSize = 10;
 
     private string _hfQuery = "";
     private string _hfActiveQuery = "";
@@ -431,11 +517,13 @@ else if (_section == "try")
 
         var hf = HuggingFace.GetTrendingAsync();
         var repos = GitHubTrending.GetTrendingReposAsync();
+        var developers = GitHubTrending.GetTrendingDevelopersAsync();
         var gguf = HuggingFace.GetTrendingGgufAsync();
         var ollamaCheck = CheckOllama();
-        await Task.WhenAll(hf, repos, gguf, ollamaCheck);
+        await Task.WhenAll(hf, repos, developers, gguf, ollamaCheck);
         (_models, _datasets) = hf.Result;
         _repos = repos.Result;
+        _developers = developers.Result;
         _ggufModels = gguf.Result;
         _loading = false;
     }

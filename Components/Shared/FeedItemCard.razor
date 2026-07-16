@@ -1,15 +1,21 @@
 @* Shared card for rendering a single FeedItem - used by News, Bookmarks, Digest, and Home so every post
-   carries the same source identity (favicon + colored-initial fallback), thumbnail, and "new" treatment
-   wherever it appears, instead of each page reimplementing its own card markup. *@
+   carries the same source identity (favicon + colored-initial fallback, and now the source's own brand
+   color where it declares one), thumbnail, and "new" treatment wherever it appears, instead of each page
+   reimplementing its own card markup. *@
 @using AiPulse.Models
+@inject FaviconService Favicons
 
-<div class="card h-100 @(Layout == "Grid" ? "feed-grid-card" : "feed-card-row") @(IsRead ? "read-item" : "") @(WatchedKeyword is not null ? "watched-item" : "") @CssClass">
+<div class="card h-100 @(Layout == "Grid" ? "feed-grid-card" : "feed-card-row") feed-card-accent @(IsRead ? "read-item" : "") @(WatchedKeyword is not null ? "watched-item" : "") @CssClass" style="--card-accent: @_accentColor">
     @if (Layout != "Compact" || !string.IsNullOrWhiteSpace(Item.ImageUrl))
     {
         <div class="feed-card-thumb feed-card-thumb-@Layout.ToLowerInvariant()">
             @if (!string.IsNullOrWhiteSpace(Item.ImageUrl))
             {
                 <img src="@Item.ImageUrl" alt="" loading="lazy" onerror="this.parentElement.style.display='none'" />
+            }
+            else if (_host is not null)
+            {
+                <img src="/favicon-proxy/@_host" alt="" loading="lazy" class="feed-card-thumb-favicon" onerror="this.style.display='none'" />
             }
         </div>
     }
@@ -65,12 +71,11 @@
 
         <div class="x-small text-muted d-flex justify-content-between align-items-center flex-wrap gap-1 mt-auto">
             <span class="source-identity">
-                <span class="source-avatar" style="--avatar-color: @AvatarColor(Item.SourceName)">
+                <span class="source-avatar" style="--avatar-color: @_accentColor">
                     <span class="source-avatar-initial">@Initial(Item.SourceName)</span>
-                    @{ var host = HostOf(Item.Link); }
-                    @if (host is not null)
+                    @if (_host is not null)
                     {
-                        <img src="/favicon-proxy/@host" alt="" loading="lazy" onerror="this.style.display='none'" />
+                        <img src="/favicon-proxy/@_host" alt="" loading="lazy" onerror="this.style.display='none'" />
                     }
                 </span>
                 <span>@Item.SourceName</span>
@@ -108,10 +113,24 @@
     /// <summary>Extra classes for the root card element (e.g. keyboard-nav focus ring), which are page-specific concerns the card itself doesn't know about.</summary>
     [Parameter] public string? CssClass { get; set; }
 
+    private string? _host;
+    private string _accentColor = "";
+
+    protected override void OnParametersSet()
+    {
+        _host = HostOf(Item.Link);
+        _accentColor = AvatarColor(Item.SourceName);
+
+        if (_host is null) return;
+        Favicons.EnsureThemeColorFetchStarted(_host);
+        if (Favicons.TryGetCachedThemeColor(_host, out var themeColor) && !string.IsNullOrWhiteSpace(themeColor))
+            _accentColor = themeColor;
+    }
+
     private static string Initial(string name) =>
         string.IsNullOrWhiteSpace(name) ? "?" : char.ToUpperInvariant(name.Trim()[0]).ToString();
 
-    /// <summary>Deterministic per-source color (hash the name to a hue) so every source has a consistent identity even before its favicon loads.</summary>
+    /// <summary>Deterministic per-source color (hash the name to a hue) so every source has a consistent identity even before its favicon/theme-color loads (or when a site declares neither).</summary>
     private static string AvatarColor(string name)
     {
         var hash = 0;

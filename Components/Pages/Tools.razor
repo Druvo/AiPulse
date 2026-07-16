@@ -16,7 +16,7 @@
     <div class="card mb-4">
         <div class="card-body">
             <h6 class="section-title mb-2"><Icon Name="sparkle" Size="16" /> Trending dev tools &amp; frameworks</h6>
-            <p class="text-muted small mb-2">Recently popular AI repos, via GitHub's search API — refreshes hourly. The curated list below is hand-picked; this is what's new.</p>
+            <p class="text-muted small mb-2">Live from github.com/trending — refreshes hourly. The curated list below is hand-picked; this is what's new.</p>
             <div class="row g-2">
                 @foreach (var r in _trendingRepos.Take(8))
                 {
@@ -34,50 +34,55 @@
 }
 
 <h3 class="section-title mt-4"><Icon Name="tool" Size="18" /> Right tool for the right task</h3>
-@foreach (var group in Kb.Tools.GroupBy(t => t.Category))
+
+<div class="d-flex flex-wrap gap-2 mb-2">
+    <input class="form-control form-control-sm" style="max-width:260px" placeholder="Search tools…"
+           value="@_search" @oninput="e => { _search = (string)e.Value!; _page = 1; }" />
+    <select class="form-select form-select-sm w-auto" @bind="_category" @bind:after="() => _page = 1">
+        <option value="">All categories</option>
+        @foreach (var c in Kb.Tools.Select(t => t.Category).Distinct().OrderBy(c => c))
+        {
+            <option value="@c">@c</option>
+        }
+    </select>
+    <select class="form-select form-select-sm w-auto" @bind="_sort" @bind:after="() => _page = 1">
+        <option value="category">Category (default)</option>
+        <option value="popularity">Popularity (live GitHub stars)</option>
+        <option value="name">Name A-Z</option>
+    </select>
+</div>
+
+@{
+    var (pagedTools, totalTools) = GetPage();
+}
+<p class="text-muted small">@totalTools tool(s)</p>
+
+@if (totalTools == 0)
 {
-    <h5 class="mt-3 text-muted">@group.Key</h5>
-    @foreach (var tool in group)
+    <p class="text-muted">No tools match the current filter/search.</p>
+}
+else if (_sort == "category")
+{
+    @foreach (var group in pagedTools.GroupBy(t => t.Category))
     {
-        <div class="card mb-2">
-            <div class="card-body">
-                <div class="d-flex justify-content-between align-items-start gap-2">
-                    <h5 class="card-title mb-1">
-                        @if (!string.IsNullOrWhiteSpace(tool.Url))
-                        {
-                            <a href="@tool.Url" target="_blank" rel="noopener" class="text-decoration-none">@tool.Name ↗</a>
-                        }
-                        else
-                        {
-                            @tool.Name
-                        }
-                    </h5>
-                </div>
-                <p class="mb-2">@tool.OneLiner</p>
-                <div class="row">
-                    <div class="col-md-6">
-                        <div class="small text-success fw-bold">Best for</div>
-                        <ul class="small">
-                            @foreach (var b in tool.BestFor) { <li>@b</li> }
-                        </ul>
-                    </div>
-                    <div class="col-md-6">
-                        <div class="small text-danger fw-bold">Not ideal for</div>
-                        <ul class="small">
-                            @foreach (var n in tool.NotIdealFor) { <li>@n</li> }
-                        </ul>
-                    </div>
-                </div>
-                @if (tool.TokenTips.Length > 0)
-                {
-                    <div class="small text-primary fw-bold">Token tips</div>
-                    <ul class="small mb-0">
-                        @foreach (var tip in tool.TokenTips) { <li>@tip</li> }
-                    </ul>
-                }
-            </div>
-        </div>
+        <h5 class="mt-3 text-muted">@group.Key</h5>
+        @foreach (var tool in group)
+        {
+            @ToolCard(tool)
+        }
     }
+}
+else
+{
+    @foreach (var tool in pagedTools)
+    {
+        @ToolCard(tool)
+    }
+}
+
+@if (totalTools > 0)
+{
+    <Pager TotalItems="totalTools" @bind-CurrentPage="_page" @bind-PageSize="_pageSize" PageSizeOptions="new[] { 10, 20, 50 }" />
 }
 
 <h3 class="section-title mt-5"><Icon Name="sparkle" Size="18" /> Best practices &amp; token optimization</h3>
@@ -101,9 +106,113 @@
 
 @code {
     private List<TrendingRepo> _trendingRepos = new();
+    private Dictionary<string, int> _starCounts = new();
+
+    private string _search = "";
+    private string _category = "";
+    private string _sort = "category";
+    private int _page = 1;
+    private int _pageSize = 10;
 
     protected override async Task OnInitializedAsync()
     {
         _trendingRepos = await GitHub.GetTrendingReposAsync();
+
+        var lookups = Kb.Tools
+            .Select(t => (Tool: t, Repo: ParseGitHubUrl(t.Url)))
+            .Where(x => x.Repo is not null)
+            .ToList();
+
+        var results = await Task.WhenAll(lookups.Select(async x =>
+        {
+            var stars = await GitHub.GetRepoStatsAsync(x.Repo!.Value.Owner, x.Repo.Value.Repo);
+            return (x.Tool.Name, Stars: stars);
+        }));
+
+        _starCounts = results.Where(r => r.Stars.HasValue).ToDictionary(r => r.Name, r => r.Stars!.Value);
     }
+
+    /// <summary>Extracts (owner, repo) from a tool's Url if it points at a github.com repo - used to look up a live star count for the "Popularity" sort/badge.</summary>
+    private static (string Owner, string Repo)? ParseGitHubUrl(string? url)
+    {
+        if (string.IsNullOrWhiteSpace(url)) return null;
+        if (!Uri.TryCreate(url, UriKind.Absolute, out var uri) || !uri.Host.Equals("github.com", StringComparison.OrdinalIgnoreCase))
+            return null;
+
+        var parts = uri.AbsolutePath.Trim('/').Split('/', StringSplitOptions.RemoveEmptyEntries);
+        return parts.Length >= 2 ? (parts[0], parts[1]) : null;
+    }
+
+    private static string FormatStars(int n) => n >= 1000 ? (n / 1000.0).ToString("0.#") + "k" : n.ToString("N0");
+
+    private (List<ToolEntry> Tools, int Total) GetPage()
+    {
+        IEnumerable<ToolEntry> q = Kb.Tools;
+
+        if (!string.IsNullOrEmpty(_category))
+            q = q.Where(t => t.Category == _category);
+
+        if (!string.IsNullOrWhiteSpace(_search))
+        {
+            var s = _search.Trim();
+            q = q.Where(t =>
+                t.Name.Contains(s, StringComparison.OrdinalIgnoreCase) ||
+                t.OneLiner.Contains(s, StringComparison.OrdinalIgnoreCase) ||
+                t.BestFor.Any(b => b.Contains(s, StringComparison.OrdinalIgnoreCase)));
+        }
+
+        q = _sort switch
+        {
+            "popularity" => q.OrderByDescending(t => _starCounts.TryGetValue(t.Name, out var s) ? s : -1),
+            "name" => q.OrderBy(t => t.Name, StringComparer.OrdinalIgnoreCase),
+            _ => q.OrderBy(t => t.Category, StringComparer.OrdinalIgnoreCase).ThenBy(t => t.Name, StringComparer.OrdinalIgnoreCase),
+        };
+
+        var list = q.ToList();
+        var page = list.Skip((_page - 1) * _pageSize).Take(_pageSize).ToList();
+        return (page, list.Count);
+    }
+
+    private RenderFragment ToolCard(ToolEntry tool) => @<div class="card mb-2">
+        <div class="card-body">
+            <div class="d-flex justify-content-between align-items-start gap-2">
+                <h5 class="card-title mb-1">
+                    @if (!string.IsNullOrWhiteSpace(tool.Url))
+                    {
+                        <a href="@tool.Url" target="_blank" rel="noopener" class="text-decoration-none">@tool.Name ↗</a>
+                    }
+                    else
+                    {
+                        @tool.Name
+                    }
+                </h5>
+                @if (_starCounts.TryGetValue(tool.Name, out var stars))
+                {
+                    <span class="badge bg-secondary text-nowrap" title="Live GitHub star count">★ @FormatStars(stars)</span>
+                }
+            </div>
+            <p class="mb-2">@tool.OneLiner</p>
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="small text-success fw-bold">Best for</div>
+                    <ul class="small">
+                        @foreach (var b in tool.BestFor) { <li>@b</li> }
+                    </ul>
+                </div>
+                <div class="col-md-6">
+                    <div class="small text-danger fw-bold">Not ideal for</div>
+                    <ul class="small">
+                        @foreach (var n in tool.NotIdealFor) { <li>@n</li> }
+                    </ul>
+                </div>
+            </div>
+            @if (tool.TokenTips.Length > 0)
+            {
+                <div class="small text-primary fw-bold">Token tips</div>
+                <ul class="small mb-0">
+                    @foreach (var tip in tool.TokenTips) { <li>@tip</li> }
+                </ul>
+            }
+        </div>
+    </div>;
 }
