@@ -533,6 +533,52 @@ Status tags: ✅ done · 🟢 fits philosophy, no AI needed · 🟡 needs a desi
 > class of bot-blocking this session already hit scraping Reddit and YouTube - so its badge is phrased as
 > "needs review", not "broken", and nothing gets auto-removed on a failed check.
 
+- Implemented a full round of findings from a self-published senior-UX audit of the app - flow-consistency
+  fixes, missing affordances, and a Learning Hub tracking overhaul:
+  - **Shared chrome, one visual language.** New `FilterBar`/`EmptyState`/`ToastHost` components replace
+    three independently-built "filter a list" patterns (News' sidebar, Tools/Free AI APIs' top row,
+    Explore's bare search box) and a scatter of one-off inline alerts across Settings/Reading Stats/News.
+    `ToastService` is Scoped (one per circuit, same lifetime as `ReadingStateService`) with a single
+    `<ToastHost />` mounted once in `MainLayout`; pages push to it instead of hand-rolling their own
+    clear-on-next-action logic. Transient confirmations (password changed, export done, test results) moved
+    to toasts; validation errors and actionable instructions (wrong password, "restart AiPulse now") stayed
+    inline, on purpose - a toast that vanishes in 5 seconds is the wrong home for something you still need
+    to act on.
+  - **Consistency fixes:** Reading Stats' saved-articles list gained the same `Pager` News and Tools already
+    had; Learning Hub's live trending panel gained a refresh button + last-updated stamp matching Explore's
+    per-section pattern; Mark-all-as-read (News) and Remove bookmark (Reading Stats) both gained an Undo
+    toast instead of firing with no way back; `FeedItemCard`'s Compact layout (Dashboard's Biggest
+    Stories/Read Later) gained an explicit checkmark + strikethrough for read items, since opacity alone
+    has less room to register at that size; Explore/Tools/Learn's bare "Loading…" spinners became skeleton
+    placeholders; the nav's "Learn & Explore" group split into "Learn & Explore" (content streams: Learning
+    Hub, Explore) and "Reference" (lookups: Glossary, Tools & Tips, Free AI APIs); the Dashboard's welcome
+    banner became a 3-item first-run checklist (visit News, read/save something, start a module) driven by
+    real state instead of static copy.
+  - **Learning Hub tracking overhaul** - the largest piece, aimed at tracking retention instead of just
+    consumption: modules now track completion **per step** (`ReadingState.CompletedSteps`, keyed
+    `"ModuleTitle::StepIndex"`) instead of one binary toggle, with the whole-module flag derived from steps
+    rather than a second source of truth - a one-time backfill in `Learn.razor`'s `OnInitialized` upgrades
+    modules completed under the old toggle so checking a single step never silently un-completes them.
+    Learning now has its own streak (`ReadingState.LearningHistory`, mirroring `ReadHistory` but for step
+    completions) so a day spent deep in one module without opening a news article still counts as "showed
+    up today." A "Worth a refresher" shelf surfaces modules completed six-plus weeks ago
+    (`ModuleCompletedAt`), the closest thing to spaced repetition without an actual scheduling algorithm. A
+    one-line self-check ("could you explain this to someone else?") records yes/not-yet per module. A
+    "Topic strength" panel cross-references completed modules' `RelatedTerms` against articles actually read
+    in the last 30 days (via `FeedHistoryService.Items` matched against `ReadHistory` links) - two signals
+    that already existed separately and had never been combined. Personal notes per module
+    (`ReadingState.ModuleNotes`) feed a new `ObsidianExportService.ExportLearningNotes`, so the Learning Hub
+    export is a real takeaway notebook, not a dump of static module content. Time invested is a rough
+    per-step estimate (8 min default) summed from `LearningHistory`, shown next to the streak.
+
+> **UX audit implementation reality check:** every `[Authorize]` page touched here was verified the same way
+> every authenticated page has been all session - clean build, server starts with no exceptions, and the
+> route redirects cleanly to `/login` with nothing thrown server-side (still no admin credentials available
+> in this environment). That confirms routing and startup health but doesn't exercise a signed-in user's
+> actual render path, so the newer Learning Hub logic (step-completion backfill, streak calculation,
+> topic-strength matching) is verified by code review and by direct reasoning through the data flow, not by
+> clicking through it live. Flagging this honestly rather than claiming a level of testing that didn't happen.
+
 > **GitHub Trending scrape reality check:** `GitHubTrendingService` scrapes `github.com/trending` and
 > `github.com/trending/developers` directly for the repo/developer views above - GitHub has no API for
 > either, and "stars today" and contributor avatars only exist on those unofficial pages, so there's no
