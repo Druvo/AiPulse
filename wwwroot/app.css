@@ -1,13 +1,53 @@
+/* Hallmark · genre: modern-minimal · macrostructure: Workbench (app) + Marquee (entry) · theme: custom (cyan-anchored, Cobalt-DNA) · enrichment: none · nav: N3 side-rail · footer: n/a (app shell)
+ * design-system: design.md · designed-as-app
+ * pre-emit critique: P4 H4 E4 S4 R5 V3
+ */
+
 @font-face {
-    font-family: 'Inter';
-    src: url('fonts/InterVariable.woff2') format('woff2');
-    font-weight: 100 900;
+    font-family: 'Space Grotesk';
+    src: url('fonts/space-grotesk-variable.woff2') format('woff2');
+    font-weight: 500 700;
+    font-style: normal;
+    font-display: swap;
+}
+@font-face {
+    font-family: 'IBM Plex Sans';
+    src: url('fonts/ibm-plex-sans-variable.woff2') format('woff2');
+    font-weight: 400 600;
+    font-style: normal;
+    font-display: swap;
+}
+@font-face {
+    font-family: 'JetBrains Mono';
+    src: url('fonts/jetbrains-mono-variable.woff2') format('woff2');
+    font-weight: 400 600;
     font-style: normal;
     font-display: swap;
 }
 
+:root {
+    --ap-font-display: 'Space Grotesk', ui-sans-serif, system-ui, sans-serif;
+    --ap-font-body: 'IBM Plex Sans', ui-sans-serif, system-ui, sans-serif;
+    --ap-font-mono: 'JetBrains Mono', ui-monospace, 'SFMono-Regular', Menlo, monospace;
+
+    /* 4pt spacing scale - named so component CSS references a token, not a raw rem value */
+    --ap-space-3xs: .25rem;
+    --ap-space-2xs: .5rem;
+    --ap-space-xs: .75rem;
+    --ap-space-sm: 1rem;
+    --ap-space-md: 1.5rem;
+    --ap-space-lg: 2rem;
+    --ap-space-xl: 3rem;
+
+    /* Motion - one easing family, no bounce/overshoot on UI state */
+    --ap-ease-out: cubic-bezier(.16, 1, .3, 1);
+    --ap-ease-in-out: cubic-bezier(.65, 0, .35, 1);
+    --ap-dur-fast: 120ms;
+    --ap-dur-base: 180ms;
+}
+
 html, body {
-    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    font-family: var(--ap-font-body);
 }
 
 /* Playground chat transcript */
@@ -180,99 +220,104 @@ h1:focus {
 
 /* ============================================================
    AiPulse design tokens — light/dark via [data-theme] on <html>
+   OKLCH throughout, cyan anchor (hue 200) — a custom theme built on
+   the existing brand color, not a catalog swap. Cool engineered paper,
+   hairline borders over heavy shadow, one signal accent.
    ============================================================ */
 :root {
-    --ap-bg: #f7f9f9;
-    --ap-surface: #ffffff;
-    --ap-surface-2: #eef2f2;
-    --ap-text: #101817;
-    --ap-text-secondary: #4b5b59;
-    --ap-muted: #657572;
-    --ap-border: #e2e8e7;
-    --ap-border-strong: #cbd6d4;
+    --ap-bg: oklch(98% .006 200);
+    --ap-surface: oklch(99.2% .004 200);
+    --ap-surface-2: oklch(95.5% .008 200);
+    --ap-text: oklch(22% .02 220);
+    --ap-text-secondary: oklch(40% .018 215);
+    --ap-muted: oklch(52% .014 210);
+    --ap-border: oklch(90% .008 205);
+    --ap-border-strong: oklch(82% .012 205);
 
-    --ap-accent: #0891b2;
-    --ap-accent-hover: #0e7490;
-    --ap-accent-2: #06b6d4;
-    --ap-accent-soft: #cffafe;
-    --ap-accent-soft-text: #155e75;
+    --ap-accent: oklch(58% .14 200);
+    --ap-accent-hover: oklch(50% .15 200);
+    --ap-accent-2: oklch(68% .12 195);
+    --ap-accent-soft: oklch(93% .05 200);
+    --ap-accent-soft-text: oklch(32% .09 205);
 
-    --ap-success: #16a34a;
-    --ap-success-soft: #dcfce7;
-    --ap-success-soft-text: #166534;
-    --ap-warning: #d97706;
-    --ap-warning-soft: #fef3c7;
-    --ap-warning-soft-text: #92400e;
-    --ap-danger: #dc2626;
-    --ap-danger-soft: #fee2e2;
-    --ap-danger-soft-text: #991b1b;
+    --ap-success: oklch(55% .15 150);
+    --ap-success-soft: oklch(94% .05 150);
+    --ap-success-soft-text: oklch(32% .09 150);
+    --ap-warning: oklch(62% .15 70);
+    --ap-warning-soft: oklch(94% .06 75);
+    --ap-warning-soft-text: oklch(38% .09 60);
+    --ap-danger: oklch(56% .19 25);
+    --ap-danger-soft: oklch(93% .06 20);
+    --ap-danger-soft-text: oklch(35% .12 20);
 
-    --ap-shadow-sm: 0 1px 2px rgba(15,23,42,.05), 0 1px 1px rgba(15,23,42,.03);
-    --ap-shadow-md: 0 8px 24px rgba(15,23,42,.08), 0 2px 6px rgba(15,23,42,.04);
-    --ap-radius-sm: 7px;
-    --ap-radius-md: 12px;
-    --ap-radius-lg: 16px;
+    /* Hairlines carry the structure; shadows are a barely-there lift, not blur-heavy depth */
+    --ap-shadow-sm: 0 1px 2px oklch(20% .02 220 / .06);
+    --ap-shadow-md: 0 4px 16px oklch(20% .02 220 / .08), 0 1px 3px oklch(20% .02 220 / .05);
+    --ap-radius-sm: 6px;
+    --ap-radius-md: 8px;
+    --ap-radius-lg: 12px;
 
     /* Sidebar follows the theme (see [data-theme="dark"] below for the dark variant) */
-    --ap-sidebar-bg: #eef2f2;
-    --ap-sidebar-border: #e2e8e7;
-    --ap-sidebar-text: #4b5b59;
-    --ap-sidebar-text-active: #101817;
-    --ap-sidebar-hover: rgba(16,24,23,.05);
-    --ap-sidebar-hover-strong: rgba(16,24,23,.09);
+    --ap-sidebar-bg: oklch(96% .008 200);
+    --ap-sidebar-border: oklch(90% .008 205);
+    --ap-sidebar-text: oklch(40% .018 215);
+    --ap-sidebar-text-active: oklch(20% .02 220);
+    --ap-sidebar-hover: oklch(20% .02 220 / .05);
+    --ap-sidebar-hover-strong: oklch(20% .02 220 / .09);
 }
 
 /* ============================================================
    Accent presets — pick a hue independent of light/dark, via [data-accent] on <html>.
-   Default (no attribute) keeps the teal values defined above.
+   Default (no attribute) keeps the cyan values defined above. Each preset holds the
+   same lightness/chroma discipline as the default, just rotated to a different hue.
    ============================================================ */
-[data-accent="violet"] { --ap-accent: #7c3aed; --ap-accent-hover: #6d28d9; --ap-accent-2: #a78bfa; --ap-accent-soft: #ede9fe; --ap-accent-soft-text: #5b21b6; }
-[data-theme="dark"][data-accent="violet"] { --ap-accent: #a78bfa; --ap-accent-hover: #c4b5fd; --ap-accent-2: #8b5cf6; }
+[data-accent="violet"] { --ap-accent: oklch(56% .19 300); --ap-accent-hover: oklch(48% .2 300); --ap-accent-2: oklch(68% .16 300); --ap-accent-soft: oklch(93% .06 300); --ap-accent-soft-text: oklch(34% .14 300); }
+[data-theme="dark"][data-accent="violet"] { --ap-accent: oklch(76% .15 300); --ap-accent-hover: oklch(82% .13 300); --ap-accent-2: oklch(70% .14 300); }
 
-[data-accent="rose"] { --ap-accent: #e11d48; --ap-accent-hover: #be123c; --ap-accent-2: #fb7185; --ap-accent-soft: #ffe4e6; --ap-accent-soft-text: #9f1239; }
-[data-theme="dark"][data-accent="rose"] { --ap-accent: #fb7185; --ap-accent-hover: #fda4af; --ap-accent-2: #f43f5e; }
+[data-accent="rose"] { --ap-accent: oklch(55% .2 20); --ap-accent-hover: oklch(47% .21 20); --ap-accent-2: oklch(66% .18 20); --ap-accent-soft: oklch(93% .06 20); --ap-accent-soft-text: oklch(35% .15 20); }
+[data-theme="dark"][data-accent="rose"] { --ap-accent: oklch(74% .16 20); --ap-accent-hover: oklch(80% .14 20); --ap-accent-2: oklch(68% .15 20); }
 
-[data-accent="amber"] { --ap-accent: #d97706; --ap-accent-hover: #b45309; --ap-accent-2: #fbbf24; --ap-accent-soft: #fef3c7; --ap-accent-soft-text: #92400e; }
-[data-theme="dark"][data-accent="amber"] { --ap-accent: #fbbf24; --ap-accent-hover: #fcd34d; --ap-accent-2: #f59e0b; }
+[data-accent="amber"] { --ap-accent: oklch(62% .15 75); --ap-accent-hover: oklch(54% .16 75); --ap-accent-2: oklch(72% .13 75); --ap-accent-soft: oklch(94% .06 78); --ap-accent-soft-text: oklch(38% .1 65); }
+[data-theme="dark"][data-accent="amber"] { --ap-accent: oklch(78% .13 78); --ap-accent-hover: oklch(84% .11 78); --ap-accent-2: oklch(72% .12 78); }
 
-[data-accent="emerald"] { --ap-accent: #059669; --ap-accent-hover: #047857; --ap-accent-2: #34d399; --ap-accent-soft: #d1fae5; --ap-accent-soft-text: #065f46; }
-[data-theme="dark"][data-accent="emerald"] { --ap-accent: #34d399; --ap-accent-hover: #6ee7b7; --ap-accent-2: #10b981; }
+[data-accent="emerald"] { --ap-accent: oklch(55% .14 155); --ap-accent-hover: oklch(47% .15 155); --ap-accent-2: oklch(68% .13 155); --ap-accent-soft: oklch(93% .06 155); --ap-accent-soft-text: oklch(32% .1 155); }
+[data-theme="dark"][data-accent="emerald"] { --ap-accent: oklch(74% .15 155); --ap-accent-hover: oklch(80% .13 155); --ap-accent-2: oklch(68% .13 155); }
 
 [data-theme="dark"] {
-    --ap-bg: #0a0f0f;
-    --ap-surface: #101817;
-    --ap-surface-2: #182221;
-    --ap-text: #e6f0ef;
-    --ap-text-secondary: #a3b3b1;
-    --ap-muted: #66807d;
-    --ap-border: #1f2b2a;
-    --ap-border-strong: #2b3b39;
+    --ap-bg: oklch(15% .014 220);
+    --ap-surface: oklch(19% .016 220);
+    --ap-surface-2: oklch(24% .018 218);
+    --ap-text: oklch(94% .01 210);
+    --ap-text-secondary: oklch(74% .014 210);
+    --ap-muted: oklch(58% .014 210);
+    --ap-border: oklch(28% .016 215);
+    --ap-border-strong: oklch(35% .018 215);
 
-    --ap-accent: #22d3ee;
-    --ap-accent-hover: #67e8f9;
-    --ap-accent-2: #06b6d4;
-    --ap-accent-soft: rgba(34,211,238,.15);
-    --ap-accent-soft-text: #a5f3fc;
+    --ap-accent: oklch(74% .14 200);
+    --ap-accent-hover: oklch(80% .13 200);
+    --ap-accent-2: oklch(70% .12 195);
+    --ap-accent-soft: oklch(30% .09 200 / .35);
+    --ap-accent-soft-text: oklch(85% .08 200);
 
-    --ap-success: #4ade80;
-    --ap-success-soft: rgba(74,222,128,.15);
-    --ap-success-soft-text: #86efac;
-    --ap-warning: #fbbf24;
-    --ap-warning-soft: rgba(251,191,36,.15);
-    --ap-warning-soft-text: #fcd34d;
-    --ap-danger: #f87171;
-    --ap-danger-soft: rgba(248,113,113,.15);
-    --ap-danger-soft-text: #fca5a5;
+    --ap-success: oklch(72% .15 150);
+    --ap-success-soft: oklch(30% .09 150 / .35);
+    --ap-success-soft-text: oklch(85% .09 150);
+    --ap-warning: oklch(76% .14 75);
+    --ap-warning-soft: oklch(32% .09 75 / .35);
+    --ap-warning-soft-text: oklch(86% .1 75);
+    --ap-danger: oklch(70% .17 25);
+    --ap-danger-soft: oklch(32% .1 20 / .35);
+    --ap-danger-soft-text: oklch(84% .1 20);
 
-    --ap-shadow-sm: 0 1px 2px rgba(0,0,0,.3);
-    --ap-shadow-md: 0 8px 24px rgba(0,0,0,.4), 0 2px 6px rgba(0,0,0,.3);
+    --ap-shadow-sm: 0 1px 2px oklch(0% 0 0 / .35);
+    --ap-shadow-md: 0 8px 24px oklch(0% 0 0 / .4), 0 2px 6px oklch(0% 0 0 / .3);
 
-    --ap-sidebar-bg: #0d1416;
-    --ap-sidebar-border: #1c2628;
-    --ap-sidebar-text: #93a3a2;
-    --ap-sidebar-text-active: #ffffff;
-    --ap-sidebar-hover: rgba(255,255,255,.06);
-    --ap-sidebar-hover-strong: rgba(255,255,255,.1);
+    --ap-sidebar-bg: oklch(13% .014 220);
+    --ap-sidebar-border: oklch(24% .016 218);
+    --ap-sidebar-text: oklch(66% .014 210);
+    --ap-sidebar-text-active: oklch(97% .006 210);
+    --ap-sidebar-hover: oklch(100% 0 0 / .06);
+    --ap-sidebar-hover-strong: oklch(100% 0 0 / .1);
 }
 
 html, body {
@@ -285,7 +330,7 @@ html, body {
 .btn .ap-icon, a .ap-icon { vertical-align: -3px; margin-right: 3px; }
 h1 .ap-icon, h4 .ap-icon, h6 .ap-icon { color: var(--ap-accent); }
 
-h1, h2, h3, h4, h5, h6 { font-weight: 600; letter-spacing: -0.01em; }
+h1, h2, h3, h4, h5, h6 { font-family: var(--ap-font-display); font-weight: 600; letter-spacing: -0.01em; }
 
 /* Consistent keyboard/interaction focus feedback across all interactive elements */
 a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible,
@@ -331,7 +376,7 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
     color: var(--ap-text);
     border-radius: var(--ap-radius-md);
     box-shadow: var(--ap-shadow-sm);
-    transition: box-shadow .15s ease, transform .15s ease, border-color .15s ease;
+    transition: box-shadow var(--ap-dur-base) var(--ap-ease-out), transform var(--ap-dur-base) var(--ap-ease-out), border-color var(--ap-dur-base) var(--ap-ease-out);
 }
 .card:hover { box-shadow: var(--ap-shadow-md); border-color: var(--ap-border-strong); }
 a.card:hover { transform: translateY(-1px); }
@@ -371,13 +416,14 @@ a.card:hover { transform: translateY(-1px); }
     text-align: center;
     text-decoration: none;
     color: var(--ap-text);
-    transition: transform .15s ease, box-shadow .15s ease;
+    transition: transform var(--ap-dur-base) var(--ap-ease-out), box-shadow var(--ap-dur-base) var(--ap-ease-out), border-color var(--ap-dur-base) var(--ap-ease-out);
 }
-.stat-card:hover { transform: translateY(-1px); box-shadow: var(--ap-shadow-md); color: var(--ap-text); }
+.stat-card:hover { transform: translateY(-1px); box-shadow: var(--ap-shadow-md); border-color: var(--ap-border-strong); color: var(--ap-text); }
 .stat-num {
+    font-family: var(--ap-font-display);
     font-size: 1.9rem; font-weight: 600; line-height: 1;
-    background: linear-gradient(135deg, var(--ap-accent), var(--ap-accent-2));
-    -webkit-background-clip: text; background-clip: text; color: transparent;
+    font-variant-numeric: tabular-nums;
+    color: var(--ap-accent);
 }
 .stat-label {
     font-size: .85rem; color: var(--ap-text-secondary); margin-top: .3rem;
@@ -574,28 +620,28 @@ a.card:hover { transform: translateY(-1px); }
     display: flex;
     align-items: center;
     gap: .55rem;
+    font-family: var(--ap-font-display);
     font-weight: 600;
 }
 .brand-logo { height: 34px; width: auto; }
-.login-logo { height: 108px; width: auto; filter: drop-shadow(0 6px 16px rgba(109, 94, 252, .35)); }
+.login-logo { height: 92px; width: auto; }
 .login-brand-mark {
     text-align: center;
+    font-family: var(--ap-font-display);
     font-size: 1.85rem;
-    font-weight: 700;
+    font-weight: 600;
     letter-spacing: -.02em;
     margin: .6rem 0 .15rem;
-    background: linear-gradient(90deg, #0ea5e9, #6d5efc, #7c3aed);
-    -webkit-background-clip: text;
-    background-clip: text;
-    -webkit-text-fill-color: transparent;
+    color: var(--ap-text);
 }
 
 .nav-section-label {
-    font-size: .68rem;
-    font-weight: 600;
+    font-family: var(--ap-font-mono);
+    font-size: .64rem;
+    font-weight: 500;
     text-transform: uppercase;
-    letter-spacing: .06em;
-    color: #5c6b69;
+    letter-spacing: .08em;
+    color: var(--ap-muted);
     padding-top: 1rem;
     padding-bottom: .35rem;
 }
@@ -634,17 +680,14 @@ a.card:hover { transform: translateY(-1px); }
 .nav-signature a { color: inherit; text-decoration: underline; }
 .nav-signature a:hover { opacity: 1; }
 
-/* Login/Register screens */
+/* Login/Register screens - cool engineered paper, hairline card, no decorative gradients */
 .login-shell {
     min-height: 100vh;
     display: flex;
     align-items: center;
     justify-content: center;
     padding: 1rem;
-    background:
-        radial-gradient(circle at 12% 15%, rgba(14, 165, 233, .16), transparent 40%),
-        radial-gradient(circle at 88% 85%, rgba(124, 58, 237, .18), transparent 40%),
-        var(--ap-bg);
+    background: var(--ap-bg);
 }
 .login-shell-inner { display: flex; flex-direction: column; align-items: center; width: 100%; max-width: 400px; }
 .login-card {
@@ -652,20 +695,22 @@ a.card:hover { transform: translateY(-1px); }
     color: var(--ap-text);
     width: 100%;
     padding: 2.25rem 2rem;
-    border-radius: 18px;
+    border-radius: var(--ap-radius-lg);
     border: 1px solid var(--ap-border);
-    box-shadow: 0 24px 60px -24px rgba(76, 29, 199, .35), var(--ap-shadow-md);
-    position: relative;
-    overflow: hidden;
-}
-.login-card::before {
-    content: "";
-    position: absolute;
-    top: 0; left: 0; right: 0;
-    height: 4px;
-    background: linear-gradient(90deg, #0ea5e9, #6d5efc, #7c3aed);
+    box-shadow: var(--ap-shadow-md);
 }
 .login-logo-wrap { display: flex; justify-content: center; margin-bottom: .5rem; }
+.login-eyebrow {
+    display: block;
+    text-align: center;
+    font-family: var(--ap-font-mono);
+    font-size: .68rem;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: .1em;
+    color: var(--ap-accent);
+    margin-bottom: .3rem;
+}
 .login-signature {
     margin-top: 1.25rem;
     text-align: center;

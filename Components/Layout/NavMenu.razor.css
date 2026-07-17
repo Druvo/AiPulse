@@ -53,11 +53,11 @@
         line-height: 1;
         width: 100%;
         padding-left: .6rem;
-        transition: background-color .12s ease, color .12s ease;
+        transition: background-color var(--ap-dur-fast, 120ms) var(--ap-ease-out, ease), color var(--ap-dur-fast, 120ms) var(--ap-ease-out, ease);
     }
 
 .nav-item ::deep a.active {
-    background-color: rgba(129,140,248,0.14);
+    background-color: var(--ap-accent-soft, rgba(129,140,248,0.14));
     border-left-color: var(--ap-accent, #22d3ee);
     color: var(--ap-sidebar-text-active, #fff);
 }

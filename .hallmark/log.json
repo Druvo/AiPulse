@@ -1,0 +1,12 @@
+[
+  {
+    "date": "2026-07-18",
+    "scope": "app",
+    "macrostructure": "Workbench (app pages) + Marquee-lite (entry pages)",
+    "theme": "custom",
+    "theme_axes": "cool-light / grotesk-sans / cyan-blue",
+    "vibe": "technical, self-hosted AI dashboard, quietly confident",
+    "enrichment": "none",
+    "brief": "AiPulse - full design-system redesign (tokens, nav, cards/buttons/badges, Login/Register)"
+  }
+]

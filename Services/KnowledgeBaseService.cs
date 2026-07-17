@@ -427,13 +427,15 @@ public sealed class KnowledgeBaseService
     public async Task<List<DiscoveryRunLogEntry>> GetDiscoveryRunLogAsync(int take = 30)
     {
         await using var db = await _dbFactory.CreateDbContextAsync();
-        return await db.DiscoveryRunLog.OrderByDescending(e => e.RanAt).Take(take).ToListAsync();
+        // SQLite's EF Core provider can't translate ORDER BY on a DateTimeOffset column - Id is
+        // auto-increment, so ordering by it descending gives the same "most recent first" result.
+        return await db.DiscoveryRunLog.OrderByDescending(e => e.Id).Take(take).ToListAsync();
     }
 
     public async Task<List<FreeApiCandidate>> GetPendingCandidatesAsync()
     {
         await using var db = await _dbFactory.CreateDbContextAsync();
-        return await db.FreeApiCandidates.Where(c => c.Status == "Pending").OrderByDescending(c => c.DiscoveredAt).ToListAsync();
+        return await db.FreeApiCandidates.Where(c => c.Status == "Pending").OrderByDescending(c => c.Id).ToListAsync();
     }
 
     /// <summary>
@@ -511,9 +513,11 @@ public sealed class KnowledgeBaseService
     public async Task<List<ContentCandidate>> GetPendingContentCandidatesAsync(string kind)
     {
         await using var db = await _dbFactory.CreateDbContextAsync();
+        // SQLite's EF Core provider can't translate ORDER BY on a DateTimeOffset column - Id is
+        // auto-increment, so ordering by it descending gives the same "most recent first" result.
         return await db.ContentCandidates
             .Where(c => c.Kind == kind && c.Status == "Pending")
-            .OrderByDescending(c => c.DiscoveredAt)
+            .OrderByDescending(c => c.Id)
             .ToListAsync();
     }
 

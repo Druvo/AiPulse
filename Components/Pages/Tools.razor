@@ -11,43 +11,6 @@
     <p class="lead">The right tool for the right task, plus concrete ways to cut token usage.</p>
 </div>
 
-@if (_trendingRepos.Count > 0 || _trendingLoading)
-{
-    <div class="card mb-4">
-        <div class="card-body">
-            <div class="d-flex align-items-center justify-content-between mb-2">
-                <h6 class="section-title mb-0"><Icon Name="sparkle" Size="16" /> Trending dev tools &amp; frameworks</h6>
-                <button class="btn btn-sm btn-outline-secondary" disabled="@_trendingLoading" @onclick="() => LoadTrendingReposAsync(force: true)" title="Refresh live data">
-                    @if (_trendingLoading) { <span class="spinner"></span> } else { <Icon Name="refresh" Size="13" /> }
-                </button>
-            </div>
-            <p class="text-muted small mb-2">Live from github.com/trending - @LastUpdatedLabel(GitHub.GetRepoLastUpdated("daily")). The curated list below is hand-picked; this is what's new.</p>
-            @if (_trendingLoading && _trendingRepos.Count == 0)
-            {
-                <div class="row g-2">
-                    <div class="col-md-6"><div class="skeleton-line w-80"></div><div class="skeleton-line w-60"></div></div>
-                    <div class="col-md-6"><div class="skeleton-line w-80"></div><div class="skeleton-line w-60"></div></div>
-                </div>
-            }
-            else
-            {
-                <div class="row g-2">
-                    @foreach (var r in _trendingRepos.Take(8))
-                    {
-                        <div class="col-md-6">
-                            <a href="@r.Url" target="_blank" rel="noopener" class="d-block small text-decoration-none border-bottom py-1">
-                                @r.FullName
-                                <span class="text-muted"> · ★ @r.Stars.ToString("N0")@(string.IsNullOrWhiteSpace(r.Language) ? "" : $" · {r.Language}")</span>
-                            </a>
-                        </div>
-                    }
-                </div>
-                <a href="explore?tab=github" class="small">See all trending repos →</a>
-            }
-        </div>
-    </div>
-}
-
 <AuthorizeView Roles="Admin" Context="adminPanel">
     <Authorized>
         @if (_pendingCandidates.Count > 0)
@@ -174,7 +137,6 @@ else
 
 @code {
     private List<TrendingRepo> _trendingRepos = new();
-    private bool _trendingLoading = true;
     private Dictionary<string, int> _starCounts = new();
 
     private string _search = "";
@@ -192,16 +154,11 @@ else
         _ = RefreshCandidatesAsync();
     }
 
-    private async Task LoadTrendingReposAsync(bool force = false)
+    /// <summary>No display panel for this anymore - the fetch only feeds QueueToolCandidatesAsync's candidate detection below.</summary>
+    private async Task LoadTrendingReposAsync()
     {
-        _trendingLoading = true;
-        StateHasChanged();
-        try
-        {
-            _trendingRepos = await GitHub.GetTrendingReposAsync(force: force);
-            await QueueToolCandidatesAsync();
-        }
-        finally { _trendingLoading = false; StateHasChanged(); }
+        _trendingRepos = await GitHub.GetTrendingReposAsync();
+        await QueueToolCandidatesAsync();
     }
 
     private static readonly string[] AiToolKeywords =
@@ -300,9 +257,6 @@ else
         _starCounts = results.Where(r => r.Stars.HasValue).ToDictionary(r => r.Name, r => r.Stars!.Value);
         StateHasChanged();
     }
-
-    private static string LastUpdatedLabel(DateTimeOffset? at) =>
-        at is null ? "never fetched yet" : $"updated {at.Value.ToLocalTime():g}";
 
     /// <summary>Extracts (owner, repo) from a tool's Url if it points at a github.com repo - used to look up a live star count for the "Popularity" sort/badge.</summary>
     private static (string Owner, string Repo)? ParseGitHubUrl(string? url)
