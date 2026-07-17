@@ -40,9 +40,12 @@ public sealed class GitHubTrendingService
 
     private readonly ConcurrentDictionary<string, (DateTimeOffset At, int? Stars)> _repoStatsCache = new();
 
-    public GitHubTrendingService(IHttpClientFactory httpFactory, IWebHostEnvironment env, ILogger<GitHubTrendingService> log)
+    private readonly TrendingRepoHistoryService _history;
+
+    public GitHubTrendingService(IHttpClientFactory httpFactory, IWebHostEnvironment env, TrendingRepoHistoryService history, ILogger<GitHubTrendingService> log)
     {
         _httpFactory = httpFactory;
+        _history = history;
         _log = log;
         var dir = Path.Combine(env.ContentRootPath, "App_Data");
         Directory.CreateDirectory(dir);
@@ -72,6 +75,7 @@ public sealed class GitHubTrendingService
             var repos = await ScrapeTrendingReposAsync(since, ct);
             _repoCache[since] = (DateTimeOffset.Now, repos);
             SavePersisted();
+            _history.RecordSnapshot(since, repos);
             return repos;
         }
         catch (Exception ex)

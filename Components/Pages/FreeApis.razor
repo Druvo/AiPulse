@@ -38,7 +38,26 @@
                     {
                         <span class="text-muted x-small">Hasn't run yet this session - checks a community-maintained free-LLM-API list once a day, or on demand here.</span>
                     }
+                    @if (_runLog.Count > 0)
+                    {
+                        <button class="btn btn-sm btn-link x-small" @onclick="() => _showRunLog = !_showRunLog">
+                            @(_showRunLog ? "Hide" : "Show") run history (@_runLog.Count)
+                        </button>
+                    }
                 </div>
+
+                @if (_showRunLog && _runLog.Count > 0)
+                {
+                    <div class="border rounded p-2 mb-2 small" style="max-height:200px; overflow-y:auto">
+                        @foreach (var entry in _runLog)
+                        {
+                            <div class="d-flex justify-content-between gap-2">
+                                <span class="text-muted">@entry.RanAt.ToLocalTime().ToString("MMM d, HH:mm")</span>
+                                <span>@entry.Summary</span>
+                            </div>
+                        }
+                    </div>
+                }
 
                 @if (_pending.Count == 0)
                 {
@@ -213,6 +232,8 @@ else
     private int _pageSize = 10;
 
     private List<FreeApiCandidate> _pending = new();
+    private List<DiscoveryRunLogEntry> _runLog = new();
+    private bool _showRunLog;
     private int? _approvingCandidateId;
     private int? _editingId;
     private bool _showAddForm;
@@ -221,7 +242,11 @@ else
 
     private readonly string[] _categories = { "Fully Free", "Free Tier", "Free Credits" };
 
-    protected override async Task OnInitializedAsync() => await RefreshPendingAsync();
+    protected override async Task OnInitializedAsync()
+    {
+        await RefreshPendingAsync();
+        _runLog = await Kb.GetDiscoveryRunLogAsync();
+    }
 
     private async Task RefreshPendingAsync() => _pending = await Kb.GetPendingCandidatesAsync();
 
@@ -229,6 +254,7 @@ else
     {
         await Discovery.RunAsync();
         await RefreshPendingAsync();
+        _runLog = await Kb.GetDiscoveryRunLogAsync();
     }
 
     private void StartApprove(FreeApiCandidate c)

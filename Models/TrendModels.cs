@@ -55,6 +55,14 @@ public sealed record RepoContributor(string Username, string AvatarUrl)
     public string ProfileUrl => $"https://github.com/{Username}";
 }
 
+/// <summary>One day's trending-repos leaderboard for a given since-window, persisted so past days stay browsable after the live scrape cache moves on.</summary>
+public sealed class TrendingRepoSnapshot
+{
+    public required DateOnly Date { get; init; }
+    public required string Since { get; init; } // daily, weekly, monthly
+    public List<TrendingRepo> Repos { get; init; } = new();
+}
+
 /// <summary>A developer on GitHub's real Trending Developers page (scraped).</summary>
 public sealed class TrendingDeveloper
 {

@@ -48,6 +48,59 @@
     </div>
 }
 
+<AuthorizeView Roles="Admin" Context="adminPanel">
+    <Authorized>
+        @if (_pendingCandidates.Count > 0)
+        {
+            <div class="card mb-3">
+                <div class="card-body">
+                    <strong class="d-block mb-2"><Icon Name="search" Size="16" /> Candidate tools awaiting review (@_pendingCandidates.Count)</strong>
+                    <div class="d-flex flex-column gap-2">
+                        @foreach (var c in _pendingCandidates)
+                        {
+                            @if (_approvingCandidateId == c.Id)
+                            {
+                                <div class="border rounded p-2">
+                                    <EditForm Model="_form" OnValidSubmit="ConfirmApprove">
+                                        <div class="row g-2 mb-2">
+                                            <div class="col-md-6"><InputText class="form-control form-control-sm" @bind-Value="_form.Name" placeholder="Name" /></div>
+                                            <div class="col-md-6"><InputText class="form-control form-control-sm" @bind-Value="_form.Category" placeholder="Category" /></div>
+                                        </div>
+                                        <InputText class="form-control form-control-sm mb-2" @bind-Value="_form.OneLiner" placeholder="One-liner (required)" />
+                                        <InputText class="form-control form-control-sm mb-2" @bind-Value="_form.BestFor" placeholder="Best for (comma-separated)" />
+                                        <InputText class="form-control form-control-sm mb-2" @bind-Value="_form.NotIdealFor" placeholder="Not ideal for (comma-separated)" />
+                                        <InputText class="form-control form-control-sm mb-2" @bind-Value="_form.TokenTips" placeholder="Token tips (comma-separated)" />
+                                        <InputText class="form-control form-control-sm mb-2" @bind-Value="_form.Url" placeholder="URL" />
+                                        @if (_error is not null)
+                                        {
+                                            <div class="alert alert-danger py-1 px-2 small mb-2">@_error</div>
+                                        }
+                                        <button type="submit" class="btn btn-sm btn-success">Add to list</button>
+                                        <button type="button" class="btn btn-sm btn-outline-secondary" @onclick="() => _approvingCandidateId = null">Cancel</button>
+                                    </EditForm>
+                                </div>
+                            }
+                            else
+                            {
+                                <div class="d-flex align-items-center justify-content-between gap-2 border rounded p-2">
+                                    <div class="small">
+                                        <strong>@c.Name</strong>
+                                        <span class="text-muted"> — @c.RawNote</span>
+                                    </div>
+                                    <div class="text-nowrap">
+                                        <button class="btn btn-sm btn-outline-success" @onclick="() => StartApprove(c)">Review</button>
+                                        <button class="btn btn-sm btn-outline-secondary" @onclick="() => Dismiss(c.Id)">Dismiss</button>
+                                    </div>
+                                </div>
+                            }
+                        }
+                    </div>
+                </div>
+            </div>
+        }
+    </Authorized>
+</AuthorizeView>
+
 <h3 class="section-title mt-4"><Icon Name="tool" Size="18" /> Right tool for the right task</h3>
 
 <FilterBar>
@@ -136,14 +189,99 @@ else
         // badges on the curated tools list below (or vice versa).
         _ = LoadTrendingReposAsync();
         _ = LoadStarCountsAsync();
+        _ = RefreshCandidatesAsync();
     }
 
     private async Task LoadTrendingReposAsync(bool force = false)
     {
         _trendingLoading = true;
         StateHasChanged();
-        try { _trendingRepos = await GitHub.GetTrendingReposAsync(force: force); }
+        try
+        {
+            _trendingRepos = await GitHub.GetTrendingReposAsync(force: force);
+            await QueueToolCandidatesAsync();
+        }
         finally { _trendingLoading = false; StateHasChanged(); }
+    }
+
+    private static readonly string[] AiToolKeywords =
+    {
+        "ai", "llm", "gpt", "agent", "copilot", "assistant", "chatbot", "rag", "prompt",
+        "claude", "openai", "ollama", "langchain", "vector", "embedding", "coding agent"
+    };
+
+    /// <summary>
+    /// Trending repos not already on the curated list (by name/URL), filtered to ones that look like
+    /// AI-dev-tooling by keyword match on name/description - the closest deterministic substitute for "is
+    /// this actually relevant to this page" without an AI call to judge it.
+    /// </summary>
+    private async Task QueueToolCandidatesAsync()
+    {
+        var existingNames = Kb.Tools.Select(t => t.Name).Concat(Kb.Tools.Select(t => t.Url ?? "")).ToList();
+        var candidates = _trendingRepos
+            .Where(r => AiToolKeywords.Any(k =>
+                r.FullName.Contains(k, StringComparison.OrdinalIgnoreCase) ||
+                (r.Description?.Contains(k, StringComparison.OrdinalIgnoreCase) ?? false)))
+            .Take(20);
+
+        foreach (var r in candidates)
+            await Kb.AddContentCandidateIfNewAsync("Tool", r.FullName, "Coding Agent", r.Description ?? r.Url, existingNames);
+
+        await RefreshCandidatesAsync();
+    }
+
+    private List<ContentCandidate> _pendingCandidates = new();
+    private int? _approvingCandidateId;
+    private string? _error;
+    private ToolForm _form = new();
+
+    private async Task RefreshCandidatesAsync() => _pendingCandidates = await Kb.GetPendingContentCandidatesAsync("Tool");
+
+    private void StartApprove(ContentCandidate c)
+    {
+        _approvingCandidateId = c.Id;
+        _error = null;
+        _form = new ToolForm { Name = c.Name, Category = c.Category ?? "Coding Agent", Url = c.RawNote?.StartsWith("http") == true ? c.RawNote : "" };
+    }
+
+    private async Task ConfirmApprove()
+    {
+        if (_approvingCandidateId is null) return;
+        if (string.IsNullOrWhiteSpace(_form.Name) || string.IsNullOrWhiteSpace(_form.OneLiner))
+        {
+            _error = "Name and one-liner are required.";
+            return;
+        }
+        static string[] Split(string s) => s.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        await Kb.ApproveToolCandidateAsync(_approvingCandidateId.Value, new ToolEntry
+        {
+            Name = _form.Name.Trim(),
+            Category = _form.Category.Trim(),
+            OneLiner = _form.OneLiner.Trim(),
+            BestFor = Split(_form.BestFor),
+            NotIdealFor = Split(_form.NotIdealFor),
+            TokenTips = Split(_form.TokenTips),
+            Url = string.IsNullOrWhiteSpace(_form.Url) ? null : _form.Url.Trim()
+        });
+        _approvingCandidateId = null;
+        await RefreshCandidatesAsync();
+    }
+
+    private async Task Dismiss(int id)
+    {
+        await Kb.DismissContentCandidateAsync(id);
+        await RefreshCandidatesAsync();
+    }
+
+    private sealed class ToolForm
+    {
+        public string Name { get; set; } = "";
+        public string Category { get; set; } = "Coding Agent";
+        public string OneLiner { get; set; } = "";
+        public string BestFor { get; set; } = "";
+        public string NotIdealFor { get; set; } = "";
+        public string TokenTips { get; set; } = "";
+        public string Url { get; set; } = "";
     }
 
     private async Task LoadStarCountsAsync()

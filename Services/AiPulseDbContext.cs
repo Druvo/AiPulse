@@ -16,4 +16,6 @@ public sealed class AiPulseDbContext : DbContext
     public DbSet<WebSubSubscription> WebSubSubscriptions => Set<WebSubSubscription>();
     public DbSet<FreeApiRecord> FreeApis => Set<FreeApiRecord>();
     public DbSet<FreeApiCandidate> FreeApiCandidates => Set<FreeApiCandidate>();
+    public DbSet<DiscoveryRunLogEntry> DiscoveryRunLog => Set<DiscoveryRunLogEntry>();
+    public DbSet<ContentCandidate> ContentCandidates => Set<ContentCandidate>();
 }

@@ -21,7 +21,7 @@
     <div class="card mb-3">
         <div class="card-body">
             <h6 class="section-title mb-2"><Icon Name="sparkle" Size="16" /> Trending in the news, not yet defined here</h6>
-            <p class="text-muted small mb-2">Terms showing up often in your News feed that aren't in the glossary yet — add the ones worth keeping to <code>Data/glossary.json</code>.</p>
+            <p class="text-muted small mb-2">Terms showing up often in your News feed that aren't in the glossary yet — queued below for an admin to review, or jump to News to see the coverage yourself.</p>
             <div class="d-flex flex-wrap gap-1">
                 @foreach (var (term, count) in emerging)
                 {
@@ -31,6 +31,65 @@
         </div>
     </div>
 }
+
+<AuthorizeView Roles="Admin" Context="adminPanel">
+    <Authorized>
+        @if (_pendingCandidates.Count > 0)
+        {
+            <div class="card mb-3">
+                <div class="card-body">
+                    <strong class="d-block mb-2"><Icon Name="search" Size="16" /> Candidate terms awaiting review (@_pendingCandidates.Count)</strong>
+                    <div class="d-flex flex-column gap-2">
+                        @foreach (var c in _pendingCandidates)
+                        {
+                            @if (_approvingCandidateId == c.Id)
+                            {
+                                <div class="border rounded p-2">
+                                    <EditForm Model="_form" OnValidSubmit="ConfirmApprove">
+                                        <div class="row g-2 mb-2">
+                                            <div class="col-md-6"><InputText class="form-control form-control-sm" @bind-Value="_form.Term" placeholder="Term" /></div>
+                                            <div class="col-md-6">
+                                                <InputSelect class="form-select form-select-sm" @bind-Value="_form.Category">
+                                                    @foreach (var cat in _categories.Where(c => c != "All"))
+                                                    {
+                                                        <option value="@cat">@cat</option>
+                                                    }
+                                                </InputSelect>
+                                            </div>
+                                        </div>
+                                        <InputText class="form-control form-control-sm mb-2" @bind-Value="_form.ShortDef" placeholder="Short definition (required)" />
+                                        <InputTextArea class="form-control form-control-sm mb-2" @bind-Value="_form.Details" placeholder="Details (optional)" />
+                                        <InputText class="form-control form-control-sm mb-2" @bind-Value="_form.WhenToUse" placeholder="When to use (optional)" />
+                                        <InputText class="form-control form-control-sm mb-2" @bind-Value="_form.LearnMoreUrl" placeholder="Learn more URL (optional)" />
+                                        @if (_error is not null)
+                                        {
+                                            <div class="alert alert-danger py-1 px-2 small mb-2">@_error</div>
+                                        }
+                                        <button type="submit" class="btn btn-sm btn-success">Add to glossary</button>
+                                        <button type="button" class="btn btn-sm btn-outline-secondary" @onclick="() => _approvingCandidateId = null">Cancel</button>
+                                    </EditForm>
+                                </div>
+                            }
+                            else
+                            {
+                                <div class="d-flex align-items-center justify-content-between gap-2 border rounded p-2">
+                                    <div class="small">
+                                        <strong>@c.Name</strong>
+                                        <span class="text-muted"> — @c.RawNote</span>
+                                    </div>
+                                    <div class="text-nowrap">
+                                        <button class="btn btn-sm btn-outline-success" @onclick="() => StartApprove(c)">Review</button>
+                                        <button class="btn btn-sm btn-outline-secondary" @onclick="() => Dismiss(c.Id)">Dismiss</button>
+                                    </div>
+                                </div>
+                            }
+                        }
+                    </div>
+                </div>
+            </div>
+        }
+    </Authorized>
+</AuthorizeView>
 
 <input class="form-control mb-2" placeholder="Search a term (e.g. RAG, MCP, loops, headroom, caveman)…"
        @bind="_search" @bind:event="oninput" />
@@ -134,6 +193,11 @@
     private readonly Dictionary<string, string> _explanations = new();
     private IReadOnlyList<FeedItem> _feedItems = Array.Empty<FeedItem>();
 
+    private List<ContentCandidate> _pendingCandidates = new();
+    private int? _approvingCandidateId;
+    private string? _error;
+    private GlossaryForm _form = new();
+
     protected override void OnInitialized()
     {
         if (!string.IsNullOrWhiteSpace(QueryParam))
@@ -145,13 +209,70 @@
         // Feeds.GetAsync(), which on a cold cache can take 10+ minutes with the Reddit source batch. The
         // "emerging terms" panel just fades in once this resolves instead of holding up the whole page.
         _ = LoadFeedItemsAsync();
+        _ = RefreshCandidatesAsync();
     }
 
     private async Task LoadFeedItemsAsync()
     {
         var result = await Feeds.GetAsync();
         _feedItems = result.Items;
+        await QueueEmergingCandidatesAsync();
         StateHasChanged();
+    }
+
+    /// <summary>Turns the tag-frequency "emerging terms" signal into actual admin-reviewable candidates instead of just a read-only chip list - this is what makes the Glossary "grow on its own."</summary>
+    private async Task QueueEmergingCandidatesAsync()
+    {
+        var existingNames = Kb.Glossary.SelectMany(t => new[] { t.Term }.Concat(t.Aliases)).ToList();
+        foreach (var (term, count) in EmergingTerms())
+            await Kb.AddContentCandidateIfNewAsync("Glossary", term, "Concept", $"Seen {count}x in News over the last 14 days", existingNames);
+        await RefreshCandidatesAsync();
+    }
+
+    private async Task RefreshCandidatesAsync() => _pendingCandidates = await Kb.GetPendingContentCandidatesAsync("Glossary");
+
+    private void StartApprove(ContentCandidate c)
+    {
+        _approvingCandidateId = c.Id;
+        _error = null;
+        _form = new GlossaryForm { Term = c.Name, Category = c.Category ?? "Concept" };
+    }
+
+    private async Task ConfirmApprove()
+    {
+        if (_approvingCandidateId is null) return;
+        if (string.IsNullOrWhiteSpace(_form.Term) || string.IsNullOrWhiteSpace(_form.ShortDef))
+        {
+            _error = "Term and short definition are required.";
+            return;
+        }
+        await Kb.ApproveGlossaryCandidateAsync(_approvingCandidateId.Value, new GlossaryTerm
+        {
+            Term = _form.Term.Trim(),
+            Category = _form.Category,
+            ShortDef = _form.ShortDef.Trim(),
+            Details = _form.Details.Trim(),
+            WhenToUse = _form.WhenToUse.Trim(),
+            LearnMoreUrl = string.IsNullOrWhiteSpace(_form.LearnMoreUrl) ? null : _form.LearnMoreUrl.Trim()
+        });
+        _approvingCandidateId = null;
+        await RefreshCandidatesAsync();
+    }
+
+    private async Task Dismiss(int id)
+    {
+        await Kb.DismissContentCandidateAsync(id);
+        await RefreshCandidatesAsync();
+    }
+
+    private sealed class GlossaryForm
+    {
+        public string Term { get; set; } = "";
+        public string Category { get; set; } = "Concept";
+        public string ShortDef { get; set; } = "";
+        public string Details { get; set; } = "";
+        public string WhenToUse { get; set; } = "";
+        public string LearnMoreUrl { get; set; } = "";
     }
 
     private void SetCategory(string cat)

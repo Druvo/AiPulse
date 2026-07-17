@@ -115,7 +115,8 @@
             <p class="text-muted small mb-2">
                 Tags showing up a lot in your News Feed over the last 14 days that no module below covers yet -
                 this is the "what's next" radar: today's chatter, tomorrow's module. No AI involved - just
-                counting how often each tag appears across your own sources.
+                counting how often each tag appears across your own sources. Queued below for an admin to turn
+                into a real module.
             </p>
             <div class="d-flex flex-wrap gap-1">
                 @foreach (var tag in uncoveredTags)
@@ -126,6 +127,63 @@
         </div>
     </div>
 }
+
+<AuthorizeView Roles="Admin" Context="adminPanel">
+    <Authorized>
+        @if (_pendingCandidates.Count > 0)
+        {
+            <div class="card mb-4">
+                <div class="card-body">
+                    <strong class="d-block mb-2"><Icon Name="search" Size="16" /> Candidate modules awaiting review (@_pendingCandidates.Count)</strong>
+                    <div class="d-flex flex-column gap-2">
+                        @foreach (var c in _pendingCandidates)
+                        {
+                            @if (_approvingCandidateId == c.Id)
+                            {
+                                <div class="border rounded p-2">
+                                    <EditForm Model="_form" OnValidSubmit="ConfirmApprove">
+                                        <div class="row g-2 mb-2">
+                                            <div class="col-md-6"><InputText class="form-control form-control-sm" @bind-Value="_form.Title" placeholder="Title" /></div>
+                                            <div class="col-md-6">
+                                                <InputSelect class="form-select form-select-sm" @bind-Value="_form.Level">
+                                                    <option value="Beginner">Beginner</option>
+                                                    <option value="Intermediate">Intermediate</option>
+                                                    <option value="Advanced">Advanced</option>
+                                                </InputSelect>
+                                            </div>
+                                        </div>
+                                        <InputText class="form-control form-control-sm mb-2" @bind-Value="_form.Why" placeholder="Why this matters (required)" />
+                                        <InputTextArea class="form-control form-control-sm mb-2" rows="4" @bind-Value="_form.Steps" placeholder="Steps (one per line)" />
+                                        <InputText class="form-control form-control-sm mb-2" @bind-Value="_form.RelatedTerms" placeholder="Related terms (comma-separated)" />
+                                        @if (_error is not null)
+                                        {
+                                            <div class="alert alert-danger py-1 px-2 small mb-2">@_error</div>
+                                        }
+                                        <button type="submit" class="btn btn-sm btn-success">Add module</button>
+                                        <button type="button" class="btn btn-sm btn-outline-secondary" @onclick="() => _approvingCandidateId = null">Cancel</button>
+                                    </EditForm>
+                                </div>
+                            }
+                            else
+                            {
+                                <div class="d-flex align-items-center justify-content-between gap-2 border rounded p-2">
+                                    <div class="small">
+                                        <strong>@c.Name</strong>
+                                        <span class="text-muted"> — @c.RawNote</span>
+                                    </div>
+                                    <div class="text-nowrap">
+                                        <button class="btn btn-sm btn-outline-success" @onclick="() => StartApprove(c)">Review</button>
+                                        <button class="btn btn-sm btn-outline-secondary" @onclick="() => Dismiss(c.Id)">Dismiss</button>
+                                    </div>
+                                </div>
+                            }
+                        }
+                    </div>
+                </div>
+            </div>
+        }
+    </Authorized>
+</AuthorizeView>
 
 @{
     var strengths = TopicStrengths();
@@ -348,6 +406,69 @@
         // Fire-and-forget: the learning roadmap itself is static data and should render instantly - the
         // trending models/repos panel just fills in once these resolve instead of holding up the page.
         _ = LoadTrendingAsync(force: false);
+        _ = QueueUncoveredTagCandidatesAsync();
+    }
+
+    private List<ContentCandidate> _pendingCandidates = new();
+    private int? _approvingCandidateId;
+    private string? _error;
+    private LearningForm _form = new();
+
+    /// <summary>Turns the existing UncoveredTrendingTags tag-frequency signal into actual admin-reviewable module candidates instead of just a read-only chip list - this is what makes the Learning Hub "grow on its own."</summary>
+    private async Task QueueUncoveredTagCandidatesAsync()
+    {
+        var existingNames = Kb.Learning.Select(m => m.Title).ToList();
+        foreach (var tag in UncoveredTrendingTags(TrendingTags()))
+            await Kb.AddContentCandidateIfNewAsync("Learning", tag, "Intermediate", $"Trending tag not yet covered by a module", existingNames);
+        await RefreshCandidatesAsync();
+    }
+
+    private async Task RefreshCandidatesAsync() => _pendingCandidates = await Kb.GetPendingContentCandidatesAsync("Learning");
+
+    private void StartApprove(ContentCandidate c)
+    {
+        _approvingCandidateId = c.Id;
+        _error = null;
+        _form = new LearningForm { Title = c.Name, Level = c.Category ?? "Intermediate", RelatedTerms = c.Name };
+    }
+
+    private async Task ConfirmApprove()
+    {
+        if (_approvingCandidateId is null) return;
+        if (string.IsNullOrWhiteSpace(_form.Title) || string.IsNullOrWhiteSpace(_form.Why))
+        {
+            _error = "Title and 'why this matters' are required.";
+            return;
+        }
+        var steps = _form.Steps
+            .Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Select(s => new LearningStep { Text = s })
+            .ToArray();
+        await Kb.ApproveLearningCandidateAsync(_approvingCandidateId.Value, new LearningModule
+        {
+            Title = _form.Title.Trim(),
+            Level = _form.Level,
+            Why = _form.Why.Trim(),
+            Steps = steps,
+            RelatedTerms = _form.RelatedTerms.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+        });
+        _approvingCandidateId = null;
+        await RefreshCandidatesAsync();
+    }
+
+    private async Task Dismiss(int id)
+    {
+        await Kb.DismissContentCandidateAsync(id);
+        await RefreshCandidatesAsync();
+    }
+
+    private sealed class LearningForm
+    {
+        public string Title { get; set; } = "";
+        public string Level { get; set; } = "Intermediate";
+        public string Why { get; set; } = "";
+        public string Steps { get; set; } = "";
+        public string RelatedTerms { get; set; } = "";
     }
 
     private async Task LoadTrendingAsync(bool force)

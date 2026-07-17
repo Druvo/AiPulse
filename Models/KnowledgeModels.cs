@@ -60,3 +60,22 @@ public sealed class FreeApiEntry
     public bool NeedsReview { get; init; }
     public string? NeedsReviewReason { get; init; }
 }
+
+/// <summary>
+/// A deterministically-detected candidate awaiting admin review before it grows the Glossary, Tools &amp; Tips,
+/// or Learning Hub content (Data/glossary.json, tools.json, learning.json respectively) - never AI-generated,
+/// just tag-frequency/trending-overlap signals already computed on each page. One shared table (discriminated
+/// by <see cref="Kind"/>) rather than three near-identical ones, since the review workflow (Pending/Approved/
+/// Dismissed, dedup-on-insert) is identical for all three.
+/// </summary>
+public sealed class ContentCandidate
+{
+    public int Id { get; set; }
+    public required string Kind { get; set; } // Glossary, Tool, Learning
+    public required string Name { get; set; }
+    public string? Category { get; set; }
+    public string? RawNote { get; set; }
+    public DateTimeOffset DiscoveredAt { get; set; } = DateTimeOffset.Now;
+    public string Status { get; set; } = "Pending"; // Pending, Approved, Dismissed
+    public DateTimeOffset? ReviewedAt { get; set; }
+}

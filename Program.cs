@@ -58,6 +58,7 @@ builder.Services.AddSingleton<UserService>();
 builder.Services.AddSingleton<NotificationService>();
 builder.Services.AddScoped<ObsidianExportService>();
 builder.Services.AddSingleton<HuggingFaceService>();
+builder.Services.AddSingleton<TrendingRepoHistoryService>();
 builder.Services.AddSingleton<GitHubTrendingService>();
 builder.Services.AddSingleton<OllamaService>();
 builder.Services.AddSingleton<SystemInfoService>();

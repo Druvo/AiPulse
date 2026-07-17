@@ -576,8 +576,19 @@ a.card:hover { transform: translateY(-1px); }
     gap: .55rem;
     font-weight: 600;
 }
-.brand-logo { height: 28px; width: auto; }
-.login-logo { height: 64px; width: auto; }
+.brand-logo { height: 34px; width: auto; }
+.login-logo { height: 108px; width: auto; filter: drop-shadow(0 6px 16px rgba(109, 94, 252, .35)); }
+.login-brand-mark {
+    text-align: center;
+    font-size: 1.85rem;
+    font-weight: 700;
+    letter-spacing: -.02em;
+    margin: .6rem 0 .15rem;
+    background: linear-gradient(90deg, #0ea5e9, #6d5efc, #7c3aed);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
 
 .nav-section-label {
     font-size: .68rem;
@@ -966,7 +977,11 @@ a.heatmap-cell:hover { outline: 2px solid var(--ap-accent-hover); }
 }
 .source-avatar-initial { color: #fff; font-size: .62rem; font-weight: 700; line-height: 1; }
 .source-avatar img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
-.source-identity { display: inline-flex; align-items: center; gap: .4rem; }
+/* flex-wrap so the identity block can drop to a second line as whole chunks (source, date, reading time)
+   instead of overflowing - each chunk gets white-space:nowrap so it wraps between chunks, never mid-word
+   or mid-timestamp (the ragged "Magithar" / "Sridhar" / "10:52" / "PM" break this was fixing). */
+.source-identity { display: inline-flex; flex-wrap: wrap; align-items: center; gap: .4rem; row-gap: .2rem; }
+.source-identity > span, .source-identity > .badge { white-space: nowrap; }
 
 /* "New since last visit" - a small accent dot + semibold title instead of a red border/badge, so it
    reads as "here's what's fresh" rather than a warning (red elsewhere in the app means excluded/error). */

@@ -3,7 +3,7 @@
 @{
     var monthStart = _displayMonth;
     var monthEnd = monthStart.AddMonths(1).AddDays(-1);
-    var counts = Items
+    var counts = CountsOverride ?? Items
         .GroupBy(i => DateOnly.FromDateTime(i.Published.LocalDateTime))
         .ToDictionary(g => g.Key, g => g.Count());
     var max = counts.Count > 0 ? counts.Values.Max() : 0;
@@ -67,8 +67,12 @@
 </div>
 
 @code {
-    [Parameter, EditorRequired]
+    [Parameter]
     public IReadOnlyList<FeedItem> Items { get; set; } = Array.Empty<FeedItem>();
+
+    /// <summary>Pre-computed day->count map, for callers whose data isn't a FeedItem list (e.g. GitHub Trending snapshots by date). Takes priority over <see cref="Items"/> when set.</summary>
+    [Parameter]
+    public IReadOnlyDictionary<DateOnly, int>? CountsOverride { get; set; }
 
     [Parameter]
     public DateOnly? RangeStart { get; set; }

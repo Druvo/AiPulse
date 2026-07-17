@@ -58,3 +58,13 @@ public sealed class FreeApiCandidate
     public string Status { get; set; } = "Pending"; // Pending, Approved, Dismissed
     public DateTimeOffset? ReviewedAt { get; set; }
 }
+
+/// <summary>One completed FreeApiDiscoveryService run, kept so the admin can see discovery activity over time on the Free AI APIs page instead of only ever seeing the latest run's summary.</summary>
+public sealed class DiscoveryRunLogEntry
+{
+    public int Id { get; set; }
+    public DateTimeOffset RanAt { get; set; } = DateTimeOffset.Now;
+    public int CandidatesFound { get; set; }
+    public int EntriesFlagged { get; set; }
+    public required string Summary { get; set; }
+}

@@ -10,6 +10,7 @@
 @inject NavigationManager Nav
 @inject IJSRuntime JS
 @inject FeedHistoryService History
+@inject TrendingRepoHistoryService RepoHistory
 @inject ReadingStateService Reading
 
 <PageTitle>AiPulse · Explore</PageTitle>
@@ -218,6 +219,7 @@ else if (_section == "github")
             @(string.IsNullOrWhiteSpace(_repoActiveQuery)
                 ? "Live from github.com/trending — same page GitHub itself shows, refreshed hourly."
                 : "Repo keyword search uses GitHub's official Search API instead (trending pages aren't searchable).")
+            <a href="https://trendshift.io" target="_blank" rel="noopener" class="ms-1">Also see Trendshift ↗</a>
         </p>
         <select class="form-select form-select-sm w-auto" value="@_since" @onchange="OnSinceChanged">
             <option value="daily">Today</option>
@@ -231,13 +233,28 @@ else if (_section == "github")
             <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-2">
                 <h6 class="section-title mb-0"><Icon Name="code" Size="16" /> Repositories</h6>
                 <div class="d-flex align-items-center gap-2">
-                    <span class="text-muted x-small">@LastUpdatedLabel(GitHubTrending.GetRepoLastUpdated(_since))</span>
-                    <button class="btn btn-sm btn-outline-secondary" disabled="@_reposLoading" @onclick="() => LoadReposAsync(force: true)">
-                        @if (_reposLoading) { <span class="spinner"></span> } else { <Icon Name="refresh" Size="13" /> }
-                        Refresh
+                    @if (_historyDate is not null)
+                    {
+                        <span class="badge bg-info text-dark">Viewing: @_historyDate.Value.ToString("MMM d, yyyy")</span>
+                        <button class="btn btn-sm btn-outline-secondary" @onclick="BackToLiveRepos">Back to live</button>
+                    }
+                    else
+                    {
+                        <span class="text-muted x-small">@LastUpdatedLabel(GitHubTrending.GetRepoLastUpdated(_since))</span>
+                        <button class="btn btn-sm btn-outline-secondary" disabled="@_reposLoading" @onclick="() => LoadReposAsync(force: true)">
+                            @if (_reposLoading) { <span class="spinner"></span> } else { <Icon Name="refresh" Size="13" /> }
+                            Refresh
+                        </button>
+                    }
+                    <button class="btn btn-sm btn-outline-secondary" title="Browse past trending days" @onclick="() => _showHistoryCalendar = !_showHistoryCalendar">
+                        <Icon Name="calendar" Size="13" />
                     </button>
                 </div>
             </div>
+            @if (_showHistoryCalendar)
+            {
+                <MonthCalendar CountsOverride="RepoHistory.AvailableDates(_since)" RangeStart="_historyDate" RangeEnd="_historyDate" OnRangeChanged="OnHistoryDatePicked" />
+            }
             <FilterBar>
             <div class="input-group">
                 <input class="form-control" placeholder="Search GitHub repos by keyword…" @bind="_repoQuery"
@@ -305,7 +322,11 @@ else if (_section == "github")
             }
             else if (_repos.Count == 0)
             {
-                <p class="text-muted small">@(string.IsNullOrWhiteSpace(_repoActiveQuery) ? "Couldn't reach GitHub right now — try refreshing shortly." : "No matches.")</p>
+                <p class="text-muted small">
+                    @(!string.IsNullOrWhiteSpace(_repoActiveQuery) ? "No matches."
+                        : _historyDate is not null ? $"No snapshot recorded for {_historyDate.Value:MMM d, yyyy}."
+                        : "Couldn't reach GitHub right now — try refreshing shortly.")
+                </p>
             }
             else
             {
@@ -654,6 +675,8 @@ else if (_section == "try")
     private string _repoActiveQuery = "";
     private bool _repoSearching;
     private string _since = "daily";
+    private DateOnly? _historyDate;
+    private bool _showHistoryCalendar;
 
     private bool _ollamaChecked;
     private bool _ollamaRunning;
@@ -857,6 +880,7 @@ else if (_section == "try")
     private async Task SearchRepos()
     {
         if (string.IsNullOrWhiteSpace(_repoQuery)) return;
+        _historyDate = null; // keyword search always hits the live Search API, so leave history browsing
         _repoSearching = true;
         StateHasChanged();
         try
@@ -874,7 +898,9 @@ else if (_section == "try")
     {
         _repoQuery = "";
         _repoActiveQuery = "";
-        _repos = await GitHubTrending.GetTrendingReposAsync(_since);
+        _repos = _historyDate is not null
+            ? (RepoHistory.GetSnapshot(_historyDate.Value, _since) ?? Array.Empty<TrendingRepo>()).ToList()
+            : await GitHubTrending.GetTrendingReposAsync(_since);
     }
 
     private Task OnSinceChanged(ChangeEventArgs e)
@@ -884,9 +910,28 @@ else if (_section == "try")
         _devPage = 1;
 
         var tasks = new List<Task> { LoadDevelopersAsync() };
-        if (string.IsNullOrWhiteSpace(_repoActiveQuery))
+        if (_historyDate is not null)
+            _repos = (RepoHistory.GetSnapshot(_historyDate.Value, _since) ?? Array.Empty<TrendingRepo>()).ToList();
+        else if (string.IsNullOrWhiteSpace(_repoActiveQuery))
             tasks.Add(LoadReposAsync());
         return Task.WhenAll(tasks);
+    }
+
+    private Task OnHistoryDatePicked((DateOnly Start, DateOnly End) range)
+    {
+        _historyDate = range.Start;
+        _repoQuery = "";
+        _repoActiveQuery = "";
+        _repoPage = 1;
+        _repos = (RepoHistory.GetSnapshot(_historyDate.Value, _since) ?? Array.Empty<TrendingRepo>()).ToList();
+        return Task.CompletedTask;
+    }
+
+    private async Task BackToLiveRepos()
+    {
+        _historyDate = null;
+        _repoPage = 1;
+        await LoadReposAsync();
     }
 
     private async Task SearchGguf()

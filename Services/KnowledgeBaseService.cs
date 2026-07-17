@@ -150,7 +150,7 @@ public sealed class KnowledgeBaseService
         var existing = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         await using (var check = conn.CreateCommand())
         {
-            check.CommandText = "SELECT name FROM sqlite_master WHERE type='table' AND name IN ('FreeApis','FreeApiCandidates')";
+            check.CommandText = "SELECT name FROM sqlite_master WHERE type='table' AND name IN ('FreeApis','FreeApiCandidates','DiscoveryRunLog','ContentCandidates')";
             await using var reader = await check.ExecuteReaderAsync();
             while (await reader.ReadAsync())
                 existing.Add(reader.GetString(0));
@@ -187,6 +187,39 @@ public sealed class KnowledgeBaseService
                     "Id" INTEGER NOT NULL CONSTRAINT "PK_FreeApiCandidates" PRIMARY KEY AUTOINCREMENT,
                     "Name" TEXT NOT NULL,
                     "SourceUrl" TEXT NOT NULL,
+                    "RawNote" TEXT NULL,
+                    "DiscoveredAt" TEXT NOT NULL,
+                    "Status" TEXT NOT NULL DEFAULT 'Pending',
+                    "ReviewedAt" TEXT NULL
+                )
+                """;
+            await create.ExecuteNonQueryAsync();
+        }
+
+        if (!existing.Contains("DiscoveryRunLog"))
+        {
+            await using var create = conn.CreateCommand();
+            create.CommandText = """
+                CREATE TABLE "DiscoveryRunLog" (
+                    "Id" INTEGER NOT NULL CONSTRAINT "PK_DiscoveryRunLog" PRIMARY KEY AUTOINCREMENT,
+                    "RanAt" TEXT NOT NULL,
+                    "CandidatesFound" INTEGER NOT NULL DEFAULT 0,
+                    "EntriesFlagged" INTEGER NOT NULL DEFAULT 0,
+                    "Summary" TEXT NOT NULL
+                )
+                """;
+            await create.ExecuteNonQueryAsync();
+        }
+
+        if (!existing.Contains("ContentCandidates"))
+        {
+            await using var create = conn.CreateCommand();
+            create.CommandText = """
+                CREATE TABLE "ContentCandidates" (
+                    "Id" INTEGER NOT NULL CONSTRAINT "PK_ContentCandidates" PRIMARY KEY AUTOINCREMENT,
+                    "Kind" TEXT NOT NULL,
+                    "Name" TEXT NOT NULL,
+                    "Category" TEXT NULL,
                     "RawNote" TEXT NULL,
                     "DiscoveredAt" TEXT NOT NULL,
                     "Status" TEXT NOT NULL DEFAULT 'Pending',
@@ -370,6 +403,33 @@ public sealed class KnowledgeBaseService
         await RefreshFreeApisAsync();
     }
 
+    /// <summary>Records one completed FreeApiDiscoveryService run so the admin can see discovery activity over time, not just the latest run's summary.</summary>
+    public async Task LogDiscoveryRunAsync(int candidatesFound, int entriesFlagged, string summary)
+    {
+        await using var db = await _dbFactory.CreateDbContextAsync();
+        db.DiscoveryRunLog.Add(new DiscoveryRunLogEntry
+        {
+            CandidatesFound = candidatesFound,
+            EntriesFlagged = entriesFlagged,
+            Summary = summary
+        });
+        await db.SaveChangesAsync();
+
+        var cutoff = DateTimeOffset.Now.AddDays(-180);
+        var stale = await db.DiscoveryRunLog.Where(e => e.RanAt < cutoff).ToListAsync();
+        if (stale.Count > 0)
+        {
+            db.DiscoveryRunLog.RemoveRange(stale);
+            await db.SaveChangesAsync();
+        }
+    }
+
+    public async Task<List<DiscoveryRunLogEntry>> GetDiscoveryRunLogAsync(int take = 30)
+    {
+        await using var db = await _dbFactory.CreateDbContextAsync();
+        return await db.DiscoveryRunLog.OrderByDescending(e => e.RanAt).Take(take).ToListAsync();
+    }
+
     public async Task<List<FreeApiCandidate>> GetPendingCandidatesAsync()
     {
         await using var db = await _dbFactory.CreateDbContextAsync();
@@ -421,6 +481,98 @@ public sealed class KnowledgeBaseService
         }
         await db.SaveChangesAsync();
         await RefreshFreeApisAsync();
+    }
+
+    /// <summary>
+    /// Adds a Glossary/Tool/Learning candidate unless it overlaps (case-insensitive, either-direction
+    /// substring) an existing name in <paramref name="existingNames"/> or an already-pending candidate of the
+    /// same <paramref name="kind"/>. Returns false when skipped as a likely duplicate - what lets pages call
+    /// this on every load/refresh without piling up repeat candidates for the same tag/repo.
+    /// </summary>
+    public async Task<bool> AddContentCandidateIfNewAsync(string kind, string name, string? category, string? rawNote, IEnumerable<string> existingNames)
+    {
+        await using var db = await _dbFactory.CreateDbContextAsync();
+        var pendingNames = await db.ContentCandidates
+            .Where(c => c.Kind == kind && c.Status == "Pending")
+            .Select(c => c.Name)
+            .ToListAsync();
+
+        bool Overlaps(string a, string b) =>
+            a.Contains(b, StringComparison.OrdinalIgnoreCase) || b.Contains(a, StringComparison.OrdinalIgnoreCase);
+
+        if (existingNames.Any(n => Overlaps(n, name)) || pendingNames.Any(n => Overlaps(n, name)))
+            return false;
+
+        db.ContentCandidates.Add(new ContentCandidate { Kind = kind, Name = name, Category = category, RawNote = rawNote });
+        await db.SaveChangesAsync();
+        return true;
+    }
+
+    public async Task<List<ContentCandidate>> GetPendingContentCandidatesAsync(string kind)
+    {
+        await using var db = await _dbFactory.CreateDbContextAsync();
+        return await db.ContentCandidates
+            .Where(c => c.Kind == kind && c.Status == "Pending")
+            .OrderByDescending(c => c.DiscoveredAt)
+            .ToListAsync();
+    }
+
+    public async Task DismissContentCandidateAsync(int id)
+    {
+        await using var db = await _dbFactory.CreateDbContextAsync();
+        var c = await db.ContentCandidates.FindAsync(id);
+        if (c is null) return;
+        c.Status = "Dismissed";
+        c.ReviewedAt = DateTimeOffset.Now;
+        await db.SaveChangesAsync();
+    }
+
+    private async Task MarkContentCandidateApprovedAsync(int id)
+    {
+        await using var db = await _dbFactory.CreateDbContextAsync();
+        var c = await db.ContentCandidates.FindAsync(id);
+        if (c is null) return;
+        c.Status = "Approved";
+        c.ReviewedAt = DateTimeOffset.Now;
+        await db.SaveChangesAsync();
+    }
+
+    /// <summary>
+    /// Approving appends the admin-filled entry to Data/glossary.json and marks the candidate resolved - the
+    /// file itself is what "grows on its own" here, since Glossary has no DB-backed CRUD (unlike Sources/
+    /// FreeApis) and doesn't need one just for this.
+    /// </summary>
+    public async Task ApproveGlossaryCandidateAsync(int candidateId, GlossaryTerm term)
+    {
+        var list = Glossary.ToList();
+        list.Add(term);
+        SaveJson("glossary.json", list);
+        _glossary = list;
+        await MarkContentCandidateApprovedAsync(candidateId);
+    }
+
+    public async Task ApproveToolCandidateAsync(int candidateId, ToolEntry entry)
+    {
+        var list = Tools.ToList();
+        list.Add(entry);
+        SaveJson("tools.json", list);
+        _tools = list;
+        await MarkContentCandidateApprovedAsync(candidateId);
+    }
+
+    public async Task ApproveLearningCandidateAsync(int candidateId, LearningModule module)
+    {
+        var list = Learning.ToList();
+        list.Add(module);
+        SaveJson("learning.json", list);
+        _learning = list;
+        await MarkContentCandidateApprovedAsync(candidateId);
+    }
+
+    private void SaveJson<T>(string file, List<T> items)
+    {
+        var path = Path.Combine(_dataDir, file);
+        File.WriteAllText(path, JsonSerializer.Serialize(items, new JsonSerializerOptions { WriteIndented = true }));
     }
 
     private List<T> Load<T>(string file)

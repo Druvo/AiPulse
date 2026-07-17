@@ -23,6 +23,9 @@ aipulse-deploy.tar.gz
 # Logs
 *.log
 
+# graphify codebase-analysis tool output - local dev aid, not part of the app
+graphify-out/
+
 # IDE / OS
 .vs/
 .vscode/

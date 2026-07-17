@@ -2,6 +2,7 @@
 @attribute [Authorize]
 @rendermode InteractiveServer
 @inject ReadingStateService Reading
+@inject KnowledgeBaseService Kb
 @inject ObsidianExportService Export
 @inject NavigationManager Nav
 @inject ToastService Toasts
@@ -10,8 +11,31 @@
 
 <div class="page-header">
     <h1><Icon Name="activity" Size="22" /> Reading Stats</h1>
-    <p class="lead">How much of the feed you've actually gotten through, and everything you've saved to read later - all in one place.</p>
+    <p class="lead">A real tracer of your own activity on this system - reading and learning both - not a vanity counter: every number here comes from things you actually did (articles opened, modules worked through), nothing simulated.</p>
 </div>
+
+@if (Kb.Learning.Count > 0)
+{
+    <div class="card mb-4">
+        <div class="card-body">
+            <h6 class="section-title mb-2"><Icon Name="book" Size="16" /> Learning activity</h6>
+            <div class="row g-2">
+                <div class="col-6 col-md-3">
+                    <div class="text-center"><div class="fs-4 fw-bold">@LearningStreak() 🔥</div><div class="x-small text-muted">Learning day streak</div></div>
+                </div>
+                <div class="col-6 col-md-3">
+                    <div class="text-center"><div class="fs-4 fw-bold">@Reading.CompletedModuleCount / @Kb.Learning.Count</div><div class="x-small text-muted">Modules completed</div></div>
+                </div>
+                <div class="col-6 col-md-3">
+                    <div class="text-center"><div class="fs-4 fw-bold">@LearningTimeLabel()</div><div class="x-small text-muted">Time invested</div></div>
+                </div>
+                <div class="col-6 col-md-3 d-flex align-items-center justify-content-center">
+                    <a href="learn" class="small">Open Learning Hub →</a>
+                </div>
+            </div>
+        </div>
+    </div>
+}
 
 @if (_history.Count == 0)
 {
@@ -358,6 +382,23 @@ else
             longest = Math.Max(longest, current);
         }
         return longest;
+    }
+
+    /// <summary>Same streak logic as Learn.razor's own, kept separate from the article-reading streak above - a day spent deep in one module without opening a news item should still count as "showed up today" for learning.</summary>
+    private int LearningStreak()
+    {
+        var days = Reading.LearningHistory.Select(e => DateOnly.FromDateTime(e.At.LocalDateTime.Date)).ToHashSet();
+        var streak = 0;
+        var d = Today;
+        while (days.Contains(d)) { streak++; d = d.AddDays(-1); }
+        return streak;
+    }
+
+    private string LearningTimeLabel()
+    {
+        var minutes = Reading.LearningHistory.Sum(e => e.Minutes);
+        if (minutes == 0) return "0 min";
+        return minutes >= 60 ? $"~{minutes / 60.0:0.#} hr" : $"~{minutes} min";
     }
 
     private string TodayGoalMessage()

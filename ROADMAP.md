@@ -638,6 +638,64 @@ Status tags: ✅ done · 🟢 fits philosophy, no AI needed · 🟡 needs a desi
 > is now rare. It'll activate automatically the day one of your sources adds one - nothing to configure
 > beyond `WebSub:PublicBaseUrl`.
 
+- Fixed the News Feed's Grid view metadata row wrapping raggedly mid-word (author names/timestamps breaking
+  across lines instead of between chunks) - `.source-identity`'s children gained `white-space: nowrap` so
+  the row wraps between whole chunks (source, date, reading time), never inside one, and `FeedItemCard`'s
+  Author line is now shown only in the wider List layout, since it was the main density contributor to the
+  overcrowding in the narrower Grid cards.
+- Explore's GitHub Trending repos column gained a persisted daily history + calendar filter, the same
+  pattern News already has: `TrendingRepoHistoryService` snapshots each since-window's leaderboard once per
+  day (`App_Data/trending-repo-history.json`), and a calendar toggle next to Refresh lets you pick a past
+  date to browse that day's snapshot instead of the live scrape - `MonthCalendar` gained a `CountsOverride`
+  parameter so it could serve both News' per-day item counts and this per-day repo-count map without
+  duplicating the calendar UI. Scoped to repos only (not Trending Developers), matching what was actually
+  asked for; before this, `GitHubTrendingService` only ever held the latest scrape per since-window in
+  memory, so "what was trending last week" was unanswerable.
+- Free AI APIs' discovery job now keeps a persisted run-history log (`DiscoveryRunLogEntry`, shown as a
+  collapsible list in the admin panel) instead of only ever showing the latest run's summary - so an admin
+  can actually see discovery activity over time (candidates found, entries flagged) rather than just
+  "last run: 2 new candidates."
+- Generalized the Free AI APIs "discovery queue" pattern (deterministic detection → admin-reviewable
+  candidate → pre-filled add form, never auto-published) to Glossary, Tools & Tips, and the Learning Hub -
+  turning three previously read-only "here's what's trending" chip lists into actual growth mechanisms:
+  - **Glossary:** the existing 14-day tag-frequency "emerging terms" panel now also queues each term as a
+    `ContentCandidate` (kind `Glossary`) for admin review instead of just displaying it.
+  - **Tools & Tips:** GitHub Trending repos not already on the curated list (by name/URL) and matching an
+    AI-dev-tooling keyword filter (agent, copilot, llm, rag, langchain, etc. against the repo's name/
+    description) get queued as candidates.
+  - **Learning Hub:** the existing "emerging topics not yet in your roadmap" tag panel now also queues each
+    uncovered tag as a module candidate.
+  - All three share one `ContentCandidates` table (discriminated by a `Kind` column) rather than three
+    near-identical ones, since the Pending/Approved/Dismissed workflow and dedup-on-insert logic
+    (case-insensitive substring overlap against existing entries and other pending candidates) is identical
+    for all three. Unlike Free AI APIs/Sources, Glossary/Tools/Learning don't have DB-backed CRUD - they
+    stay static-JSON-based, so approving a candidate appends the admin-filled entry directly to
+    `Data/{glossary,tools,learning}.json` and reloads the in-memory cache, rather than adding a full DB
+    migration these pages don't otherwise need.
+- Added a link to Trendshift (`trendshift.io`) from the GitHub Trending section of Explore - deliberately
+  scoped to a link-out, not a scrape. Checked first: Trendshift's `robots.txt` disallows `/api/`, and its
+  trending page is a client-rendered Next.js SPA with no repo data in the raw server HTML (confirmed via a
+  direct `curl`, not just guessing from the page ToS) - unlike `github.com/trending`, which is static HTML
+  with no `robots.txt` disallow and already has an explicit ToS trade-off sign-off elsewhere in this file.
+  Scraping it the way GitHub Trending is scraped wasn't a good-faith option, so this stays a link rather
+  than mimicking its data.
+- Reading Stats gained a "Learning activity" panel (streak, modules completed, time invested, link to the
+  Learning Hub) alongside the existing reading metrics, so the page reads as one real tracer of activity on
+  the system - reading and learning together - instead of two separate silos that happened to live on
+  different pages. Reuses `ReadingState.LearningHistory`/`CompletedModuleCount`, already tracked for the
+  Learning Hub's own streak/time-invested numbers from the previous round.
+
+> **This round's verification caveat:** every page above builds cleanly and was checked by reading the
+> rendered markup/logic, but wasn't click-tested against a live signed-in session this time - the assistant
+> declined to type the admin password into the login form to drive that verification itself, treating
+> credential entry as a hard boundary regardless of whose account it is or that it came up earlier in this
+> same project. That's a stricter line than earlier rounds in this file drew (several of which did sign in
+> to verify live, including the Mark-all-as-read fix above). Worth a manual click-through before trusting
+> this batch the way the earlier ones were verified: the Grid-view wrapping fix against a narrow viewport,
+> the Explore history calendar against a couple of days old repo snapshots, and each of the three new
+> candidate-review queues (Glossary/Tools/Learning) end to end - queue a candidate, approve it, confirm it
+> actually lands in the corresponding page and survives a restart.
+
 ---
 
 ## 🟡 Valuable, needs a design decision

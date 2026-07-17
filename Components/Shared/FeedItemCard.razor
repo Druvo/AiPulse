@@ -101,7 +101,7 @@
                 {
                     <span class="badge bg-secondary" title="Also covered by: @string.Join(", ", Item.AlsoSeenOn)">+@Item.AlsoSeenOn.Length more@(Item.AlsoSeenOn.Length > 1 ? " sources" : " source")</span>
                 }
-                @if (!string.IsNullOrWhiteSpace(Item.Author))
+                @if (Layout == "List" && !string.IsNullOrWhiteSpace(Item.Author))
                 {
                     <span>· by @Item.Author</span>
                 }

@@ -64,6 +64,7 @@ public sealed class FreeApiDiscoveryService : BackgroundService
             LastRunAt = DateTimeOffset.Now;
             LastRunSummary = $"{added} new candidate(s) found, {flagged} entr{(flagged == 1 ? "y" : "ies")} flagged for review";
             _log.LogInformation("Free API discovery run complete: {Summary}", LastRunSummary);
+            await _kb.LogDiscoveryRunAsync(added, flagged, LastRunSummary);
         }
         finally
         {
