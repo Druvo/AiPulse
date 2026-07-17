@@ -7,6 +7,8 @@
 @inject NavigationManager Nav
 @inject HuggingFaceService HuggingFace
 @inject GitHubTrendingService GitHub
+@inject ObsidianExportService Export
+@inject ToastService Toasts
 
 <PageTitle>AiPulse · Learning Hub</PageTitle>
 
@@ -43,12 +45,39 @@
     </div>
 }
 
-@if (_trendingModels.Count > 0 || _trendingRepos.Count > 0)
-{
-    <div class="card mb-4">
-        <div class="card-body">
-            <h6 class="section-title mb-2"><Icon Name="sparkle" Size="16" /> Trending in the ecosystem right now</h6>
-            <p class="text-muted small mb-2">The models and projects getting the most attention this week — via Hugging Face and GitHub. Good candidates for what to learn next.</p>
+<div class="card mb-4">
+    <div class="card-body">
+        <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-2">
+            <h6 class="section-title mb-0"><Icon Name="sparkle" Size="16" /> Trending in the ecosystem right now</h6>
+            <div class="d-flex align-items-center gap-2">
+                <button class="btn btn-sm btn-outline-secondary py-0 px-2" disabled="@_trendingLoading" @onclick="() => LoadTrendingAsync(true)">
+                    <Icon Name="refresh" Size="13" /> Refresh
+                </button>
+                @if (_trendingLastUpdated is { } lu)
+                {
+                    <span class="x-small text-muted">Updated @lu.ToLocalTime().ToString("t")</span>
+                }
+            </div>
+        </div>
+        <p class="text-muted small mb-2">The models and projects getting the most attention this week — via Hugging Face and GitHub. Good candidates for what to learn next.</p>
+
+        @if (_trendingLoading && _trendingModels.Count == 0 && _trendingRepos.Count == 0)
+        {
+            <div class="row g-2">
+                <div class="col-md-6">
+                    <div class="skeleton-line w-40"></div>
+                    <div class="skeleton-line w-80"></div>
+                    <div class="skeleton-line w-60"></div>
+                </div>
+                <div class="col-md-6">
+                    <div class="skeleton-line w-40"></div>
+                    <div class="skeleton-line w-80"></div>
+                    <div class="skeleton-line w-60"></div>
+                </div>
+            </div>
+        }
+        else if (_trendingModels.Count > 0 || _trendingRepos.Count > 0)
+        {
             <div class="row g-2">
                 <div class="col-md-6">
                     <p class="x-small text-muted text-uppercase mb-1">Trending models</p>
@@ -66,9 +95,13 @@
                 </div>
             </div>
             <a href="explore" class="small">Explore models, benchmarks &amp; datasets →</a>
-        </div>
+        }
+        else
+        {
+            <EmptyState Icon="trending-up" Title="No trending data yet" Body="Couldn't reach Hugging Face or GitHub - try Refresh above." />
+        }
     </div>
-}
+</div>
 
 @{
     var trendingTags = TrendingTags();
@@ -88,6 +121,58 @@
                 @foreach (var tag in uncoveredTags)
                 {
                     <a class="tag-chip small" href="@($"news?tag={Uri.EscapeDataString(tag)}")">@tag</a>
+                }
+            </div>
+        </div>
+    </div>
+}
+
+@{
+    var strengths = TopicStrengths();
+}
+@if (strengths.Count > 0)
+{
+    <div class="card mb-4">
+        <div class="card-body">
+            <h6 class="section-title mb-2"><Icon Name="activity" Size="16" /> Topic strength</h6>
+            <p class="text-muted small mb-2">
+                Where completed modules and what you've actually been reading overlap - module completion plus
+                RelatedTerms-tagged articles read in the last 30 days. Not just "did you open the module," but
+                whether it's showing up in what you read too.
+            </p>
+            <div class="d-flex flex-column gap-1">
+                @foreach (var s in strengths)
+                {
+                    <div class="d-flex align-items-center justify-content-between gap-2 small border-bottom py-1">
+                        <span>@s.Module.Title @if (s.Complete) { <span class="text-success">✓</span> }</span>
+                        <span class="text-muted x-small">@(s.ArticlesRead > 0 ? $"{s.ArticlesRead} article(s) read recently" : "completed, not much recent reading")</span>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+}
+
+@{
+    var refreshers = Refreshers();
+}
+@if (refreshers.Count > 0)
+{
+    <div class="card mb-4 refresher-shelf">
+        <div class="card-body">
+            <h6 class="section-title mb-2"><Icon Name="activity" Size="16" /> Worth a refresher</h6>
+            <p class="text-muted small mb-2">Completed six or more weeks ago - concepts fade, and nothing else in the app ever asks you to revisit them. No pressure, just a nudge.</p>
+            <div class="row g-2">
+                @foreach (var m in refreshers)
+                {
+                    <div class="col-md-6">
+                        <div class="card h-100">
+                            <div class="card-body py-2">
+                                <div class="small fw-bold">@m.Title</div>
+                                <div class="x-small text-muted">Completed @Reading.ModuleCompletedAt[m.Title].ToString("MMM d")</div>
+                            </div>
+                        </div>
+                    </div>
                 }
             </div>
         </div>
@@ -135,7 +220,20 @@
     </div>
 }
 
-<p class="text-muted small">@Reading.CompletedModuleCount of @Kb.Learning.Count modules complete</p>
+<div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-1">
+    <p class="text-muted small mb-0">@Reading.CompletedModuleCount of @Kb.Learning.Count modules complete</p>
+    <div class="d-flex align-items-center gap-3">
+        @if (LearningStreak() > 0)
+        {
+            <span class="small">@LearningStreak() 🔥 <span class="text-muted">day learning streak</span></span>
+        }
+        @if (!string.IsNullOrEmpty(LearningTimeLabel()))
+        {
+            <span class="small text-muted">@LearningTimeLabel()</span>
+        }
+        <button class="btn btn-sm btn-link p-0" @onclick="ExportNotes">Export learning notes</button>
+    </div>
+</div>
 <div class="progress mb-3" style="height: 6px;">
     <div class="progress-bar" style="width: @(ProgressPct())%"></div>
 </div>
@@ -157,34 +255,45 @@
 {
     i++;
     var complete = Reading.IsModuleComplete(m.Title);
+    var doneSteps = Reading.CompletedStepCount(m.Title, m.Steps.Length);
+    var pct = m.Steps.Length == 0 ? 0 : 100.0 * doneSteps / m.Steps.Length;
     <div class="card mb-3 learn-card @(complete ? "module-complete" : "")">
         <div class="card-body">
             <div class="d-flex justify-content-between align-items-start gap-2">
                 <h4 class="card-title mb-1"><span class="text-muted">@i.</span> @m.Title @if (complete) { <span class="text-success">✓</span> }</h4>
                 <div class="d-flex align-items-center gap-2">
                     <span class="badge level-@m.Level.ToLower()">@m.Level</span>
-                    <button class="btn btn-sm @(complete ? "btn-success" : "btn-outline-success")"
-                            @onclick="() => Reading.ToggleModuleComplete(m.Title)">
-                        @(complete ? "✓ Complete" : "Mark complete")
-                    </button>
+                    @if (!complete)
+                    {
+                        <button class="btn btn-sm btn-outline-success" @onclick="() => MarkAllComplete(m)">Mark all complete</button>
+                    }
                 </div>
             </div>
-            <p class="text-muted mb-3"><strong>Why:</strong> @m.Why</p>
-            <ol class="mb-2">
-                @foreach (var step in m.Steps)
+            <p class="text-muted mb-2"><strong>Why:</strong> @m.Why</p>
+            <div class="progress module-progress-mini mb-2">
+                <div class="progress-bar" style="width: @(pct.ToString("0"))%"></div>
+            </div>
+            <div class="mb-2">
+                @for (var stepIdx = 0; stepIdx < m.Steps.Length; stepIdx++)
                 {
-                    <li class="mb-1">
-                        @step.Text
-                        @if (!string.IsNullOrWhiteSpace(step.Url))
-                        {
-                            <a href="@step.Url" target="_blank" rel="noopener" class="ms-1 small">↗ open</a>
-                        }
-                    </li>
+                    var idx = stepIdx;
+                    var step = m.Steps[idx];
+                    var done = Reading.IsStepComplete(m.Title, idx);
+                    <div class="learn-step @(done ? "step-done" : "") mb-1">
+                        <input type="checkbox" id="@($"{m.Title}-step-{idx}")" checked="@done" @onchange="() => ToggleStep(m, idx)" />
+                        <label for="@($"{m.Title}-step-{idx}")">
+                            @step.Text
+                            @if (!string.IsNullOrWhiteSpace(step.Url))
+                            {
+                                <a href="@step.Url" target="_blank" rel="noopener" class="ms-1 small" @onclick:stopPropagation="true">↗ open</a>
+                            }
+                        </label>
+                    </div>
                 }
-            </ol>
+            </div>
             @if (m.RelatedTerms.Length > 0)
             {
-                <div class="small">
+                <div class="small mb-2">
                     <span class="text-muted">Key terms:</span>
                     @foreach (var t in m.RelatedTerms)
                     {
@@ -192,6 +301,20 @@
                     }
                 </div>
             }
+            @if (complete)
+            {
+                var check = Reading.GetSelfCheck(m.Title);
+                <div class="border-top pt-2 mt-2 small">
+                    <span class="text-muted">Could you explain this to someone else right now?</span>
+                    <button class="btn btn-sm @(check == true ? "btn-success" : "btn-outline-success") py-0 px-2 ms-2" @onclick="() => Reading.SetSelfCheck(m.Title, true)">Yes</button>
+                    <button class="btn btn-sm @(check == false ? "btn-warning" : "btn-outline-warning") py-0 px-2 ms-1" @onclick="() => Reading.SetSelfCheck(m.Title, false)">Not yet</button>
+                </div>
+            }
+            <div class="mt-2">
+                <label class="x-small text-muted d-block mb-1" for="@($"{m.Title}-notes")">Your notes</label>
+                <textarea id="@($"{m.Title}-notes")" class="form-control form-control-sm" rows="2" placeholder="Your own takeaway, once you've worked through this..."
+                          value="@Reading.GetModuleNote(m.Title)" @onchange="e => Reading.SetModuleNote(m.Title, (string)e.Value!)"></textarea>
+            </div>
         </div>
     </div>
 }
@@ -204,22 +327,38 @@
     private readonly string[] _levels = { "All", "Beginner", "Intermediate", "Advanced" };
     private List<TrendingModel> _trendingModels = new();
     private List<TrendingRepo> _trendingRepos = new();
+    private bool _trendingLoading = true;
+    private DateTimeOffset? _trendingLastUpdated;
 
     protected override void OnInitialized()
     {
         if (!string.IsNullOrWhiteSpace(LevelParam) && _levels.Contains(LevelParam))
             _level = LevelParam;
 
+        // One-time, self-healing backfill: modules completed under the old whole-module toggle (before
+        // per-step tracking existed) are in CompletedModules but have zero CompletedSteps recorded. Without
+        // this, checking a single step on one of those modules would make RecomputeModuleCompletion see
+        // "not all steps done" and silently un-complete a module the user had already finished.
+        foreach (var m in Kb.Learning)
+        {
+            if (Reading.IsModuleComplete(m.Title) && m.Steps.Length > 0 && Reading.CompletedStepCount(m.Title, m.Steps.Length) == 0)
+                Reading.MarkAllStepsComplete(m.Title, m.Steps.Length);
+        }
+
         // Fire-and-forget: the learning roadmap itself is static data and should render instantly - the
         // trending models/repos panel just fills in once these resolve instead of holding up the page.
-        _ = LoadTrendingAsync();
+        _ = LoadTrendingAsync(force: false);
     }
 
-    private async Task LoadTrendingAsync()
+    private async Task LoadTrendingAsync(bool force)
     {
-        var (models, _) = await HuggingFace.GetTrendingAsync();
+        _trendingLoading = true;
+        StateHasChanged();
+        var (models, _) = await HuggingFace.GetTrendingAsync(force);
         _trendingModels = models;
-        _trendingRepos = await GitHub.GetTrendingReposAsync();
+        _trendingRepos = await GitHub.GetTrendingReposAsync(force: force);
+        _trendingLastUpdated = HuggingFace.LastUpdated ?? GitHub.GetRepoLastUpdated("daily");
+        _trendingLoading = false;
         StateHasChanged();
     }
 
@@ -231,6 +370,66 @@
 
     private double ProgressPct() =>
         Kb.Learning.Count == 0 ? 0 : 100.0 * Reading.CompletedModuleCount / Kb.Learning.Count;
+
+    private void ToggleStep(LearningModule m, int stepIndex) => Reading.ToggleStep(m.Title, stepIndex, m.Steps.Length);
+    private void MarkAllComplete(LearningModule m) => Reading.MarkAllStepsComplete(m.Title, m.Steps.Length);
+
+    /// <summary>Consecutive days up to and including today with at least one step completed - separate from Reading Stats' article-read streak, so a day spent deep in one module without opening a news item still counts as "showed up today."</summary>
+    private int LearningStreak()
+    {
+        var days = Reading.LearningHistory.Select(e => DateOnly.FromDateTime(e.At.LocalDateTime.Date)).ToHashSet();
+        var streak = 0;
+        var d = DateOnly.FromDateTime(DateTime.Now);
+        while (days.Contains(d)) { streak++; d = d.AddDays(-1); }
+        return streak;
+    }
+
+    private string LearningTimeLabel()
+    {
+        var minutes = Reading.LearningHistory.Sum(e => e.Minutes);
+        if (minutes == 0) return "";
+        return minutes >= 60 ? $"~{minutes / 60.0:0.#} hr in the Learning Hub" : $"~{minutes} min in the Learning Hub";
+    }
+
+    /// <summary>Modules completed 6+ weeks ago - the spaced-repetition nudge. Only modules with a recorded completion date qualify (a module completed under the pre-upgrade whole-module toggle gets one retroactively via the OnInitialized backfill above).</summary>
+    private List<LearningModule> Refreshers()
+    {
+        var cutoff = DateTimeOffset.Now.AddDays(-42);
+        var completedAt = Reading.ModuleCompletedAt;
+        return Kb.Learning
+            .Where(m => completedAt.TryGetValue(m.Title, out var at) && at <= cutoff)
+            .OrderBy(m => completedAt[m.Title])
+            .Take(4)
+            .ToList();
+    }
+
+    private sealed record TopicStrength(LearningModule Module, bool Complete, int ArticlesRead);
+
+    /// <summary>Combines module completion with how many of that module's RelatedTerms tags showed up in articles you've actually read in the last 30 days - "completed the module" and "still reading about it" are two different signals that happened to live in separate silos.</summary>
+    private List<TopicStrength> TopicStrengths()
+    {
+        var readLinks = Reading.ReadHistory.Select(e => e.Link).ToHashSet();
+        var cutoff = DateTimeOffset.UtcNow.AddDays(-30);
+        var readTagCounts = History.Items
+            .Where(i => i.Published >= cutoff && readLinks.Contains(i.Link))
+            .SelectMany(i => i.Tags)
+            .GroupBy(t => t, StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(g => g.Key, g => g.Count(), StringComparer.OrdinalIgnoreCase);
+
+        return Kb.Learning
+            .Select(m => new TopicStrength(m, Reading.IsModuleComplete(m.Title), m.RelatedTerms.Sum(t => readTagCounts.GetValueOrDefault(t, 0))))
+            .Where(x => x.Complete || x.ArticlesRead > 0)
+            .OrderByDescending(x => (x.Complete ? 1000 : 0) + x.ArticlesRead)
+            .Take(6)
+            .ToList();
+    }
+
+    private async Task ExportNotes()
+    {
+        var path = Export.ExportLearningNotes(Kb.Learning);
+        Toasts.Show($"Exported to {path}");
+        await Task.CompletedTask;
+    }
 
     private HashSet<string> TrendingTags() =>
         History.Items

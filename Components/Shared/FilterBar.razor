@@ -1,0 +1,20 @@
+@* Shared filter chrome - search/selects/chips as slots, so every "filter a list" page shares one visual
+   language instead of each one inventing its own layout (News' old sidebar, Tools/Free AI APIs' top row,
+   Explore's bare search box all independently arrived at slightly different versions of the same thing). *@
+
+<div class="filter-bar">
+    @if (ChildContent is not null)
+    {
+        <div class="filter-bar-row">@ChildContent</div>
+    }
+    @if (Chips is not null)
+    {
+        <div class="filter-bar-chips">@Chips</div>
+    }
+</div>
+
+@code {
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+    /// <summary>Chip rows (source/tag toggles) - kept in their own scroll region so a long chip list can never push the rest of the page out of reach.</summary>
+    [Parameter] public RenderFragment? Chips { get; set; }
+}

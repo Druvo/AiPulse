@@ -52,6 +52,7 @@ builder.Services.AddSingleton<KnowledgeBaseService>();
 builder.Services.AddSingleton<FeedAggregatorService>();
 // Scoped (one instance per signed-in circuit) - these resolve the current user via AuthenticationStateProvider.
 builder.Services.AddScoped<ReadingStateService>();
+builder.Services.AddScoped<ToastService>();
 builder.Services.AddSingleton<FeedHistoryService>();
 builder.Services.AddSingleton<UserService>();
 builder.Services.AddSingleton<NotificationService>();

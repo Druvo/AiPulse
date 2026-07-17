@@ -62,6 +62,20 @@ public sealed class ReadEvent
 }
 
 /// <summary>
+/// One learning-step completion event - the append-only log behind the Learning Hub's own streak and
+/// time-invested total, kept separate from <see cref="ReadEvent"/> (articles) since reading news and doing
+/// focused learning are different activities that should both count as "showed up today" without either
+/// one resetting the other's streak.
+/// </summary>
+public sealed class ModuleProgressEvent
+{
+    public required string ModuleTitle { get; init; }
+    public DateTimeOffset At { get; init; } = DateTimeOffset.Now;
+    /// <summary>Rough per-step time estimate in minutes, summed for the "time invested" total - not tracked precisely, just enough to be more meaningful than a bare completion percentage.</summary>
+    public int Minutes { get; init; } = 8;
+}
+
+/// <summary>
 /// An additional outgoing webhook scoped to specific keywords - lets different topics route to different
 /// channels (e.g. "MCP" alerts to one Slack channel, everything else to another) instead of every alert
 /// going to the single global <see cref="ReadingState.WebhookUrl"/>.
@@ -91,6 +105,21 @@ public sealed class ReadingState
     public HashSet<string> ReadLinks { get; set; } = new();
     public HashSet<string> CompletedModules { get; set; } = new();
     public DateTimeOffset LastNewsVisit { get; set; } = DateTimeOffset.MinValue;
+
+    /// <summary>Individual completed steps, keyed "ModuleTitle::StepIndex" - a module counts as complete once every one of its steps is in here.</summary>
+    public HashSet<string> CompletedSteps { get; set; } = new();
+
+    /// <summary>When each module was completed (all steps done), by title - powers the spaced-repetition "worth a refresher" shelf. Absent if never completed, or if it was completed before this field existed (see the Learn.razor doc comment on how that's handled).</summary>
+    public Dictionary<string, DateTimeOffset> ModuleCompletedAt { get; set; } = new();
+
+    /// <summary>Append-only log of step completions - the Learning Hub's own streak and time-invested total, kept separate from <see cref="ReadHistory"/> (articles).</summary>
+    public List<ModuleProgressEvent> LearningHistory { get; set; } = new();
+
+    /// <summary>Optional personal takeaway per module, by title - the only field in the Learning Hub that isn't just "did you open this."</summary>
+    public Dictionary<string, string> ModuleNotes { get; set; } = new();
+
+    /// <summary>"Could you explain this to someone else?" per module, by title - true = yes, false = not yet, absent = not answered.</summary>
+    public Dictionary<string, bool> ModuleSelfChecks { get; set; } = new();
 
     /// <summary>Keywords to highlight and to fire notifications for.</summary>
     public List<string> Watchlist { get; set; } = new();

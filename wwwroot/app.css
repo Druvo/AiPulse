@@ -470,6 +470,65 @@ a.card:hover { transform: translateY(-1px); }
 .progress { background-color: var(--ap-surface-2); border-radius: 999px; }
 .progress-bar { background-color: var(--ap-accent); }
 .module-complete { box-shadow: inset 3px 0 0 var(--ap-success); }
+.module-progress-mini { height: 4px; }
+.learn-step { display: flex; align-items: flex-start; gap: .5rem; }
+.learn-step input[type="checkbox"] { margin-top: .3rem; flex-shrink: 0; }
+.learn-step.step-done label { text-decoration: line-through; color: var(--ap-text-secondary); }
+.refresher-shelf .card { border-left: 3px solid var(--ap-warning); }
+
+/* Shared FilterBar - one visual language for search/select/chip rows across News/Tools/Free AI APIs/Explore */
+.filter-bar {
+    background: var(--ap-surface);
+    border: 1px solid var(--ap-border);
+    border-radius: .5rem;
+    padding: .65rem .85rem;
+    margin-bottom: 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: .5rem;
+}
+.filter-bar-row { display: flex; flex-wrap: wrap; gap: .5rem; align-items: center; }
+.filter-bar-chips { display: flex; flex-wrap: wrap; gap: .375rem; max-height: 200px; overflow-y: auto; padding-right: 4px; align-content: flex-start; }
+
+/* Shared ToastHost - one home for transient confirmations instead of a scattered inline alert per page */
+.toast-stack {
+    position: fixed;
+    right: 1.25rem;
+    bottom: 1.25rem;
+    z-index: 1200;
+    display: flex;
+    flex-direction: column;
+    gap: .5rem;
+    max-width: 360px;
+}
+.toast-item {
+    background: var(--ap-surface-2);
+    color: var(--ap-text);
+    border: 1px solid var(--ap-border);
+    border-radius: .5rem;
+    padding: .55rem .75rem;
+    box-shadow: var(--ap-shadow-md);
+    display: flex;
+    align-items: center;
+    gap: .6rem;
+    font-size: .875rem;
+    animation: toast-in .15s ease-out;
+}
+.toast-action { color: var(--ap-accent); font-weight: 600; white-space: nowrap; }
+.toast-close { color: var(--ap-text-secondary); margin-left: auto; }
+@keyframes toast-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+
+/* Shared EmptyState */
+.empty-state { color: var(--ap-text-secondary); }
+.empty-state .ap-icon { display: block; margin-left: auto; margin-right: auto; }
+
+/* Skeleton loaders - a shape of what's coming instead of a bare spinner, same idea News' progressive fill already uses */
+.skeleton-line { background: linear-gradient(90deg, var(--ap-surface-2) 25%, var(--ap-surface) 37%, var(--ap-surface-2) 63%); background-size: 400% 100%; animation: skeleton-shine 1.4s ease infinite; border-radius: 4px; height: .85rem; margin-bottom: .5rem; }
+.skeleton-line.w-60 { width: 60%; }
+.skeleton-line.w-80 { width: 80%; }
+.skeleton-line.w-40 { width: 40%; }
+@keyframes skeleton-shine { 0% { background-position: 100% 50%; } 100% { background-position: 0 50%; } }
+@media (prefers-reduced-motion: reduce) { .skeleton-line { animation: none; } }
 
 /* Inputs adapt to theme */
 .form-control, .form-select {

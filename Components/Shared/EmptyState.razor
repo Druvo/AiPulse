@@ -1,0 +1,30 @@
+@* Shared "nothing here" slot - one visual language for every dead end in the app instead of each page hand-writing its own tone/layout. *@
+
+<div class="empty-state text-center py-4">
+    <Icon Name="@Icon" Size="28" CssClass="text-muted mb-2" />
+    <p class="mb-1">@Title</p>
+    @if (!string.IsNullOrWhiteSpace(Body))
+    {
+        <p class="text-muted small mb-2">@Body</p>
+    }
+    @if (ActionText is not null)
+    {
+        @if (ActionHref is not null)
+        {
+            <a class="btn btn-sm btn-outline-primary" href="@ActionHref">@ActionText</a>
+        }
+        else if (OnAction.HasDelegate)
+        {
+            <button class="btn btn-sm btn-outline-primary" @onclick="OnAction">@ActionText</button>
+        }
+    }
+</div>
+
+@code {
+    [Parameter] public string Icon { get; set; } = "inbox";
+    [Parameter] public string Title { get; set; } = "Nothing here yet";
+    [Parameter] public string? Body { get; set; }
+    [Parameter] public string? ActionText { get; set; }
+    [Parameter] public string? ActionHref { get; set; }
+    [Parameter] public EventCallback OnAction { get; set; }
+}

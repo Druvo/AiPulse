@@ -1,0 +1,58 @@
+@* Single toast stack for the whole app - see ToastService for how pages push a message here. *@
+@rendermode InteractiveServer
+@implements IDisposable
+@inject ToastService Toasts
+
+<div class="toast-stack">
+    @foreach (var t in _active)
+    {
+        <div class="toast-item" @key="t.Id">
+            <span>@t.Text</span>
+            @if (t.ActionText is not null)
+            {
+                <button class="btn btn-sm btn-link p-0 toast-action" @onclick="() => RunAction(t)">@t.ActionText</button>
+            }
+            <button class="btn btn-sm btn-link p-0 toast-close" title="Dismiss" @onclick="() => Remove(t.Id)"><Icon Name="check" Size="13" /></button>
+        </div>
+    }
+</div>
+
+@code {
+    private readonly List<ToastMessage> _active = new();
+
+    protected override void OnInitialized()
+    {
+        Toasts.OnShow += HandleShow;
+        Toasts.OnDismiss += HandleDismiss;
+    }
+
+    private void HandleDismiss(Guid id) => InvokeAsync(() => Remove(id));
+
+    private void HandleShow(ToastMessage t)
+    {
+        InvokeAsync(async () =>
+        {
+            _active.Add(t);
+            StateHasChanged();
+            await Task.Delay(t.DurationMs);
+            Remove(t.Id);
+        });
+    }
+
+    private async Task RunAction(ToastMessage t)
+    {
+        Remove(t.Id);
+        if (t.OnAction is not null) await t.OnAction();
+    }
+
+    private void Remove(Guid id)
+    {
+        if (_active.RemoveAll(x => x.Id == id) > 0) InvokeAsync(StateHasChanged);
+    }
+
+    public void Dispose()
+    {
+        Toasts.OnShow -= HandleShow;
+        Toasts.OnDismiss -= HandleDismiss;
+    }
+}

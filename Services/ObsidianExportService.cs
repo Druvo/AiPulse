@@ -67,6 +67,62 @@ public sealed class ObsidianExportService
         return sb.ToString();
     }
 
+    /// <summary>Writes "AiPulse Learning Notes.md" - your own per-module takeaways, not the module content itself (that's static data, not worth exporting). Only modules with a note or a self-check answer are included, so this stays a personal notebook rather than a dump of the whole roadmap.</summary>
+    public string ExportLearningNotes(IReadOnlyList<LearningModule> modules)
+    {
+        var dir = TargetDir;
+        Directory.CreateDirectory(dir);
+        var path = Path.Combine(dir, "AiPulse Learning Notes.md");
+        File.WriteAllText(path, BuildLearningMarkdown(modules), Encoding.UTF8);
+        return path;
+    }
+
+    private string BuildLearningMarkdown(IReadOnlyList<LearningModule> modules)
+    {
+        var sb = new StringBuilder();
+        sb.AppendLine("---");
+        sb.AppendLine("tags: [ai, learning, aipulse]");
+        sb.AppendLine($"updated: {DateTimeOffset.Now:yyyy-MM-dd HH:mm}");
+        sb.AppendLine("---");
+        sb.AppendLine();
+        sb.AppendLine("# 🎓 AiPulse Learning Notes");
+        sb.AppendLine();
+
+        var withContent = modules
+            .Where(m => !string.IsNullOrWhiteSpace(_reading.GetModuleNote(m.Title)) || _reading.GetSelfCheck(m.Title) is not null || _reading.IsModuleComplete(m.Title))
+            .ToList();
+
+        if (withContent.Count == 0)
+        {
+            sb.AppendLine("_Nothing to export yet - complete a module or leave yourself a note first._");
+            return sb.ToString();
+        }
+
+        foreach (var m in withContent)
+        {
+            sb.AppendLine($"## {EscapeMd(m.Title)}");
+            var completedAt = _reading.ModuleCompletedAt.TryGetValue(m.Title, out var at) ? at.ToString("yyyy-MM-dd") : null;
+            var status = _reading.IsModuleComplete(m.Title)
+                ? (completedAt is not null ? $"✓ completed {completedAt}" : "✓ completed")
+                : "in progress";
+            sb.AppendLine($"*{status} · {m.Level}*");
+            sb.AppendLine();
+
+            var check = _reading.GetSelfCheck(m.Title);
+            if (check is not null)
+                sb.AppendLine(check == true ? "**Self-check:** could explain this to someone else." : "**Self-check:** not confident yet - worth a refresher.");
+
+            var note = _reading.GetModuleNote(m.Title);
+            if (!string.IsNullOrWhiteSpace(note))
+            {
+                sb.AppendLine();
+                sb.AppendLine(note);
+            }
+            sb.AppendLine();
+        }
+        return sb.ToString();
+    }
+
     private static string EscapeMd(string s) => s.Replace("[", "(").Replace("]", ")");
 
     /// <summary>Obsidian tags can't contain spaces or most punctuation; collapse to kebab-case.</summary>
