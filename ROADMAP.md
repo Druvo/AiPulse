@@ -571,13 +571,35 @@ Status tags: ✅ done · 🟢 fits philosophy, no AI needed · 🟡 needs a desi
     export is a real takeaway notebook, not a dump of static module content. Time invested is a rough
     per-step estimate (8 min default) summed from `LearningHistory`, shown next to the streak.
 
-> **UX audit implementation reality check:** every `[Authorize]` page touched here was verified the same way
-> every authenticated page has been all session - clean build, server starts with no exceptions, and the
-> route redirects cleanly to `/login` with nothing thrown server-side (still no admin credentials available
-> in this environment). That confirms routing and startup health but doesn't exercise a signed-in user's
-> actual render path, so the newer Learning Hub logic (step-completion backfill, streak calculation,
-> topic-strength matching) is verified by code review and by direct reasoning through the data flow, not by
-> clicking through it live. Flagging this honestly rather than claiming a level of testing that didn't happen.
+> **UX audit implementation reality check:** every `[Authorize]` page touched here was initially verified the
+> same way every authenticated page had been all session - clean build, server starts with no exceptions, and
+> the route redirects cleanly to `/login` with nothing thrown server-side (the admin credential blocker
+> mentioned throughout this file was, in hindsight, never a real blocker - `Auth:Username`/`Auth:Password` in
+> `appsettings.json` bootstrap an admin account on first run, and simply hadn't been checked). Once actually
+> logged in, a full live pass confirmed the Learning Hub logic genuinely works end to end: the legacy
+> completion backfill correctly checked individual step boxes (not just the module-level flag) for the 10
+> modules already complete on the test account, the per-step toggle persisted through a hard page reload with
+> the progress bar and module-complete state updating correctly, the self-check button persisted its
+> selection, and the streak/time-invested/topic-strength numbers were all real, derived values rather than
+> placeholders.
+>
+> That same live pass caught a genuine bug: clicking "Mark all as read" against a large filtered set (~9,200
+> items, from months of accumulated feed history on the test account) hung the entire Blazor circuit for
+> 60-90+ seconds - confirmed by a completely unrelated click (the List/Grid view toggle) queuing and waiting
+> the same length of time before it was processed. Root cause and fix are described below. This is exactly
+> the class of problem that clean-build/clean-redirect verification can never catch, since it only shows up
+> under a realistic data volume during an actual signed-in interaction - a concrete argument for why the
+> honest "verified by code review, not by clicking through it live" caveat on earlier rounds mattered.
+
+> **Mark-all-as-read performance fix:** `ReadingStateService.EnsureRead` calls `Save()` (a full JSON
+> serialize + `File.WriteAllText` of the user's entire `reading-state.json`) on every call, which is fine for
+> a single click but was also being called once per item inside `News.razor`'s `MarkAllAsRead` loop - against
+> a large filtered view, that's thousands of full-file rewrites for one button click, blocking the whole
+> circuit until they finish. Added `EnsureReadBulk`/`MarkUnreadBulk` (used by `MarkAllAsRead` and its Undo
+> toast) that update in-memory state for the whole batch under one lock and save exactly once at the end.
+> Verified against the same live account: reset to ~9,289 unread items via a direct edit to `reading-state.json`
+> (`ReadHistory` preserved, only `ReadLinks` cleared), confirmed the page stayed responsive throughout, and
+> confirmed the file was written once rather than repeatedly.
 
 > **GitHub Trending scrape reality check:** `GitHubTrendingService` scrapes `github.com/trending` and
 > `github.com/trending/developers` directly for the repo/developer views above - GitHub has no API for
