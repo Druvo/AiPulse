@@ -15,9 +15,11 @@ AiPulse is ~entirely an app product, not a marketing site, so there are two fami
   **Workbench** — the existing sidebar + content shell, refined density/voice, not
   rebuilt. These pages vary only in internal card/table/chart layout, never in
   macrostructure.
-- **Entry pages** (Login, Register): a **Marquee**-lite hero — logo, eyebrow, wordmark,
-  card, signature — no code demo, no ⌘K (those are Cobalt's marketing-page signature
-  moves; AiPulse's entry pages stay quiet and functional).
+- **Entry pages** (Login, Register): a **standard centered auth card** — logo, wordmark,
+  form, signature. Deliberately boring: no eyebrow tag, no code demo, no ⌘K (those are
+  Cobalt's marketing-page signature moves, not a sign-in page's job). A user's muscle
+  memory for "sign in" is a centered card with a name and a form — that's exactly what
+  this is, not a hero.
 
 ## Theme
 Custom — anchored on AiPulse's existing cyan/teal brand color (not a catalog swap),
@@ -55,8 +57,9 @@ dark-mode variant. Never introduce a new color as a literal hex/rgb — add a na
 - Body: **IBM Plex Sans** 400/500/600, self-hosted (`wwwroot/fonts/ibm-plex-sans-variable.woff2`).
   Everything else.
 - Mono/outlier: **JetBrains Mono**, self-hosted (`wwwroot/fonts/jetbrains-mono-variable.woff2`).
-  Nav section labels, the login eyebrow tag, kbd hints, code/snippet blocks — machine-readout
-  register only, not a third body face.
+  Nav section labels, kbd hints, code/snippet blocks — machine-readout register only, not a
+  third body face. (An eyebrow tag on Login/Register used this face too, but was removed as
+  a decorative anti-pattern with no ordinal function — see the audit note below.)
 - All three fonts are self-hosted (not a Google Fonts CDN link) — loading a third-party
   font CDN on every page view would leak every visitor's IP to Google on every load,
   which conflicts with the self-hosted ethos `FaviconService` already established for
@@ -91,8 +94,8 @@ remain in use throughout existing page markup — not worth replacing wholesale.
 ## Per-page allowances
 - App pages: function carries the page. No enrichment, no imagery beyond what's
   already data-driven (favicons, thumbnails, avatars).
-- Entry pages (Login/Register): logo + eyebrow + wordmark is the full extent of
-  "enrichment" — no illustration, no code demo.
+- Entry pages (Login/Register): logo + wordmark is the full extent of "enrichment" — no
+  eyebrow tag, no illustration, no code demo.
 
 ## What pages MUST share
 - The token set above (colors, fonts, radii, shadows, motion) — every page pulls from

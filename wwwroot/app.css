@@ -700,17 +700,6 @@ a.card:hover { transform: translateY(-1px); }
     box-shadow: var(--ap-shadow-md);
 }
 .login-logo-wrap { display: flex; justify-content: center; margin-bottom: .5rem; }
-.login-eyebrow {
-    display: block;
-    text-align: center;
-    font-family: var(--ap-font-mono);
-    font-size: .68rem;
-    font-weight: 500;
-    text-transform: uppercase;
-    letter-spacing: .1em;
-    color: var(--ap-accent);
-    margin-bottom: .3rem;
-}
 .login-signature {
     margin-top: 1.25rem;
     text-align: center;
