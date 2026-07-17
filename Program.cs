@@ -76,6 +76,8 @@ builder.Services.Configure<WebSubOptions>(builder.Configuration.GetSection("WebS
 builder.Services.AddSingleton<WebSubService>();
 builder.Services.AddSingleton<WebhookService>();
 builder.Services.AddSingleton<FeverApiService>();
+builder.Services.AddSingleton<FreeApiDiscoveryService>();
+builder.Services.AddHostedService(sp => sp.GetRequiredService<FreeApiDiscoveryService>());
 
 // Background watcher that raises desktop notifications for big releases & watchlist hits.
 builder.Services.Configure<NotificationOptions>(builder.Configuration.GetSection("Notifications"));
@@ -244,6 +246,7 @@ using (var scope = app.Services.CreateScope())
 {
     var kb = scope.ServiceProvider.GetRequiredService<KnowledgeBaseService>();
     await kb.InitializeSourcesAsync();
+    await kb.InitializeFreeApisAsync();
 
     var authOptions = scope.ServiceProvider.GetRequiredService<Microsoft.Extensions.Options.IOptions<AuthOptions>>().Value;
     await scope.ServiceProvider.GetRequiredService<UserService>().EnsureSchemaAndBootstrapAsync();

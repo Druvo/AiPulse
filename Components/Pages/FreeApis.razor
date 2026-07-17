@@ -2,6 +2,7 @@
 @attribute [Authorize]
 @rendermode InteractiveServer
 @inject KnowledgeBaseService Kb
+@inject FreeApiDiscoveryService Discovery
 @inject IJSRuntime JS
 
 <PageTitle>AiPulse · Free AI APIs</PageTitle>
@@ -12,11 +13,100 @@
 </div>
 
 <div class="alert alert-light border small mb-4">
-    <strong>Hand-curated, not live-scraped.</strong> Free-tier terms, rate limits, and which models are free
-    change often, and providers don't publish this as a structured feed the way news/RSS sources do - so
-    this list is manually verified rather than auto-refreshed. Each entry shows when it was last checked;
-    double-check the linked docs before relying on a specific number.
+    <strong>Hand-verified, discovery-assisted.</strong> Free-tier terms, rate limits, and which models are free
+    change often, so every entry below was checked by hand before it was added - a background job only
+    <em>suggests</em> new providers and flags links that might have gone stale; it never publishes anything on
+    its own. Each entry shows when it was last checked; double-check the linked docs before relying on a
+    specific number.
 </div>
+
+<AuthorizeView Roles="Admin" Context="adminPanel">
+    <Authorized>
+        <div class="card mb-3">
+            <div class="card-body">
+                <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
+                    <strong><Icon Name="search" Size="16" /> Discovery</strong>
+                    <button class="btn btn-sm btn-outline-secondary" disabled="@Discovery.IsRunning" @onclick="RunDiscovery">
+                        @if (Discovery.IsRunning) { <span class="spinner"></span> } else { <Icon Name="refresh" Size="14" /> }
+                        Run now
+                    </button>
+                    @if (Discovery.LastRunAt is { } at)
+                    {
+                        <span class="text-muted x-small">Last run @at.ToLocalTime().ToString("g") — @Discovery.LastRunSummary</span>
+                    }
+                    else
+                    {
+                        <span class="text-muted x-small">Hasn't run yet this session - checks a community-maintained free-LLM-API list once a day, or on demand here.</span>
+                    }
+                </div>
+
+                @if (_pending.Count == 0)
+                {
+                    <p class="text-muted small mb-0">No pending candidates right now.</p>
+                }
+                else
+                {
+                    <div class="d-flex flex-column gap-2">
+                        @foreach (var c in _pending)
+                        {
+                            @if (_approvingCandidateId == c.Id)
+                            {
+                                <div class="border rounded p-2">
+                                    <EditForm Model="_form" OnValidSubmit="ConfirmApprove">
+                                        @EntryFormFields()
+                                        @if (_error is not null)
+                                        {
+                                            <div class="alert alert-danger py-1 px-2 small mb-2">@_error</div>
+                                        }
+                                        <button type="submit" class="btn btn-sm btn-success">Add to list</button>
+                                        <button type="button" class="btn btn-sm btn-outline-secondary" @onclick="CancelApprove">Cancel</button>
+                                    </EditForm>
+                                </div>
+                            }
+                            else
+                            {
+                                <div class="d-flex align-items-start justify-content-between gap-2 border rounded p-2">
+                                    <div class="small">
+                                        <strong>@c.Name</strong>
+                                        <span class="text-muted"> — discovered @c.DiscoveredAt.ToLocalTime().ToString("MMM d")</span>
+                                        <br />
+                                        <a href="@c.SourceUrl" target="_blank" rel="noopener" class="x-small">@c.SourceUrl</a>
+                                    </div>
+                                    <div class="text-nowrap">
+                                        <button class="btn btn-sm btn-outline-success" @onclick="() => StartApprove(c)">Review</button>
+                                        <button class="btn btn-sm btn-outline-secondary" @onclick="() => Dismiss(c.Id)">Dismiss</button>
+                                    </div>
+                                </div>
+                            }
+                        }
+                    </div>
+                }
+            </div>
+        </div>
+
+        <div class="d-flex flex-wrap gap-2 mb-3">
+            <button class="btn btn-sm btn-primary" @onclick="ToggleAddForm">
+                <Icon Name="@(_showAddForm ? "check" : "sparkle")" Size="14" /> @(_showAddForm ? "Close" : "Add entry")
+            </button>
+        </div>
+
+        @if (_showAddForm)
+        {
+            <div class="card mb-3">
+                <div class="card-body">
+                    <EditForm Model="_form" OnValidSubmit="AddEntry">
+                        @EntryFormFields()
+                        @if (_error is not null)
+                        {
+                            <div class="alert alert-danger py-1 px-2 small mb-2">@_error</div>
+                        }
+                        <button type="submit" class="btn btn-success">Save entry</button>
+                    </EditForm>
+                </div>
+            </div>
+        }
+    </Authorized>
+</AuthorizeView>
 
 <div class="d-flex flex-wrap gap-2 mb-3">
     <input class="form-control form-control-sm" style="max-width:260px" placeholder="Search providers or models…"
@@ -53,7 +143,13 @@ else
                     <div class="card-body">
                         <div class="d-flex justify-content-between align-items-start gap-2">
                             <h6 class="card-title mb-1">@api.Name</h6>
-                            <span class="badge bg-secondary text-nowrap">@api.Category</span>
+                            <div class="text-nowrap">
+                                <span class="badge bg-secondary text-nowrap">@api.Category</span>
+                                @if (api.NeedsReview)
+                                {
+                                    <span class="badge bg-warning text-dark" title="@(api.NeedsReviewReason ?? "Automated check couldn't confirm this link - may be a false positive, verify manually.")">needs review</span>
+                                }
+                            </div>
                         </div>
                         <p class="small mb-2">@api.FreeTierSummary</p>
                         <div class="x-small text-muted mb-1"><strong>Models:</strong> @api.Models</div>
@@ -79,7 +175,27 @@ else
                                 <a href="@api.DocsUrl" target="_blank" rel="noopener" class="btn btn-sm btn-outline-secondary">Docs ↗</a>
                             }
                             <span class="x-small text-muted ms-auto">Verified @api.LastVerified</span>
+                            <AuthorizeView Roles="Admin" Context="adminCtx">
+                                <Authorized>
+                                    <button class="btn btn-sm btn-link p-0" title="Edit" @onclick="() => StartEdit(api)"><Icon Name="settings" Size="14" /></button>
+                                    <button class="btn btn-sm btn-link p-0 text-danger" title="Delete" @onclick="() => DeleteEntry(api.Id)"><Icon Name="trash" Size="14" /></button>
+                                </Authorized>
+                            </AuthorizeView>
                         </div>
+                        @if (_editingId == api.Id)
+                        {
+                            <div class="border rounded p-2 mt-2">
+                                <EditForm Model="_form" OnValidSubmit="SaveEdit">
+                                    @EntryFormFields()
+                                    @if (_error is not null)
+                                    {
+                                        <div class="alert alert-danger py-1 px-2 small mb-2">@_error</div>
+                                    }
+                                    <button type="submit" class="btn btn-sm btn-success">Save</button>
+                                    <button type="button" class="btn btn-sm btn-outline-secondary" @onclick="CancelEdit">Cancel</button>
+                                </EditForm>
+                            </div>
+                        }
                     </div>
                 </div>
             </div>
@@ -95,6 +211,129 @@ else
     private bool _openAiCompatibleOnly;
     private int _page = 1;
     private int _pageSize = 10;
+
+    private List<FreeApiCandidate> _pending = new();
+    private int? _approvingCandidateId;
+    private int? _editingId;
+    private bool _showAddForm;
+    private string? _error;
+    private FreeApiForm _form = new();
+
+    private readonly string[] _categories = { "Fully Free", "Free Tier", "Free Credits" };
+
+    protected override async Task OnInitializedAsync() => await RefreshPendingAsync();
+
+    private async Task RefreshPendingAsync() => _pending = await Kb.GetPendingCandidatesAsync();
+
+    private async Task RunDiscovery()
+    {
+        await Discovery.RunAsync();
+        await RefreshPendingAsync();
+    }
+
+    private void StartApprove(FreeApiCandidate c)
+    {
+        _showAddForm = false;
+        _editingId = null;
+        _approvingCandidateId = c.Id;
+        _error = null;
+        _form = new FreeApiForm { Name = c.Name, SignupUrl = c.SourceUrl, Category = "Free Tier", LastVerified = DateTime.Now.ToString("yyyy-MM-dd") };
+    }
+
+    private void CancelApprove() => _approvingCandidateId = null;
+
+    private async Task ConfirmApprove()
+    {
+        if (_approvingCandidateId is null || !Validate()) return;
+        await Kb.ApproveCandidateAsync(_approvingCandidateId.Value, ToRecord());
+        _approvingCandidateId = null;
+        await RefreshPendingAsync();
+    }
+
+    private async Task Dismiss(int id)
+    {
+        await Kb.DismissCandidateAsync(id);
+        await RefreshPendingAsync();
+    }
+
+    private void ToggleAddForm()
+    {
+        _showAddForm = !_showAddForm;
+        _editingId = null;
+        _approvingCandidateId = null;
+        _error = null;
+        if (_showAddForm) _form = new FreeApiForm { Category = "Free Tier", LastVerified = DateTime.Now.ToString("yyyy-MM-dd") };
+    }
+
+    private void StartEdit(FreeApiEntry e)
+    {
+        _showAddForm = false;
+        _approvingCandidateId = null;
+        _editingId = e.Id;
+        _error = null;
+        _form = new FreeApiForm
+        {
+            Name = e.Name,
+            Category = e.Category,
+            FreeTierSummary = e.FreeTierSummary,
+            Models = e.Models,
+            RateLimit = e.RateLimit,
+            SignupUrl = e.SignupUrl,
+            HowToUse = e.HowToUse,
+            OpenAiCompatible = e.OpenAiCompatible,
+            DocsUrl = e.DocsUrl ?? "",
+            LastVerified = e.LastVerified
+        };
+    }
+
+    private void CancelEdit() => _editingId = null;
+
+    private bool Validate()
+    {
+        if (string.IsNullOrWhiteSpace(_form.Name) || string.IsNullOrWhiteSpace(_form.SignupUrl) ||
+            string.IsNullOrWhiteSpace(_form.FreeTierSummary) || string.IsNullOrWhiteSpace(_form.Models))
+        {
+            _error = "Name, signup URL, free-tier summary, and models are required.";
+            return false;
+        }
+        _error = null;
+        return true;
+    }
+
+    private FreeApiRecord ToRecord(int id = 0) => new()
+    {
+        Id = id,
+        Name = _form.Name.Trim(),
+        Category = _form.Category,
+        FreeTierSummary = _form.FreeTierSummary.Trim(),
+        Models = _form.Models.Trim(),
+        RateLimit = _form.RateLimit.Trim(),
+        SignupUrl = _form.SignupUrl.Trim(),
+        HowToUse = _form.HowToUse.Trim(),
+        OpenAiCompatible = _form.OpenAiCompatible,
+        DocsUrl = string.IsNullOrWhiteSpace(_form.DocsUrl) ? null : _form.DocsUrl.Trim(),
+        LastVerified = string.IsNullOrWhiteSpace(_form.LastVerified) ? DateTime.Now.ToString("yyyy-MM-dd") : _form.LastVerified.Trim()
+    };
+
+    private async Task AddEntry()
+    {
+        if (!Validate()) return;
+        await Kb.AddFreeApiAsync(ToRecord());
+        _showAddForm = false;
+    }
+
+    private async Task SaveEdit()
+    {
+        if (_editingId is null || !Validate()) return;
+        await Kb.UpdateFreeApiAsync(ToRecord(_editingId.Value));
+        _editingId = null;
+    }
+
+    private async Task DeleteEntry(int id)
+    {
+        var confirmed = await JS.InvokeAsync<bool>("confirm", "Remove this entry? This can't be undone.");
+        if (confirmed) await Kb.DeleteFreeApiAsync(id);
+    }
 
     private List<FreeApiEntry> Filtered()
     {
@@ -125,4 +364,41 @@ else
     }
 
     private async Task CopySnippet(string text) => await JS.InvokeVoidAsync("copyText", text);
+
+    private sealed class FreeApiForm
+    {
+        public string Name { get; set; } = "";
+        public string Category { get; set; } = "Free Tier";
+        public string FreeTierSummary { get; set; } = "";
+        public string Models { get; set; } = "";
+        public string RateLimit { get; set; } = "";
+        public string SignupUrl { get; set; } = "";
+        public string HowToUse { get; set; } = "";
+        public bool OpenAiCompatible { get; set; }
+        public string DocsUrl { get; set; } = "";
+        public string LastVerified { get; set; } = "";
+    }
+
+    /// <summary>Shared field markup for the add/approve/edit forms - all three drive the same _form instance.</summary>
+    private RenderFragment EntryFormFields() => @<div class="row g-2">
+        <div class="col-md-4"><input class="form-control form-control-sm" placeholder="Name" @bind="_form.Name" /></div>
+        <div class="col-md-3">
+            <select class="form-select form-select-sm" @bind="_form.Category">
+                @foreach (var c in _categories) { <option value="@c">@c</option> }
+            </select>
+        </div>
+        <div class="col-md-5"><input class="form-control form-control-sm" placeholder="Signup URL" @bind="_form.SignupUrl" /></div>
+        <div class="col-12"><input class="form-control form-control-sm" placeholder="Free-tier summary" @bind="_form.FreeTierSummary" /></div>
+        <div class="col-md-6"><input class="form-control form-control-sm" placeholder="Models" @bind="_form.Models" /></div>
+        <div class="col-md-6"><input class="form-control form-control-sm" placeholder="Rate limit" @bind="_form.RateLimit" /></div>
+        <div class="col-12"><input class="form-control form-control-sm" placeholder="How to use with agent tools" @bind="_form.HowToUse" /></div>
+        <div class="col-md-6"><input class="form-control form-control-sm" placeholder="Docs URL (optional)" @bind="_form.DocsUrl" /></div>
+        <div class="col-md-3"><input class="form-control form-control-sm" placeholder="Last verified (yyyy-MM-dd)" @bind="_form.LastVerified" /></div>
+        <div class="col-md-3 d-flex align-items-center">
+            <div class="form-check">
+                <input class="form-check-input" type="checkbox" id="oaiCompatible" @bind="_form.OpenAiCompatible" />
+                <label class="form-check-label small" for="oaiCompatible">OpenAI-compatible</label>
+            </div>
+        </div>
+    </div>;
 }

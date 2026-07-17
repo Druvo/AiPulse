@@ -43,6 +43,7 @@ public sealed class PracticeTip
 /// </summary>
 public sealed class FreeApiEntry
 {
+    public int Id { get; init; }
     public required string Name { get; init; }
     public required string Category { get; init; } // Fully Free, Free Tier, Free Credits
     public required string FreeTierSummary { get; init; }
@@ -55,4 +56,7 @@ public sealed class FreeApiEntry
     public string? DocsUrl { get; init; }
     /// <summary>ISO date (yyyy-MM-dd) this entry was last hand-verified, shown so stale entries are obvious rather than silently trusted.</summary>
     public required string LastVerified { get; init; }
+    /// <summary>Set when FreeApiDiscoveryService's automated link check couldn't confirm SignupUrl/DocsUrl still resolve - a signal to re-verify by hand, not a confirmed dead link (bot-blocking gives false positives).</summary>
+    public bool NeedsReview { get; init; }
+    public string? NeedsReviewReason { get; init; }
 }

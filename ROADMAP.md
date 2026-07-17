@@ -513,6 +513,25 @@ Status tags: ✅ done · 🟢 fits philosophy, no AI needed · 🟡 needs a desi
   more fragile than useful; each entry instead carries a `LastVerified` date so staleness is visible rather
   than silently trusted. Groq's and OpenRouter's current rate limits were checked directly against their
   live docs while building this list.
+- Free AI APIs page gained a discovery queue instead of staying purely hand-maintained: a daily background
+  job (`FreeApiDiscoveryService`, also triggerable on demand from an admin-only panel on the page) checks
+  `cheahjs/free-llm-api-resources` - a GitHub repo whose entire purpose is tracking exactly this - for
+  provider names not yet on AiPulse's own list, and separately re-checks every existing entry's signup/docs
+  links with an automated HEAD/GET request. Neither pass publishes anything by itself. New providers land as
+  pending candidates the admin reviews and fills in by hand (name/URL only get pre-filled - rate limits,
+  agent-wiring notes, etc. still need a human), and a broken-link check just sets a "needs review" badge
+  rather than editing or removing the entry, since a bot-blocked request isn't proof a link is actually dead.
+  `FreeApiEntry`/`Sources` moved to the same DB-backed pattern (seeded once from Data/free-apis.json, then
+  the DB is authoritative) so admin approvals persist without a redeploy.
+
+> **Free API discovery reality check:** there's still no structured feed for "which providers currently have
+> a free tier" - that's the whole reason this page started out hand-curated. `cheahjs/free-llm-api-resources`
+> is the closest real substitute: its README was fetched directly and confirmed to be a flat sequence of
+> `### [Provider Name](url)` headings (26 at time of writing) before writing the parser against it, rather
+> than guessing at the format. The link-staleness check has a known false-positive risk - some sites block
+> automated HEAD/GET requests outright regardless of whether a browser could load the page fine, the same
+> class of bot-blocking this session already hit scraping Reddit and YouTube - so its badge is phrased as
+> "needs review", not "broken", and nothing gets auto-removed on a failed check.
 
 > **GitHub Trending scrape reality check:** `GitHubTrendingService` scrapes `github.com/trending` and
 > `github.com/trending/developers` directly for the repo/developer views above - GitHub has no API for
