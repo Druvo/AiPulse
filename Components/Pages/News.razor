@@ -659,19 +659,17 @@ else
     /// eye-icon toggle, this never flips an already-read item back to unread.</summary>
     private void MarkAsRead(FeedItem item) => Reading.EnsureRead(item);
 
-    /// <summary>Marks every item in the current filter/search/sort view as read, not just the current page. Offers an Undo toast since this has no other confirmation step.</summary>
+    /// <summary>Marks every item in the current filter/search/sort view as read, not just the current page. Offers an Undo toast since this has no other confirmation step. Uses the bulk save-once methods - the naive per-item loop measured well over a minute against a ~9,000-item filtered view, blocking the whole circuit for that long.</summary>
     private void MarkAllAsRead()
     {
         var toMark = Filtered().Where(i => !Reading.IsRead(i.Link)).ToList();
         if (toMark.Count == 0) return;
 
-        foreach (var item in toMark)
-            Reading.EnsureRead(item);
+        Reading.EnsureReadBulk(toMark);
 
         Toasts.ShowWithAction($"Marked {toMark.Count} item(s) as read", "Undo", async () =>
         {
-            foreach (var item in toMark)
-                Reading.MarkRead(item.Link, false);
+            Reading.MarkUnreadBulk(toMark.Select(i => i.Link));
             await InvokeAsync(StateHasChanged);
         });
     }

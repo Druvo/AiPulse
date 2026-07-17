@@ -130,6 +130,19 @@ public sealed class ReadingStateService
         }
     }
 
+    /// <summary>Bulk unread - the Undo side of <see cref="EnsureReadBulk"/>, same one-save-at-the-end reasoning.</summary>
+    public void MarkUnreadBulk(IEnumerable<string> links)
+    {
+        EnsureLoaded();
+        lock (_lock)
+        {
+            var changed = false;
+            foreach (var link in links)
+                if (_state!.ReadLinks.Remove(link)) changed = true;
+            if (changed) Save();
+        }
+    }
+
     /// <summary>
     /// Marks an item read - safe to call every time it's opened (e.g. clicking through to the original
     /// article), unlike <see cref="ToggleRead"/> which would flip an already-read item back to unread.
@@ -153,6 +166,39 @@ public sealed class ReadingStateService
                 Category = item.Category
             });
             Save();
+        }
+    }
+
+    /// <summary>
+    /// Same as calling <see cref="EnsureRead"/> once per item, but saves exactly once at the end instead of
+    /// once per item - the difference between a few milliseconds and (with a large enough batch and reading
+    /// history) multiple minutes of the circuit blocked re-serializing the whole state file on every single
+    /// item. Found via live testing "Mark all as read" against ~9,000 filtered items, where the per-item
+    /// version hung the page for well over a minute. Returns how many items were actually newly marked read.
+    /// </summary>
+    public int EnsureReadBulk(IEnumerable<FeedItem> items)
+    {
+        EnsureLoaded();
+        lock (_lock)
+        {
+            var marked = 0;
+            foreach (var item in items)
+            {
+                if (!_state!.ReadLinks.Add(item.Link)) continue;
+                _state.ReadHistory.Add(new ReadEvent
+                {
+                    Link = item.Link,
+                    SourceName = item.SourceName,
+                    ReadingMinutes = item.ReadingMinutes ?? 0,
+                    Title = item.Title,
+                    ContentType = item.ContentType,
+                    Level = item.Level,
+                    Category = item.Category
+                });
+                marked++;
+            }
+            if (marked > 0) Save();
+            return marked;
         }
     }
 
