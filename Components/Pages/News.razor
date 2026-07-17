@@ -8,6 +8,7 @@
 @inject KnowledgeBaseService Kb
 @inject NavigationManager Nav
 @inject IJSRuntime JS
+@inject ToastService Toasts
 
 <PageTitle>AiPulse · News Feed</PageTitle>
 
@@ -112,7 +113,7 @@
 }
 else if (_result is null)
 {
-    <p>No data yet.</p>
+    <EmptyState Icon="rss" Title="No data yet" Body="Sources haven't returned anything on this first load." />
 }
 else
 {
@@ -178,7 +179,7 @@ else
 
     @if (totalItems == 0)
     {
-        <p class="text-muted">Nothing matches the current filter/search.</p>
+        <EmptyState Icon="search" Title="Nothing matches the current filter/search" ActionText="Clear filters" OnAction="ClearAllFilters" />
     }
     else
     {
@@ -195,51 +196,56 @@ else
 
     <h6 class="mb-2"><Icon Name="tool" Size="14" /> Filters</h6>
 
-    <div class="d-flex flex-column gap-2">
-        <select class="form-select form-select-sm" @bind="_contentType" @bind:after="SyncUrl">
-            <option value="">All content types</option>
-            @foreach (var ct in _contentTypes)
-            {
-                <option value="@ct">@ct</option>
-            }
-        </select>
-        <select class="form-select form-select-sm" @bind="_level" @bind:after="SyncUrl">
-            <option value="">All levels</option>
-            @foreach (var lvl in _levels)
-            {
-                <option value="@lvl">@lvl</option>
-            }
-        </select>
-        <select class="form-select form-select-sm" @bind="_sort" @bind:after="SyncUrl">
-            <option value="newest">Newest first</option>
-            <option value="oldest">Oldest first</option>
-            <option value="source">Source A-Z</option>
-            <option value="title">Title A-Z</option>
-        </select>
-    </div>
-
-    @if (AvailableSources().Count > 0)
-    {
-        <div class="mt-2">
-            <div class="x-small text-muted text-uppercase mb-1">Sources (select any number)</div>
-            <div class="d-flex flex-wrap gap-1 source-chip-scroll">
-                @foreach (var src in AvailableSources())
+    <FilterBar>
+        <ChildContent>
+            <select class="form-select form-select-sm" @bind="_contentType" @bind:after="SyncUrl">
+                <option value="">All content types</option>
+                @foreach (var ct in _contentTypes)
                 {
-                    <button class="btn btn-sm tag-chip @(_sources.Contains(src) ? "active" : "")" @onclick="() => ToggleSource(src)">@src</button>
+                    <option value="@ct">@ct</option>
                 }
-            </div>
-        </div>
-    }
-
-    @if (_result is not null && AvailableTags().Count > 0)
-    {
-        <div class="d-flex flex-wrap gap-1 mt-2">
-            @foreach (var t in AvailableTags().Take(20))
+            </select>
+            <select class="form-select form-select-sm" @bind="_level" @bind:after="SyncUrl">
+                <option value="">All levels</option>
+                @foreach (var lvl in _levels)
+                {
+                    <option value="@lvl">@lvl</option>
+                }
+            </select>
+            <select class="form-select form-select-sm" @bind="_sort" @bind:after="SyncUrl">
+                <option value="newest">Newest first</option>
+                <option value="oldest">Oldest first</option>
+                <option value="source">Source A-Z</option>
+                <option value="title">Title A-Z</option>
+            </select>
+        </ChildContent>
+        <Chips>
+            @if (AvailableSources().Count > 0)
             {
-                <button class="btn btn-sm tag-chip @(_tag == t ? "active" : "")" @onclick='() => SetTag(_tag == t ? "" : t)'>@t</button>
+                <div class="w-100">
+                    <div class="x-small text-muted text-uppercase mb-1">Sources (select any number)</div>
+                    <div class="d-flex flex-wrap gap-1">
+                        @foreach (var src in AvailableSources())
+                        {
+                            <button class="btn btn-sm tag-chip @(_sources.Contains(src) ? "active" : "")" @onclick="() => ToggleSource(src)">@src</button>
+                        }
+                    </div>
+                </div>
             }
-        </div>
-    }
+            @if (_result is not null && AvailableTags().Count > 0)
+            {
+                <div class="w-100 mt-2">
+                    <div class="x-small text-muted text-uppercase mb-1">Tags</div>
+                    <div class="d-flex flex-wrap gap-1">
+                        @foreach (var t in AvailableTags().Take(20))
+                        {
+                            <button class="btn btn-sm tag-chip @(_tag == t ? "active" : "")" @onclick='() => SetTag(_tag == t ? "" : t)'>@t</button>
+                        }
+                    </div>
+                </div>
+            }
+        </Chips>
+    </FilterBar>
 
     <div class="mt-2">
         <div class="x-small text-muted text-uppercase mb-1">Saved searches</div>
@@ -653,11 +659,34 @@ else
     /// eye-icon toggle, this never flips an already-read item back to unread.</summary>
     private void MarkAsRead(FeedItem item) => Reading.EnsureRead(item);
 
-    /// <summary>Marks every item in the current filter/search/sort view as read, not just the current page.</summary>
+    /// <summary>Marks every item in the current filter/search/sort view as read, not just the current page. Offers an Undo toast since this has no other confirmation step.</summary>
     private void MarkAllAsRead()
     {
-        foreach (var item in Filtered())
+        var toMark = Filtered().Where(i => !Reading.IsRead(i.Link)).ToList();
+        if (toMark.Count == 0) return;
+
+        foreach (var item in toMark)
             Reading.EnsureRead(item);
+
+        Toasts.ShowWithAction($"Marked {toMark.Count} item(s) as read", "Undo", async () =>
+        {
+            foreach (var item in toMark)
+                Reading.MarkRead(item.Link, false);
+            await InvokeAsync(StateHasChanged);
+        });
+    }
+
+    private void ClearAllFilters()
+    {
+        _search = "";
+        _filter = "All";
+        _contentType = "";
+        _level = "";
+        _sources.Clear();
+        _tag = "";
+        _dateFrom = null;
+        _dateTo = null;
+        SyncUrl();
     }
 
     private void MuteSource(string sourceName) => Reading.ToggleMutedSource(sourceName);

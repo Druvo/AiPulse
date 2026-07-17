@@ -43,18 +43,20 @@
             Refresh
         </button>
     </div>
-    <div class="input-group mb-3" style="max-width: 420px;">
-        <input class="form-control" placeholder="Search Hugging Face by keyword…" @bind="_hfQuery"
-               @onkeydown="@(async e => { if (e.Key == "Enter") await SearchHuggingFace(); })" />
-        <button class="btn btn-primary" disabled="@_hfSearching" @onclick="SearchHuggingFace">
-            @if (_hfSearching) { <span class="spinner"></span> }
-            <Icon Name="search" Size="14" />
-        </button>
-        @if (!string.IsNullOrWhiteSpace(_hfActiveQuery))
-        {
-            <button class="btn btn-outline-secondary" @onclick="ClearHuggingFaceSearch">✕ Clear</button>
-        }
-    </div>
+    <FilterBar>
+        <div class="input-group" style="max-width: 420px;">
+            <input class="form-control" placeholder="Search Hugging Face by keyword…" @bind="_hfQuery"
+                   @onkeydown="@(async e => { if (e.Key == "Enter") await SearchHuggingFace(); })" />
+            <button class="btn btn-primary" disabled="@_hfSearching" @onclick="SearchHuggingFace">
+                @if (_hfSearching) { <span class="spinner"></span> }
+                <Icon Name="search" Size="14" />
+            </button>
+            @if (!string.IsNullOrWhiteSpace(_hfActiveQuery))
+            {
+                <button class="btn btn-outline-secondary" @onclick="ClearHuggingFaceSearch">✕ Clear</button>
+            }
+        </div>
+    </FilterBar>
     @if (!string.IsNullOrWhiteSpace(_hfActiveQuery))
     {
         <p class="text-muted small">Results for "@_hfActiveQuery" — @_models.Count model(s), @_datasets.Count dataset(s).</p>
@@ -116,7 +118,7 @@
             }
             @if (_modelsLoading)
             {
-                <p class="text-muted small"><span class="spinner"></span> Loading…</p>
+                <div><div class="skeleton-line w-60"></div><div class="skeleton-line w-80"></div><div class="skeleton-line w-40"></div></div>
             }
             else if (_models.Count == 0)
             {
@@ -173,7 +175,7 @@
             }
             @if (_modelsLoading)
             {
-                <p class="text-muted small"><span class="spinner"></span> Loading…</p>
+                <div><div class="skeleton-line w-60"></div><div class="skeleton-line w-80"></div><div class="skeleton-line w-40"></div></div>
             }
             else if (_datasets.Count == 0)
             {
@@ -236,7 +238,8 @@ else if (_section == "github")
                     </button>
                 </div>
             </div>
-            <div class="input-group mb-3">
+            <FilterBar>
+            <div class="input-group">
                 <input class="form-control" placeholder="Search GitHub repos by keyword…" @bind="_repoQuery"
                        @onkeydown="@(async e => { if (e.Key == "Enter") await SearchRepos(); })" />
                 <button class="btn btn-primary" disabled="@_repoSearching" @onclick="SearchRepos">
@@ -248,6 +251,7 @@ else if (_section == "github")
                     <button class="btn btn-outline-secondary" @onclick="ClearRepoSearch">✕</button>
                 }
             </div>
+            </FilterBar>
             @if (!string.IsNullOrWhiteSpace(_repoActiveQuery))
             {
                 <p class="text-muted small">Results for "@_repoActiveQuery" — @_repos.Count repo(s).</p>
@@ -297,7 +301,7 @@ else if (_section == "github")
             }
             @if (_reposLoading)
             {
-                <p class="text-muted small"><span class="spinner"></span> Loading…</p>
+                <div><div class="skeleton-line w-60"></div><div class="skeleton-line w-80"></div><div class="skeleton-line w-40"></div></div>
             }
             else if (_repos.Count == 0)
             {
@@ -342,7 +346,7 @@ else if (_section == "github")
             }
             @if (_developersLoading)
             {
-                <p class="text-muted small"><span class="spinner"></span> Loading…</p>
+                <div><div class="skeleton-line w-60"></div><div class="skeleton-line w-80"></div><div class="skeleton-line w-40"></div></div>
             }
             else if (_developers.Count == 0)
             {
@@ -535,18 +539,20 @@ else if (_section == "try")
             mirrored exactly here; browse <a href="https://ollama.com/search" target="_blank" rel="noopener">ollama.com/search ↗</a>
             directly if you're looking for a model that isn't turning up below.
         </p>
-        <div class="input-group mb-3" style="max-width: 420px;">
-            <input class="form-control" placeholder="Search GGUF models by keyword…" @bind="_ggufQuery"
-                   @onkeydown="@(async e => { if (e.Key == "Enter") await SearchGguf(); })" />
-            <button class="btn btn-primary" disabled="@_ggufSearching" @onclick="SearchGguf">
-                @if (_ggufSearching) { <span class="spinner"></span> }
-                <Icon Name="search" Size="14" />
-            </button>
-            @if (!string.IsNullOrWhiteSpace(_ggufActiveQuery))
-            {
-                <button class="btn btn-outline-secondary" @onclick="ClearGgufSearch">✕ Clear</button>
-            }
-        </div>
+        <FilterBar>
+            <div class="input-group" style="max-width: 420px;">
+                <input class="form-control" placeholder="Search GGUF models by keyword…" @bind="_ggufQuery"
+                       @onkeydown="@(async e => { if (e.Key == "Enter") await SearchGguf(); })" />
+                <button class="btn btn-primary" disabled="@_ggufSearching" @onclick="SearchGguf">
+                    @if (_ggufSearching) { <span class="spinner"></span> }
+                    <Icon Name="search" Size="14" />
+                </button>
+                @if (!string.IsNullOrWhiteSpace(_ggufActiveQuery))
+                {
+                    <button class="btn btn-outline-secondary" @onclick="ClearGgufSearch">✕ Clear</button>
+                }
+            </div>
+        </FilterBar>
         @if (!string.IsNullOrWhiteSpace(_ggufActiveQuery))
         {
             <p class="text-muted small">Results for "@_ggufActiveQuery" — @_ggufModels.Count model(s).</p>
@@ -598,7 +604,7 @@ else if (_section == "try")
         </div>
         @if (_ggufLoading)
         {
-            <p class="text-muted small"><span class="spinner"></span> Loading…</p>
+            <div><div class="skeleton-line w-60"></div><div class="skeleton-line w-80"></div><div class="skeleton-line w-40"></div></div>
         }
         else if (_ggufModels.Count == 0)
         {

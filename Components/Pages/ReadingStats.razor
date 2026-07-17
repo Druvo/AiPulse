@@ -4,6 +4,7 @@
 @inject ReadingStateService Reading
 @inject ObsidianExportService Export
 @inject NavigationManager Nav
+@inject ToastService Toasts
 
 <PageTitle>AiPulse · Reading Stats</PageTitle>
 
@@ -187,11 +188,6 @@ else
     <button class="btn btn-success btn-sm" @onclick="ExportNow"><Icon Name="download" Size="14" /> Export to Obsidian</button>
 </div>
 <p class="text-muted small">Articles you saved from the News Feed. They persist across restarts.</p>
-@if (_exportMsg is not null)
-{
-    <div class="alert alert-success py-2 small">@_exportMsg</div>
-}
-
 @{
     var allBookmarks = Reading.Bookmarks;
     var savedItems = FilteredBookmarks(allBookmarks);
@@ -200,57 +196,63 @@ else
 
 @if (allBookmarks.Count == 0)
 {
-    <p>Nothing saved yet. Open the <a href="news">News Feed</a> and click the bookmark icon on any article to save it here.</p>
+    <EmptyState Icon="bookmark" Title="Nothing saved yet" Body="Open the News Feed and click the bookmark icon on any article to save it here." ActionText="Go to News Feed" ActionHref="news" />
 }
 else
 {
-    <div class="d-flex flex-wrap gap-2 mb-2">
-        <select class="form-select form-select-sm w-auto" @bind="_savedContentType" @bind:after="SyncUrl">
-            <option value="">All content types</option>
-            @foreach (var ct in allBookmarks.Select(b => b.ContentType).Distinct().OrderBy(c => c))
+    <FilterBar>
+        <ChildContent>
+            <select class="form-select form-select-sm w-auto" @bind="_savedContentType" @bind:after="SyncUrl">
+                <option value="">All content types</option>
+                @foreach (var ct in allBookmarks.Select(b => b.ContentType).Distinct().OrderBy(c => c))
+                {
+                    <option value="@ct">@ct</option>
+                }
+            </select>
+            <select class="form-select form-select-sm w-auto" @bind="_savedLevel" @bind:after="SyncUrl">
+                <option value="">All levels</option>
+                @foreach (var lvl in allBookmarks.Select(b => b.Level).Distinct().OrderBy(l => l))
+                {
+                    <option value="@lvl">@lvl</option>
+                }
+            </select>
+            @if (!string.IsNullOrEmpty(_savedTag))
             {
-                <option value="@ct">@ct</option>
+                <button class="btn btn-sm btn-warning" @onclick="() => SetSavedTag(string.Empty)">Tag: @_savedTag ✕</button>
             }
-        </select>
-        <select class="form-select form-select-sm w-auto" @bind="_savedLevel" @bind:after="SyncUrl">
-            <option value="">All levels</option>
-            @foreach (var lvl in allBookmarks.Select(b => b.Level).Distinct().OrderBy(l => l))
+        </ChildContent>
+        <Chips>
+            @if (availableTags.Count > 0)
             {
-                <option value="@lvl">@lvl</option>
+                @foreach (var t in availableTags.Take(20))
+                {
+                    <button class="btn btn-sm tag-chip @(_savedTag == t ? "active" : "")" @onclick="() => SetSavedTag(_savedTag == t ? string.Empty : t)">@t</button>
+                }
             }
-        </select>
-        @if (!string.IsNullOrEmpty(_savedTag))
-        {
-            <button class="btn btn-sm btn-warning" @onclick="() => SetSavedTag(string.Empty)">Tag: @_savedTag ✕</button>
-        }
-    </div>
-
-    @if (availableTags.Count > 0)
-    {
-        <div class="d-flex flex-wrap gap-1 mb-3">
-            @foreach (var t in availableTags.Take(20))
-            {
-                <button class="btn btn-sm tag-chip @(_savedTag == t ? "active" : "")" @onclick="() => SetSavedTag(_savedTag == t ? string.Empty : t)">@t</button>
-            }
-        </div>
-    }
+        </Chips>
+    </FilterBar>
 
     <p class="text-muted small">@savedItems.Count of @allBookmarks.Count saved</p>
-    @foreach (var b in savedItems)
-    {
-        var bItem = ToFeedItem(b);
-        <div class="mb-2 position-relative">
-            <FeedItemCard Item="bItem" Layout="List"
-                          IsRead="Reading.IsRead(bItem.Link)"
-                          OnToggleRead="() => Reading.ToggleRead(bItem)"
-                          OnOpened="() => Reading.EnsureRead(bItem)" />
-            <button class="btn btn-sm btn-outline-danger position-absolute" style="top:.5rem; right:.5rem;" @onclick="() => RemoveBookmark(b.Link)">Remove</button>
-        </div>
-    }
 
     @if (savedItems.Count == 0)
     {
-        <p class="text-muted">Nothing matches the current filter.</p>
+        <EmptyState Icon="search" Title="Nothing matches the current filter" ActionText="Clear filters" OnAction="@(() => { _savedContentType = ""; _savedLevel = ""; _savedTag = ""; SyncUrl(); })" />
+    }
+    else
+    {
+        var (pagedSaved, totalSaved) = GetSavedPage(savedItems);
+        @foreach (var b in pagedSaved)
+        {
+            var bItem = ToFeedItem(b);
+            <div class="mb-2 position-relative">
+                <FeedItemCard Item="bItem" Layout="List"
+                              IsRead="Reading.IsRead(bItem.Link)"
+                              OnToggleRead="() => Reading.ToggleRead(bItem)"
+                              OnOpened="() => Reading.EnsureRead(bItem)" />
+                <button class="btn btn-sm btn-outline-danger position-absolute" style="top:.5rem; right:.5rem;" @onclick="() => RemoveBookmark(b)">Remove</button>
+            </div>
+        }
+        <Pager TotalItems="totalSaved" @bind-CurrentPage="_savedPage" @bind-PageSize="_savedPageSize" PageSizeOptions="new[] { 10, 20, 50 }" />
     }
 }
 
@@ -266,10 +268,11 @@ else
 
     private IReadOnlyList<ReadEvent> _history = new List<ReadEvent>();
 
-    private string? _exportMsg;
     private string _savedContentType = "";
     private string _savedLevel = "";
     private string _savedTag = "";
+    private int _savedPage = 1;
+    private int _savedPageSize = 10;
 
     private static DateOnly Today => DateOnly.FromDateTime(DateTime.Today);
 
@@ -408,7 +411,15 @@ else
         return q.ToList();
     }
 
-    private void RemoveBookmark(string link) => Reading.RemoveBookmark(link);
+    private void RemoveBookmark(BookmarkItem b)
+    {
+        Reading.RemoveBookmark(b.Link);
+        Toasts.ShowWithAction($"Removed \"{b.Title}\"", "Undo", async () =>
+        {
+            Reading.ToggleBookmark(ToFeedItem(b));
+            await InvokeAsync(StateHasChanged);
+        });
+    }
 
     /// <summary>Adapts a saved BookmarkItem to a FeedItem so it can render through the shared FeedItemCard.</summary>
     private static FeedItem ToFeedItem(BookmarkItem b) => new()
@@ -428,6 +439,12 @@ else
     private void ExportNow()
     {
         var path = Export.ExportReadingList();
-        _exportMsg = $"Exported {Reading.Bookmarks.Count} item(s) to {path}";
+        Toasts.Show($"Exported {Reading.Bookmarks.Count} item(s) to {path}");
+    }
+
+    private (List<BookmarkItem> Page, int Total) GetSavedPage(List<BookmarkItem> filtered)
+    {
+        var page = filtered.Skip((_savedPage - 1) * _savedPageSize).Take(_savedPageSize).ToList();
+        return (page, filtered.Count);
     }
 }
