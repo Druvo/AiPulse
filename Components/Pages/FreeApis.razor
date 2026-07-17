@@ -71,6 +71,10 @@
                             @if (_approvingCandidateId == c.Id)
                             {
                                 <div class="border rounded p-2">
+                                    @if (!string.IsNullOrWhiteSpace(_form.FreeTierSummary) || !string.IsNullOrWhiteSpace(_form.Models))
+                                    {
+                                        <p class="text-muted x-small mb-2">Free-tier summary and models below are parsed from the discovery source's own listing for this provider - check them before saving, don't just trust them.</p>
+                                    }
                                     <EditForm Model="_form" OnValidSubmit="ConfirmApprove">
                                         @EntryFormFields()
                                         @if (_error is not null)
@@ -263,7 +267,17 @@ else
         _editingId = null;
         _approvingCandidateId = c.Id;
         _error = null;
-        _form = new FreeApiForm { Name = c.Name, SignupUrl = c.SourceUrl, Category = "Free Tier", LastVerified = DateTime.Now.ToString("yyyy-MM-dd") };
+        _form = new FreeApiForm
+        {
+            Name = c.Name,
+            SignupUrl = c.SourceUrl,
+            Category = "Free Tier",
+            LastVerified = DateTime.Now.ToString("yyyy-MM-dd"),
+            // Parsed straight from the discovery source's own text for this provider - a starting point
+            // to edit or confirm, not a substitute for actually checking the free tier still holds.
+            FreeTierSummary = c.SuggestedSummary ?? "",
+            Models = c.SuggestedModels ?? ""
+        };
     }
 
     private void CancelApprove() => _approvingCandidateId = null;

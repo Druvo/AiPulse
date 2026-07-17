@@ -188,12 +188,34 @@ public sealed class KnowledgeBaseService
                     "Name" TEXT NOT NULL,
                     "SourceUrl" TEXT NOT NULL,
                     "RawNote" TEXT NULL,
+                    "SuggestedSummary" TEXT NULL,
+                    "SuggestedModels" TEXT NULL,
                     "DiscoveredAt" TEXT NOT NULL,
                     "Status" TEXT NOT NULL DEFAULT 'Pending',
                     "ReviewedAt" TEXT NULL
                 )
                 """;
             await create.ExecuteNonQueryAsync();
+        }
+        else
+        {
+            // Installs that already had FreeApiCandidates before SuggestedSummary/SuggestedModels existed
+            // won't gain the new columns just because the model class did - add them directly if missing.
+            await using var pragma = conn.CreateCommand();
+            pragma.CommandText = "PRAGMA table_info(FreeApiCandidates)";
+            var existingCols = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            await using (var reader = await pragma.ExecuteReaderAsync())
+            {
+                while (await reader.ReadAsync())
+                    existingCols.Add(reader.GetString(reader.GetOrdinal("name")));
+            }
+            foreach (var col in new[] { "SuggestedSummary", "SuggestedModels" })
+            {
+                if (existingCols.Contains(col)) continue;
+                await using var alter = conn.CreateCommand();
+                alter.CommandText = $"""ALTER TABLE "FreeApiCandidates" ADD COLUMN "{col}" TEXT NULL""";
+                await alter.ExecuteNonQueryAsync();
+            }
         }
 
         if (!existing.Contains("DiscoveryRunLog"))
@@ -415,8 +437,10 @@ public sealed class KnowledgeBaseService
         });
         await db.SaveChangesAsync();
 
-        var cutoff = DateTimeOffset.Now.AddDays(-180);
-        var stale = await db.DiscoveryRunLog.Where(e => e.RanAt < cutoff).ToListAsync();
+        // SQLite's EF Core provider can't translate a WHERE/ORDER BY comparison on a DateTimeOffset column
+        // (same issue as the other candidate queries) - keep the most recent 200 rows by Id (insertion
+        // order tracks RanAt anyway) instead of filtering by date.
+        var stale = await db.DiscoveryRunLog.OrderByDescending(e => e.Id).Skip(200).ToListAsync();
         if (stale.Count > 0)
         {
             db.DiscoveryRunLog.RemoveRange(stale);
@@ -443,7 +467,7 @@ public sealed class KnowledgeBaseService
     /// "Groq" and "Groq (GroqCloud)" count as the same provider) an existing live entry or an already-pending
     /// candidate. Returns false when skipped as a likely duplicate.
     /// </summary>
-    public async Task<bool> AddCandidateIfNewAsync(string name, string sourceUrl, string? rawNote)
+    public async Task<bool> AddCandidateIfNewAsync(string name, string sourceUrl, string? rawNote, string? suggestedSummary = null, string? suggestedModels = null)
     {
         await using var db = await _dbFactory.CreateDbContextAsync();
         var existingNames = await db.FreeApis.Select(a => a.Name).ToListAsync();
@@ -455,7 +479,14 @@ public sealed class KnowledgeBaseService
         if (existingNames.Any(n => Overlaps(n, name)) || pendingNames.Any(n => Overlaps(n, name)))
             return false;
 
-        db.FreeApiCandidates.Add(new FreeApiCandidate { Name = name, SourceUrl = sourceUrl, RawNote = rawNote });
+        db.FreeApiCandidates.Add(new FreeApiCandidate
+        {
+            Name = name,
+            SourceUrl = sourceUrl,
+            RawNote = rawNote,
+            SuggestedSummary = suggestedSummary,
+            SuggestedModels = suggestedModels
+        });
         await db.SaveChangesAsync();
         return true;
     }

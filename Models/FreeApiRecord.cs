@@ -45,8 +45,9 @@ public sealed class FreeApiRecord
 /// <summary>
 /// A provider name found by FreeApiDiscoveryService in a community-curated free-API list that isn't already
 /// on AiPulse's own list, awaiting admin review. Never auto-published - approving takes the admin to the
-/// normal add-entry form pre-filled with just the name and discovery link, since the source list's fields
-/// rarely map cleanly onto AiPulse's structured shape (rate limits, agent-wiring notes, etc.).
+/// normal add-entry form, pre-filled with the name/discovery link plus whatever the source list's own
+/// entry says about free-tier limits and models (parsed from its own text, not invented) so there's less
+/// to retype - the admin still confirms and can edit before it's added.
 /// </summary>
 public sealed class FreeApiCandidate
 {
@@ -54,6 +55,10 @@ public sealed class FreeApiCandidate
     public required string Name { get; set; }
     public required string SourceUrl { get; set; }
     public string? RawNote { get; set; }
+    /// <summary>Parsed from the source list's own "Credits"/"Limits" line for this provider, if present - a starting point for FreeTierSummary, not a substitute for checking it.</summary>
+    public string? SuggestedSummary { get; set; }
+    /// <summary>Parsed from the source list's own "Models" list/table for this provider, if present - a starting point for Models, not a substitute for checking it.</summary>
+    public string? SuggestedModels { get; set; }
     public DateTimeOffset DiscoveredAt { get; set; } = DateTimeOffset.Now;
     public string Status { get; set; } = "Pending"; // Pending, Approved, Dismissed
     public DateTimeOffset? ReviewedAt { get; set; }

@@ -23,6 +23,12 @@ public sealed class FreeApiDiscoveryService : BackgroundService
     private static readonly TimeSpan RunInterval = TimeSpan.FromHours(24);
     private static readonly TimeSpan LinkCheckTimeout = TimeSpan.FromSeconds(10);
     private static readonly Regex ProviderHeadingRegex = new(@"^### \[([^\]]+)\]\(([^)]+)\)", RegexOptions.Multiline | RegexOptions.Compiled);
+    private static readonly Regex AnyHeadingRegex = new(@"^#{2,3} ", RegexOptions.Multiline | RegexOptions.Compiled);
+    private static readonly Regex ModelsLabelRegex = new(@"\*\*Models:\*\*[ \t]*(.*)", RegexOptions.Compiled);
+    private static readonly Regex SummaryLabelRegex = new(@"\*\*(?:Credits|Limits[^*:]*):\*\*[ \t]*(.*)", RegexOptions.Compiled);
+    private static readonly Regex MdLinkRegex = new(@"\[([^\]]*)\]\([^)]*\)", RegexOptions.Compiled);
+    private static readonly Regex TableRowRegex = new(@"<tr>\s*<td>([^<]*)</td>", RegexOptions.Compiled);
+    private static readonly Regex BulletLineRegex = new(@"^-\s+(.*)$", RegexOptions.Multiline | RegexOptions.Compiled);
 
     private readonly IHttpClientFactory _httpFactory;
     private readonly KnowledgeBaseService _kb;
@@ -87,26 +93,104 @@ public sealed class FreeApiDiscoveryService : BackgroundService
         }
 
         var added = 0;
-        foreach (var (name, url) in ParseProviders(markdown))
+        foreach (var p in ParseProviders(markdown))
         {
-            if (await _kb.AddCandidateIfNewAsync(name, url, $"Listed at {SourceRepoUrl}"))
+            if (await _kb.AddCandidateIfNewAsync(p.Name, p.Url, $"Listed at {SourceRepoUrl}", p.Summary, p.Models))
                 added++;
         }
         return added;
     }
 
-    internal static List<(string Name, string Url)> ParseProviders(string markdown)
+    internal readonly record struct ProviderInfo(string Name, string Url, string? Summary, string? Models);
+
+    /// <summary>
+    /// Beyond the "### [Name](url)" heading, each provider's own section already carries a free-tier
+    /// summary (a "**Credits:**" or "**Limits...:**" line) and a model list (a "**Models:**" label, an
+    /// HTML table, or a bare bullet list) - both parsed straight from the source's own text, never
+    /// invented, so the admin's review form starts with real content instead of a blank field.
+    /// </summary>
+    internal static List<ProviderInfo> ParseProviders(string markdown)
     {
-        var results = new List<(string, string)>();
+        var results = new List<ProviderInfo>();
+        var headingStarts = AnyHeadingRegex.Matches(markdown).Select(m => m.Index).OrderBy(i => i).ToList();
+
         foreach (Match m in ProviderHeadingRegex.Matches(markdown))
         {
             var name = m.Groups[1].Value.Trim();
             var url = m.Groups[2].Value.Trim();
-            if (name.Length < 2 || !results.Any(r => r.Item1.Equals(name, StringComparison.OrdinalIgnoreCase)))
-                results.Add((name, url));
+            if (name.Length < 2 || results.Any(r => r.Name.Equals(name, StringComparison.OrdinalIgnoreCase)))
+                continue;
+
+            var bodyStart = m.Index + m.Length;
+            var bodyEnd = headingStarts.FirstOrDefault(i => i > m.Index, markdown.Length);
+            var body = bodyStart < bodyEnd ? markdown[bodyStart..bodyEnd] : "";
+
+            results.Add(new ProviderInfo(name, url, ExtractSummary(body), ExtractModels(body)));
         }
         return results;
     }
+
+    private static string? ExtractSummary(string body)
+    {
+        var m = SummaryLabelRegex.Match(body);
+        if (!m.Success) return null;
+
+        var text = m.Groups[1].Value.Trim();
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            // Label with nothing on the same line - the value is the next non-empty line.
+            var rest = body[(m.Index + m.Length)..];
+            text = rest.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).FirstOrDefault() ?? "";
+        }
+
+        var cleaned = CleanMarkdown(text);
+        return string.IsNullOrWhiteSpace(cleaned) ? null : Truncate(cleaned, 220);
+    }
+
+    private static string? ExtractModels(string body)
+    {
+        var labelMatch = ModelsLabelRegex.Match(body);
+        if (labelMatch.Success)
+        {
+            var inline = labelMatch.Groups[1].Value.Trim();
+            if (!string.IsNullOrWhiteSpace(inline))
+                return Truncate(CleanMarkdown(inline), 300);
+
+            var bulleted = JoinBullets(body[(labelMatch.Index + labelMatch.Length)..]);
+            if (bulleted is not null) return Truncate(bulleted, 300);
+        }
+
+        // No explicit "Models:" label (e.g. OpenRouter, NVIDIA NIM) - fall back to whatever's actually
+        // in the section: an HTML rate-limit table's Model Name column, or a bare bullet list.
+        var tableNames = TableRowRegex.Matches(body)
+            .Select(x => x.Groups[1].Value.Trim())
+            .Where(s => s.Length > 0 && !s.Equals("Model Name", StringComparison.OrdinalIgnoreCase))
+            .Take(10)
+            .ToList();
+        if (tableNames.Count > 0) return Truncate(string.Join(", ", tableNames), 300);
+
+        return JoinBullets(body) is { } bullets ? Truncate(bullets, 300) : null;
+    }
+
+    private static string? JoinBullets(string text)
+    {
+        var names = BulletLineRegex.Matches(text)
+            .Select(x => CleanMarkdown(x.Groups[1].Value))
+            .Where(s => !string.IsNullOrWhiteSpace(s))
+            .Take(10)
+            .ToList();
+        return names.Count > 0 ? string.Join(", ", names) : null;
+    }
+
+    private static string CleanMarkdown(string s)
+    {
+        s = MdLinkRegex.Replace(s, "$1");
+        s = s.Replace("<br>", ", ", StringComparison.OrdinalIgnoreCase).Replace("<br/>", ", ", StringComparison.OrdinalIgnoreCase);
+        s = s.Replace("**", "");
+        return Regex.Replace(s, @"\s+", " ").Trim();
+    }
+
+    private static string Truncate(string s, int max) => s.Length <= max ? s : s[..max].TrimEnd() + "…";
 
     private async Task<int> CheckStalenessAsync(CancellationToken ct)
     {
