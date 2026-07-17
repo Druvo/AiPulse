@@ -8,6 +8,7 @@
 @inject AuthenticationStateProvider AuthState
 @inject NavigationManager Nav
 @inject IJSRuntime JS
+@inject ToastService Toasts
 
 <PageTitle>AiPulse · Settings</PageTitle>
 
@@ -143,7 +144,7 @@
         <button class="btn btn-primary" @onclick="ChangePassword">Change password</button>
         @if (_passwordChangeMessage is not null)
         {
-            <div class="alert @(_passwordChangeSuccess ? "alert-success" : "alert-warning") py-2 mt-2 small mb-0">@_passwordChangeMessage</div>
+            <div class="alert alert-warning py-2 mt-2 small mb-0">@_passwordChangeMessage</div>
         }
 
         <hr class="my-4" />
@@ -161,10 +162,6 @@
         }
         <button class="btn btn-outline-primary me-2" @onclick="RequestPermission">Enable notifications</button>
         <button class="btn btn-outline-secondary" @onclick="TestNotification">Send test</button>
-        @if (_testResult is not null)
-        {
-            <div class="alert @(_testResult == "shown" ? "alert-success" : "alert-warning") py-2 mt-2 small">@TestResultMessage()</div>
-        }
         <p class="text-muted small mt-2">
             Background alerts (releases/watchlist) only fire for items published <em>after</em> the app's first poll on startup,
             and re-check every <code>Notifications:PollMinutes</code> (default 15 min, in <code>appsettings.json</code>) —
@@ -185,12 +182,6 @@
             <button class="btn btn-primary" @onclick="SaveWebhook">Save</button>
         </div>
         <button class="btn btn-outline-secondary" @onclick="TestWebhook" disabled="@string.IsNullOrWhiteSpace(_webhookUrl)">Send test</button>
-        @if (_webhookTestResult is not null)
-        {
-            <div class="alert @(_webhookTestResult == "ok" ? "alert-success" : "alert-warning") py-2 mt-2 small">
-                @(_webhookTestResult == "ok" ? "Test message sent — check your channel." : $"Failed: {_webhookTestResult}")
-            </div>
-        }
 
         <h6 class="mt-4 mb-2">Per-keyword webhooks</h6>
         <p class="text-muted small">
@@ -293,10 +284,6 @@
             <button class="btn btn-primary" @onclick="SavePath">Save</button>
         </div>
         <button class="btn btn-success" @onclick="ExportNow">Export reading list now</button>
-        @if (_exportMsg is not null)
-        {
-            <div class="alert alert-success mt-2 py-2 small">@_exportMsg</div>
-        }
 
         <AuthorizeView Roles="Admin">
             <Authorized>
@@ -335,11 +322,8 @@
     private bool _newFilterIsRegex;
     private string? _exportPath;
     private string _permission = "unknown";
-    private string? _exportMsg;
-    private string? _testResult;
     private string _customCss = "";
     private string _webhookUrl = "";
-    private string? _webhookTestResult;
     private string _feverPassword = "";
     private bool _feverSaved;
     private string _username = "";
@@ -351,7 +335,6 @@
     private string _newPassword = "";
     private string _confirmPassword = "";
     private string? _passwordChangeMessage;
-    private bool _passwordChangeSuccess;
 
     protected override void OnInitialized()
     {
@@ -370,16 +353,15 @@
     {
         if (_newPassword != _confirmPassword)
         {
-            _passwordChangeSuccess = false;
             _passwordChangeMessage = "New password and confirmation don't match.";
             return;
         }
 
         var (success, error) = await UserSvc.ChangeOwnPasswordAsync(_username, _currentPassword, _newPassword);
-        _passwordChangeSuccess = success;
-        _passwordChangeMessage = success ? "Password changed." : error;
+        _passwordChangeMessage = success ? null : error;
         if (success)
         {
+            Toasts.Show("Password changed.");
             _currentPassword = "";
             _newPassword = "";
             _confirmPassword = "";
@@ -399,7 +381,7 @@
     private async Task TestWebhook()
     {
         var (success, error) = await Webhooks.SendTestAsync(_webhookUrl);
-        _webhookTestResult = success ? "ok" : (error ?? "unknown error");
+        Toasts.Show(success ? "Test message sent — check your channel." : $"Webhook test failed: {error ?? "unknown error"}");
     }
 
     private string _newRouteUrl = "";
@@ -476,27 +458,28 @@
 
     private async Task TestNotification()
     {
-        try { _testResult = await JS.InvokeAsync<string>("aipulseNotify.show", "AiPulse", "Notifications are working.", ""); }
-        catch (Exception ex) { _testResult = "error: " + ex.Message; }
-    }
+        string result;
+        try { result = await JS.InvokeAsync<string>("aipulseNotify.show", "AiPulse", "Notifications are working.", ""); }
+        catch (Exception ex) { result = "error: " + ex.Message; }
 
-    private string TestResultMessage() => _testResult switch
-    {
-        "shown" => "Test notification sent — check your OS notification area if you didn't see it pop up.",
-        "denied" => "Blocked by the browser. See the message above for how to unblock it.",
-        "unsupported" => "This browser doesn't support desktop notifications.",
-        _ => $"Couldn't show a notification ({_testResult})."
-    };
+        Toasts.Show(result switch
+        {
+            "shown" => "Test notification sent — check your OS notification area if you didn't see it pop up.",
+            "denied" => "Blocked by the browser. See the message above for how to unblock it.",
+            "unsupported" => "This browser doesn't support desktop notifications.",
+            _ => $"Couldn't show a notification ({result})."
+        });
+    }
 
     private void SavePath()
     {
         Reading.SetObsidianExportPath(_exportPath);
-        _exportMsg = "Export folder saved.";
+        Toasts.Show("Export folder saved.");
     }
 
     private void ExportNow()
     {
         var path = Export.ExportReadingList();
-        _exportMsg = $"Exported {Reading.Bookmarks.Count} item(s) to {path}";
+        Toasts.Show($"Exported {Reading.Bookmarks.Count} item(s) to {path}");
     }
 }

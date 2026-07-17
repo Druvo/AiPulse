@@ -1018,3 +1018,8 @@ a.heatmap-cell:hover { outline: 2px solid var(--ap-accent-hover); }
     position: sticky;
     top: 1rem;
 }
+/* Narrow viewports: the panel already wraps below the feed (flex-wrap on .news-layout), but sticky
+   positioning on a below-the-fold block just follows scroll awkwardly with no room to justify it. */
+@media (max-width: 900px) {
+    .news-calendar-panel { position: static; flex-basis: 100%; padding: 1rem; }
+}
