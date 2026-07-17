@@ -492,6 +492,27 @@ Status tags: ✅ done · 🟢 fits philosophy, no AI needed · 🟡 needs a desi
 - Added a project signature - "Made with ♥ by Druvo" - in the sidebar footer, the sign-in/register pages,
   and the bottom of `README.md` (with a "star this repo" link), so the project carries a clear, consistent
   mark of authorship wherever someone lands.
+- Learning Hub expanded with 7 new modules covering ground the roadmap didn't reach before: AI model types
+  & architectures, AI security (prompt injection & agent risks), AI ethics/responsible use, plus three
+  deliberately non-AI topics that came up analyzing what else the sources you follow actually cover -
+  cybersecurity fundamentals, cloud & DevOps fundamentals, data engineering fundamentals - and one
+  forward-looking one, quantum computing basics. Added 8 matching glossary terms (Prompt Injection,
+  Responsible AI, Attack Surface, Zero Trust, Hybrid Cloud, FinOps, Data Fabric, Quantum Computing).
+- Learning Hub gained an "Emerging topics not yet in your roadmap" panel - reuses the existing 14-day
+  tag-frequency counter (already powering the "🔥 Trending" course badge) to surface tags trending in your
+  News Feed that no module's `RelatedTerms` covers yet. Genuinely dynamic without an AI call: today's
+  chatter surfaces itself as a candidate for tomorrow's module, rather than the roadmap only growing when
+  someone remembers to add to it by hand.
+- Added a new "Free AI APIs" page/nav item: a curated table of providers with a real free tier (Groq,
+  Google AI Studio, OpenRouter, Cerebras, Hugging Face Inference Providers, Cloudflare Workers AI, GitHub
+  Models, Mistral La Plateforme, NVIDIA NIM, Cohere, SambaNova Cloud, Together.ai) - each entry has the free
+  tier's real limits, which models are covered, a signup link, and how to point an agent tool (Claude Code,
+  Codex CLI, OpenCode, etc.) at it via an OpenAI-compatible base URL where one exists. Hand-maintained
+  rather than scraped on a schedule - provider free-tier terms aren't published as a structured feed the
+  way RSS/news sources are, change often, and scraping pricing pages against changing markup/ToS would be
+  more fragile than useful; each entry instead carries a `LastVerified` date so staleness is visible rather
+  than silently trusted. Groq's and OpenRouter's current rate limits were checked directly against their
+  live docs while building this list.
 
 > **GitHub Trending scrape reality check:** `GitHubTrendingService` scrapes `github.com/trending` and
 > `github.com/trending/developers` directly for the repo/developer views above - GitHub has no API for

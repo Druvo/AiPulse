@@ -108,5 +108,82 @@
       { "Text": "Give agents project memory (a CLAUDE.md / rules file) so they stop re-learning your repo." }
     ],
     "RelatedTerms": ["Agent", "Agentic Loop", "Open Coding Agents"]
+  },
+  {
+    "Title": "Understanding AI model types & architectures",
+    "Level": "Intermediate",
+    "Why": "Not all models are the same shape. Knowing base vs. instruct-tuned, dense vs. Mixture-of-Experts, and multimodal vs. text-only tells you what a given model can actually do for your use case before you waste time on the wrong one.",
+    "Steps": [
+      { "Text": "Learn the difference between a base model, an instruct-tuned model, and a chat model." },
+      { "Text": "Understand Mixture of Experts (MoE) and why it's used to scale models efficiently." },
+      { "Text": "Learn what multimodal means (vision, audio, code) versus text-only, and where each fits." }
+    ],
+    "RelatedTerms": ["Mixture of Experts", "Reasoning Model", "Fine-Tuning"]
+  },
+  {
+    "Title": "AI security: prompt injection & agent risks",
+    "Level": "Advanced",
+    "Why": "The moment an agent can browse the web, read email, or run code, it inherits a new attack surface - untrusted content it reads can try to hijack its instructions. This is the top real-world risk in agentic AI today.",
+    "Steps": [
+      { "Text": "Understand direct vs. indirect prompt injection and how each actually works." },
+      { "Text": "Learn why agents need a clear boundary between trusted instructions (the user) and untrusted content (web pages, tool results, documents)." },
+      { "Text": "Review real prompt-injection incidents and how they were mitigated." }
+    ],
+    "RelatedTerms": ["Prompt Injection", "Agent", "MCP"]
+  },
+  {
+    "Title": "AI ethics, safety & responsible use",
+    "Level": "Beginner",
+    "Why": "Understanding hallucination, bias, and where AI shouldn't be trusted unsupervised keeps you from shipping something that quietly does harm - this matters as much for a side project as it does at enterprise scale.",
+    "Steps": [
+      { "Text": "Learn what hallucination is, why it happens, and why evals matter." },
+      { "Text": "Understand how bias in training data shows up in model output." },
+      { "Text": "Know where human review is still required - medical, legal, financial, and safety-critical decisions." }
+    ],
+    "RelatedTerms": ["Hallucination", "Eval", "Responsible AI"]
+  },
+  {
+    "Title": "Cybersecurity fundamentals for developers",
+    "Level": "Beginner",
+    "Why": "Every developer ships code that touches the internet. Basic security hygiene - auth, secrets, dependencies - prevents the large majority of real-world breaches, AI-powered or not.",
+    "Steps": [
+      { "Text": "Learn the OWASP Top 10 web vulnerabilities.", "Url": "https://owasp.org/www-project-top-ten/" },
+      { "Text": "Practice secrets management - never commit API keys; use environment variables or a vault." },
+      { "Text": "Learn to reason about your own attack surface: what's actually reachable from the internet." }
+    ],
+    "RelatedTerms": ["Attack Surface", "Zero Trust"]
+  },
+  {
+    "Title": "Cloud & DevOps fundamentals",
+    "Level": "Beginner",
+    "Why": "Modern apps - AI-powered or not - live in containers on someone's cloud. Knowing the basics of what you're actually deploying to saves hours of confusion and avoids nasty billing surprises.",
+    "Steps": [
+      { "Text": "Learn what a container is and why Docker/Kubernetes exist." },
+      { "Text": "Understand the difference between IaaS, PaaS, and serverless." },
+      { "Text": "Learn FinOps basics - why cloud bills spiral, and how teams keep them in check." }
+    ],
+    "RelatedTerms": ["Hybrid Cloud", "FinOps"]
+  },
+  {
+    "Title": "Data engineering fundamentals",
+    "Level": "Intermediate",
+    "Why": "RAG, fine-tuning, and analytics all live or die on data quality. Knowing how data actually moves - pipelines, lakes, fabrics - explains why 'garbage in, garbage out' is real, not a cliché.",
+    "Steps": [
+      { "Text": "Learn the difference between a data warehouse, a data lake, and a data fabric." },
+      { "Text": "Understand ETL/ELT pipelines at a conceptual level." },
+      { "Text": "Learn why data governance - lineage, access control - matters once data feeds production AI systems." }
+    ],
+    "RelatedTerms": ["Data Fabric", "RAG"]
+  },
+  {
+    "Title": "Quantum computing basics",
+    "Level": "Beginner",
+    "Why": "Not useful for your day job yet, but worth understanding conceptually - it's the next major computing paradigm shift being actively invested in right now, and it will eventually reshape cryptography and simulation.",
+    "Steps": [
+      { "Text": "Learn what a qubit is and how superposition/entanglement differ from classical bits." },
+      { "Text": "Understand what quantum computers are (and aren't) good at today." },
+      { "Text": "Follow which problems - cryptography, chemistry simulation - are expected to be affected first." }
+    ],
+    "RelatedTerms": ["Quantum Computing"]
   }
 ]

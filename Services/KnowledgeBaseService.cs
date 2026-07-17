@@ -35,6 +35,7 @@ public sealed class KnowledgeBaseService
     public IReadOnlyList<BenchmarkEntry> Benchmarks => _benchmarks ??= Load<BenchmarkEntry>("benchmarks.json");
     public IReadOnlyList<ModelDirectoryEntry> ModelDirectory => _modelDirectory ??= Load<ModelDirectoryEntry>("model-directory.json");
     public IReadOnlyList<CourseEntry> Courses => _courses ??= Load<CourseEntry>("courses.json");
+    public IReadOnlyList<FreeApiEntry> FreeApis => _freeApis ??= Load<FreeApiEntry>("free-apis.json");
 
     private List<GlossaryTerm>? _glossary;
     private List<ToolEntry>? _tools;
@@ -43,6 +44,7 @@ public sealed class KnowledgeBaseService
     private List<BenchmarkEntry>? _benchmarks;
     private List<ModelDirectoryEntry>? _modelDirectory;
     private List<CourseEntry>? _courses;
+    private List<FreeApiEntry>? _freeApis;
 
     /// <summary>Sources mapped to the plain DTO used everywhere else (FeedAggregatorService, News, etc.).</summary>
     public IReadOnlyList<FeedSource> Sources

@@ -260,5 +260,77 @@
     "WhenToUse": "When you want an open, model-agnostic coding agent or to use your own keys/models.",
     "Related": ["Agent", "Tool Use"],
     "LearnMoreUrl": "https://github.com/cline/cline"
+  },
+  {
+    "Term": "Prompt Injection",
+    "Aliases": ["Indirect prompt injection", "Jailbreak"],
+    "Category": "Technique",
+    "ShortDef": "Untrusted content (a web page, email, tool result) contains text crafted to hijack an AI agent's instructions.",
+    "Details": "Direct injection means the user themselves tries to override the system prompt. Indirect injection is the bigger real-world risk for agents: a page the agent reads, or a file it opens, contains hidden instructions aimed at the model rather than the user. Mitigation relies on treating observed content as data, not commands, and confirming risky actions with the user.",
+    "WhenToUse": "Any time an agent has tool access to browse, read files, or call external systems - not optional to think about, since it's the top real-world agent security risk today.",
+    "Related": ["Agent", "MCP", "Tool Use"]
+  },
+  {
+    "Term": "Responsible AI",
+    "Aliases": ["AI Governance", "AI Ethics"],
+    "Category": "Concept",
+    "ShortDef": "The practice of building and deploying AI with deliberate attention to bias, transparency, safety, and accountability.",
+    "Details": "Covers things like documenting a model's known limitations, checking training/output data for bias, keeping a human in the loop for high-stakes decisions, and being able to explain why a system produced a given output.",
+    "WhenToUse": "Whenever AI output influences a decision that affects a real person - hiring, lending, medical, legal, or safety-critical systems.",
+    "Related": ["Hallucination", "Eval"]
+  },
+  {
+    "Term": "Attack Surface",
+    "Aliases": [],
+    "Category": "Concept",
+    "ShortDef": "Everything about a system that's reachable and could potentially be exploited - endpoints, open ports, third-party integrations, exposed secrets.",
+    "Details": "The bigger and more exposed a system is, the more ways there are to attack it. Adding an AI agent with tool/internet access measurably grows a system's attack surface, since the agent itself becomes a new thing an attacker can try to manipulate.",
+    "WhenToUse": "Whenever you're reasoning about what could go wrong with a system before it ships, not just whether the happy path works.",
+    "Related": ["Zero Trust", "Prompt Injection"]
+  },
+  {
+    "Term": "Zero Trust",
+    "Aliases": ["Zero Trust Architecture"],
+    "Category": "Architecture",
+    "ShortDef": "A security model that assumes no request is trustworthy by default - every user, device, and service must verify itself every time.",
+    "Details": "Replaces the older 'trusted internal network' model, where anything inside the firewall was assumed safe. Under zero trust, identity and permissions are checked continuously, not just at login.",
+    "WhenToUse": "Designing access control for any system with remote workers, cloud services, or third-party integrations - which is to say, almost everything now.",
+    "Related": ["Attack Surface"]
+  },
+  {
+    "Term": "Hybrid Cloud",
+    "Aliases": ["Multi-cloud"],
+    "Category": "Architecture",
+    "ShortDef": "Running workloads across a mix of on-premises infrastructure and one or more public clouds, rather than committing entirely to one.",
+    "Details": "Common reasons: regulatory/data-residency requirements, avoiding vendor lock-in, keeping latency-sensitive workloads local, or gradually migrating rather than an all-at-once cutover.",
+    "WhenToUse": "When a single cloud provider can't (or shouldn't, for cost/compliance reasons) host everything.",
+    "Related": ["FinOps"]
+  },
+  {
+    "Term": "FinOps",
+    "Aliases": ["Cloud financial management"],
+    "Category": "Concept",
+    "ShortDef": "The practice of tracking and controlling cloud spend, treating cost as an engineering concern rather than an after-the-fact finance problem.",
+    "Details": "Cloud bills grow silently - idle resources, over-provisioned instances, and forgotten test environments add up fast. FinOps practices (tagging, budgets/alerts, right-sizing) catch this before the invoice does.",
+    "WhenToUse": "Any team running meaningful workloads in the cloud, especially once AI workloads (which can be GPU-expensive) enter the mix.",
+    "Related": ["Hybrid Cloud"]
+  },
+  {
+    "Term": "Data Fabric",
+    "Aliases": [],
+    "Category": "Architecture",
+    "ShortDef": "An architecture that connects data across many separate systems (databases, lakes, apps) into one consistent, governed access layer, without physically moving it all into one place.",
+    "Details": "Contrasted with a data lake (centralize everything in one store) or a data warehouse (centralize and pre-structure it) - a data fabric instead adds a unifying metadata/access layer on top of data that stays where it already lives.",
+    "WhenToUse": "Large organizations with data spread across many systems that need consistent governance and discoverability without a slow, risky full migration.",
+    "Related": ["RAG"]
+  },
+  {
+    "Term": "Quantum Computing",
+    "Aliases": ["Qubit"],
+    "Category": "Concept",
+    "ShortDef": "Computing that uses qubits - which can represent a superposition of 0 and 1 at once - instead of classical bits, enabling certain problems to be solved fundamentally faster.",
+    "Details": "Still early and mostly experimental for practical use; the problems expected to be affected first are cryptography (breaking current encryption) and chemistry/materials simulation. Not a general replacement for classical computers.",
+    "WhenToUse": "Not yet relevant to most day-to-day development, but worth understanding conceptually given active investment and its long-term implications for cryptography.",
+    "Related": []
   }
 ]

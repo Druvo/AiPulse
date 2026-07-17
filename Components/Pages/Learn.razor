@@ -72,6 +72,29 @@
 
 @{
     var trendingTags = TrendingTags();
+    var uncoveredTags = UncoveredTrendingTags(trendingTags);
+}
+@if (uncoveredTags.Count > 0)
+{
+    <div class="card mb-4">
+        <div class="card-body">
+            <h6 class="section-title mb-2"><Icon Name="trending-up" Size="16" /> Emerging topics not yet in your roadmap</h6>
+            <p class="text-muted small mb-2">
+                Tags showing up a lot in your News Feed over the last 14 days that no module below covers yet -
+                this is the "what's next" radar: today's chatter, tomorrow's module. No AI involved - just
+                counting how often each tag appears across your own sources.
+            </p>
+            <div class="d-flex flex-wrap gap-1">
+                @foreach (var tag in uncoveredTags)
+                {
+                    <a class="tag-chip small" href="@($"news?tag={Uri.EscapeDataString(tag)}")">@tag</a>
+                }
+            </div>
+        </div>
+    </div>
+}
+
+@{
     var courses = Kb.Courses
         .Where(c => _level == "All" || c.Level == _level)
         .OrderByDescending(c => c.Topics.Any(t => trendingTags.Contains(t)))
@@ -217,4 +240,23 @@
             .Where(g => g.Count() >= 3)
             .Select(g => g.Key)
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>
+    /// Trending tags from the last 14 days that no existing module's RelatedTerms already cover - the
+    /// "roadmap doesn't have this yet" signal. Pure tag-frequency counting (already used for the course
+    /// "Trending" badge above), so this stays genuinely dynamic without needing an AI call to decide
+    /// what's new.
+    /// </summary>
+    private List<string> UncoveredTrendingTags(HashSet<string> trendingTags)
+    {
+        var covered = Kb.Learning
+            .SelectMany(m => m.RelatedTerms)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        return trendingTags
+            .Where(t => !covered.Contains(t))
+            .OrderBy(t => t, StringComparer.OrdinalIgnoreCase)
+            .Take(12)
+            .ToList();
+    }
 }

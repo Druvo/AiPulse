@@ -34,3 +34,25 @@ public sealed class PracticeTip
     public required string Category { get; init; } // Token Optimization, Prompting, Workflow, Context
     public required string Body { get; init; }
 }
+
+/// <summary>
+/// A curated entry for the Free AI APIs page - providers with a genuinely free tier (not just a paid
+/// trial), for plugging into agent tools (Claude Code, Codex CLI, OpenCode, etc.) that support a custom
+/// base URL / OpenAI-compatible endpoint. Hand-maintained, not scraped - provider free-tier terms change
+/// too often and aren't published as a structured feed, so this is refreshed manually rather than polled.
+/// </summary>
+public sealed class FreeApiEntry
+{
+    public required string Name { get; init; }
+    public required string Category { get; init; } // Fully Free, Free Tier, Free Credits
+    public required string FreeTierSummary { get; init; }
+    public required string Models { get; init; }
+    public string RateLimit { get; init; } = "";
+    public required string SignupUrl { get; init; }
+    /// <summary>Short note on wiring this into an agent CLI - env var/base-URL override, or why it isn't directly agent-compatible.</summary>
+    public string HowToUse { get; init; } = "";
+    public bool OpenAiCompatible { get; init; }
+    public string? DocsUrl { get; init; }
+    /// <summary>ISO date (yyyy-MM-dd) this entry was last hand-verified, shown so stale entries are obvious rather than silently trusted.</summary>
+    public required string LastVerified { get; init; }
+}

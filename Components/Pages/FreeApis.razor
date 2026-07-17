@@ -1,0 +1,128 @@
+@page "/free-apis"
+@attribute [Authorize]
+@rendermode InteractiveServer
+@inject KnowledgeBaseService Kb
+@inject IJSRuntime JS
+
+<PageTitle>AiPulse · Free AI APIs</PageTitle>
+
+<div class="page-header">
+    <h1><Icon Name="sparkle" Size="22" /> Free AI APIs</h1>
+    <p class="lead">Providers with a genuinely free tier, so you can point Claude Code, Codex CLI, OpenCode, or any other agent tool at a real model without paying for one.</p>
+</div>
+
+<div class="alert alert-light border small mb-4">
+    <strong>Hand-curated, not live-scraped.</strong> Free-tier terms, rate limits, and which models are free
+    change often, and providers don't publish this as a structured feed the way news/RSS sources do - so
+    this list is manually verified rather than auto-refreshed. Each entry shows when it was last checked;
+    double-check the linked docs before relying on a specific number.
+</div>
+
+<div class="d-flex flex-wrap gap-2 mb-3">
+    <input class="form-control form-control-sm" style="max-width:260px" placeholder="Search providers or models…"
+           value="@_search" @oninput="e => { _search = (string)e.Value!; _page = 1; }" />
+    <select class="form-select form-select-sm w-auto" @bind="_category" @bind:after="() => _page = 1">
+        <option value="">All categories</option>
+        @foreach (var c in Kb.FreeApis.Select(a => a.Category).Distinct().OrderBy(c => c))
+        {
+            <option value="@c">@c</option>
+        }
+    </select>
+    <div class="form-check form-check-inline align-self-center">
+        <input class="form-check-input" type="checkbox" id="oaiOnly" @bind="_openAiCompatibleOnly" @bind:after="() => _page = 1" />
+        <label class="form-check-label small" for="oaiOnly">OpenAI-compatible only</label>
+    </div>
+</div>
+
+@{
+    var (paged, total) = GetPage();
+}
+<p class="text-muted small">@total provider(s)</p>
+
+@if (total == 0)
+{
+    <p class="text-muted">No providers match the current filter/search.</p>
+}
+else
+{
+    <div class="row g-3">
+        @foreach (var api in paged)
+        {
+            <div class="col-md-6">
+                <div class="card h-100">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-start gap-2">
+                            <h6 class="card-title mb-1">@api.Name</h6>
+                            <span class="badge bg-secondary text-nowrap">@api.Category</span>
+                        </div>
+                        <p class="small mb-2">@api.FreeTierSummary</p>
+                        <div class="x-small text-muted mb-1"><strong>Models:</strong> @api.Models</div>
+                        @if (!string.IsNullOrWhiteSpace(api.RateLimit))
+                        {
+                            <div class="x-small text-muted mb-2"><strong>Limits:</strong> @api.RateLimit</div>
+                        }
+                        @if (!string.IsNullOrWhiteSpace(api.HowToUse))
+                        {
+                            <div class="d-flex justify-content-between align-items-start gap-2 mb-2">
+                                <div class="x-small"><strong>Use with agents:</strong> @api.HowToUse</div>
+                                <button class="btn btn-sm btn-outline-secondary py-0 px-1 flex-shrink-0" title="Copy" @onclick="() => CopySnippet(api.HowToUse)"><Icon Name="copy" Size="11" /></button>
+                            </div>
+                        }
+                        <div class="d-flex flex-wrap align-items-center gap-2">
+                            @if (api.OpenAiCompatible)
+                            {
+                                <span class="badge bg-success">OpenAI-compatible</span>
+                            }
+                            <a href="@api.SignupUrl" target="_blank" rel="noopener" class="btn btn-sm btn-primary">Sign up ↗</a>
+                            @if (!string.IsNullOrWhiteSpace(api.DocsUrl))
+                            {
+                                <a href="@api.DocsUrl" target="_blank" rel="noopener" class="btn btn-sm btn-outline-secondary">Docs ↗</a>
+                            }
+                            <span class="x-small text-muted ms-auto">Verified @api.LastVerified</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+
+    <Pager TotalItems="total" @bind-CurrentPage="_page" @bind-PageSize="_pageSize" PageSizeOptions="new[] { 10, 20, 50 }" />
+}
+
+@code {
+    private string _search = "";
+    private string _category = "";
+    private bool _openAiCompatibleOnly;
+    private int _page = 1;
+    private int _pageSize = 10;
+
+    private List<FreeApiEntry> Filtered()
+    {
+        IEnumerable<FreeApiEntry> q = Kb.FreeApis;
+
+        if (!string.IsNullOrEmpty(_category))
+            q = q.Where(a => a.Category == _category);
+
+        if (_openAiCompatibleOnly)
+            q = q.Where(a => a.OpenAiCompatible);
+
+        if (!string.IsNullOrWhiteSpace(_search))
+        {
+            var s = _search.Trim();
+            q = q.Where(a =>
+                a.Name.Contains(s, StringComparison.OrdinalIgnoreCase) ||
+                a.Models.Contains(s, StringComparison.OrdinalIgnoreCase));
+        }
+
+        return q.OrderBy(a => a.Name, StringComparer.OrdinalIgnoreCase).ToList();
+    }
+
+    private (List<FreeApiEntry> Page, int Total) GetPage()
+    {
+        var filtered = Filtered();
+        var page = filtered.Skip((_page - 1) * _pageSize).Take(_pageSize).ToList();
+        return (page, filtered.Count);
+    }
+
+    private async Task CopySnippet(string text) => await JS.InvokeVoidAsync("copyText", text);
+}
