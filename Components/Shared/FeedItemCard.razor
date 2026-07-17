@@ -47,8 +47,9 @@
                 }
             </div>
         </div>
-        <a href="@Item.Link" target="_blank" rel="noopener" class="h6 mb-1 d-block text-decoration-none @(IsNew ? "feed-card-title-new" : "")" @onclick="NotifyOpened" @onclick:stopPropagation="true">
+        <a href="@Item.Link" target="_blank" rel="noopener" class="h6 mb-1 d-block text-decoration-none @(IsNew ? "feed-card-title-new" : "") @(Layout == "Compact" && IsRead ? "feed-card-title-read" : "")" @onclick="NotifyOpened" @onclick:stopPropagation="true">
             @if (IsNew) { <span class="new-dot me-1" title="New since your last visit"></span> }
+            @if (Layout == "Compact" && IsRead) { <span class="read-check" title="Read"><Icon Name="check" Size="12" /></span> }
             @if (WatchedKeyword is not null) { <span class="badge bg-warning me-1" title="Watchlist: @WatchedKeyword"><Icon Name="star" Size="11" Filled="true" /></span> }
             @Item.Title
         </a>

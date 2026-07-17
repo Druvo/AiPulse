@@ -404,6 +404,10 @@ a.card:hover { transform: translateY(-1px); }
 .read-btn { font-size: 1rem; text-decoration: none; line-height: 1; color: var(--ap-text-secondary); }
 .read-item { opacity: .55; }
 .read-item:hover { opacity: .85; }
+/* Compact cards (Dashboard's Biggest Stories / Read Later) have less room for opacity alone to register as
+   "read" - add an explicit checkmark + strikethrough so the state is legible at that size too. */
+.feed-card-title-read { text-decoration: line-through; color: var(--ap-text-secondary); }
+.read-check { display: inline-flex; color: var(--ap-success); margin-right: 2px; vertical-align: -1px; }
 
 /* Mute-this-source (feed cards) */
 .mute-source-btn { opacity: .5; text-decoration: none; }
@@ -517,6 +521,14 @@ a.card:hover { transform: translateY(-1px); }
 .toast-action { color: var(--ap-accent); font-weight: 600; white-space: nowrap; }
 .toast-close { color: var(--ap-text-secondary); margin-left: auto; }
 @keyframes toast-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+
+/* Dashboard first-run checklist */
+.checklist-item { display: flex; align-items: center; gap: .5rem; font-size: .875rem; color: var(--ap-text); text-decoration: none; padding: .15rem 0; }
+.checklist-item:hover { color: var(--ap-accent); }
+.checklist-item .ap-icon { color: var(--ap-muted); flex-shrink: 0; }
+.checklist-item.done { color: var(--ap-text-secondary); }
+.checklist-item.done .ap-icon { color: var(--ap-success); }
+.checklist-item.done span { text-decoration: line-through; }
 
 /* Shared EmptyState */
 .empty-state { color: var(--ap-text-secondary); }

@@ -22,12 +22,26 @@
     <div class="card mb-4 welcome-banner">
         <div class="card-body">
             <div class="d-flex justify-content-between align-items-start gap-3">
-                <div>
-                    <h5 class="mb-1"><Icon Name="sparkle" Size="18" /> New here?</h5>
-                    <p class="mb-2">
+                <div class="flex-grow-1">
+                    <h5 class="mb-1"><Icon Name="sparkle" Size="18" /> New here? Three things to try</h5>
+                    <p class="text-muted small mb-2">
                         AiPulse aggregates ~51 AI news/research/tool sources into one feed, plus a glossary, a tools
                         comparison, and a learning roadmap — all standalone, no AI required to run it.
                     </p>
+                    <div class="d-flex flex-column gap-1 mb-2">
+                        <a href="news" class="checklist-item @(VisitedNews() ? "done" : "")">
+                            <Icon Name="@(VisitedNews() ? "check" : "rss")" Size="15" />
+                            <span>Browse the News Feed</span>
+                        </a>
+                        <a href="news" class="checklist-item @(ReadSomething() ? "done" : "")">
+                            <Icon Name="@(ReadSomething() ? "check" : "bookmark")" Size="15" />
+                            <span>Read or save an article</span>
+                        </a>
+                        <a href="learn" class="checklist-item @(StartedLearning() ? "done" : "")">
+                            <Icon Name="@(StartedLearning() ? "check" : "graduation-cap")" Size="15" />
+                            <span>Start a Learning Hub module</span>
+                        </a>
+                    </div>
                     <a href="help" class="btn btn-sm btn-primary">
                         <Icon Name="help-circle" Size="14" /> Read the full guide
                     </a>
@@ -441,6 +455,10 @@
         Reading.DismissWelcome();
         _welcomeDismissed = true;
     }
+
+    private bool VisitedNews() => Reading.LastNewsVisit > DateTimeOffset.MinValue;
+    private bool ReadSomething() => Reading.ReadHistory.Count > 0 || Reading.Bookmarks.Count > 0;
+    private bool StartedLearning() => Kb.Learning.Any(m => Reading.CompletedStepCount(m.Title, m.Steps.Length) > 0);
 
     private void ToggleRead(FeedItem item) => Reading.ToggleRead(item);
     private void ToggleBookmark(FeedItem item) => Reading.ToggleBookmark(item);
