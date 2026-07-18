@@ -18,4 +18,6 @@ public sealed class AiPulseDbContext : DbContext
     public DbSet<FreeApiCandidate> FreeApiCandidates => Set<FreeApiCandidate>();
     public DbSet<DiscoveryRunLogEntry> DiscoveryRunLog => Set<DiscoveryRunLogEntry>();
     public DbSet<ContentCandidate> ContentCandidates => Set<ContentCandidate>();
+    public DbSet<AuditLogEntry> AuditLog => Set<AuditLogEntry>();
+    public DbSet<PasswordResetToken> PasswordResetTokens => Set<PasswordResetToken>();
 }

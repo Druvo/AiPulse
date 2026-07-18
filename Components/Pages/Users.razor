@@ -5,6 +5,7 @@
 @inject AuthenticationStateProvider AuthState
 @inject IWebHostEnvironment Env
 @inject IJSRuntime JS
+@inject NavigationManager Nav
 
 <PageTitle>AiPulse · Users</PageTitle>
 
@@ -37,6 +38,7 @@
                     <div class="col-md-3">
                         <select class="form-select" @bind="_form.Role">
                             <option value="User">User</option>
+                            <option value="Curator">Curator</option>
                             <option value="Admin">Admin</option>
                         </select>
                     </div>
@@ -57,14 +59,26 @@
     var (pageUsers, totalUsers) = GetPage();
 }
 
+@if (_selectedIds.Count > 0)
+{
+    <div class="d-flex align-items-center gap-2 mb-2">
+        <span class="small text-muted">@_selectedIds.Count selected</span>
+        <button class="btn btn-sm btn-success" @onclick="ApproveSelected">Approve selected</button>
+        <button class="btn btn-sm btn-outline-secondary" @onclick="DisableSelected">Disable selected</button>
+        <button class="btn btn-sm btn-link" @onclick="() => _selectedIds.Clear()">Clear selection</button>
+    </div>
+}
+
 <div class="table-responsive">
     <table class="table table-sm align-middle">
         <thead>
             <tr>
+                <th style="width:2rem"></th>
                 <SortableHeader Column="username" Label="Username" SortColumn="@_sortColumn" SortAscending="@_sortAscending" OnSort="ToggleSort" />
                 <SortableHeader Column="role" Label="Role" SortColumn="@_sortColumn" SortAscending="@_sortAscending" OnSort="ToggleSort" />
                 <SortableHeader Column="status" Label="Status" SortColumn="@_sortColumn" SortAscending="@_sortAscending" OnSort="ToggleSort" />
                 <SortableHeader Column="created" Label="Created" SortColumn="@_sortColumn" SortAscending="@_sortAscending" OnSort="ToggleSort" />
+                <SortableHeader Column="lastLogin" Label="Last login" SortColumn="@_sortColumn" SortAscending="@_sortAscending" OnSort="ToggleSort" />
                 <th></th>
             </tr>
         </thead>
@@ -74,7 +88,7 @@
                 @if (_editingId == u.Id)
                 {
                     <tr>
-                        <td colspan="5">
+                        <td colspan="7">
                             <div class="row g-2 align-items-center">
                                 <div class="col-md-3"><input class="form-control form-control-sm" placeholder="Username" @bind="_editForm.Username" /></div>
                                 <div class="col-md-3"><input type="password" class="form-control form-control-sm" placeholder="New password (leave blank to keep current)" @bind="_editForm.NewPassword" /></div>
@@ -93,15 +107,23 @@
                 else
                 {
                     <tr>
+                        <td>
+                            <input type="checkbox" checked="@_selectedIds.Contains(u.Id)" @onchange="e => ToggleSelected(u.Id, (bool)e.Value!)" />
+                        </td>
                         <td>@u.Username</td>
                         <td>
                             <select class="form-select form-select-sm" style="width:auto" value="@u.Role" @onchange="e => ChangeRole(u, (string)e.Value!)">
                                 <option value="User">User</option>
+                                <option value="Curator">Curator</option>
                                 <option value="Admin">Admin</option>
                             </select>
                         </td>
                         <td>
-                            @if (u.Status == UserStatuses.Approved)
+                            @if (u.LockoutUntil is { } lockedUntil && lockedUntil > DateTimeOffset.UtcNow)
+                            {
+                                <span class="text-danger" title="Locked until @lockedUntil.ToLocalTime().ToString("g")">⛔ locked</span>
+                            }
+                            else if (u.Status == UserStatuses.Approved)
                             {
                                 <span class="text-success">● approved</span>
                             }
@@ -115,7 +137,12 @@
                             }
                         </td>
                         <td class="small text-muted">@u.CreatedAt.ToLocalTime().ToString("MMM d, yyyy")</td>
+                        <td class="small text-muted">@(u.LastLoginAt is { } last ? last.ToLocalTime().ToString("MMM d, yyyy HH:mm") : "Never")</td>
                         <td class="text-nowrap">
+                            @if (u.LockoutUntil is { } lu && lu > DateTimeOffset.UtcNow)
+                            {
+                                <button class="btn btn-sm btn-outline-danger me-1" @onclick="() => Unlock(u)">Unlock</button>
+                            }
                             @if (u.Status == UserStatuses.Pending)
                             {
                                 <button class="btn btn-sm btn-success me-1" @onclick="() => Approve(u)">Approve</button>
@@ -135,6 +162,8 @@
                             else
                             {
                                 <button class="btn btn-sm btn-link p-0 me-2" title="Rename / reset password" @onclick="() => StartEdit(u)"><Icon Name="settings" Size="15" /></button>
+                                <button class="btn btn-sm btn-link p-0 me-2" title="Generate a password-reset link to hand to this user" @onclick="() => GenerateResetLink(u)"><Icon Name="key" Size="15" /></button>
+                                <button class="btn btn-sm btn-link p-0 me-2" title="Force sign-out on next request" @onclick="() => ForceLogout(u)"><Icon Name="logout" Size="15" /></button>
                             }
                             <button class="btn btn-sm btn-link p-0 text-danger" title="Delete" @onclick="() => Delete(u)"><Icon Name="trash" Size="15" /></button>
                         </td>
@@ -146,6 +175,51 @@
 </div>
 
 <Pager TotalItems="totalUsers" @bind-CurrentPage="_page" @bind-PageSize="_pageSize" />
+
+<hr class="my-4" />
+
+<button class="btn btn-sm btn-outline-secondary" @onclick="ToggleAuditLog">
+    <Icon Name="activity" Size="14" /> @(_showAuditLog ? "Hide" : "Show") audit log
+</button>
+
+@if (_showAuditLog)
+{
+    <div class="mt-3">
+        <div class="table-responsive">
+            <table class="table table-sm">
+                <thead>
+                    <tr>
+                        <th>When</th>
+                        <th>Action</th>
+                        <th>Actor</th>
+                        <th>Target</th>
+                        <th>Detail</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var entry in _auditRows)
+                    {
+                        <tr>
+                            <td class="small text-muted text-nowrap">@entry.TimestampUtc.ToLocalTime().ToString("MMM d, HH:mm:ss")</td>
+                            <td class="small">@entry.Action</td>
+                            <td class="small">@(entry.ActorUsername ?? "—")</td>
+                            <td class="small">@(entry.TargetUsername ?? "—")</td>
+                            <td class="small text-muted">@entry.Detail</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+        @if (_auditRows.Count == 0)
+        {
+            <p class="text-muted small">No audit events recorded yet.</p>
+        }
+        else
+        {
+            <Pager TotalItems="_auditTotal" CurrentPage="_auditPage" CurrentPageChanged="OnAuditPageChanged" PageSize="_auditPageSize" PageSizeChanged="OnAuditPageSizeChanged" />
+        }
+    </div>
+}
 
 @code {
     private List<AppUser> _users = new();
@@ -163,6 +237,13 @@
     private bool _sortAscending = false;
     private int _page = 1;
     private int _pageSize = 20;
+
+    private readonly HashSet<int> _selectedIds = new();
+    private bool _showAuditLog;
+    private List<AuditLogEntry> _auditRows = new();
+    private int _auditTotal;
+    private int _auditPage = 1;
+    private int _auditPageSize = 20;
 
     private void ToggleSort(string column)
     {
@@ -193,6 +274,8 @@
             ("status", true) => q.OrderBy(u => u.Status),
             ("status", false) => q.OrderByDescending(u => u.Status),
             ("created", true) => q.OrderBy(u => u.CreatedAt),
+            ("lastLogin", true) => q.OrderBy(u => u.LastLoginAt),
+            ("lastLogin", false) => q.OrderByDescending(u => u.LastLoginAt),
             (_, false) => q.OrderByDescending(u => u.CreatedAt),
             _ => q.OrderBy(u => u.Username),
         };
@@ -247,6 +330,74 @@
         }
         await UserSvc.SetStatusAsync(u.Id, UserStatuses.Disabled);
         await Reload();
+    }
+
+    private async Task Unlock(AppUser u)
+    {
+        await UserSvc.ClearLockoutAsync(u.Id);
+        await Reload();
+    }
+
+    private async Task ForceLogout(AppUser u)
+    {
+        await UserSvc.BumpSecurityStampAsync(u.Id);
+        _message = $"{u.Username} will be signed out on their next request.";
+    }
+
+    private async Task GenerateResetLink(AppUser u)
+    {
+        var baseUrl = Nav.BaseUri.TrimEnd('/');
+        var url = await UserSvc.GenerateResetLinkForAdminAsync(u.Id, token => $"{baseUrl}/reset-password?token={token}");
+        _message = $"Reset link for {u.Username}: {url}";
+    }
+
+    private void ToggleSelected(int id, bool @checked)
+    {
+        if (@checked) _selectedIds.Add(id);
+        else _selectedIds.Remove(id);
+    }
+
+    /// <summary>Bulk actions reuse the existing single-user SetStatusAsync in a loop rather than a new bulk-specific service method - the user counts here are small enough (an admin's own user table) that per-row round-trips aren't a real cost.</summary>
+    private async Task ApproveSelected()
+    {
+        foreach (var id in _selectedIds.ToList())
+            await UserSvc.SetStatusAsync(id, UserStatuses.Approved);
+        _selectedIds.Clear();
+        await Reload();
+    }
+
+    private async Task DisableSelected()
+    {
+        foreach (var id in _selectedIds.ToList())
+        {
+            var u = _users.FirstOrDefault(x => x.Id == id);
+            if (u is not null && await IsLastAdmin(u)) continue; // silently skip - the guard already surfaces via the single Disable button if attempted alone
+            await UserSvc.SetStatusAsync(id, UserStatuses.Disabled);
+        }
+        _selectedIds.Clear();
+        await Reload();
+    }
+
+    private async Task ToggleAuditLog()
+    {
+        _showAuditLog = !_showAuditLog;
+        if (_showAuditLog) await LoadAuditLogAsync();
+    }
+
+    private async Task LoadAuditLogAsync() =>
+        (_auditRows, _auditTotal) = await UserSvc.GetAuditLogAsync(_auditPage, _auditPageSize);
+
+    private async Task OnAuditPageChanged(int page)
+    {
+        _auditPage = page;
+        await LoadAuditLogAsync();
+    }
+
+    private async Task OnAuditPageSizeChanged(int size)
+    {
+        _auditPageSize = size;
+        _auditPage = 1;
+        await LoadAuditLogAsync();
     }
 
     private async Task Delete(AppUser u)

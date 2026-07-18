@@ -128,7 +128,7 @@
     </div>
 }
 
-<AuthorizeView Roles="Admin" Context="adminPanel">
+<AuthorizeView Roles="Admin,Curator" Context="adminPanel">
     <Authorized>
         @if (_pendingCandidates.Count > 0)
         {

@@ -20,7 +20,7 @@
     specific number.
 </div>
 
-<AuthorizeView Roles="Admin" Context="adminPanel">
+<AuthorizeView Roles="Admin,Curator" Context="adminPanel">
     <Authorized>
         <div class="card mb-3">
             <div class="card-body">
@@ -198,7 +198,7 @@ else
                                 <a href="@api.DocsUrl" target="_blank" rel="noopener" class="btn btn-sm btn-outline-secondary">Docs ↗</a>
                             }
                             <span class="x-small text-muted ms-auto">Verified @api.LastVerified</span>
-                            <AuthorizeView Roles="Admin" Context="adminCtx">
+                            <AuthorizeView Roles="Admin,Curator" Context="adminCtx">
                                 <Authorized>
                                     <button class="btn btn-sm btn-link p-0" title="Edit" @onclick="() => StartEdit(api)"><Icon Name="settings" Size="14" /></button>
                                     <button class="btn btn-sm btn-link p-0 text-danger" title="Delete" @onclick="() => DeleteEntry(api.Id)"><Icon Name="trash" Size="14" /></button>

@@ -39,6 +39,9 @@
     </EditForm>
 
     <p class="text-center text-muted small mt-3 mb-0">
+        <a href="/forgot-password">Forgot password?</a>
+    </p>
+    <p class="text-center text-muted small mt-1 mb-0">
         Don't have an account? <a href="/register">Register</a>
     </p>
 </div>
@@ -57,6 +60,7 @@
         _error = result switch
         {
             LoginResult.PendingApproval => "Your account is pending admin approval.",
+            LoginResult.LockedOut => "Too many failed attempts. Try again in a few minutes, or ask an admin to unlock your account.",
             LoginResult.Success => null,
             _ => "Invalid username or password."
         };
@@ -67,7 +71,8 @@
         {
             new Claim(ClaimTypes.Name, user.Username),
             new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
-            new Claim(ClaimTypes.Role, user.Role)
+            new Claim(ClaimTypes.Role, user.Role),
+            new Claim("security_stamp", user.SecurityStamp)
         };
         var identity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
         var principal = new ClaimsPrincipal(identity);

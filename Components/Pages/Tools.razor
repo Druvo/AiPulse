@@ -11,7 +11,7 @@
     <p class="lead">The right tool for the right task, plus concrete ways to cut token usage.</p>
 </div>
 
-<AuthorizeView Roles="Admin" Context="adminPanel">
+<AuthorizeView Roles="Admin,Curator" Context="adminPanel">
     <Authorized>
         @if (_pendingCandidates.Count > 0)
         {

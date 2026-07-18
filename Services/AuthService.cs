@@ -15,4 +15,13 @@ public sealed class AuthOptions
 
     /// <summary>PBKDF2 hash (format: v1.iterations.saltBase64.hashBase64). Takes precedence over Password.</summary>
     public string? PasswordHash { get; set; }
+
+    /// <summary>
+    /// Whether self-registration (username/password or OAuth) lands as Pending, needing an Admin to approve
+    /// before the account can sign in. Defaults to false - open registration, auto-approved - per an explicit
+    /// choice made after being shown the risk framing (anyone reaching this instance can create a working
+    /// account immediately). Flip to true in appsettings to restore the original approval-gated behavior
+    /// without a rebuild.
+    /// </summary>
+    public bool RequireApproval { get; set; }
 }

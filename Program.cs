@@ -88,6 +88,14 @@ builder.Services.AddHostedService<FeedWatcherService>();
 // AI hook: standalone by default. Swap NullSummarizer for a real implementation to enable AI.
 builder.Services.AddSingleton<ISummarizer, NullSummarizer>();
 
+// Email hook: standalone by default. Password-reset links always work (shown in the server log, or
+// via Users.razor's admin "Generate reset link" button) - only real delivery needs Smtp:Host configured.
+builder.Services.Configure<SmtpOptions>(builder.Configuration.GetSection("Smtp"));
+if (string.IsNullOrWhiteSpace(builder.Configuration["Smtp:Host"]))
+    builder.Services.AddSingleton<IEmailSender, NullEmailSender>();
+else
+    builder.Services.AddSingleton<IEmailSender, SmtpEmailSender>();
+
 // --- Authentication (cookie based, single configured user) ---
 builder.Services.Configure<AuthOptions>(builder.Configuration.GetSection("Auth"));
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
@@ -101,6 +109,40 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
         options.Cookie.Name = "AiPulse.Auth";
         options.Cookie.HttpOnly = true;
         options.Cookie.SameSite = SameSiteMode.Lax;
+
+        // Session-invalidation check: an admin's "Force logout," a password reset, or a Disable action all
+        // bump AppUser.SecurityStamp. This compares that against the stamp baked into the session's own
+        // claim on each request, so those actions actually take effect instead of just blocking future
+        // logins. Throttled to once/minute per request (not exactly per-request) since it's a DB read -
+        // costs nothing on Blazor Server's DB-free static asset/SignalR traffic, negligible on real navigation.
+        options.Events.OnValidatePrincipal = async context =>
+        {
+            var lastCheckedRaw = context.Properties.Items.TryGetValue("stamp_checked", out var raw) ? raw : null;
+            if (lastCheckedRaw is not null && DateTimeOffset.TryParse(lastCheckedRaw, out var lastChecked)
+                && DateTimeOffset.UtcNow - lastChecked < TimeSpan.FromMinutes(1))
+                return;
+
+            var userIdClaim = context.Principal?.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+            var stampClaim = context.Principal?.FindFirst("security_stamp")?.Value;
+            if (userIdClaim is null || !int.TryParse(userIdClaim, out var userId))
+            {
+                context.RejectPrincipal();
+                await context.HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+                return;
+            }
+
+            var users = context.HttpContext.RequestServices.GetRequiredService<UserService>();
+            var user = await users.GetByIdAsync(userId);
+            if (user is null || user.Status != AiPulse.Models.UserStatuses.Approved || user.SecurityStamp != stampClaim)
+            {
+                context.RejectPrincipal();
+                await context.HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+                return;
+            }
+
+            context.Properties.Items["stamp_checked"] = DateTimeOffset.UtcNow.ToString("o");
+            context.ShouldRenew = true;
+        };
     });
 builder.Services.AddAuthorization();
 builder.Services.AddCascadingAuthenticationState();
