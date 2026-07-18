@@ -36,6 +36,7 @@ public sealed class SavedSearch
     public required string Name { get; set; }
     public string Search { get; set; } = "";
     public string Tag { get; set; } = "";
+    public string Category { get; set; } = "";
     public string ContentType { get; set; } = "";
     public string Level { get; set; } = "";
     public List<string> Sources { get; set; } = new();

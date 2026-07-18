@@ -80,6 +80,10 @@
             </button>
         }
     </div>
+    @if (!string.IsNullOrEmpty(_category))
+    {
+        <button class="btn btn-sm btn-warning" @onclick='() => { _category = ""; SyncUrl(); }'>Category: @_category ✕</button>
+    }
     @if (!string.IsNullOrEmpty(_tag))
     {
         <button class="btn btn-sm btn-warning" @onclick='() => SetTag("")'>Tag: @_tag ✕</button>
@@ -198,6 +202,13 @@ else
 
     <FilterBar>
         <ChildContent>
+            <select class="form-select form-select-sm" @bind="_category" @bind:after="SyncUrl">
+                <option value="">All categories</option>
+                @foreach (var cat in _categories)
+                {
+                    <option value="@cat">@cat</option>
+                }
+            </select>
             <select class="form-select form-select-sm" @bind="_contentType" @bind:after="SyncUrl">
                 <option value="">All content types</option>
                 @foreach (var ct in _contentTypes)
@@ -224,10 +235,16 @@ else
             {
                 <div class="w-100">
                     <div class="x-small text-muted text-uppercase mb-1">Sources (select any number)</div>
-                    <div class="d-flex flex-wrap gap-1">
-                        @foreach (var src in AvailableSources())
+                    <input class="form-control form-control-sm mb-1" placeholder="Search sources…"
+                           value="@_sourceSearch" @oninput="e => _sourceSearch = (string)e.Value!" />
+                    <div class="d-flex flex-wrap gap-1 source-chip-scroll">
+                        @foreach (var src in FilteredSources())
                         {
                             <button class="btn btn-sm tag-chip @(_sources.Contains(src) ? "active" : "")" @onclick="() => ToggleSource(src)">@src</button>
+                        }
+                        @if (FilteredSources().Count == 0)
+                        {
+                            <span class="text-muted x-small">No sources match "@_sourceSearch".</span>
                         }
                     </div>
                 </div>
@@ -298,6 +315,9 @@ else
     [SupplyParameterFromQuery(Name = "contentType")]
     public string? ContentTypeParam { get; set; }
 
+    [SupplyParameterFromQuery(Name = "category")]
+    public string? CategoryParam { get; set; }
+
     [SupplyParameterFromQuery(Name = "level")]
     public string? LevelParam { get; set; }
 
@@ -311,10 +331,12 @@ else
     private FeedResult? _pendingResult;
     private int _pendingNewCount;
     private bool _loading;
-    private string _filter = "All";
+    private string _filter = "Unread";
     private string _search = "";
     private string _contentType = "";
+    private string _category = "";
     private string _level = "";
+    private string _sourceSearch = "";
     private HashSet<string> _sources = new(StringComparer.OrdinalIgnoreCase);
     private string _sort = "newest";
     private string _tag = "";
@@ -331,7 +353,8 @@ else
     private bool _showShortcutsHelp;
     private DotNetObjectReference<News>? _dotNetRef;
 
-    private readonly string[] _filters = { "All", "New", "Unread", "Read", "Today", "News", "Research", "Tools", "Community" };
+    private readonly string[] _filters = { "Unread", "New", "Read", "All" };
+    private readonly string[] _categories = { "News", "Research", "Tools", "Community" };
     private readonly string[] _contentTypes = { "News", "Tutorial", "Paper", "Discussion", "Video" };
     private readonly string[] _levels = { "Beginner", "Intermediate", "Advanced" };
     private readonly string[] _sortOptions = { "newest", "oldest", "source", "title" };
@@ -356,6 +379,8 @@ else
             _filter = FilterParam;
         if (!string.IsNullOrWhiteSpace(ContentTypeParam) && _contentTypes.Contains(ContentTypeParam))
             _contentType = ContentTypeParam;
+        if (!string.IsNullOrWhiteSpace(CategoryParam) && _categories.Contains(CategoryParam))
+            _category = CategoryParam;
         if (!string.IsNullOrWhiteSpace(LevelParam) && _levels.Contains(LevelParam))
             _level = LevelParam;
         if (!string.IsNullOrWhiteSpace(SourceParam))
@@ -470,13 +495,14 @@ else
 
         var query = new List<string>();
         if (_view != "Grid") query.Add($"view={_view}");
-        if (_filter != "All") query.Add($"filter={Uri.EscapeDataString(_filter)}");
+        if (_filter != "Unread") query.Add($"filter={Uri.EscapeDataString(_filter)}");
         if (!string.IsNullOrEmpty(_tag)) query.Add($"tag={Uri.EscapeDataString(_tag)}");
         if (_dateFrom is not null && _dateTo is not null)
         {
             if (_dateFrom == _dateTo) query.Add($"date={_dateFrom:yyyy-MM-dd}");
             else query.Add($"dateFrom={_dateFrom:yyyy-MM-dd}&dateTo={_dateTo:yyyy-MM-dd}");
         }
+        if (!string.IsNullOrEmpty(_category)) query.Add($"category={Uri.EscapeDataString(_category)}");
         if (!string.IsNullOrEmpty(_contentType)) query.Add($"contentType={Uri.EscapeDataString(_contentType)}");
         if (!string.IsNullOrEmpty(_level)) query.Add($"level={Uri.EscapeDataString(_level)}");
         if (_sources.Count > 0) query.Add($"source={string.Join(",", _sources.Select(Uri.EscapeDataString))}");
@@ -503,7 +529,7 @@ else
     private string _savedSearchName = "";
 
     private bool HasSaveableFilters() =>
-        !string.IsNullOrWhiteSpace(_search) || !string.IsNullOrEmpty(_tag) || !string.IsNullOrEmpty(_contentType) ||
+        !string.IsNullOrWhiteSpace(_search) || !string.IsNullOrEmpty(_tag) || !string.IsNullOrEmpty(_category) || !string.IsNullOrEmpty(_contentType) ||
         !string.IsNullOrEmpty(_level) || _sources.Count > 0 || (_dateFrom is not null && _dateTo is not null);
 
     private void SaveCurrentSearch()
@@ -521,6 +547,7 @@ else
             Name = _savedSearchName.Trim(),
             Search = _search,
             Tag = _tag,
+            Category = _category,
             ContentType = _contentType,
             Level = _level,
             Sources = _sources.ToList(),
@@ -536,6 +563,7 @@ else
     {
         _search = saved.Search;
         _tag = saved.Tag;
+        _category = saved.Category;
         _contentType = saved.ContentType;
         _level = saved.Level;
         _sources = new HashSet<string>(saved.Sources, StringComparer.OrdinalIgnoreCase);
@@ -560,6 +588,7 @@ else
         var parts = new List<string>();
         if (!string.IsNullOrWhiteSpace(s.Search)) parts.Add($"\"{s.Search}\"");
         if (!string.IsNullOrEmpty(s.Tag)) parts.Add($"tag: {s.Tag}");
+        if (!string.IsNullOrEmpty(s.Category)) parts.Add(s.Category);
         if (!string.IsNullOrEmpty(s.ContentType)) parts.Add(s.ContentType);
         if (!string.IsNullOrEmpty(s.Level)) parts.Add(s.Level);
         if (s.Sources.Count > 0) parts.Add($"{s.Sources.Count} source(s)");
@@ -578,6 +607,15 @@ else
     /// </summary>
     private List<string> AvailableSources() =>
         Kb.Sources.Where(s => s.Enabled).Select(s => s.Name).Distinct(StringComparer.OrdinalIgnoreCase).OrderBy(s => s).ToList();
+
+    /// <summary>Narrows the (potentially 100+ entry) source chip list by name as the admin types - the list itself stays the stable AvailableSources() set, this is just what's rendered.</summary>
+    private List<string> FilteredSources()
+    {
+        var all = AvailableSources();
+        return string.IsNullOrWhiteSpace(_sourceSearch)
+            ? all
+            : all.Where(s => s.Contains(_sourceSearch.Trim(), StringComparison.OrdinalIgnoreCase)).ToList();
+    }
 
     private List<FeedItem> Filtered()
     {
@@ -600,10 +638,11 @@ else
             "New" => q.Where(i => i.Published > _sinceVisit),
             "Unread" => q.Where(i => !Reading.IsRead(i.Link)),
             "Read" => q.Where(i => Reading.IsRead(i.Link)),
-            "Today" => q.Where(i => i.Published.LocalDateTime.Date == DateTime.Today),
-            "All" => q,
-            _ => q.Where(i => i.Category == _filter)
+            _ => q
         };
+
+        if (!string.IsNullOrEmpty(_category))
+            q = q.Where(i => i.Category == _category);
 
         if (!string.IsNullOrEmpty(_contentType))
             q = q.Where(i => i.ContentType == _contentType);
@@ -677,10 +716,12 @@ else
     private void ClearAllFilters()
     {
         _search = "";
-        _filter = "All";
+        _filter = "Unread";
+        _category = "";
         _contentType = "";
         _level = "";
         _sources.Clear();
+        _sourceSearch = "";
         _tag = "";
         _dateFrom = null;
         _dateTo = null;
