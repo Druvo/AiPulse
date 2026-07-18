@@ -1,5 +1,16 @@
 ﻿@inherits LayoutComponentBase
 
+@* Everything using this layout is [Authorize]-gated and would just redirect a crawler - noindex by
+   default. Login/Register/ForgotPassword use EmptyLayout instead, so they're indexable without needing
+   an override here (a page-level <HeadContent> here couldn't cleanly override this anyway - search
+   engines combine, not replace, conflicting robots directives from multiple meta tags). *@
+<HeadContent>
+    <meta name="robots" content="noindex, nofollow" />
+    <meta name="description" content="AiPulse — a standalone, self-hosted dashboard to keep developers current on the AI world: news, jargon, the right tool for the right task, and a structured learning roadmap. Runs with zero AI and no API keys." />
+    <meta property="og:title" content="AiPulse — self-hosted AI news & learning dashboard" />
+    <meta property="og:description" content="Aggregates ~39 AI/dev RSS sources with a curated glossary, tools matrix, and learning roadmap. Standalone, self-hosted, no API keys required." />
+</HeadContent>
+
 <div class="page">
     <div class="sidebar">
         <NavMenu />

@@ -4,12 +4,12 @@
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="description" content="AiPulse — a standalone, self-hosted dashboard to keep developers current on the AI world: news, jargon, the right tool for the right task, and a structured learning roadmap. Runs with zero AI and no API keys." />
     <meta name="theme-color" content="#00919b" />
     <meta property="og:type" content="website" />
-    <meta property="og:title" content="AiPulse — self-hosted AI news & learning dashboard" />
-    <meta property="og:description" content="Aggregates ~39 AI/dev RSS sources with a curated glossary, tools matrix, and learning roadmap. Standalone, self-hosted, no API keys required." />
     <meta property="og:image" content="favicon.png" />
+    @* description/og:title/og:description are set per-layout below (MainLayout vs. Login/Register's own
+       HeadContent) rather than here, so a page-level override doesn't end up duplicating a static default -
+       browsers/crawlers don't reliably pick one when the same meta name appears twice. *@
     <base href="/" />
     <link rel="stylesheet" href="bootstrap/bootstrap.min.css" />
     <link rel="stylesheet" href="app.css" />
