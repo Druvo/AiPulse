@@ -252,7 +252,7 @@ app.MapGet("/auth/external/{provider}", async (string provider, OAuthSettingsSer
 
     var safeReturnUrl = !string.IsNullOrWhiteSpace(returnUrl) && returnUrl.StartsWith('/') && !returnUrl.StartsWith("//")
         ? returnUrl
-        : "/";
+        : "/dashboard";
     return Results.Challenge(new AuthenticationProperties { RedirectUri = safeReturnUrl }, [scheme]);
 });
 

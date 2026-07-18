@@ -1,6 +1,10 @@
 # AiPulse is a self-hosted, authenticated dashboard - almost every page requires sign-in, so
 # there's nothing there for a crawler to usefully index. Only the public entry points are open.
+# Allow: /$ matches the exact root path only (the landing page) - everything past the first
+# slash still falls under Disallow: /, since Google/Bing resolve overlapping rules by specificity.
 User-agent: *
+Allow: /$
 Allow: /login
 Allow: /register
+Allow: /forgot-password
 Disallow: /

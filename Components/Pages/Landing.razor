@@ -1,0 +1,169 @@
+@page "/"
+@layout AiPulse.Components.Layout.LandingLayout
+@inject AuthenticationStateProvider AuthState
+@inject NavigationManager Nav
+
+<PageTitle>AiPulse — Self-hosted AI news, tools &amp; learning dashboard</PageTitle>
+<HeadContent>
+    <meta name="robots" content="index, follow" />
+    <meta name="description" content="AiPulse aggregates 200+ AI news, research and tool sources into one feed, plus a glossary, a tools comparison, and a 17-module learning path. Self-hosted, standalone, no AI required to run it." />
+    <link rel="canonical" href="/" />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="AiPulse — Self-hosted AI news, tools &amp; learning dashboard" />
+    <meta property="og:description" content="200+ sources, one feed, zero API keys. A self-hosted dashboard to keep developers current on the AI world." />
+    <meta property="og:image" content="/favicon.png" />
+    <meta property="og:url" content="/" />
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:title" content="AiPulse — Self-hosted AI news, tools &amp; learning dashboard" />
+    <meta name="twitter:description" content="200+ sources, one feed, zero API keys. Self-hosted, standalone, no AI required to run it." />
+    <script type="application/ld+json">
+        {
+            "@@context": "https://schema.org",
+            "@@type": "SoftwareApplication",
+            "name": "AiPulse",
+            "applicationCategory": "DeveloperApplication",
+            "operatingSystem": "Self-hosted (.NET 8, cross-platform)",
+            "description": "A standalone, self-hosted dashboard that aggregates AI news and research, a glossary, a tools comparison, and a structured learning roadmap into one feed. Runs with zero AI and no API keys.",
+            "offers": {
+                "@@type": "Offer",
+                "price": "0",
+                "priceCurrency": "USD"
+            },
+            "license": "https://opensource.org/licenses/MIT",
+            "codeRepository": "https://github.com/Druvo/AiPulse",
+            "url": "/"
+        }
+    </script>
+</HeadContent>
+
+@if (!_checkedAuth)
+{
+    return;
+}
+
+<div class="landing">
+
+    <header class="landing-nav">
+        <div class="landing-nav__inner">
+            <a class="landing-nav__brand" href="/">
+                <img src="/img/logo-v1.png" alt="" />
+                <span>AiPulse</span>
+            </a>
+            <nav class="landing-nav__center">
+                <a class="landing-nav__link" href="#features">Features</a>
+                <a class="landing-nav__link" href="#self-hosted">Open source</a>
+                <a class="landing-nav__link" href="https://github.com/Druvo/AiPulse" target="_blank" rel="noopener">GitHub</a>
+            </nav>
+            <div class="landing-nav__right">
+                <a class="landing-btn landing-btn--text" href="/login">Sign in</a>
+                <a class="landing-btn landing-btn--fill" href="/register">Get started</a>
+            </div>
+        </div>
+    </header>
+
+    <main>
+        <section class="landing-hero">
+            <h1 class="landing-hero__headline reveal" style="--i:0">202 sources. One feed. <span class="accent">Zero API keys.</span></h1>
+            <p class="landing-hero__sub reveal" style="--i:1">
+                AiPulse aggregates AI news, research and tools into a single dashboard — plus a glossary,
+                a tools comparison, and a 17-module learning path. Self-hosted. No AI required to run it.
+            </p>
+            <div class="landing-hero__ctas reveal" style="--i:2">
+                <a class="landing-btn landing-btn--fill" href="/register">Get started free</a>
+                <a class="landing-btn landing-btn--outline" href="https://github.com/Druvo/AiPulse" target="_blank" rel="noopener">View on GitHub</a>
+            </div>
+        </section>
+
+        <section class="landing-bento-wrap" id="features">
+            <div class="landing-bento">
+                <article class="bento-cell bento-cell--feature-lead bento-span-2x2 reveal" style="--i:3">
+                    <Icon Name="rss" Size="26" CssClass="bento-icon" />
+                    <h3>Every AI headline, one feed</h3>
+                    <p>News, research and tool sources — arXiv, Hacker News, GitHub, Reddit, YouTube, RSS — cross-source dedup means the same story from 12 outlets shows once, not twelve times.</p>
+                </article>
+
+                <article class="bento-cell bento-cell--stat reveal" style="--i:4">
+                    <span class="stat-num">202</span>
+                    <span class="stat-label">sources tracked</span>
+                </article>
+
+                <article class="bento-cell bento-span-2x1 reveal" style="--i:5">
+                    <Icon Name="trending-up" Size="22" CssClass="bento-icon" />
+                    <h3>Explore</h3>
+                    <p>GitHub Trending and Hugging Face models/datasets, refreshed daily with disk-persisted caching so a slow scrape never blocks the page.</p>
+                </article>
+
+                <article class="bento-cell bento-cell--stat reveal" style="--i:6">
+                    <span class="stat-num">36</span>
+                    <span class="stat-label">glossary terms</span>
+                </article>
+
+                <article class="bento-cell bento-span-1x2 reveal" style="--i:7">
+                    <Icon Name="graduation-cap" Size="22" CssClass="bento-icon" />
+                    <h3>Learning Hub</h3>
+                    <p>A 17-module roadmap from how LLMs actually work up through RAG and context engineering — with progress tracking, spaced-repetition resurfacing, and per-module notes exportable straight to Obsidian.</p>
+                </article>
+
+                <article class="bento-cell reveal" style="--i:8">
+                    <Icon Name="tool" Size="22" CssClass="bento-icon" />
+                    <h3>Tools &amp; Tips</h3>
+                    <p>Compare AI dev tools side by side, sorted by live popularity.</p>
+                </article>
+
+                <article class="bento-cell reveal" style="--i:9">
+                    <Icon Name="key" Size="22" CssClass="bento-icon" />
+                    <h3>Free AI APIs</h3>
+                    <p>A maintained directory of free-tier LLM APIs — rate limits, models, sign-up links.</p>
+                </article>
+
+                <article class="bento-cell bento-cell--stat reveal" style="--i:10">
+                    <span class="stat-num">17</span>
+                    <span class="stat-label">learning modules</span>
+                </article>
+
+                <article class="bento-cell bento-span-2x1 reveal" id="self-hosted" style="--i:11">
+                    <Icon Name="database" Size="22" CssClass="bento-icon" />
+                    <h3>Self-hosted &amp; standalone</h3>
+                    <p>Runs with zero AI and no API keys. Your reading history, bookmarks and chat logs stay on your own machine — MIT licensed, yours to run and modify.</p>
+                </article>
+            </div>
+        </section>
+
+        <section class="landing-statement">
+            <p>Built for developers who want <span class="accent">one feed</span>, not fifteen tabs — and a dashboard that stays theirs, not a vendor’s.</p>
+        </section>
+    </main>
+
+    <section class="landing-cta-strip">
+        <p>Free forever. MIT licensed. Yours to run.</p>
+        <a class="landing-btn landing-btn--fill" href="/register">Get started free</a>
+    </section>
+
+    <footer class="landing-footer">
+        <p class="wordmark">AiPulse</p>
+        <p class="tagline">Your AI reading &amp; learning station.</p>
+        <p class="links">
+            <a href="https://github.com/Druvo/AiPulse" target="_blank" rel="noopener">GitHub</a>
+            &nbsp;·&nbsp;
+            <a href="https://github.com/Druvo/AiPulse/blob/main/LICENSE" target="_blank" rel="noopener">MIT Licence</a>
+            &nbsp;·&nbsp;
+            <a href="/login">Sign in</a>
+        </p>
+    </footer>
+
+</div>
+
+@code {
+    private bool _checkedAuth;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var state = await AuthState.GetAuthenticationStateAsync();
+        if (state.User.Identity?.IsAuthenticated == true)
+        {
+            Nav.NavigateTo("/dashboard");
+            return;
+        }
+        _checkedAuth = true;
+    }
+}

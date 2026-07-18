@@ -38,6 +38,8 @@
     --ap-space-md: 1.5rem;
     --ap-space-lg: 2rem;
     --ap-space-xl: 3rem;
+    --ap-space-2xl: 4.5rem;
+    --ap-space-3xl: 7rem;
 
     /* Motion - one easing family, no bounce/overshoot on UI state */
     --ap-ease-out: cubic-bezier(.16, 1, .3, 1);

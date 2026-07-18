@@ -8,18 +8,31 @@ than reinventing tokens per page.
 modern-minimal
 
 ## Macrostructure family
-AiPulse is ~entirely an app product, not a marketing site, so there are two families:
+AiPulse is ~entirely an app product, not a marketing site, so there are three families:
 
 - **App pages** (Dashboard, News Feed, Explore, Learning Hub, Glossary, Tools & Tips,
   Reading Stats, Free AI APIs, Settings, Sources, Users, Source Health, Playground):
   **Workbench** — the existing sidebar + content shell, refined density/voice, not
   rebuilt. These pages vary only in internal card/table/chart layout, never in
   macrostructure.
-- **Entry pages** (Login, Register): a **standard centered auth card** — logo, wordmark,
-  form, signature. Deliberately boring: no eyebrow tag, no code demo, no ⌘K (those are
-  Cobalt's marketing-page signature moves, not a sign-in page's job). A user's muscle
-  memory for "sign in" is a centered card with a name and a form — that's exactly what
-  this is, not a hero.
+- **Entry pages** (Login, Register, Forgot/Reset password): a **standard centered auth
+  card** — logo, wordmark, form, signature. Deliberately boring: no eyebrow tag, no code
+  demo, no ⌘K (those are Cobalt's marketing-page signature moves, not a sign-in page's
+  job). A user's muscle memory for "sign in" is a centered card with a name and a
+  form — that's exactly what this is, not a hero.
+- **Public page** (Landing, at `/`): the one page in the app that's allowed to be a
+  marketing page, since it's the actual public front door and the only page search
+  engines should index. **Bento Grid** macrostructure — N1b nav (frost-on-scroll,
+  transparent over the hero) + a fixed-height typographic hero (no imagery) + an
+  irregular feature/stat grid mixing real feature tiles with real numbers (202 sources,
+  36 glossary terms, 17 learning modules — pulled from the shipped `Data/*.json`
+  baseline, never invented) + a one-line closing statement + a single-button CTA strip +
+  Ft1 mast-headed footer. No testimonials, no logo wall, no pricing table — none of
+  those exist for this project and inventing them would violate the same "no fabricated
+  content" rule as everywhere else in this system. Lives in its own layout
+  (`LandingLayout.razor`, no sidebar, no auth card) and its own stylesheet
+  (`wwwroot/landing.css`) referencing the same `--ap-*` tokens as the rest of the app,
+  rather than a per-page token fork.
 
 ## Theme
 Custom — anchored on AiPulse's existing cyan/teal brand color (not a catalog swap),
@@ -69,9 +82,11 @@ dark-mode variant. Never introduce a new color as a literal hex/rgb — add a na
   place (harmless) but no longer referenced.
 
 ## Spacing
-4-point named scale (`--ap-space-3xs` through `--ap-space-xl` in `app.css`). New custom
-CSS should reference these tokens; Bootstrap's own utility classes (`g-2`, `mb-4`, etc.)
-remain in use throughout existing page markup — not worth replacing wholesale.
+4-point named scale (`--ap-space-3xs` through `--ap-space-3xl` in `app.css` — `2xl`/`3xl`
+added for the Landing page's section-level rhythm, which needs bigger gaps than any App
+page ever did). New custom CSS should reference these tokens; Bootstrap's own utility
+classes (`g-2`, `mb-4`, etc.) remain in use throughout existing App-page markup — not
+worth replacing wholesale there.
 
 ## Motion
 - Easings: `--ap-ease-out: cubic-bezier(.16,1,.3,1)`, `--ap-ease-in-out: cubic-bezier(.65,0,.35,1)`.
@@ -99,15 +114,24 @@ remain in use throughout existing page markup — not worth replacing wholesale.
 
 ## What pages MUST share
 - The token set above (colors, fonts, radii, shadows, motion) — every page pulls from
-  `wwwroot/app.css`, no per-page inline overrides.
-- The sidebar nav (N3 side-rail) and its active-state left accent bar.
+  `wwwroot/app.css` (the landing page also pulls from its own `wwwroot/landing.css`,
+  which references the same tokens rather than forking them), no per-page inline
+  overrides.
+- The sidebar nav (N3 side-rail) and its active-state left accent bar — App pages only;
+  Entry pages use no nav, the Landing page uses its own N1b top nav (see above).
 - Button/card/badge voice (radius, border treatment, hover lift).
-- The 5-accent-preset + light/dark system — a real user-facing Settings feature.
+- The 5-accent-preset + light/dark system — a real user-facing Settings feature. The
+  Landing page inherits this automatically (no extra wiring needed): `App.razor`'s
+  `applyTheme()` script and `app.css`'s tokens load on every page including `/`, so a
+  returning visitor's stored theme/accent preference still applies before they've ever
+  signed in.
 
 ## What pages MAY differ on
 - Internal layout of app pages (grid vs. list, chart types, table density) — content-
   specific, not a macrostructure choice.
-- Login/Register's Marquee-lite entry treatment vs. the Workbench shell everywhere else.
+- Each family's macrostructure: Workbench (App) vs. standard centered auth card (Entry)
+  vs. Bento Grid (Public/Landing) — three genuinely different page shapes, not
+  colour-swaps of one template.
 
 ## Exports
 

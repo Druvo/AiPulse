@@ -1,4 +1,4 @@
-@page "/"
+@page "/dashboard"
 @attribute [Authorize]
 @rendermode InteractiveServer
 @inject KnowledgeBaseService Kb
@@ -367,7 +367,7 @@
         _range = range;
         _dayPage = 1;
         RecomputeRange();
-        Nav.NavigateTo(range == "week" ? "/" : $"/?range={range}", replace: true);
+        Nav.NavigateTo(range == "week" ? "/dashboard" : $"/dashboard?range={range}", replace: true);
     }
 
     /// <summary>Re-derives every range-scoped section (stat cards, trending panel, biggest stories, day-by-day) from the currently selected Today/Week/Month range - mirrors what Digest.razor used to compute for a hardcoded 7 days.</summary>

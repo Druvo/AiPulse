@@ -62,11 +62,11 @@
         <div class="d-flex flex-column gap-2">
             @if (_googleUsable)
             {
-                <a class="btn btn-outline-secondary w-100" href="@($"/auth/external/google?returnUrl={Uri.EscapeDataString(ReturnUrl ?? "/")}")">Sign in with Google</a>
+                <a class="btn btn-outline-secondary w-100" href="@($"/auth/external/google?returnUrl={Uri.EscapeDataString(ReturnUrl ?? "/dashboard")}")">Sign in with Google</a>
             }
             @if (_githubUsable)
             {
-                <a class="btn btn-outline-secondary w-100" href="@($"/auth/external/github?returnUrl={Uri.EscapeDataString(ReturnUrl ?? "/")}")">Sign in with GitHub</a>
+                <a class="btn btn-outline-secondary w-100" href="@($"/auth/external/github?returnUrl={Uri.EscapeDataString(ReturnUrl ?? "/dashboard")}")">Sign in with GitHub</a>
             }
         </div>
     }
@@ -125,7 +125,7 @@
             principal,
             new AuthenticationProperties { IsPersistent = Input.Remember });
 
-        Nav.NavigateTo(string.IsNullOrWhiteSpace(ReturnUrl) ? "/" : ReturnUrl);
+        Nav.NavigateTo(string.IsNullOrWhiteSpace(ReturnUrl) ? "/dashboard" : ReturnUrl);
     }
 
     public sealed class LoginInput

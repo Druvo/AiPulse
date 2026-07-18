@@ -741,6 +741,21 @@ Status tags: ✅ done · 🟢 fits philosophy, no AI needed · 🟡 needs a desi
 > click-tested end to end (a real Google/GitHub round-trip, plus the admin settings form itself) since
 > that needs both an Admin session and real provider credentials, neither of which the assistant has.
 
+- Public landing page at `/` (Hallmark Bento Grid, modern-minimal genre) — the Dashboard moved to
+  `/dashboard` to make room for it, since a landing page's whole job is to be the thing a bare-domain
+  visit or a shared link actually shows, and search engines only ever index `/`. Every stat on the page
+  (202 sources, 36 glossary terms, 17 learning modules) is a real count pulled from the shipped
+  `Data/*.json` baseline, not invented. No testimonials, logo wall, or pricing table - none of those
+  exist for this project, and Hallmark's "no fabricated content" rule applies here same as everywhere
+  else. Full SEO pass: single H1, `index, follow` + canonical + Open Graph/Twitter tags + a
+  `SoftwareApplication` JSON-LD block, and `robots.txt` now allows the exact root path (`Allow: /$`)
+  while everything else stays disallowed. Lives in its own layout (`LandingLayout.razor`) and stylesheet
+  (`wwwroot/landing.css`) referencing the same `--ap-*` design tokens as the rest of the app - two new
+  spacing steps (`--ap-space-2xl`/`3xl`) were added to the shared scale in `app.css` for its larger
+  section rhythm, not forked into a separate file. Every sign-in-redirect touchpoint (Login's
+  `ReturnUrl` default, the OAuth callback's fallback, the sidebar's Dashboard link, the two "Back to
+  Dashboard" links, Help.razor's references) was updated to point at `/dashboard` instead of `/`.
+
 ---
 
 ## 🟡 Valuable, needs a design decision
