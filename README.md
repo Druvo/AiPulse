@@ -11,6 +11,8 @@ It aggregates ~51 RSS/Atom sources (blogs, news outlets, arXiv, Hacker News, Red
 
 > Built with ASP.NET Core + Blazor (Server interactivity), targeting .NET 8. MIT licensed.
 
+**[Live demo →](https://aipulse.druvium.xyz/)**
+
 <!--
   Screenshots: drop 2-3 PNGs into docs/screenshots/ (dark mode looks best) and reference them here, e.g.:
   ![Dashboard](docs/screenshots/dashboard.png)

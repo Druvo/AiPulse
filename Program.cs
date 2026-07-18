@@ -256,6 +256,23 @@ app.MapGet("/auth/external/{provider}", async (string provider, OAuthSettingsSer
     return Results.Challenge(new AuthenticationProperties { RedirectUri = safeReturnUrl }, [scheme]);
 });
 
+// Generated at request time from the request's own Host header, not a static file - AiPulse is
+// self-hosted with no fixed domain, so a committed sitemap.xml would bake one deployment's URL (e.g.
+// the maintainer's own demo instance) into every other self-hoster's copy of the repo.
+app.MapGet("/sitemap.xml", (HttpRequest request) =>
+{
+    var origin = $"{request.Scheme}://{request.Host}";
+    var xml = $"""
+        <?xml version="1.0" encoding="UTF-8"?>
+        <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+          <url><loc>{origin}/</loc><changefreq>weekly</changefreq><priority>1.0</priority></url>
+          <url><loc>{origin}/register</loc><changefreq>monthly</changefreq><priority>0.5</priority></url>
+          <url><loc>{origin}/login</loc><changefreq>monthly</changefreq><priority>0.3</priority></url>
+        </urlset>
+        """;
+    return Results.Text(xml, "application/xml");
+});
+
 // Dev-only helper: generate a PBKDF2 hash to paste into appsettings ("Auth:PasswordHash").
 if (app.Environment.IsDevelopment())
 {
