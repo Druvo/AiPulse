@@ -696,6 +696,41 @@ Status tags: ✅ done · 🟢 fits philosophy, no AI needed · 🟡 needs a desi
 > candidate-review queues (Glossary/Tools/Learning) end to end - queue a candidate, approve it, confirm it
 > actually lands in the corresponding page and survives a restart.
 
+- Hallmark design-system audit of the Dashboard and Login/Register pages: dropped the decorative
+  "eyebrow" tag from Login/Register (no ordinal function - a real anti-pattern flag) and corrected
+  `design.md`'s description of the entry pages from "Marquee-lite hero" to what they actually are, a
+  standard centered auth card.
+- Free AI APIs' discovery queue now auto-populates the free-tier summary and supported-models fields
+  (previously admin had to type both by hand) by parsing the `**Credits:**`/`**Limits:**` line and the
+  `**Models:**` list straight out of the discovery source's own per-provider listing - deterministic
+  parsing, no AI. Always shown as a suggestion to verify before saving, never auto-saved.
+- Reorganized the sidebar into two groups - Overview (Dashboard, News Feed, Explore, Free AI APIs) and
+  Learning (Learning Hub, Reading Stats, Glossary, Tools & Tips) - and reworked the News Feed's filters:
+  Unread is now the first tab and the default view (was All); the redundant Today tab was removed
+  (already covered by the calendar); the four content-type tabs (News/Research/Tools/Community) moved
+  into a Category dropdown alongside the existing ContentType/Level filters; and a source-search box was
+  added above the source chip list, which can otherwise run to 100+ entries.
+- User/permission overhaul: a third **Curator** role scoped to just the four content-curation admin
+  panels (Free AI APIs, Glossary, Tools & Tips, Learning Hub) - everything system-level (Users, Sources,
+  Source Health, Playground, backup/restore) stays Admin-only. Account security: DB-backed login
+  lockout (5 failed attempts → 15 min), a security-stamp mechanism that invalidates a user's existing
+  sessions the moment an admin force-logs-them-out, resets their password, or disables their account,
+  and a full audit log (Users.razor gained an admin view of it, plus bulk approve/disable and an
+  unlock button). Self-service password reset via emailed link - falls back to logging the link to the
+  server console, or an admin-generated link from Users.razor, when no SMTP is configured (mirrors
+  `ISummarizer`'s "optional, standalone by default" pattern). Registration is now open to anyone and
+  auto-approves immediately (no admin gate) - a deliberate choice given this is a self-hosted app the
+  operator controls network access to; `Auth:RequireApproval` can be flipped back to `true` in
+  `appsettings.json` to restore the gate without a rebuild.
+- Basic SEO: almost every page is `[Authorize]`-gated and would just redirect a crawler, so the main
+  layout now emits `noindex, nofollow` by default; Login and Register (the only genuinely public pages)
+  stay indexable with their own canonical link, description, and Open Graph tags, and `robots.txt`
+  allows just those two paths.
+
+> **Google/GitHub OAuth login is designed but not yet built** - it needs the site operator to create
+> real OAuth apps in the Google Cloud Console and GitHub Developer Settings first (client ID/secret
+> aren't something to hand over in chat), so it's parked until that's in hand.
+
 ---
 
 ## 🟡 Valuable, needs a design decision
