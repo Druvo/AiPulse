@@ -727,9 +727,19 @@ Status tags: ✅ done · 🟢 fits philosophy, no AI needed · 🟡 needs a desi
   stay indexable with their own canonical link, description, and Open Graph tags, and `robots.txt`
   allows just those two paths.
 
-> **Google/GitHub OAuth login is designed but not yet built** - it needs the site operator to create
-> real OAuth apps in the Google Cloud Console and GitHub Developer Settings first (client ID/secret
-> aren't something to hand over in chat), so it's parked until that's in hand.
+- Google/GitHub OAuth sign-in, admin-configurable from Settings.razor rather than appsettings.json - an
+  admin pastes a provider's Client ID/Secret and checks Enabled, and it takes effect on the next sign-in
+  attempt with no restart (a DB-backed `OAuthProviderSettings` table, read live by a custom
+  `IConfigureOptions<T>` per provider). Account linking on first external sign-in: match by
+  `(Provider, ProviderKey)` if seen before, else by email against an existing password account, else
+  create a new one under the same `Auth:RequireApproval` gate as normal registration. Login.razor only
+  shows a provider's button once it's genuinely enabled and configured.
+
+> **OAuth still needs real credentials from the site operator before it does anything** - the code path
+> is live, but each provider stays inert until an admin creates a real OAuth app (Google Cloud Console /
+> GitHub Developer Settings) and pastes its Client ID/Secret into Settings. Also not yet
+> click-tested end to end (a real Google/GitHub round-trip, plus the admin settings form itself) since
+> that needs both an Admin session and real provider credentials, neither of which the assistant has.
 
 ---
 
