@@ -4,6 +4,7 @@
 @using Microsoft.AspNetCore.Authentication
 @using Microsoft.AspNetCore.Authentication.Cookies
 @inject UserService Users
+@inject OAuthSettingsService OAuthSettings
 @inject IHttpContextAccessor Http
 @inject NavigationManager Nav
 
@@ -30,6 +31,14 @@
         {
             <div class="alert alert-danger py-2">@_error</div>
         }
+        @if (Error == "pending")
+        {
+            <div class="alert alert-warning py-2">Your account is pending admin approval.</div>
+        }
+        else if (Error == "disabled")
+        {
+            <div class="alert alert-danger py-2">This account has been disabled.</div>
+        }
         <div class="mb-3">
             <label class="form-label">Username</label>
             <InputText class="form-control" @bind-Value="Input.Username" autocomplete="username" />
@@ -45,6 +54,23 @@
         <button type="submit" class="btn btn-primary w-100">Sign in</button>
     </EditForm>
 
+    @if (_googleUsable || _githubUsable)
+    {
+        <div class="d-flex align-items-center gap-2 my-3">
+            <hr class="flex-grow-1" /><span class="text-muted small">or</span><hr class="flex-grow-1" />
+        </div>
+        <div class="d-flex flex-column gap-2">
+            @if (_googleUsable)
+            {
+                <a class="btn btn-outline-secondary w-100" href="@($"/auth/external/google?returnUrl={Uri.EscapeDataString(ReturnUrl ?? "/")}")">Sign in with Google</a>
+            }
+            @if (_githubUsable)
+            {
+                <a class="btn btn-outline-secondary w-100" href="@($"/auth/external/github?returnUrl={Uri.EscapeDataString(ReturnUrl ?? "/")}")">Sign in with GitHub</a>
+            }
+        </div>
+    }
+
     <p class="text-center text-muted small mt-3 mb-0">
         <a href="/forgot-password">Forgot password?</a>
     </p>
@@ -58,7 +84,16 @@
 @code {
     [SupplyParameterFromForm] private LoginInput Input { get; set; } = new();
     [SupplyParameterFromQuery] private string? ReturnUrl { get; set; }
+    [SupplyParameterFromQuery] private string? Error { get; set; }
     private string? _error;
+    private bool _googleUsable;
+    private bool _githubUsable;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _googleUsable = await OAuthSettings.IsUsableAsync(OAuthProviders.Google);
+        _githubUsable = await OAuthSettings.IsUsableAsync(OAuthProviders.GitHub);
+    }
 
     private async Task SignIn()
     {

@@ -407,7 +407,7 @@ public sealed class UserService
             await conn.OpenAsync();
 
             await using var check = conn.CreateCommand();
-            check.CommandText = "SELECT name FROM sqlite_master WHERE type='table' AND name IN ('Users','AuditLog','PasswordResetTokens')";
+            check.CommandText = "SELECT name FROM sqlite_master WHERE type='table' AND name IN ('Users','AuditLog','PasswordResetTokens','OAuthProviderSettings','ExternalLogins')";
             var existingTables = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             await using (var reader = await check.ExecuteReaderAsync())
             {
@@ -521,6 +521,51 @@ public sealed class UserService
                     )
                     """;
                 await create.ExecuteNonQueryAsync();
+            }
+
+            if (!existingTables.Contains("OAuthProviderSettings"))
+            {
+                await using var create = conn.CreateCommand();
+                create.CommandText = """
+                    CREATE TABLE "OAuthProviderSettings" (
+                        "Id" INTEGER NOT NULL CONSTRAINT "PK_OAuthProviderSettings" PRIMARY KEY AUTOINCREMENT,
+                        "Provider" TEXT NOT NULL,
+                        "Enabled" INTEGER NOT NULL DEFAULT 0,
+                        "ClientId" TEXT NOT NULL DEFAULT '',
+                        "ClientSecret" TEXT NOT NULL DEFAULT '',
+                        "UpdatedAt" TEXT NOT NULL
+                    )
+                    """;
+                await create.ExecuteNonQueryAsync();
+
+                foreach (var provider in new[] { OAuthProviders.Google, OAuthProviders.GitHub })
+                {
+                    await using var seed = conn.CreateCommand();
+                    seed.CommandText = """INSERT INTO "OAuthProviderSettings" ("Provider", "Enabled", "ClientId", "ClientSecret", "UpdatedAt") VALUES (@provider, 0, '', '', @now)""";
+                    seed.Parameters.Add(new Microsoft.Data.Sqlite.SqliteParameter("@provider", provider));
+                    seed.Parameters.Add(new Microsoft.Data.Sqlite.SqliteParameter("@now", DateTimeOffset.UtcNow.ToString("o")));
+                    await seed.ExecuteNonQueryAsync();
+                }
+            }
+
+            if (!existingTables.Contains("ExternalLogins"))
+            {
+                await using var create = conn.CreateCommand();
+                create.CommandText = """
+                    CREATE TABLE "ExternalLogins" (
+                        "Id" INTEGER NOT NULL CONSTRAINT "PK_ExternalLogins" PRIMARY KEY AUTOINCREMENT,
+                        "UserId" INTEGER NOT NULL,
+                        "Provider" TEXT NOT NULL,
+                        "ProviderKey" TEXT NOT NULL,
+                        "Email" TEXT NULL,
+                        "CreatedAt" TEXT NOT NULL
+                    )
+                    """;
+                await create.ExecuteNonQueryAsync();
+
+                await using var index = conn.CreateCommand();
+                index.CommandText = """CREATE UNIQUE INDEX "IX_ExternalLogins_Provider_ProviderKey" ON "ExternalLogins" ("Provider", "ProviderKey")""";
+                await index.ExecuteNonQueryAsync();
             }
 
             _schemaEnsured = true;

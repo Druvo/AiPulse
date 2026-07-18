@@ -9,6 +9,7 @@
 @inject NavigationManager Nav
 @inject IJSRuntime JS
 @inject ToastService Toasts
+@inject OAuthSettingsService OAuthSettings
 
 <PageTitle>AiPulse · Settings</PageTitle>
 
@@ -289,6 +290,30 @@
             <Authorized>
                 <hr class="my-4" />
 
+                <h4 class="section-title"><Icon Name="key" /> OAuth sign-in</h4>
+                <p class="text-muted">
+                    Let people sign in with an existing Google or GitHub account instead of a password. Off by
+                    default - fill in a provider's Client ID/Secret from its developer console and check Enabled
+                    to turn it on. Takes effect immediately, no restart needed.
+                </p>
+                @foreach (var p in _oauthForms)
+                {
+                    <div class="row g-2 align-items-center mb-2">
+                        <div class="col-md-2 fw-bold">@p.Provider</div>
+                        <div class="col-md-2 form-check">
+                            <input type="checkbox" class="form-check-input" id="@($"oauth-{p.Provider}-enabled")" @bind="p.Enabled" />
+                            <label class="form-check-label" for="@($"oauth-{p.Provider}-enabled")">Enabled</label>
+                        </div>
+                        <div class="col-md-3"><input class="form-control" placeholder="Client ID" @bind="p.ClientId" /></div>
+                        <div class="col-md-3"><input type="password" class="form-control" placeholder="Client secret" @bind="p.ClientSecret" /></div>
+                        <div class="col-md-2"><button class="btn btn-outline-primary w-100" @onclick="() => SaveOAuthProvider(p)">Save</button></div>
+                    </div>
+                }
+                <p class="text-muted small mb-3">
+                    Redirect/callback URL to register with the provider: <code>https://your-domain/signin-google</code> (Google)
+                    or <code>https://your-domain/signin-github</code> (GitHub).
+                </p>
+
                 <h4 class="section-title"><Icon Name="database" /> Backup &amp; restore</h4>
                 <p class="text-muted">
                     Sources, all users' bookmarks/watchlists, Playground chat history, and feed history all live in <code>App_Data/</code>.
@@ -335,6 +360,7 @@
     private string _newPassword = "";
     private string _confirmPassword = "";
     private string? _passwordChangeMessage;
+    private List<OAuthFormRow> _oauthForms = new();
 
     protected override void OnInitialized()
     {
@@ -347,6 +373,26 @@
     {
         var state = await AuthState.GetAuthenticationStateAsync();
         _username = state.User.Identity?.Name ?? "";
+
+        if (state.User.IsInRole("Admin"))
+        {
+            var rows = await OAuthSettings.GetAllAsync();
+            _oauthForms = rows.Select(r => new OAuthFormRow { Provider = r.Provider, Enabled = r.Enabled, ClientId = r.ClientId, ClientSecret = r.ClientSecret }).ToList();
+        }
+    }
+
+    private async Task SaveOAuthProvider(OAuthFormRow p)
+    {
+        await OAuthSettings.SaveAsync(p.Provider, p.Enabled, p.ClientId, p.ClientSecret);
+        Toasts.Show($"{p.Provider} sign-in settings saved.");
+    }
+
+    private sealed class OAuthFormRow
+    {
+        public string Provider { get; set; } = "";
+        public bool Enabled { get; set; }
+        public string ClientId { get; set; } = "";
+        public string ClientSecret { get; set; } = "";
     }
 
     private async Task ChangePassword()

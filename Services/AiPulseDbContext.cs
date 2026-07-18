@@ -20,4 +20,6 @@ public sealed class AiPulseDbContext : DbContext
     public DbSet<ContentCandidate> ContentCandidates => Set<ContentCandidate>();
     public DbSet<AuditLogEntry> AuditLog => Set<AuditLogEntry>();
     public DbSet<PasswordResetToken> PasswordResetTokens => Set<PasswordResetToken>();
+    public DbSet<OAuthProviderSettings> OAuthProviderSettings => Set<OAuthProviderSettings>();
+    public DbSet<ExternalLogin> ExternalLogins => Set<ExternalLogin>();
 }

@@ -1,9 +1,13 @@
 using System.Net.Http.Headers;
+using System.Security.Claims;
 using System.Text;
 using AiPulse.Components;
+using AiPulse.Models;
 using AiPulse.Services;
+using AspNet.Security.OAuth.GitHub;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Authentication.Google;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -98,6 +102,19 @@ else
 
 // --- Authentication (cookie based, single configured user) ---
 builder.Services.Configure<AuthOptions>(builder.Configuration.GetSection("Auth"));
+
+// Google/GitHub sign-in: credentials are admin-configurable at runtime (Settings.razor), stored in the
+// DB rather than appsettings.json - see OAuthSettingsService for why the handlers below are always
+// registered even when neither provider is configured yet.
+builder.Services.AddSingleton<OAuthSettingsService>();
+builder.Services.AddSingleton<ExternalAuthService>();
+// Registered under IConfigureOptions<T> (the base interface), not IConfigureNamedOptions<T> directly -
+// OptionsFactory<T> only resolves IEnumerable<IConfigureOptions<T>> from DI and checks "is
+// IConfigureNamedOptions<T>" on each entry itself; registering under the derived interface means DI never
+// surfaces it there and the configurator silently never runs.
+builder.Services.AddSingleton<Microsoft.Extensions.Options.IConfigureOptions<GoogleOptions>, GoogleOptionsConfigurator>();
+builder.Services.AddSingleton<Microsoft.Extensions.Options.IConfigureOptions<GitHubAuthenticationOptions>, GitHubOptionsConfigurator>();
+
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
     .AddCookie(options =>
     {
@@ -143,8 +160,48 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
             context.Properties.Items["stamp_checked"] = DateTimeOffset.UtcNow.ToString("o");
             context.ShouldRenew = true;
         };
+    })
+    .AddGoogle(options =>
+    {
+        // ClientId/ClientSecret come from GoogleOptionsConfigurator (DB-backed), not set here.
+        options.CallbackPath = "/signin-google";
+        options.Events.OnTicketReceived = ctx => HandleExternalTicketReceivedAsync(ctx, OAuthProviders.Google);
+    })
+    .AddGitHub(options =>
+    {
+        // ClientId/ClientSecret come from GitHubOptionsConfigurator (DB-backed), not set here.
+        options.CallbackPath = "/signin-github";
+        options.Scope.Add("user:email"); // GitHub omits email from the base profile unless requested
+        options.Events.OnTicketReceived = ctx => HandleExternalTicketReceivedAsync(ctx, OAuthProviders.GitHub);
     });
 builder.Services.AddAuthorization();
+
+// Shared by both providers' OnTicketReceived above: resolve/create the local AppUser (ExternalAuthService),
+// then replace the provider's own principal with AiPulse's own 4-claim shape (same one Login.razor's
+// SignIn builds) before letting the framework's default post-TicketReceived flow sign in under the
+// cookie scheme and redirect to whatever RedirectUri the /auth/external/{provider} endpoint set below.
+async Task HandleExternalTicketReceivedAsync(TicketReceivedContext ctx, string provider)
+{
+    var externalAuth = ctx.HttpContext.RequestServices.GetRequiredService<ExternalAuthService>();
+    var (result, user) = await externalAuth.CompleteAsync(provider, ctx.Principal!);
+
+    if (result != ExternalLoginResult.Success || user is null)
+    {
+        ctx.HandleResponse();
+        var reason = result == ExternalLoginResult.PendingApproval ? "pending" : "disabled";
+        ctx.Response.Redirect($"/login?error={reason}");
+        return;
+    }
+
+    var claims = new[]
+    {
+        new Claim(ClaimTypes.Name, user.Username),
+        new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
+        new Claim(ClaimTypes.Role, user.Role),
+        new Claim("security_stamp", user.SecurityStamp)
+    };
+    ctx.Principal = new ClaimsPrincipal(new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme));
+}
 builder.Services.AddCascadingAuthenticationState();
 
 var app = builder.Build();
@@ -178,6 +235,25 @@ app.MapPost("/auth/logout", async (HttpContext http) =>
 {
     await http.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
     return Results.Redirect("/login");
+});
+
+// Kicks off a Google/GitHub sign-in. A minimal-API endpoint rather than something Login.razor calls
+// directly - Blazor Interactive Server components run over SignalR and can't issue a Challenge result themselves.
+app.MapGet("/auth/external/{provider}", async (string provider, OAuthSettingsService oauthSettings, string? returnUrl) =>
+{
+    var scheme = provider.ToLowerInvariant() switch
+    {
+        "google" => OAuthProviders.Google,
+        "github" => OAuthProviders.GitHub,
+        _ => null
+    };
+    if (scheme is null) return Results.NotFound();
+    if (!await oauthSettings.IsUsableAsync(scheme)) return Results.Redirect("/login");
+
+    var safeReturnUrl = !string.IsNullOrWhiteSpace(returnUrl) && returnUrl.StartsWith('/') && !returnUrl.StartsWith("//")
+        ? returnUrl
+        : "/";
+    return Results.Challenge(new AuthenticationProperties { RedirectUri = safeReturnUrl }, [scheme]);
 });
 
 // Dev-only helper: generate a PBKDF2 hash to paste into appsettings ("Auth:PasswordHash").
