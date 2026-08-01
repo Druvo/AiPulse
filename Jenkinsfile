@@ -17,7 +17,7 @@ pipeline {
         
         stage('Build') {
             steps {
-                bat 'dotnet publish AiPulse.sln -c Release -o publish --self-contained false -r linux-x64 --source https://api.nuget.org/v3/index.json'
+                bat 'dotnet publish AiPulse.csproj -c Release -o publish --self-contained false -r linux-x64 --source https://api.nuget.org/v3/index.json'
             }
         }
         
