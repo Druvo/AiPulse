@@ -37,25 +37,60 @@
     }
 }
 
-<div class="page">
-    <div class="sidebar">
-        <NavMenu />
-    </div>
+@* An anonymous visitor on a public page (News/Explore/Glossary/Tools/a profile) should see a public
+   site, not the internal dashboard shell - the full sidebar links to Dashboard/Learning Hub/Reading
+   Stats/etc. that would just redirect them to /login, which reads as "broken internal tool", not
+   "public site". Signed-in visitors still get the full dashboard sidebar as before. *@
+<AuthorizeView>
+    <Authorized>
+        <div class="page">
+            <div class="sidebar">
+                <NavMenu />
+            </div>
 
-    <main>
-        <div class="top-row px-4 gap-4">
-            <GlobalSearch />
-            <NotificationBell />
-            <a href="help"><Icon Name="help-circle" Size="16" /> Help</a>
-            <a href="settings"><Icon Name="settings" Size="16" /> Settings</a>
-            <a href="https://github.com/Druvo/AiPulse" target="_blank"><Icon Name="external-link" Size="16" /> About</a>
+            <main>
+                <div class="top-row px-4 gap-4">
+                    <GlobalSearch />
+                    <NotificationBell />
+                    <a href="help"><Icon Name="help-circle" Size="16" /> Help</a>
+                    <a href="settings"><Icon Name="settings" Size="16" /> Settings</a>
+                    <a href="https://github.com/Druvo/AiPulse" target="_blank"><Icon Name="external-link" Size="16" /> About</a>
+                </div>
+
+                <article class="content px-4">
+                    @Body
+                </article>
+            </main>
         </div>
+    </Authorized>
+    <NotAuthorized>
+        <div class="page">
+            <main class="w-100">
+                <div class="top-row px-4 justify-content-between">
+                    <a class="navbar-brand d-flex align-items-center gap-2" href="/">
+                        <img src="/img/logo-v1.png" alt="AiPulse" class="app-logo brand-logo" />
+                        <span>AiPulse</span>
+                    </a>
+                    <nav class="d-flex align-items-center gap-3">
+                        <a href="news">News</a>
+                        <a href="explore">Explore</a>
+                        <a href="glossary">Glossary</a>
+                        <a href="tools">Tools</a>
+                        <a href="https://github.com/Druvo/AiPulse" target="_blank" rel="noopener">GitHub</a>
+                    </nav>
+                    <div class="d-flex align-items-center gap-2">
+                        <a class="btn btn-sm btn-outline-dark" href="login">Sign in</a>
+                        <a class="btn btn-sm btn-dark" href="register">Get started</a>
+                    </div>
+                </div>
 
-        <article class="content px-4">
-            @Body
-        </article>
-    </main>
-</div>
+                <article class="content px-4">
+                    @Body
+                </article>
+            </main>
+        </div>
+    </NotAuthorized>
+</AuthorizeView>
 
 <button type="button" id="scroll-top-btn" class="scroll-top-btn" title="Back to top" aria-label="Back to top">
     <Icon Name="arrow-up" Size="18" />

@@ -18,35 +18,43 @@
 <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
     <h1 class="mb-0"><Icon Name="rss" Size="22" /> News Feed</h1>
     <div class="d-flex align-items-center gap-2">
-        @if (_result is not null)
+        @* Live-fetch status/Refresh/Mark-all-as-read are dashboard-y account actions, not browsing
+           filters - a public/anonymous visitor sees just the display and filter controls below. *@
+        @if (_userId is not null)
         {
-            @if (_result.FetchedAt == DateTimeOffset.MinValue)
+            @if (_result is not null)
             {
-                <span class="text-muted small">Showing saved history @(_loading ? "— fetching live data…" : "")</span>
-            }
-            else
-            {
-                <span class="text-muted small">Updated @_result.FetchedAt.ToLocalTime().ToString("g")</span>
+                @if (_result.FetchedAt == DateTimeOffset.MinValue)
+                {
+                    <span class="text-muted small">Showing saved history @(_loading ? "— fetching live data…" : "")</span>
+                }
+                else
+                {
+                    <span class="text-muted small">Updated @_result.FetchedAt.ToLocalTime().ToString("g")</span>
+                }
             }
         }
         <div class="btn-group view-toggle" role="group">
             <button class="btn btn-sm @(_view == "List" ? "btn-dark" : "btn-outline-dark")" @onclick='() => SetView("List")'><Icon Name="list" Size="15" /> List</button>
             <button class="btn btn-sm @(_view == "Grid" ? "btn-dark" : "btn-outline-dark")" @onclick='() => SetView("Grid")'><Icon Name="grid" Size="15" /> Grid</button>
         </div>
-        <button class="btn btn-primary" @onclick="() => Load(true)" disabled="@_loading">
-            @if (_loading)
-            {
-                <span class="spinner"></span>
-            }
-            else
-            {
-                <Icon Name="refresh" Size="15" />
-            }
-            @(_loading ? "Refreshing…" : "Refresh")
-        </button>
-        <button class="btn btn-sm btn-outline-dark" title="Mark every item in the current view as read" @onclick="MarkAllAsRead">
-            <Icon Name="check" Size="14" /> Mark all as read
-        </button>
+        @if (_userId is not null)
+        {
+            <button class="btn btn-primary" @onclick="() => Load(true)" disabled="@_loading">
+                @if (_loading)
+                {
+                    <span class="spinner"></span>
+                }
+                else
+                {
+                    <Icon Name="refresh" Size="15" />
+                }
+                @(_loading ? "Refreshing…" : "Refresh")
+            </button>
+            <button class="btn btn-sm btn-outline-dark" title="Mark every item in the current view as read" @onclick="MarkAllAsRead">
+                <Icon Name="check" Size="14" /> Mark all as read
+            </button>
+        }
         <button class="btn btn-sm btn-outline-dark" title="Keyboard shortcuts" @onclick="() => _showShortcutsHelp = !_showShortcutsHelp">?</button>
     </div>
 </div>
