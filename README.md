@@ -119,7 +119,7 @@ against yet.
     "PasswordHash": ""         // PBKDF2 hash (preferred) — takes precedence over Password
   },
   "Notifications": {
-    "PollMinutes": 15,         // how often the watcher checks feeds
+    "PollMinutes": 60,         // how often the watcher checks feeds
     "NotifyReleases": true,    // alert on new items in the Tools (GitHub releases) category
     "NotifyWatchlist": true,   // alert on watchlist keyword hits
     "MaxPerPoll": 15

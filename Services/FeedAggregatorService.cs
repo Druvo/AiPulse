@@ -28,15 +28,21 @@ public sealed class FeedAggregatorService
 
     /// <summary>Per-domain throttle: tracks last fetch time per host to avoid rate-limiting (e.g. Reddit 429s).</summary>
     private static readonly ConcurrentDictionary<string, DateTime> _lastDomainFetch = new();
-    /// <summary>Serializes the read-wait-write around <see cref="_lastDomainFetch"/> per host, so concurrent
+    /// <summary>Gates the read-wait-write around <see cref="_lastDomainFetch"/> per host, so concurrent
     /// requests to the same host can't all read the same stale timestamp and fire together (the previous
     /// check-then-set was not atomic under the concurrency gate below, which is what actually let bursts of
-    /// simultaneous Reddit requests through despite the "cooldown").</summary>
+    /// simultaneous Reddit requests through despite the "cooldown"). Capacity 1 for every host except
+    /// reddit.com (see <see cref="RedditMaxConcurrency"/>) - reddit's 100+ sources sharing one host meant
+    /// full serialization made it the poll's long pole, so it gets a couple of concurrent slots instead of one.</summary>
     private static readonly ConcurrentDictionary<string, SemaphoreSlim> _domainLocks = new();
     private static readonly TimeSpan DomainCooldown = TimeSpan.FromSeconds(3);
     /// <summary>Reddit's anonymous/unauthenticated RSS rate limit is tighter than most other hosts, and this
     /// app can have 100+ subreddit sources sharing the one host - give it a longer, dedicated cooldown.</summary>
     private static readonly TimeSpan RedditCooldown = TimeSpan.FromSeconds(6);
+    /// <summary>Reddit sources (100+ of them, one host) used to fully serialize behind a 1-at-a-time host
+    /// lock, which meant they alone could dominate the poll's wall-clock time. Letting a couple through
+    /// concurrently cuts that down while still keeping real spacing between requests via <see cref="RedditCooldown"/>.</summary>
+    private const int RedditMaxConcurrency = 2;
     /// <summary>
     /// Reddit's responses (429 or not) carry real "x-ratelimit-remaining"/"x-ratelimit-reset" headers -
     /// verified live: a single request can already show remaining=0, reset=13s, i.e. its actual budget is
@@ -312,7 +318,8 @@ public sealed class FeedAggregatorService
             : host.EndsWith("reddit.com", StringComparison.OrdinalIgnoreCase) ? RedditCooldown
             : DomainCooldown;
 
-        var hostLock = _domainLocks.GetOrAdd(host, _ => new SemaphoreSlim(1, 1));
+        var hostLock = _domainLocks.GetOrAdd(host, h =>
+            new SemaphoreSlim(h.EndsWith("reddit.com", StringComparison.OrdinalIgnoreCase) ? RedditMaxConcurrency : 1));
         await hostLock.WaitAsync(ct);
         try
         {
