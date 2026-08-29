@@ -10,6 +10,8 @@
 @inject IJSRuntime JS
 @inject ToastService Toasts
 @inject OAuthSettingsService OAuthSettings
+@inject FollowService Follow
+@inject ProfileService Profile
 
 <PageTitle>AiPulse · Settings</PageTitle>
 
@@ -42,6 +44,35 @@
                         @k
                         <button class="btn-close btn-close-sm ms-1" style="font-size:.6rem;"
                                 @onclick="() => Remove(k)" aria-label="remove"></button>
+                    </span>
+                }
+            </div>
+        }
+
+        <hr class="my-4" />
+
+        <h4 class="section-title"><Icon Name="star" /> Followed tags</h4>
+        <p class="text-muted">Powers the "Following" filter on the News page — items matching any of these show up there, along with items from sources you've starred directly on a card.</p>
+
+        <div class="input-group mb-3">
+            <input class="form-control" placeholder="e.g. LLM, Agents" @bind="_newFollowedTag" @bind:event="oninput"
+                   @onkeydown="@(e => { if (e.Key == "Enter") { _ = AddFollowedTagAsync(); } })" />
+            <button class="btn btn-primary" @onclick="AddFollowedTagAsync">Add</button>
+        </div>
+
+        @if (_followedTags.Count == 0)
+        {
+            <p class="text-muted">Not following any tags yet.</p>
+        }
+        else
+        {
+            <div class="d-flex flex-wrap gap-2">
+                @foreach (var t in _followedTags)
+                {
+                    <span class="badge bg-warning p-2">
+                        @t
+                        <button class="btn-close btn-close-sm ms-1" style="font-size:.6rem;"
+                                @onclick="() => RemoveFollowedTagAsync(t)" aria-label="remove"></button>
                     </span>
                 }
             </div>
@@ -147,6 +178,25 @@
         {
             <div class="alert alert-warning py-2 mt-2 small mb-0">@_passwordChangeMessage</div>
         }
+
+        <hr class="my-4" />
+
+        <h4 class="section-title"><Icon Name="user" /> Public profile</h4>
+        <p class="text-muted">
+            Shown on your public profile page at <a href="@($"u/{_username}")" target="_blank">/u/@_username</a> —
+            visible to anyone, signed in or not.
+        </p>
+        <div class="row g-2 mb-2">
+            <div class="col-md-6"><input class="form-control" placeholder="Display name (optional - defaults to your username)" @bind="_profileDisplayName" /></div>
+            <div class="col-md-6"><input class="form-control" placeholder="Website (optional)" @bind="_profileWebsiteUrl" /></div>
+        </div>
+        <div class="mb-2">
+            <input class="form-control" placeholder="Avatar image URL (optional)" @bind="_profileAvatarUrl" />
+        </div>
+        <div class="mb-2">
+            <textarea class="form-control" rows="3" placeholder="Bio (optional)" @bind="_profileBio"></textarea>
+        </div>
+        <button class="btn btn-primary" @onclick="SaveProfileAsync">Save profile</button>
 
         <hr class="my-4" />
 
@@ -343,6 +393,13 @@
     public string? RestoredParam { get; set; }
 
     private string _newKeyword = "";
+    private string _newFollowedTag = "";
+    private int _userId;
+    private HashSet<string> _followedTags = new(StringComparer.OrdinalIgnoreCase);
+    private string? _profileDisplayName;
+    private string? _profileWebsiteUrl;
+    private string? _profileAvatarUrl;
+    private string? _profileBio;
     private string _newFilterPattern = "";
     private bool _newFilterIsRegex;
     private string? _exportPath;
@@ -373,6 +430,19 @@
     {
         var state = await AuthState.GetAuthenticationStateAsync();
         _username = state.User.Identity?.Name ?? "";
+
+        var idClaim = state.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+        if (int.TryParse(idClaim, out var uid))
+        {
+            _userId = uid;
+            _followedTags = await Follow.GetFollowedTagsAsync(uid);
+
+            var profile = await Profile.GetProfileAsync(uid);
+            _profileDisplayName = profile.DisplayName;
+            _profileWebsiteUrl = profile.WebsiteUrl;
+            _profileAvatarUrl = profile.AvatarUrl;
+            _profileBio = profile.Bio;
+        }
 
         if (state.User.IsInRole("Admin"))
         {
@@ -477,6 +547,29 @@
     }
 
     private void Remove(string k) => Reading.RemoveKeyword(k);
+
+    private async Task SaveProfileAsync()
+    {
+        await Profile.UpsertProfileAsync(_userId, _profileBio, _profileAvatarUrl, _profileWebsiteUrl, _profileDisplayName);
+        Toasts.Show("Public profile saved.");
+    }
+
+    private async Task AddFollowedTagAsync()
+    {
+        if (string.IsNullOrWhiteSpace(_newFollowedTag)) return;
+        var tag = _newFollowedTag.Trim();
+        _newFollowedTag = "";
+        if (_followedTags.Contains(tag)) return; // already following - Add shouldn't silently toggle it off
+
+        if (await Follow.ToggleFollowTagAsync(_userId, tag))
+            _followedTags.Add(tag.ToLowerInvariant());
+    }
+
+    private async Task RemoveFollowedTagAsync(string tag)
+    {
+        if (!await Follow.ToggleFollowTagAsync(_userId, tag))
+            _followedTags.Remove(tag);
+    }
 
     private void AddExcludeFilter()
     {

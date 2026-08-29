@@ -106,6 +106,9 @@
                 <Icon Name="user" Size="14" />
                 <span>Signed in as <strong>@context.User.Identity?.Name</strong></span>
             </div>
+            <a class="nav-user-profile-link d-block px-1 pb-1 small" href="@($"u/{context.User.Identity?.Name}")">
+                <Icon Name="external-link" Size="12" /> View my profile
+            </a>
             <form method="post" action="/auth/logout">
                 <button type="submit" class="logout-btn">
                     <Icon Name="logout" Size="16" />

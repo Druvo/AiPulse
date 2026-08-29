@@ -1,0 +1,109 @@
+@page "/u/{Username}"
+@rendermode InteractiveServer
+@inject UserService Users
+@inject ProfileService ProfileSvc
+@inject CommentService CommentsSvc
+@inject FollowService Follow
+
+<PageTitle>AiPulse · @(_user?.Username ?? "Profile")</PageTitle>
+
+@* Hard privacy boundary: this page only ever calls UserService/ProfileService/CommentService/FollowService,
+   never ReadingStateService - bookmarks, read history, watchlist, muted sources, saved searches, webhook
+   URL, and the Fever API key stay exactly where they are today, private, never queried by this public route. *@
+
+@if (_notFound)
+{
+    <EmptyState Icon="user" Title="User not found" Body="No account with that username." />
+}
+else if (_user is null)
+{
+    <p><em>Loading…</em></p>
+}
+else
+{
+    <HeadContent>
+        <meta name="description" content="@(string.IsNullOrWhiteSpace(_profile?.Bio) ? $"{_user.Username}'s profile on AiPulse" : _profile!.Bio)" />
+    </HeadContent>
+
+    <div class="page-header d-flex align-items-center gap-3">
+        <span class="source-avatar profile-avatar" style="--avatar-color: @AvatarColor(_user.Username); width:64px; height:64px; font-size:1.5rem;">
+            @if (!string.IsNullOrWhiteSpace(_profile?.AvatarUrl))
+            {
+                <img src="@_profile.AvatarUrl" alt="" />
+            }
+            else
+            {
+                <span class="source-avatar-initial">@Initial(_user.Username)</span>
+            }
+        </span>
+        <div>
+            <h1 class="mb-0">@(string.IsNullOrWhiteSpace(_profile?.DisplayName) ? _user.Username : _profile!.DisplayName)</h1>
+            <p class="text-muted mb-0">@@@_user.Username · Joined @_user.CreatedAt.ToString("MMMM yyyy")</p>
+        </div>
+    </div>
+
+    @if (!string.IsNullOrWhiteSpace(_profile?.Bio))
+    {
+        <p class="mt-3">@_profile.Bio</p>
+    }
+    @if (!string.IsNullOrWhiteSpace(_profile?.WebsiteUrl))
+    {
+        <p><a href="@_profile.WebsiteUrl" target="_blank" rel="noopener"><Icon Name="external-link" Size="14" /> @_profile.WebsiteUrl</a></p>
+    }
+    <p class="text-muted small">Following @_followingCount source@(_followingCount == 1 ? "" : "s")/tag@(_followingCount == 1 ? "" : "s")</p>
+
+    <hr class="my-4" />
+
+    <h4 class="section-title">Recent comments</h4>
+    @if (_comments.Count == 0)
+    {
+        <p class="text-muted">No public activity yet.</p>
+    }
+    else
+    {
+        @foreach (var c in _comments)
+        {
+            <div class="mb-3 small">
+                <a href="@c.ArticleLink" target="_blank" rel="noopener">@c.ArticleLink</a>
+                <span class="text-muted"> · @c.CreatedAt.ToLocalTime().ToString("g")</span>
+                <p class="mb-0">@c.Body</p>
+            </div>
+        }
+    }
+}
+
+@code {
+    [Parameter] public string Username { get; set; } = "";
+
+    private AppUser? _user;
+    private UserProfileRecord? _profile;
+    private List<CommentView> _comments = new();
+    private int _followingCount;
+    private bool _notFound;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _user = await Users.GetByUsernameAsync(Username);
+        if (_user is null)
+        {
+            _notFound = true;
+            return;
+        }
+
+        _profile = await ProfileSvc.GetProfileAsync(_user.Id);
+        _comments = await CommentsSvc.GetByUserAsync(_user.Id);
+        _followingCount = await Follow.GetFollowingCountAsync(_user.Id);
+    }
+
+    private static string Initial(string name) =>
+        string.IsNullOrWhiteSpace(name) ? "?" : char.ToUpperInvariant(name.Trim()[0]).ToString();
+
+    /// <summary>Same deterministic per-name color hash FeedItemCard uses for source avatars.</summary>
+    private static string AvatarColor(string name)
+    {
+        var hash = 0;
+        foreach (var ch in name)
+            hash = (hash * 31 + ch) & 0x7fffffff;
+        return $"hsl({hash % 360}, 58%, 42%)";
+    }
+}

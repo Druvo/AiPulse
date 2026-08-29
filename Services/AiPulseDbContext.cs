@@ -22,4 +22,7 @@ public sealed class AiPulseDbContext : DbContext
     public DbSet<PasswordResetToken> PasswordResetTokens => Set<PasswordResetToken>();
     public DbSet<OAuthProviderSettings> OAuthProviderSettings => Set<OAuthProviderSettings>();
     public DbSet<ExternalLogin> ExternalLogins => Set<ExternalLogin>();
+    public DbSet<FollowRecord> Follows => Set<FollowRecord>();
+    public DbSet<CommentRecord> Comments => Set<CommentRecord>();
+    public DbSet<UserProfileRecord> UserProfiles => Set<UserProfileRecord>();
 }

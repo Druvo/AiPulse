@@ -6,6 +6,7 @@
 @inject ObsidianExportService Export
 @inject NavigationManager Nav
 @inject ToastService Toasts
+@inject CommentService CommentsSvc
 
 <PageTitle>AiPulse · Reading Stats</PageTitle>
 
@@ -272,7 +273,11 @@ else
                 <FeedItemCard Item="bItem" Layout="List"
                               IsRead="Reading.IsRead(bItem.Link)"
                               OnToggleRead="() => Reading.ToggleRead(bItem)"
-                              OnOpened="() => Reading.EnsureRead(bItem)" />
+                              OnOpened="() => Reading.EnsureRead(bItem)"
+                              CommentCount="GetCommentCount(bItem)"
+                              CommentsExpanded="_expandedComments.Contains(bItem.Link)"
+                              OnToggleComments="() => ToggleComments(bItem.Link)"
+                              OnCommentCountChanged="c => _commentCounts[bItem.Link] = c" />
                 <button class="btn btn-sm btn-outline-danger position-absolute" style="top:.5rem; right:.5rem;" @onclick="() => RemoveBookmark(b)">Remove</button>
             </div>
         }
@@ -281,6 +286,31 @@ else
 }
 
 @code {
+    private readonly HashSet<string> _expandedComments = new();
+    private readonly Dictionary<string, int> _commentCounts = new();
+    private readonly HashSet<string> _commentCountsRequested = new();
+
+    private void ToggleComments(string link)
+    {
+        if (!_expandedComments.Add(link))
+            _expandedComments.Remove(link);
+    }
+
+    /// <summary>Same lazy, memoized-per-link fetch as News.razor's GetCommentCount - see its doc comment.</summary>
+    private int GetCommentCount(FeedItem item)
+    {
+        if (_commentCounts.TryGetValue(item.Link, out var count)) return count;
+        if (_commentCountsRequested.Add(item.Link))
+            _ = LoadCommentCountAsync(item.Link);
+        return 0;
+    }
+
+    private async Task LoadCommentCountAsync(string link)
+    {
+        _commentCounts[link] = await CommentsSvc.GetCommentCountAsync(link);
+        await InvokeAsync(StateHasChanged);
+    }
+
     [SupplyParameterFromQuery(Name = "contentType")]
     public string? ContentTypeParam { get; set; }
 

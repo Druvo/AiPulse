@@ -1,15 +1,41 @@
 ﻿@inherits LayoutComponentBase
+@inject NavigationManager Nav
 
-@* Everything using this layout is [Authorize]-gated and would just redirect a crawler - noindex by
-   default. Login/Register/ForgotPassword use EmptyLayout instead, so they're indexable without needing
-   an override here (a page-level <HeadContent> here couldn't cleanly override this anyway - search
-   engines combine, not replace, conflicting robots directives from multiple meta tags). *@
+@* Most pages using this layout are still [Authorize]-gated and would just redirect a crawler - noindex
+   by default. A handful of routes (News/Explore/Glossary/Tools) are public browsing now and should be
+   indexable - decided here, in the layout itself, rather than via a page-level <HeadContent> override,
+   because search engines combine (not replace) conflicting robots directives from multiple meta tags, so
+   two <meta name="robots"> tags on the same rendered page would both apply rather than the page's one
+   winning. Checking the route here means exactly one robots tag ever renders. *@
 <HeadContent>
-    <meta name="robots" content="noindex, nofollow" />
+    @if (IsPublicPage)
+    {
+        <meta name="robots" content="index, follow" />
+    }
+    else
+    {
+        <meta name="robots" content="noindex, nofollow" />
+    }
     <meta name="description" content="AiPulse — a standalone, self-hosted dashboard to keep developers current on the AI world: news, jargon, the right tool for the right task, and a structured learning roadmap. Runs with zero AI and no API keys." />
     <meta property="og:title" content="AiPulse — self-hosted AI news & learning dashboard" />
     <meta property="og:description" content="Aggregates ~39 AI/dev RSS sources with a curated glossary, tools matrix, and learning roadmap. Standalone, self-hosted, no API keys required." />
 </HeadContent>
+
+@code {
+    private static readonly HashSet<string> PublicPaths = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "/news", "/explore", "/glossary", "/tools"
+    };
+
+    private bool IsPublicPage
+    {
+        get
+        {
+            var path = new Uri(Nav.Uri).AbsolutePath.TrimEnd('/');
+            return PublicPaths.Contains(path) || path.StartsWith("/u/", StringComparison.OrdinalIgnoreCase);
+        }
+    }
+}
 
 <div class="page">
     <div class="sidebar">

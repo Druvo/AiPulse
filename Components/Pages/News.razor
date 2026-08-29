@@ -1,10 +1,11 @@
 @page "/news"
-@attribute [Authorize]
 @rendermode InteractiveServer
 @implements IAsyncDisposable
 @inject FeedAggregatorService Feeds
 @inject FeedHistoryService History
 @inject ReadingStateService Reading
+@inject FollowService Follow
+@inject CommentService CommentsSvc
 @inject KnowledgeBaseService Kb
 @inject NavigationManager Nav
 @inject IJSRuntime JS
@@ -70,14 +71,18 @@
     <div class="btn-group flex-wrap" role="group">
         @foreach (var f in _filters)
         {
-            <button class="btn btn-sm @(_filter == f ? "btn-dark" : "btn-outline-dark")"
-                    @onclick="() => SetFilter(f)">
-                @f
-                @if (f == "New" && _newCount > 0)
-                {
-                    <span class="badge bg-info ms-1">@_newCount</span>
-                }
-            </button>
+            @* "Following" only means something for a signed-in user - nothing to follow yet otherwise. *@
+            @if (f != "Following" || _userId is not null)
+            {
+                <button class="btn btn-sm @(_filter == f ? "btn-dark" : "btn-outline-dark")"
+                        @onclick="() => SetFilter(f)">
+                    @f
+                    @if (f == "New" && _newCount > 0)
+                    {
+                        <span class="badge bg-info ms-1">@_newCount</span>
+                    }
+                </button>
+            }
         }
     </div>
     @if (!string.IsNullOrEmpty(_category))
@@ -151,9 +156,15 @@ else
                                   OnToggleBookmark="() => Toggle(item)"
                                   OnOpened="() => MarkAsRead(item)"
                                   OnMuteSource="MuteSource"
+                                  IsFollowingSource="_followedSources.Contains(item.SourceName)"
+                                  OnFollowSource="_userId.HasValue ? EventCallback.Factory.Create<string>(this, ToggleFollowSource) : default"
                                   ShowFullTextToggle="true"
                                   Expanded="_expandedLinks.Contains(item.Link)"
                                   OnToggleExpanded="() => ToggleExpanded(item.Link)"
+                                  CommentCount="GetCommentCount(item)"
+                                  CommentsExpanded="_expandedComments.Contains(item.Link)"
+                                  OnToggleComments="() => ToggleComments(item.Link)"
+                                  OnCommentCountChanged="c => _commentCounts[item.Link] = c"
                                   CssClass='@(idx == _focusedIndex ? "kb-focused" : "")' />
                 </div>
             }
@@ -173,9 +184,15 @@ else
                               OnToggleBookmark="() => Toggle(item)"
                               OnOpened="() => MarkAsRead(item)"
                               OnMuteSource="MuteSource"
+                              IsFollowingSource="_followedSources.Contains(item.SourceName)"
+                              OnFollowSource="_userId.HasValue ? EventCallback.Factory.Create<string>(this, ToggleFollowSource) : default"
                               ShowFullTextToggle="true"
                               Expanded="_expandedLinks.Contains(item.Link)"
                               OnToggleExpanded="() => ToggleExpanded(item.Link)"
+                              CommentCount="GetCommentCount(item)"
+                              CommentsExpanded="_expandedComments.Contains(item.Link)"
+                              OnToggleComments="() => ToggleComments(item.Link)"
+                              OnCommentCountChanged="c => _commentCounts[item.Link] = c"
                               CssClass='@(idx == _focusedIndex ? "kb-focused" : "")' />
             </div>
         }
@@ -264,32 +281,39 @@ else
         </Chips>
     </FilterBar>
 
-    <div class="mt-2">
-        <div class="x-small text-muted text-uppercase mb-1">Saved searches</div>
-        <div class="d-flex flex-wrap gap-2 align-items-center">
-            @foreach (var saved in Reading.SavedSearches)
-            {
-                <div class="btn-group btn-group-sm">
-                    <button class="btn btn-outline-dark" title="@SavedSearchSummary(saved)" @onclick="() => ApplySavedSearch(saved)">@saved.Name</button>
-                    <button class="btn btn-outline-danger" title="Delete this saved search" @onclick="() => Reading.RemoveSavedSearch(saved.Id)"><Icon Name="trash" Size="12" /></button>
+    @* Meaningless for an anonymous, per-tab-only session (Phase 0's ReadingStateService in-memory
+       state doesn't survive a refresh) - hidden entirely for signed-out visitors rather than shown
+       and silently forgotten. *@
+    <AuthorizeView>
+        <Authorized>
+            <div class="mt-2">
+                <div class="x-small text-muted text-uppercase mb-1">Saved searches</div>
+                <div class="d-flex flex-wrap gap-2 align-items-center">
+                    @foreach (var saved in Reading.SavedSearches)
+                    {
+                        <div class="btn-group btn-group-sm">
+                            <button class="btn btn-outline-dark" title="@SavedSearchSummary(saved)" @onclick="() => ApplySavedSearch(saved)">@saved.Name</button>
+                            <button class="btn btn-outline-danger" title="Delete this saved search" @onclick="() => Reading.RemoveSavedSearch(saved.Id)"><Icon Name="trash" Size="12" /></button>
+                        </div>
+                    }
+                    @if (_savingSearch)
+                    {
+                        <input class="form-control form-control-sm" style="max-width:180px" placeholder="Name this search…"
+                               value="@_savedSearchName" @oninput="e => _savedSearchName = (string)e.Value!"
+                               @onkeydown="@(e => { if (e.Key == "Enter") SaveCurrentSearch(); })" />
+                        <button class="btn btn-sm btn-success" @onclick="SaveCurrentSearch" disabled="@string.IsNullOrWhiteSpace(_savedSearchName)">Save</button>
+                        <button class="btn btn-sm btn-outline-secondary" @onclick="() => _savingSearch = false">Cancel</button>
+                    }
+                    else if (HasSaveableFilters())
+                    {
+                        <button class="btn btn-sm btn-outline-primary" @onclick="() => _savingSearch = true">
+                            <Icon Name="star" Size="12" /> Save current filters…
+                        </button>
+                    }
                 </div>
-            }
-            @if (_savingSearch)
-            {
-                <input class="form-control form-control-sm" style="max-width:180px" placeholder="Name this search…"
-                       value="@_savedSearchName" @oninput="e => _savedSearchName = (string)e.Value!"
-                       @onkeydown="@(e => { if (e.Key == "Enter") SaveCurrentSearch(); })" />
-                <button class="btn btn-sm btn-success" @onclick="SaveCurrentSearch" disabled="@string.IsNullOrWhiteSpace(_savedSearchName)">Save</button>
-                <button class="btn btn-sm btn-outline-secondary" @onclick="() => _savingSearch = false">Cancel</button>
-            }
-            else if (HasSaveableFilters())
-            {
-                <button class="btn btn-sm btn-outline-primary" @onclick="() => _savingSearch = true">
-                    <Icon Name="star" Size="12" /> Save current filters…
-                </button>
-            }
-        </div>
-    </div>
+            </div>
+        </Authorized>
+    </AuthorizeView>
 </div>
 </div>
 
@@ -349,11 +373,19 @@ else
     private int _newCount;
     private List<FeedItem> _visibleItems = new();
     private readonly HashSet<string> _expandedLinks = new();
+    private readonly HashSet<string> _expandedComments = new();
+    private readonly Dictionary<string, int> _commentCounts = new();
+    private readonly HashSet<string> _commentCountsRequested = new();
     private int _focusedIndex = -1;
     private bool _showShortcutsHelp;
     private DotNetObjectReference<News>? _dotNetRef;
 
-    private readonly string[] _filters = { "Unread", "New", "Read", "All" };
+    [CascadingParameter] private Task<AuthenticationState>? AuthStateTask { get; set; }
+    private int? _userId;
+    private HashSet<string> _followedSources = new(StringComparer.OrdinalIgnoreCase);
+    private HashSet<string> _followedTags = new(StringComparer.OrdinalIgnoreCase);
+
+    private readonly string[] _filters = { "Unread", "New", "Read", "All", "Following" };
     private readonly string[] _categories = { "News", "Research", "Tools", "Community" };
     private readonly string[] _contentTypes = { "News", "Tutorial", "Paper", "Discussion", "Video" };
     private readonly string[] _levels = { "Beginner", "Intermediate", "Advanced" };
@@ -415,6 +447,32 @@ else
         // on a cold cache - a blocking OnInitializedAsync would leave the page showing nothing at all for
         // however long the live fetch takes.
         _ = Load(false);
+
+        // Same fire-and-forget reasoning: don't block the page's first render on a DB round-trip just to
+        // find out whether this visitor even has an account.
+        _ = LoadFollowsAsync();
+    }
+
+    /// <summary>Resolves the signed-in user's id (null for anonymous, since News is public now) and their
+    /// followed sources/tags, for the "Following" filter and the per-card follow star.</summary>
+    private async Task LoadFollowsAsync()
+    {
+        if (AuthStateTask is null) return;
+        var authState = await AuthStateTask;
+        var idClaim = authState.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+        if (!int.TryParse(idClaim, out var uid)) return;
+
+        _userId = uid;
+        _followedSources = await Follow.GetFollowedSourcesAsync(uid);
+        _followedTags = await Follow.GetFollowedTagsAsync(uid);
+        StateHasChanged();
+    }
+
+    private async Task ToggleFollowSource(string sourceName)
+    {
+        if (_userId is not { } uid) return;
+        var following = await Follow.ToggleFollowSourceAsync(uid, sourceName);
+        if (following) _followedSources.Add(sourceName); else _followedSources.Remove(sourceName);
     }
 
     private void OnPartialProgress(IReadOnlyList<FeedItem> items)
@@ -638,6 +696,7 @@ else
             "New" => q.Where(i => i.Published > _sinceVisit),
             "Unread" => q.Where(i => !Reading.IsRead(i.Link)),
             "Read" => q.Where(i => Reading.IsRead(i.Link)),
+            "Following" => q.Where(i => _followedSources.Contains(i.SourceName) || i.Tags.Any(t => _followedTags.Contains(t))),
             _ => q
         };
 
@@ -734,6 +793,30 @@ else
     {
         if (!_expandedLinks.Add(link))
             _expandedLinks.Remove(link);
+    }
+
+    private void ToggleComments(string link)
+    {
+        if (!_expandedComments.Add(link))
+            _expandedComments.Remove(link);
+    }
+
+    /// <summary>Memoized per-link comment count for the "💬 N comments" badge - fetched lazily (once per
+    /// distinct link per circuit) rather than a bulk query for every visible item on every render, same
+    /// "ensure fetch started, return cached in the meantime" shape FeedItemCard already uses for favicon
+    /// theme colors.</summary>
+    private int GetCommentCount(FeedItem item)
+    {
+        if (_commentCounts.TryGetValue(item.Link, out var count)) return count;
+        if (_commentCountsRequested.Add(item.Link))
+            _ = LoadCommentCountAsync(item.Link);
+        return 0;
+    }
+
+    private async Task LoadCommentCountAsync(string link)
+    {
+        _commentCounts[link] = await CommentsSvc.GetCommentCountAsync(link);
+        await InvokeAsync(StateHasChanged);
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)

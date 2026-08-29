@@ -70,6 +70,17 @@
             }
         }
 
+        @if (Layout != "Compact" && OnToggleComments.HasDelegate)
+        {
+            <button class="btn btn-sm btn-link p-0 mb-2 align-self-start" @onclick="OnToggleComments" @onclick:stopPropagation="true">
+                <Icon Name="message" Size="14" /> @(CommentCount == 0 ? "Comment" : $"{CommentCount} comment{(CommentCount == 1 ? "" : "s")}")
+            </button>
+            @if (CommentsExpanded)
+            {
+                <CommentThread ArticleLink="@Item.Link" OnCountChanged="OnCommentCountUpdated" />
+            }
+        }
+
         @if (Layout != "Compact" && Item.Tags.Length > 0)
         {
             <div class="d-flex flex-wrap gap-1 mb-1">
@@ -90,6 +101,14 @@
                     }
                 </span>
                 <span>@Item.SourceName</span>
+                @if (OnFollowSource.HasDelegate)
+                {
+                    <button class="btn btn-sm btn-link p-0 follow-source-btn @(IsFollowingSource ? "active" : "")"
+                            title="@(IsFollowingSource ? $"Unfollow {Item.SourceName}" : $"Follow {Item.SourceName}")"
+                            @onclick="() => OnFollowSource.InvokeAsync(Item.SourceName)" @onclick:stopPropagation="true">
+                        <Icon Name="star" Size="12" Filled="@IsFollowingSource" />
+                    </button>
+                }
                 @if (OnMuteSource.HasDelegate)
                 {
                     <button class="btn btn-sm btn-link p-0 mute-source-btn" title="Hide @Item.SourceName from your feed"
@@ -137,6 +156,17 @@
     [Parameter] public EventCallback OnOpened { get; set; }
     /// <summary>Optional - only News.razor wires this up. Invoked with the item's SourceName when the user asks to hide that source from their own feed.</summary>
     [Parameter] public EventCallback<string> OnMuteSource { get; set; }
+    [Parameter] public bool IsFollowingSource { get; set; }
+    /// <summary>Optional - only wired up for signed-in users (following requires an account). Invoked with the item's SourceName.</summary>
+    [Parameter] public EventCallback<string> OnFollowSource { get; set; }
+    /// <summary>Optional - only wired up by pages that show a comment thread (News, Bookmarks). A parent-tracked
+    /// cache, since fetching a live count per card on every render would be one query per visible item.</summary>
+    [Parameter] public int CommentCount { get; set; }
+    [Parameter] public bool CommentsExpanded { get; set; }
+    [Parameter] public EventCallback OnToggleComments { get; set; }
+    /// <summary>Bubbles the post-mutation count up to whatever cache the caller keeps, in addition to this
+    /// card's own immediate display update.</summary>
+    [Parameter] public EventCallback<int> OnCommentCountChanged { get; set; }
     [Parameter] public bool ShowFullTextToggle { get; set; }
     [Parameter] public bool Expanded { get; set; }
     [Parameter] public EventCallback OnToggleExpanded { get; set; }
@@ -156,6 +186,12 @@
     private async Task NotifyOpened()
     {
         if (OnOpened.HasDelegate) await OnOpened.InvokeAsync();
+    }
+
+    private async Task OnCommentCountUpdated(int newCount)
+    {
+        CommentCount = newCount;
+        if (OnCommentCountChanged.HasDelegate) await OnCommentCountChanged.InvokeAsync(newCount);
     }
 
     private string TwitterShareUrl() => $"https://twitter.com/intent/tweet?text={Uri.EscapeDataString(Item.Title)}&url={Uri.EscapeDataString(Item.Link)}";

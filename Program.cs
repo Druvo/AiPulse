@@ -74,6 +74,9 @@ builder.Services.AddSingleton<SourceHealthService>();
 builder.Services.AddSingleton<ContentExtractorService>();
 builder.Services.AddSingleton<FeedDiscoveryService>();
 builder.Services.AddSingleton<FaviconService>();
+builder.Services.AddSingleton<FollowService>();
+builder.Services.AddSingleton<CommentService>();
+builder.Services.AddSingleton<ProfileService>();
 builder.Services.AddHttpContextAccessor();
 
 // WebSub (PubSubHubbub): subscribe to feeds that push updates instead of polling. Inert unless

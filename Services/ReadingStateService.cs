@@ -28,6 +28,11 @@ public sealed class ReadingStateService
         _authProvider = authProvider;
     }
 
+    /// <summary>True once loaded for a circuit with no signed-in identity - state stays in-memory only for
+    /// the circuit's lifetime, never touching disk (see EnsureLoaded). Public so pages can hide/no-op
+    /// account-only UI instead of relying on writes silently going nowhere.</summary>
+    public bool IsAnonymous { get; private set; }
+
     /// <summary>Resolves the current user and loads their state file, once per circuit. Safe to call repeatedly.</summary>
     private void EnsureLoaded()
     {
@@ -40,7 +45,20 @@ public sealed class ReadingStateService
             // renders (the cookie was validated before the circuit was even created), so blocking here
             // never actually waits on I/O or the renderer - it just unwraps an already-completed Task.
             var authState = _authProvider.GetAuthenticationStateAsync().GetAwaiter().GetResult();
-            var username = authState.User.Identity?.Name ?? "anonymous";
+            var username = authState.User.Identity?.Name;
+
+            // No signed-in identity (News/Explore are public now) - used to fall back to a literal
+            // "anonymous" folder, which meant every unauthenticated visitor shared one file and clobbered
+            // each other's bookmarks/read-state. Instead: fresh, in-memory-only state for this circuit's
+            // lifetime (one browser tab, since this service is Scoped) - never persisted, never shared.
+            if (username is null)
+            {
+                IsAnonymous = true;
+                _path = null;
+                _state = new ReadingState();
+                return;
+            }
+
             var userKey = SanitizeForPath(username);
 
             var dir = Path.Combine(_usersDir, userKey);
@@ -697,7 +715,8 @@ public sealed class ReadingStateService
 
     private void Save()
     {
-        // Caller holds _lock.
+        // Caller holds _lock. Anonymous circuits have no backing file by design - see EnsureLoaded.
+        if (_path is null) return;
         File.WriteAllText(_path!, JsonSerializer.Serialize(_state, JsonOpts));
     }
 

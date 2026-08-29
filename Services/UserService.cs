@@ -111,6 +111,15 @@ public sealed class UserService
         return (LoginResult.Success, user);
     }
 
+    /// <summary>Names that would collide with a top-level route (e.g. /u/settings looking like a profile
+    /// page for a user named "settings") - checked case-insensitively against both self-registration and
+    /// admin-created accounts.</summary>
+    private static readonly HashSet<string> ReservedUsernames = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "admin", "settings", "api", "u", "login", "logout", "register", "dashboard", "news", "explore",
+        "glossary", "tools", "sources", "users", "help", "playground"
+    };
+
     public async Task<(bool Success, string? Error)> RegisterAsync(string username, string password, string? email = null)
     {
         username = username.Trim();
@@ -118,6 +127,8 @@ public sealed class UserService
             return (false, "Username must be at least 3 characters.");
         if (password.Length < 6)
             return (false, "Password must be at least 6 characters.");
+        if (ReservedUsernames.Contains(username))
+            return (false, "That username is reserved.");
 
         await using var db = await _dbFactory.CreateDbContextAsync();
         if (await db.Users.AnyAsync(u => u.Username.ToLower() == username.ToLower()))
@@ -141,6 +152,13 @@ public sealed class UserService
     {
         await using var db = await _dbFactory.CreateDbContextAsync();
         return await db.Users.OrderBy(u => u.Username).ToListAsync();
+    }
+
+    /// <summary>Case-insensitive lookup for the public /u/{username} profile page.</summary>
+    public async Task<AppUser?> GetByUsernameAsync(string username)
+    {
+        await using var db = await _dbFactory.CreateDbContextAsync();
+        return await db.Users.FirstOrDefaultAsync(u => u.Username.ToLower() == username.Trim().ToLower());
     }
 
     public async Task<AppUser> CreateApprovedUserAsync(string username, string password, string role)

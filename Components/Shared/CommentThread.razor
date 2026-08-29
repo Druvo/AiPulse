@@ -1,0 +1,128 @@
+@* Inline comment thread for one article, expanded under a FeedItemCard (see its CommentCount/
+   CommentsExpanded/OnToggleComments params) - reuses that card's existing "expand a panel below the card"
+   pattern (ShowFullTextToggle/Expanded) rather than a separate article-detail route, since AiPulse has no
+   internal page for an article (Item.Link always points at the original external site). *@
+@using AiPulse.Models
+@inject CommentService Comments
+@inject AuthenticationStateProvider AuthState
+
+<div class="comment-thread" @onclick:stopPropagation="true">
+    @if (_loading)
+    {
+        <p class="text-muted small mb-2"><em>Loading comments…</em></p>
+    }
+    else if (_comments.Count == 0)
+    {
+        <p class="text-muted small mb-2">No comments yet.</p>
+    }
+    else
+    {
+        @foreach (var top in _comments.Where(c => c.ParentCommentId is null))
+        {
+            @RenderComment(top)
+            @foreach (var reply in _comments.Where(c => c.ParentCommentId == top.Id))
+            {
+                <div class="ms-4">@RenderComment(reply)</div>
+            }
+        }
+    }
+
+    <AuthorizeView Context="commentAuth">
+        <Authorized>
+            <div class="d-flex gap-2 mt-2">
+                <input class="form-control form-control-sm" placeholder="Add a comment…"
+                       value="@_newBody" @oninput="e => _newBody = (string)e.Value!"
+                       @onkeydown="@(e => { if (e.Key == "Enter") _ = PostAsync(); })" />
+                <button class="btn btn-sm btn-primary" disabled="@string.IsNullOrWhiteSpace(_newBody)" @onclick="PostAsync">Post</button>
+            </div>
+        </Authorized>
+        <NotAuthorized>
+            <p class="text-muted small mb-0"><a href="/login">Sign in</a> to comment.</p>
+        </NotAuthorized>
+    </AuthorizeView>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public string ArticleLink { get; set; } = null!;
+    /// <summary>Notifies the parent (e.g. FeedItemCard's caller) of the new total comment count after a
+    /// post/delete, so a cached "💬 N comments" badge elsewhere on the page can update without a full reload.</summary>
+    [Parameter] public EventCallback<int> OnCountChanged { get; set; }
+
+    private List<CommentView> _comments = new();
+    private bool _loading = true;
+    private string _newBody = "";
+    private int? _userId;
+    private string? _role;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var state = await AuthState.GetAuthenticationStateAsync();
+        var idClaim = state.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+        if (int.TryParse(idClaim, out var uid)) _userId = uid;
+        _role = state.User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value;
+
+        await ReloadAsync();
+    }
+
+    private async Task ReloadAsync()
+    {
+        _loading = true;
+        _comments = await Comments.GetForArticleAsync(ArticleLink);
+        _loading = false;
+        StateHasChanged();
+    }
+
+    private async Task PostAsync()
+    {
+        if (string.IsNullOrWhiteSpace(_newBody) || _userId is not { } uid) return;
+        var body = _newBody;
+        _newBody = "";
+        await Comments.AddAsync(ArticleLink, uid, body);
+        await ReloadAsync();
+        await NotifyCountChangedAsync();
+    }
+
+    private async Task DeleteAsync(int commentId)
+    {
+        if (_userId is not { } uid) return;
+        if (!await Comments.DeleteAsync(commentId, uid, _role ?? "")) return;
+        await ReloadAsync();
+        await NotifyCountChangedAsync();
+    }
+
+    private async Task NotifyCountChangedAsync()
+    {
+        if (!OnCountChanged.HasDelegate) return;
+        await OnCountChanged.InvokeAsync(await Comments.GetCommentCountAsync(ArticleLink));
+    }
+
+    private bool CanDelete(CommentView c) =>
+        !c.IsDeleted && _userId is { } uid && (c.UserId == uid || _role is UserRoles.Admin or UserRoles.Curator);
+
+    private RenderFragment RenderComment(CommentView c) => @<div class="comment-item small mb-2">
+        <div class="d-flex justify-content-between align-items-start">
+            <span>
+                @if (c.Username is not null)
+                {
+                    <a href="@($"u/{c.Username}")" class="fw-semibold text-decoration-none">@c.Username</a>
+                }
+                else
+                {
+                    <span class="fw-semibold text-muted">[deleted user]</span>
+                }
+                <span class="text-muted"> · @c.CreatedAt.ToLocalTime().ToString("g")</span>
+                @if (c.EditedAt is not null && !c.IsDeleted)
+                {
+                    <span class="text-muted"> (edited)</span>
+                }
+            </span>
+            @if (CanDelete(c))
+            {
+                <button class="btn btn-sm btn-link p-0 text-danger" title="Delete comment" @onclick="() => DeleteAsync(c.Id)">
+                    <Icon Name="trash" Size="12" />
+                </button>
+            }
+        </div>
+        <div class="@(c.IsDeleted ? "text-muted fst-italic" : "")">@c.Body</div>
+    </div>;
+}
