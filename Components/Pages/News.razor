@@ -17,7 +17,7 @@
 <div class="news-main">
 <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
     <h1 class="mb-0"><Icon Name="rss" Size="22" /> News Feed</h1>
-    <div class="d-flex align-items-center gap-2">
+    <div class="d-flex flex-wrap align-items-center gap-2">
         @* Live-fetch status/Refresh/Mark-all-as-read are dashboard-y account actions, not browsing
            filters - a public/anonymous visitor sees just the display and filter controls below. *@
         @if (_userId is not null)
