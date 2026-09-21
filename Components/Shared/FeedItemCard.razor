@@ -15,9 +15,15 @@
             {
                 <img src="@Item.ImageUrl" alt="" loading="lazy" onerror="this.parentElement.style.display='none'" />
             }
-            else if (_host is not null)
+            else
             {
-                <img src="/favicon-proxy/@_host" alt="" loading="lazy" class="feed-card-thumb-favicon" onerror="this.style.display='none'" />
+                <span class="feed-card-thumb-badge" style="--avatar-color: @_accentColor">
+                    <span class="feed-card-thumb-badge-initial">@Initial(Item.SourceName)</span>
+                    @if (_host is not null)
+                    {
+                        <img src="/favicon-proxy/@_host" alt="" loading="lazy" onerror="this.style.display='none'" />
+                    }
+                </span>
             }
         </div>
     }
