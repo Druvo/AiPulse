@@ -337,15 +337,24 @@ app.MapPost("/backup/restore", async (HttpRequest request, BackupService backup)
 }).RequireAuthorization(policy => policy.RequireRole("Admin"));
 
 // Per-source favicon, fetched and cached by AiPulse itself (never a third-party favicon CDN - see
-// FaviconService for why). {host} is validated as a bare hostname before any fetch happens.
-app.MapGet("/favicon-proxy/{host}", async (string host, FaviconService favicons) =>
+// FaviconService for why). Anonymous, since News/Explore/Glossary/Tools are public pages whose cards
+// need this too - but NOT a general-purpose open proxy: {host} must belong to a currently configured
+// source, so an anonymous caller can't use this endpoint to make the server fetch/probe an arbitrary
+// (e.g. internal-network) host. Uri.CheckHostName still runs first as a cheap format guard.
+app.MapGet("/favicon-proxy/{host}", async (string host, FaviconService favicons, KnowledgeBaseService kb) =>
 {
     if (Uri.CheckHostName(host) is UriHostNameType.Unknown or UriHostNameType.Basic)
         return Results.BadRequest();
 
+    var isKnownSourceHost = kb.SourceRecords.Any(s =>
+        Uri.TryCreate(s.Url, UriKind.Absolute, out var sourceUri) &&
+        string.Equals(sourceUri.Host, host, StringComparison.OrdinalIgnoreCase));
+    if (!isKnownSourceHost)
+        return Results.NotFound();
+
     var favicon = await favicons.GetFaviconAsync(host);
     return favicon is null ? Results.NotFound() : Results.File(favicon.Value.Bytes, favicon.Value.ContentType);
-}).RequireAuthorization();
+});
 
 // Bulk import/export of sources via OPML - the standard RSS-reader interchange format.
 app.MapGet("/opml/export", (OpmlService opml) =>
