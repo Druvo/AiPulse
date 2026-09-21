@@ -1,56 +1,22 @@
 using System.Collections.Concurrent;
-using System.ServiceModel.Syndication;
-using System.Text.RegularExpressions;
-using System.Xml;
 using AiPulse.Models;
-using HtmlAgilityPack;
 
 namespace AiPulse.Services;
 
 /// <summary>
 /// Pulls and normalizes items from all enabled RSS/Atom feeds. Pure HTTP + XML parsing - no AI involved.
 /// Results are cached briefly so navigating between pages doesn't re-hit the network every time.
+///
+/// Orchestration only - the actual parsing/dedup/scraping/text-cleanup logic that used to live here
+/// (all pure functions with no dependency on this class's instance state) now lives in
+/// FeedXmlParser, FeedDeduplicator, FeedScraper, FeedTextUtils and FeedDomainThrottle.
 /// </summary>
 public sealed class FeedAggregatorService
 {
     private static readonly TimeSpan CacheFor = TimeSpan.FromMinutes(15);
-    private static readonly Regex HtmlTags = new("<[^>]+>", RegexOptions.Compiled);
-
-    // A feed's own <description>/<content:encoded> is sometimes already the full article (arXiv's abstract,
-    // some Medium publications' export) - well past a mere teaser. When it's this long, use it directly as
-    // FullText instead of live-fetching the page: skips a redundant request, and some sites (Medium) reject
-    // non-browser fetches outright, so this is the only way their content shows up at all.
-    private const int FeedContentSubstantialThreshold = 500;
-    private const int FullTextFromFeedMaxChars = 6000;
 
     private readonly IHttpClientFactory _httpFactory;
     private readonly KnowledgeBaseService _kb;
-
-    /// <summary>Per-domain throttle: tracks last fetch time per host to avoid rate-limiting (e.g. Reddit 429s).</summary>
-    private static readonly ConcurrentDictionary<string, DateTime> _lastDomainFetch = new();
-    /// <summary>Gates the read-wait-write around <see cref="_lastDomainFetch"/> per host, so concurrent
-    /// requests to the same host can't all read the same stale timestamp and fire together (the previous
-    /// check-then-set was not atomic under the concurrency gate below, which is what actually let bursts of
-    /// simultaneous Reddit requests through despite the "cooldown"). Capacity 1 for every host except
-    /// reddit.com (see <see cref="RedditMaxConcurrency"/>) - reddit's 100+ sources sharing one host meant
-    /// full serialization made it the poll's long pole, so it gets a couple of concurrent slots instead of one.</summary>
-    private static readonly ConcurrentDictionary<string, SemaphoreSlim> _domainLocks = new();
-    private static readonly TimeSpan DomainCooldown = TimeSpan.FromSeconds(3);
-    /// <summary>Reddit's anonymous/unauthenticated RSS rate limit is tighter than most other hosts, and this
-    /// app can have 100+ subreddit sources sharing the one host - give it a longer, dedicated cooldown.</summary>
-    private static readonly TimeSpan RedditCooldown = TimeSpan.FromSeconds(6);
-    /// <summary>Reddit sources (100+ of them, one host) used to fully serialize behind a 1-at-a-time host
-    /// lock, which meant they alone could dominate the poll's wall-clock time. Letting a couple through
-    /// concurrently cuts that down while still keeping real spacing between requests via <see cref="RedditCooldown"/>.</summary>
-    private const int RedditMaxConcurrency = 2;
-    /// <summary>
-    /// Reddit's responses (429 or not) carry real "x-ratelimit-remaining"/"x-ratelimit-reset" headers -
-    /// verified live: a single request can already show remaining=0, reset=13s, i.e. its actual budget is
-    /// tighter and more specific than any hardcoded guess. Learned per host from the most recent response
-    /// and used instead of <see cref="RedditCooldown"/> once available, so every source sharing that host
-    /// benefits from what the last one just learned rather than each guessing independently.
-    /// </summary>
-    private static readonly ConcurrentDictionary<string, TimeSpan> _learnedCooldown = new();
     private readonly SourceHealthService _health;
     private readonly ContentExtractorService _extractor;
     private readonly WebSubService _webSub;
@@ -150,205 +116,14 @@ public sealed class FeedAggregatorService
 
         return new FeedResult
         {
-            Items = Deduplicate(items).OrderByDescending(i => i.Published).ToList(),
+            Items = FeedDeduplicator.Deduplicate(items).OrderByDescending(i => i.Published).ToList(),
             Errors = errors.OrderBy(e => e).ToList(),
             FetchedAt = DateTimeOffset.Now
         };
     }
 
-    private static readonly HashSet<string> Stopwords = new(StringComparer.OrdinalIgnoreCase)
-    {
-        "the", "and", "for", "with", "from", "that", "this", "your", "you", "are", "was", "were",
-        "into", "how", "why", "what", "new", "now", "will", "can", "has", "have", "its", "our"
-    };
-
-    /// <summary>
-    /// Merges items that are almost certainly the same story reported by multiple sources - first by an
-    /// exact normalized-title key (significant words, sorted), then by fuzzy token-overlap between the
-    /// *remaining* distinct keys (catches "OpenAI releases GPT-5" vs "OpenAI's GPT-5 launches" - different
-    /// wording, same story - which don't share an exact key but do share most of their significant words),
-    /// both within a 3-day window so a big release covered by several blogs shows up once. Pure string
-    /// matching, no AI involved.
-    /// </summary>
-    private static IEnumerable<FeedItem> Deduplicate(IEnumerable<FeedItem> items)
-    {
-        var groups = new Dictionary<string, List<FeedItem>>();
-        var keyOrder = new List<string>();
-        foreach (var item in items)
-        {
-            var key = NormalizedTitleKey(item.Title);
-            if (key is null)
-            {
-                yield return item; // title too short/generic to safely dedupe - keep as-is
-                continue;
-            }
-            if (!groups.TryGetValue(key, out var bucket))
-            {
-                groups[key] = bucket = new List<FeedItem>();
-                keyOrder.Add(key);
-            }
-            bucket.Add(item);
-        }
-
-        foreach (var bucket in MergeFuzzyDuplicates(keyOrder, groups))
-        {
-            if (bucket.Count == 1)
-            {
-                yield return bucket[0];
-                continue;
-            }
-
-            // Split into sub-clusters by publish time (within 3 days of each other) - avoids merging
-            // an old and a new story that happen to share generic significant words.
-            foreach (var cluster in ClusterByTime(bucket))
-            {
-                if (cluster.Count == 1)
-                {
-                    yield return cluster[0];
-                    continue;
-                }
-
-                var primary = cluster.OrderBy(i => i.Published).First();
-                var others = cluster.Where(i => i != primary).Select(i => i.SourceName)
-                    .Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
-                var mergedTags = cluster.SelectMany(i => i.Tags).Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
-
-                yield return primary with { AlsoSeenOn = others, Tags = mergedTags };
-            }
-        }
-    }
-
-    // Two titles need to share at least this fraction of their significant words - as an overlap
-    // coefficient (intersection / size of the SMALLER set), not Jaccard (intersection / union) - to be
-    // treated as the same story despite not matching exactly. Overlap coefficient rather than Jaccard
-    // because real near-duplicate headlines vary a lot in length ("X releases Y" vs "X's Y launches with
-    // Z capabilities"), which Jaccard punishes hard even when every word in the shorter title is also in
-    // the longer one; traced concrete examples landed on 0.5 as the line between "same story, reworded"
-    // (~0.5-0.67 overlap in practice) and "different stories sharing a couple of generic terms" (~0.3).
-    private const double FuzzyDuplicateThreshold = 0.5;
-
-    /// <summary>
-    /// Second dedup pass over the exact-key groups: merges any two whose titles are still near-duplicates
-    /// (high word-set overlap) and whose earliest items are within 3 days of each other - same rationale
-    /// as the exact-key window, applied here so two differently-worded reports of the same release still
-    /// merge instead of just reducing exact repeats.
-    /// </summary>
-    private static List<List<FeedItem>> MergeFuzzyDuplicates(List<string> keyOrder, Dictionary<string, List<FeedItem>> groups)
-    {
-        var wordSets = keyOrder.ToDictionary(k => k, k => new HashSet<string>(k.Split(' ')));
-        var consumed = new HashSet<string>();
-        var result = new List<List<FeedItem>>();
-
-        foreach (var key in keyOrder)
-        {
-            if (!consumed.Add(key)) continue; // already folded into an earlier bucket
-            var combined = new List<FeedItem>(groups[key]);
-            var earliest = groups[key].Min(i => i.Published);
-
-            foreach (var otherKey in keyOrder)
-            {
-                if (otherKey == key || consumed.Contains(otherKey)) continue;
-
-                var otherEarliest = groups[otherKey].Min(i => i.Published);
-                if (Math.Abs((otherEarliest - earliest).TotalDays) > 3) continue;
-
-                if (OverlapCoefficient(wordSets[key], wordSets[otherKey]) >= FuzzyDuplicateThreshold)
-                {
-                    combined.AddRange(groups[otherKey]);
-                    consumed.Add(otherKey);
-                }
-            }
-
-            result.Add(combined);
-        }
-        return result;
-    }
-
-    private static double OverlapCoefficient(HashSet<string> a, HashSet<string> b)
-    {
-        if (a.Count == 0 || b.Count == 0) return 0;
-        var intersection = a.Count(b.Contains);
-        return (double)intersection / Math.Min(a.Count, b.Count);
-    }
-
-    private static List<List<FeedItem>> ClusterByTime(List<FeedItem> items)
-    {
-        var sorted = items.OrderBy(i => i.Published).ToList();
-        var clusters = new List<List<FeedItem>>();
-        foreach (var item in sorted)
-        {
-            var cluster = clusters.LastOrDefault();
-            if (cluster is not null && item.Published - cluster[^1].Published <= TimeSpan.FromDays(3))
-                cluster.Add(item);
-            else
-                clusters.Add(new List<FeedItem> { item });
-        }
-        return clusters;
-    }
-
-    /// <summary>Lowercase, strip punctuation, drop stopwords/short words, sort what's left. Null if too little signal.</summary>
-    private static string? NormalizedTitleKey(string title)
-    {
-        var words = Regex.Replace(title.ToLowerInvariant(), @"[^a-z0-9\s]", " ")
-            .Split(' ', StringSplitOptions.RemoveEmptyEntries)
-            .Where(w => w.Length > 3 && !Stopwords.Contains(w))
-            .Distinct()
-            .OrderBy(w => w, StringComparer.Ordinal)
-            .ToList();
-
-        return words.Count < 3 ? null : string.Join(' ', words);
-    }
-
     /// <summary>How many of a source's newest items get a full-text fetch each poll - bounded so a big feed doesn't hammer its own site.</summary>
     private const int FullTextFetchLimit = 5;
-
-    /// <summary>
-    /// Atomically reserves the next cooldown slot for a URL's host: waits if another request to the same
-    /// host fetched too recently, then records this attempt's time - all under a per-host lock, so two
-    /// concurrent callers can't both read the same stale "last fetch" timestamp and slip through together.
-    /// Called before every actual HTTP attempt (including 429 retries), not just once per source, so a
-    /// source backing off from a rate limit doesn't leave the shared host's cooldown stale while sibling
-    /// sources for the same host race past it.
-    /// </summary>
-    private static async Task WaitForDomainSlotAsync(string? url, CancellationToken ct)
-    {
-        if (url is null || !Uri.TryCreate(url, UriKind.Absolute, out var uri)) return;
-        var host = uri.Host;
-        var cooldown = _learnedCooldown.TryGetValue(host, out var learned) ? learned
-            : host.EndsWith("reddit.com", StringComparison.OrdinalIgnoreCase) ? RedditCooldown
-            : DomainCooldown;
-
-        var hostLock = _domainLocks.GetOrAdd(host, h =>
-            new SemaphoreSlim(h.EndsWith("reddit.com", StringComparison.OrdinalIgnoreCase) ? RedditMaxConcurrency : 1));
-        await hostLock.WaitAsync(ct);
-        try
-        {
-            if (_lastDomainFetch.TryGetValue(host, out var last))
-            {
-                var elapsed = DateTime.UtcNow - last;
-                if (elapsed < cooldown)
-                    await Task.Delay(cooldown - elapsed, ct);
-            }
-            _lastDomainFetch[host] = DateTime.UtcNow;
-        }
-        finally
-        {
-            hostLock.Release();
-        }
-    }
-
-    /// <summary>
-    /// Reads "x-ratelimit-reset" (seconds until the host's own rate-limit window refills) off a response,
-    /// when present, and uses it as that host's cooldown going forward - clamped to a sane range since it's
-    /// an unofficial header and shouldn't be trusted blindly (e.g. a rogue 0 or an absurdly large value).
-    /// </summary>
-    private static void LearnCooldownFromResponse(string host, HttpResponseMessage resp)
-    {
-        if (!resp.Headers.TryGetValues("x-ratelimit-reset", out var values)) return;
-        if (!double.TryParse(values.FirstOrDefault(), out var resetSeconds) || resetSeconds <= 0) return;
-
-        _learnedCooldown[host] = TimeSpan.FromSeconds(Math.Clamp(resetSeconds, 2, 60));
-    }
 
     private async Task<List<FeedItem>> FetchOneAsync(FeedSource source, CancellationToken ct)
     {
@@ -357,22 +132,22 @@ public sealed class FeedAggregatorService
 
         if (source.IsScrape)
         {
-            await WaitForDomainSlotAsync(source.Url, ct);
-            items = await ScrapeAsync(source, ct);
+            await FeedDomainThrottle.WaitForSlotAsync(source.Url, ct);
+            items = await FeedScraper.ScrapeAsync(source, ct);
         }
         else
         {
             var client = _httpFactory.CreateClient("feeds");
-            var host = Uri.TryCreate(source.Url, UriKind.Absolute, out var srcUri) ? srcUri.Host : null;
+            var host = FeedDomainThrottle.GetHost(source.Url);
 
             // Retry on 429 (Too Many Requests) with exponential backoff.
             HttpResponseMessage? resp = null;
             for (int attempt = 0; attempt < 3; attempt++)
             {
-                await WaitForDomainSlotAsync(source.Url, ct);
+                await FeedDomainThrottle.WaitForSlotAsync(source.Url, ct);
                 resp?.Dispose();
                 resp = await client.GetAsync(source.Url, HttpCompletionOption.ResponseHeadersRead, ct);
-                if (host is not null) LearnCooldownFromResponse(host, resp);
+                if (host is not null) FeedDomainThrottle.LearnCooldownFromResponse(host, resp);
                 if ((int)resp.StatusCode != 429) break;
 
                 if (attempt < 2) // don't wait on last attempt
@@ -381,7 +156,7 @@ public sealed class FeedAggregatorService
                     // "x-ratelimit-reset") over a blind guess - verified live that Reddit sends the latter
                     // with a genuinely useful value even though it never sends Retry-After.
                     var retryAfter = resp.Headers.RetryAfter?.Delta
-                        ?? (host is not null && _learnedCooldown.TryGetValue(host, out var learned) ? learned : (TimeSpan?)null)
+                        ?? FeedDomainThrottle.GetLearnedCooldown(host)
                         ?? TimeSpan.FromSeconds(5 * (attempt + 1));
                     _log.LogWarning("Rate-limited (429) on {Source}, waiting {Wait}s (attempt {Attempt})", source.Name, retryAfter.TotalSeconds, attempt + 1);
                     await Task.Delay(retryAfter, ct);
@@ -395,11 +170,11 @@ public sealed class FeedAggregatorService
             // that don't fit the strict schema (some blogs emit mixed content the strict reader rejects).
             try
             {
-                (items, hubUrl) = ParseWithSyndication(xml, source);
+                (items, hubUrl) = FeedXmlParser.ParseWithSyndication(xml, source);
             }
             catch (Exception)
             {
-                (items, hubUrl) = ParseLenient(xml, source);
+                (items, hubUrl) = FeedXmlParser.ParseLenient(xml, source);
             }
 
             if (hubUrl is not null)
@@ -443,11 +218,11 @@ public sealed class FeedAggregatorService
         List<FeedItem> items;
         try
         {
-            (items, _) = ParseWithSyndication(xml, source);
+            (items, _) = FeedXmlParser.ParseWithSyndication(xml, source);
         }
         catch (Exception)
         {
-            (items, _) = ParseLenient(xml, source);
+            (items, _) = FeedXmlParser.ParseLenient(xml, source);
         }
 
         var vocab = GetTagVocab();
@@ -471,7 +246,7 @@ public sealed class FeedAggregatorService
                 var merged = _cache.Items.Concat(items.Where(i => !existingLinks.Contains(i.Link)));
                 _cache = new FeedResult
                 {
-                    Items = Deduplicate(merged).OrderByDescending(i => i.Published).ToList(),
+                    Items = FeedDeduplicator.Deduplicate(merged).OrderByDescending(i => i.Published).ToList(),
                     Errors = _cache.Errors,
                     FetchedAt = _cache.FetchedAt
                 };
@@ -489,8 +264,9 @@ public sealed class FeedAggregatorService
     private async Task<List<FeedItem>> ApplyFullTextAsync(List<FeedItem> items, CancellationToken ct)
     {
         // Items whose own feed content was already substantial got FullText set at parse time (see
-        // FeedContentSubstantialThreshold) - no need to hit the network for those, and skipping them means
-        // more of the FullTextFetchLimit budget goes to items that actually need a live fetch.
+        // FeedXmlParser.FeedContentSubstantialThreshold) - no need to hit the network for those, and
+        // skipping them means more of the FullTextFetchLimit budget goes to items that actually need a
+        // live fetch.
         var targets = items.Where(i => i.FullText is null).OrderByDescending(i => i.Published).Take(FullTextFetchLimit).ToList();
         var fullTexts = new Dictionary<string, string?>();
 
@@ -517,71 +293,6 @@ public sealed class FeedAggregatorService
         return items;
     }
 
-    /// <summary>Scrapes an HTML page with the source's admin-configured XPath selectors, for sites with no RSS/Atom feed.</summary>
-    private static async Task<List<FeedItem>> ScrapeAsync(FeedSource source, CancellationToken ct)
-    {
-        if (string.IsNullOrWhiteSpace(source.ScrapeItemXPath))
-            throw new InvalidOperationException("Scrape source is missing an item XPath selector.");
-
-        using var http = new HttpClient();
-        http.DefaultRequestHeaders.UserAgent.ParseAdd("AiPulse/1.0 (+https://localhost; personal AI news dashboard)");
-        var html = await http.GetStringAsync(source.Url, ct);
-
-        var doc = new HtmlDocument();
-        doc.LoadHtml(html);
-
-        var itemNodes = doc.DocumentNode.SelectNodes(source.ScrapeItemXPath);
-        if (itemNodes is null)
-            return new List<FeedItem>();
-
-        var pageUri = new Uri(source.Url);
-        var result = new List<FeedItem>();
-
-        foreach (var node in itemNodes.Take(30))
-        {
-            var linkNode = string.IsNullOrWhiteSpace(source.ScrapeLinkXPath)
-                ? node.SelectSingleNode(".//a")
-                : node.SelectSingleNode(source.ScrapeLinkXPath);
-            var href = linkNode?.GetAttributeValue("href", "");
-            if (string.IsNullOrWhiteSpace(href))
-                continue;
-
-            var absoluteLink = Uri.TryCreate(pageUri, href, out var resolved) ? resolved.ToString() : href;
-
-            var titleNode = string.IsNullOrWhiteSpace(source.ScrapeTitleXPath)
-                ? linkNode
-                : node.SelectSingleNode(source.ScrapeTitleXPath);
-            var rawTitle = titleNode?.InnerText ?? linkNode?.InnerText;
-            var itemText = CleanText(System.Net.WebUtility.HtmlDecode(node.InnerText), 320);
-            var title = DeriveTitle(rawTitle is null ? null : System.Net.WebUtility.HtmlDecode(rawTitle), itemText, source.Name);
-
-            var published = DateTimeOffset.Now;
-            if (!string.IsNullOrWhiteSpace(source.ScrapeDateXPath))
-            {
-                var dateNode = node.SelectSingleNode(source.ScrapeDateXPath);
-                var dateAttr = dateNode?.GetAttributeValue("datetime", "");
-                var dateText = string.IsNullOrWhiteSpace(dateAttr) ? dateNode?.InnerText : dateAttr;
-                if (!string.IsNullOrWhiteSpace(dateText) && DateTimeOffset.TryParse(dateText.Trim(), out var parsed))
-                    published = parsed;
-            }
-
-            result.Add(new FeedItem
-            {
-                Title = title,
-                Link = CleanUrl(absoluteLink),
-                Summary = "",
-                Published = published,
-                SourceName = source.Name,
-                Category = source.Category,
-                ContentType = source.ContentType,
-                Level = source.Level,
-                Tags = source.Tags
-            });
-        }
-
-        return result;
-    }
-
     /// <summary>Builds a lowercase term/alias -> canonical tag lookup from the curated glossary, once.</summary>
     private Dictionary<string, string> GetTagVocab()
     {
@@ -606,260 +317,16 @@ public sealed class FeedAggregatorService
 
         foreach (var (needle, canonical) in vocab)
         {
-            if (Regex.IsMatch(text, $@"\b{Regex.Escape(needle)}\b", RegexOptions.IgnoreCase))
+            if (System.Text.RegularExpressions.Regex.IsMatch(text, $@"\b{System.Text.RegularExpressions.Regex.Escape(needle)}\b", System.Text.RegularExpressions.RegexOptions.IgnoreCase))
                 tags.Add(canonical);
         }
 
         return tags.ToArray();
     }
 
-    private static (List<FeedItem> Items, string? HubUrl) ParseWithSyndication(string xml, FeedSource source)
-    {
-        using var sr = new StringReader(xml);
-        using var reader = XmlReader.Create(sr, new XmlReaderSettings { DtdProcessing = DtdProcessing.Ignore });
-        var feed = SyndicationFeed.Load(reader);
-        if (feed is null)
-            return (new List<FeedItem>(), null);
-
-        var hubUrl = feed.Links.FirstOrDefault(l => l.RelationshipType == "hub")?.Uri?.ToString();
-
-        var result = new List<FeedItem>();
-        foreach (var item in feed.Items.Take(20))
-        {
-            var link = item.Links.FirstOrDefault(l => l.RelationshipType != "hub")?.Uri?.ToString() ?? "";
-            var published = item.PublishDate != default ? item.PublishDate
-                : item.LastUpdatedTime != default ? item.LastUpdatedTime
-                : DateTimeOffset.Now;
-
-            var rawSummary = ExtractSummary(item);
-            var summary = CleanText(rawSummary, 320);
-            var imageUrl = ResolveImageUrl(
-                ExtractMediaImage(item.ElementExtensions)
-                    ?? item.Links.FirstOrDefault(l => l.RelationshipType == "enclosure" && (l.MediaType?.StartsWith("image/", StringComparison.OrdinalIgnoreCase) ?? false))?.Uri?.ToString()
-                    ?? ExtractImgTag(rawSummary),
-                source.Url);
-            var author = ExtractAuthor(item);
-
-            result.Add(new FeedItem
-            {
-                Title = DeriveTitle(item.Title?.Text, summary, source.Name),
-                Link = CleanUrl(link),
-                Summary = summary,
-                FullText = source.FullTextFetch && rawSummary.Length > FeedContentSubstantialThreshold
-                    ? CleanText(rawSummary, FullTextFromFeedMaxChars) : null,
-                Published = published,
-                SourceName = source.Name,
-                Category = source.Category,
-                ContentType = source.ContentType,
-                Level = source.Level,
-                Tags = source.Tags,
-                ImageUrl = imageUrl,
-                Author = author
-            });
-        }
-        return (result, hubUrl);
-    }
-
-    private static readonly System.Xml.Linq.XNamespace MediaNs = "http://search.yahoo.com/mrss/";
-    private static readonly System.Xml.Linq.XNamespace DcNs = "http://purl.org/dc/elements/1.1/";
-
-    /// <summary>Byline from Atom/RSS &lt;author&gt; (mapped natively by the syndication API) or the common non-standard &lt;dc:creator&gt; (not natively mapped - read from the item's raw extension XML, same technique as the media-thumbnail lookup).</summary>
-    private static string? ExtractAuthor(SyndicationItem item)
-    {
-        var direct = item.Authors.FirstOrDefault()?.Name;
-        if (!string.IsNullOrWhiteSpace(direct)) return direct.Trim();
-
-        foreach (var ext in item.ElementExtensions)
-        {
-            System.Xml.Linq.XElement el;
-            try { el = ext.GetObject<System.Xml.Linq.XElement>(); }
-            catch { continue; }
-
-            if (el.Name == DcNs + "creator" && !string.IsNullOrWhiteSpace(el.Value))
-                return el.Value.Trim();
-        }
-        return null;
-    }
-
-    /// <summary>Looks for a media:thumbnail or media:content(medium=image) anywhere inside the item's raw extension XML (covers media:group-wrapped thumbnails, e.g. YouTube's feed format).</summary>
-    private static string? ExtractMediaImage(SyndicationElementExtensionCollection extensions)
-    {
-        foreach (var ext in extensions)
-        {
-            System.Xml.Linq.XElement el;
-            try { el = ext.GetObject<System.Xml.Linq.XElement>(); }
-            catch { continue; }
-
-            var thumb = el.DescendantsAndSelf().FirstOrDefault(e => e.Name == MediaNs + "thumbnail");
-            var thumbUrl = thumb?.Attribute("url")?.Value;
-            if (!string.IsNullOrWhiteSpace(thumbUrl)) return thumbUrl;
-
-            var content = el.DescendantsAndSelf().FirstOrDefault(e => e.Name == MediaNs + "content"
-                && ((string?)e.Attribute("medium") == "image" || ((string?)e.Attribute("type"))?.StartsWith("image/", StringComparison.OrdinalIgnoreCase) == true));
-            var contentUrl = content?.Attribute("url")?.Value;
-            if (!string.IsNullOrWhiteSpace(contentUrl)) return contentUrl;
-        }
-        return null;
-    }
-
-    /// <summary>Same media:thumbnail/media:content lookup as <see cref="ExtractMediaImage(SyndicationElementExtensionCollection)"/>, for the lenient XDocument parse path.</summary>
-    private static string? ExtractMediaImage(System.Xml.Linq.XElement entry)
-    {
-        var thumbUrl = entry.Descendants(MediaNs + "thumbnail").FirstOrDefault()?.Attribute("url")?.Value;
-        if (!string.IsNullOrWhiteSpace(thumbUrl)) return thumbUrl;
-
-        var content = entry.Descendants(MediaNs + "content").FirstOrDefault(e =>
-            (string?)e.Attribute("medium") == "image" || ((string?)e.Attribute("type"))?.StartsWith("image/", StringComparison.OrdinalIgnoreCase) == true);
-        return content?.Attribute("url")?.Value;
-    }
-
-    private static readonly Regex ImgTagRegex = new(@"<img[^>]+src=[""']([^""'>]+)[""']", RegexOptions.Compiled | RegexOptions.IgnoreCase);
-
-    /// <summary>Fallback when the feed has no media/enclosure image: grabs the first &lt;img&gt; embedded in the item's raw (unstripped) summary/content HTML.</summary>
-    private static string? ExtractImgTag(string rawHtml)
-    {
-        if (string.IsNullOrEmpty(rawHtml)) return null;
-        var m = ImgTagRegex.Match(rawHtml);
-        return m.Success ? m.Groups[1].Value : null;
-    }
-
-    /// <summary>Resolves a possibly-relative image URL against the feed's own URL, same approach ScrapeAsync uses for links.</summary>
-    private static string? ResolveImageUrl(string? raw, string feedUrl)
-    {
-        if (string.IsNullOrWhiteSpace(raw)) return null;
-        if (Uri.TryCreate(feedUrl, UriKind.Absolute, out var baseUri) && Uri.TryCreate(baseUri, raw, out var resolved))
-            return resolved.ToString();
-        return Uri.IsWellFormedUriString(raw, UriKind.Absolute) ? raw : null;
-    }
-
-    /// <summary>Tolerant parser used when the strict reader rejects a feed. Handles RSS items and Atom entries.</summary>
-    private static (List<FeedItem> Items, string? HubUrl) ParseLenient(string xml, FeedSource source)
-    {
-        var doc = System.Xml.Linq.XDocument.Parse(xml, System.Xml.Linq.LoadOptions.None);
-        System.Xml.Linq.XNamespace atom = "http://www.w3.org/2005/Atom";
-        var result = new List<FeedItem>();
-
-        // Hub link lives at the feed/channel level (RSS <atom:link rel="hub"> or Atom <link rel="hub">), not per-item.
-        var hubUrl = doc.Descendants().Where(e => e.Name.LocalName == "link")
-            .FirstOrDefault(l => (string?)l.Attribute("rel") == "hub")
-            ?.Attribute("href")?.Value;
-
-        // RSS: //item ; Atom: //entry
-        var entries = doc.Descendants("item").Concat(doc.Descendants(atom + "entry")).Take(20);
-        foreach (var e in entries)
-        {
-            var title = e.Element("title")?.Value ?? e.Element(atom + "title")?.Value;
-            var link = e.Element("link")?.Value;
-            if (string.IsNullOrWhiteSpace(link))
-                link = e.Elements(atom + "link").FirstOrDefault(l => (string?)l.Attribute("rel") != "self")?.Attribute("href")?.Value;
-            var summaryRaw = e.Element("description")?.Value
-                ?? e.Element(atom + "summary")?.Value
-                ?? e.Element(atom + "content")?.Value ?? "";
-            var summary = CleanText(summaryRaw, 320);
-            var dateStr = e.Element("pubDate")?.Value
-                ?? e.Element(atom + "updated")?.Value
-                ?? e.Element(atom + "published")?.Value;
-            DateTimeOffset.TryParse(dateStr, out var published);
-
-            var enclosure = e.Element("enclosure");
-            var enclosureUrl = (string?)enclosure?.Attribute("type") is { } encType && encType.StartsWith("image/", StringComparison.OrdinalIgnoreCase)
-                ? (string?)enclosure.Attribute("url")
-                : null;
-            var imageUrl = ResolveImageUrl(ExtractMediaImage(e) ?? enclosureUrl ?? ExtractImgTag(summaryRaw), source.Url);
-
-            var author = ((string?)e.Element(DcNs + "creator"))?.Trim()
-                ?? ((string?)e.Element("author"))?.Trim()
-                ?? e.Element(atom + "author")?.Element(atom + "name")?.Value?.Trim();
-
-            result.Add(new FeedItem
-            {
-                Title = DeriveTitle(title, summary, source.Name),
-                Link = CleanUrl(link ?? ""),
-                Summary = summary,
-                FullText = source.FullTextFetch && summaryRaw.Length > FeedContentSubstantialThreshold
-                    ? CleanText(summaryRaw, FullTextFromFeedMaxChars) : null,
-                Published = published == default ? DateTimeOffset.Now : published,
-                SourceName = source.Name,
-                Category = source.Category,
-                ContentType = source.ContentType,
-                Level = source.Level,
-                Tags = source.Tags,
-                ImageUrl = imageUrl,
-                Author = string.IsNullOrWhiteSpace(author) ? null : author
-            });
-        }
-        return (result, hubUrl);
-    }
-
-    private static string ExtractSummary(SyndicationItem item)
-    {
-        if (item.Summary?.Text is { Length: > 0 } s)
-            return s;
-        if (item.Content is TextSyndicationContent tc && tc.Text is { Length: > 0 })
-            return tc.Text;
-        return "";
-    }
-
-    private static string CleanText(string raw, int max)
-    {
-        var text = HtmlTags.Replace(raw, " ");
-        text = System.Net.WebUtility.HtmlDecode(text);
-        text = Regex.Replace(text, @"\s+", " ").Trim();
-        return text.Length > max ? text[..max].TrimEnd() + "…" : text;
-    }
-
-    /// <summary>
-    /// Feeds without a per-item title (common for microblog-style posts - Mastodon, some YouTube
-    /// Community posts, etc.) used to show as a bare "(untitled)", which read as broken rather than
-    /// "this platform just doesn't have titles". Derive something readable instead: the raw title if
-    /// there is one, otherwise the start of the summary, otherwise a plain fallback naming the source.
-    /// </summary>
-    public static string DeriveTitle(string? rawTitle, string cleanedSummary, string sourceName)
-    {
-        if (!string.IsNullOrWhiteSpace(rawTitle))
-        {
-            var cleaned = CleanText(rawTitle, 200);
-            if (!string.IsNullOrWhiteSpace(cleaned))
-                return cleaned;
-        }
-
-        if (!string.IsNullOrWhiteSpace(cleanedSummary))
-        {
-            const int max = 80;
-            return cleanedSummary.Length > max ? cleanedSummary[..max].TrimEnd() + "…" : cleanedSummary;
-        }
-
-        return $"New post from {sourceName}";
-    }
-
-    private static readonly HashSet<string> TrackingParams = new(StringComparer.OrdinalIgnoreCase)
-    {
-        "utm_source", "utm_medium", "utm_campaign", "utm_term", "utm_content", "utm_id", "utm_name", "utm_reader",
-        "fbclid", "gclid", "gclsrc", "dclid", "msclkid", "mc_cid", "mc_eid", "igshid",
-        "ref", "ref_src", "ref_url", "_hsenc", "_hsmi", "spm", "yclid", "vero_id", "oly_enc_id", "oly_anon_id"
-    };
-
-    /// <summary>Strips known tracking query params from an item's link before it's stored/displayed/exported - privacy hygiene, not functional.</summary>
-    private static string CleanUrl(string url)
-    {
-        if (string.IsNullOrWhiteSpace(url)) return url;
-        var qIndex = url.IndexOf('?');
-        if (qIndex < 0) return url;
-
-        var baseUrl = url[..qIndex];
-        var query = url[(qIndex + 1)..];
-        var fragment = "";
-        var hashIndex = query.IndexOf('#');
-        if (hashIndex >= 0)
-        {
-            fragment = query[hashIndex..];
-            query = query[..hashIndex];
-        }
-
-        var kept = query.Split('&', StringSplitOptions.RemoveEmptyEntries)
-            .Where(pair => !TrackingParams.Contains(Uri.UnescapeDataString(pair.Split('=', 2)[0])))
-            .ToList();
-
-        return kept.Count == 0 ? baseUrl + fragment : $"{baseUrl}?{string.Join('&', kept)}{fragment}";
-    }
+    /// <summary>Feeds without a per-item title used to show as a bare "(untitled)" - kept as a thin
+    /// forwarder since <see cref="ReadingStateService"/>'s bookmark-repair helper already calls this
+    /// exact static path.</summary>
+    public static string DeriveTitle(string? rawTitle, string cleanedSummary, string sourceName) =>
+        FeedTextUtils.DeriveTitle(rawTitle, cleanedSummary, sourceName);
 }
