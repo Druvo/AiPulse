@@ -157,7 +157,7 @@ else
                 <div class="col" id="news-item-@idx">
                     <FeedItemCard Item="item" Layout="Grid"
                                   IsNew="item.Published > _sinceVisit"
-                                  WatchedKeyword='Reading.MatchWatchlist(item.Title + " " + item.Summary)'
+                                  WatchedKeyword='@Reading.MatchWatchlist(item.Title + " " + item.Summary)'
                                   IsRead="Reading.IsRead(item.Link)"
                                   IsBookmarked="Reading.IsBookmarked(item.Link)"
                                   OnToggleRead="() => ToggleRead(item)"
@@ -185,7 +185,7 @@ else
             <div id="news-item-@idx" class="mb-2">
                 <FeedItemCard Item="item" Layout="List"
                               IsNew="item.Published > _sinceVisit"
-                              WatchedKeyword='Reading.MatchWatchlist(item.Title + " " + item.Summary)'
+                              WatchedKeyword='@Reading.MatchWatchlist(item.Title + " " + item.Summary)'
                               IsRead="Reading.IsRead(item.Link)"
                               IsBookmarked="Reading.IsBookmarked(item.Link)"
                               OnToggleRead="() => ToggleRead(item)"
