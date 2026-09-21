@@ -24,7 +24,7 @@
 @code {
     private static readonly HashSet<string> PublicPaths = new(StringComparer.OrdinalIgnoreCase)
     {
-        "/news", "/explore", "/glossary", "/tools"
+        "/news", "/explore", "/glossary", "/tools", "/help"
     };
 
     private bool IsPublicPage
@@ -76,6 +76,7 @@
                         <a href="explore">Explore</a>
                         <a href="glossary">Glossary</a>
                         <a href="tools">Tools</a>
+                        <a href="help">Help</a>
                         <a href="https://github.com/Druvo/AiPulse" target="_blank" rel="noopener">GitHub</a>
                     </nav>
                     <div class="d-flex align-items-center gap-2">

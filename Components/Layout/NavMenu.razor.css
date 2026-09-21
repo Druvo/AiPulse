@@ -67,11 +67,12 @@
     color: var(--ap-sidebar-text-active, #fff);
 }
 
-.nav-scrollable {
+.nav-scrollable, .nav-footer {
     display: none;
 }
 
-.navbar-toggler:checked ~ .nav-scrollable {
+.navbar-toggler:checked ~ .nav-scrollable,
+.navbar-toggler:checked ~ .nav-footer {
     display: block;
 }
 
@@ -80,10 +81,12 @@
         display: none;
     }
 
-    .nav-scrollable {
+    .nav-scrollable, .nav-footer {
         /* Never collapse the sidebar for wide screens */
         display: block;
+    }
 
+    .nav-scrollable {
         /* Fill the remaining sidebar height (flex column on .sidebar) and scroll internally
            so the footer (theme toggle / sign out) always stays visible below it. */
         flex: 1 1 auto;

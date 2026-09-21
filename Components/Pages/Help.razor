@@ -1,5 +1,4 @@
 @page "/help"
-@attribute [Authorize]
 
 <PageTitle>AiPulse · Help</PageTitle>
 
@@ -21,6 +20,23 @@
             <strong>It runs standalone — no AI, no API key, nothing to configure to get value from it.</strong>
             Everything you see (aggregation, tagging, summaries, digest) is plain code: HTTP fetches, XML parsing,
             keyword matching. There's an optional AI hook for later, but it's off by default and nothing here needs it.
+        </p>
+    </div>
+</div>
+
+<div class="card mb-4">
+    <div class="card-body">
+        <h4 class="section-title"><Icon Name="user" /> Browsing without an account</h4>
+        <p class="mb-1">
+            <a href="news">News</a>, <a href="explore">Explore</a>, <a href="glossary">Glossary</a>, and <a href="tools">Tools &amp; Tips</a>
+            are open to anyone, no sign-in required. Personal features — bookmarks, watchlist, the Dashboard, Learning Hub
+            progress, notifications — need an account.
+        </p>
+        <p class="mb-0">
+            Creating an account at <a href="register">/register</a> doesn't sign you in immediately: new accounts stay
+            <strong>Pending</strong> until an Admin approves them at <code>/users</code>. On a self-hosted instance you
+            control, that's usually you — approve your own account (or set <code>Auth:RequireApproval</code> to
+            <code>false</code> to skip this for everyone).
         </p>
     </div>
 </div>

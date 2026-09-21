@@ -31,8 +31,21 @@ main {
 
 @media (max-width: 640.98px) {
     .top-row {
-        justify-content: space-between;
+        justify-content: flex-start;
+        flex-wrap: wrap;
+        height: auto;
+        min-height: 3.5rem;
+        row-gap: .5rem;
+        column-gap: .9rem;
+        padding-top: .6rem;
+        padding-bottom: .6rem;
     }
+
+        .top-row ::deep .search-trigger {
+            flex: 1 1 100%;
+            margin-right: 0;
+            order: -1;
+        }
 }
 
 @media (min-width: 641px) {
