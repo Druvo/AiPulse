@@ -190,7 +190,15 @@ else if (OpmlAdded is not null)
                         {
                             var s = row.Source;
                             <tr>
-                                <td><a href="@s.Url" target="_blank" rel="noopener">@s.Name</a></td>
+                                <td>
+                                    <span class="d-inline-flex align-items-center gap-2">
+                                        @if (HostOf(s.Url) is { } groupHost)
+                                        {
+                                            <img src="/favicon-proxy/@groupHost" alt="" loading="lazy" class="source-favicon" onerror="this.style.display='none'" />
+                                        }
+                                        <a href="@s.Url" target="_blank" rel="noopener">@s.Name</a>
+                                    </span>
+                                </td>
                                 <td>
                                     @if (s.Enabled) { <span class="text-success">● enabled</span> }
                                     else { <span class="text-muted">○ disabled</span> }
@@ -313,7 +321,15 @@ else
                 else
                 {
                     <tr>
-                        <td><a href="@s.Url" target="_blank" rel="noopener">@s.Name</a></td>
+                        <td>
+                            <span class="d-inline-flex align-items-center gap-2">
+                                @if (HostOf(s.Url) is { } flatHost)
+                                {
+                                    <img src="/favicon-proxy/@flatHost" alt="" loading="lazy" class="source-favicon" onerror="this.style.display='none'" />
+                                }
+                                <a href="@s.Url" target="_blank" rel="noopener">@s.Name</a>
+                            </span>
+                        </td>
                         <td><span class="badge bg-secondary">@s.Category</span></td>
                         <td><span class="badge ctype-@s.ContentType.ToLower()">@s.ContentType</span></td>
                         <td><span class="badge level-@s.Level.ToLower()">@s.Level</span></td>
@@ -492,6 +508,12 @@ else
     /// <summary>Unfiltered count across every source, not just the current search/category view - so the page-level warning banner
     /// reflects the whole picture even while a search or a collapsed category is hiding some rows.</summary>
     private int TotalFailingCount() => Kb.SourceRecords.Count(s => Feeds.GetFailureStreak(s.Name) > 0);
+
+    /// <summary>For the small per-source favicon next to its name - same /favicon-proxy/{host} the News Feed
+    /// cards use (FeedItemCard.HostOf), so a source is visually recognizable here too, not just once its
+    /// items start showing up in the feed.</summary>
+    private static string? HostOf(string url) =>
+        Uri.TryCreate(url, UriKind.Absolute, out var uri) ? uri.Host : null;
 
     /// <summary>Collapsible-groups view: same filtered rows as the flat table, partitioned by category (folders), sorted by name within each.</summary>
     private List<(string Category, List<SourceRow> Rows)> GetGroups() =>

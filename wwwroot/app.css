@@ -959,6 +959,9 @@ a.heatmap-cell:hover { outline: 2px solid var(--ap-accent-hover); }
 .month-calendar-cell.month-calendar-selected { outline: 2px solid var(--ap-accent); font-weight: bold; }
 .month-calendar-dot { position: absolute; bottom: 3px; width: 4px; height: 4px; border-radius: 50%; background: currentColor; opacity: 0.6; }
 
+/* Sources page: small per-source favicon next to its name, in both the grouped and flat-list tables. */
+.source-favicon { width: 16px; height: 16px; border-radius: 3px; flex-shrink: 0; object-fit: contain; }
+
 /* ============================================================
    Feed item cards (News/Bookmarks/Digest/Home share FeedItemCard.razor)
    ============================================================ */
