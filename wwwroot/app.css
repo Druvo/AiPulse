@@ -493,10 +493,14 @@ a.card:hover { transform: translateY(-1px); }
     border-radius: 4px;
 }
 
-/* Reading Stats: "Last 14 days" bar chart */
-.chart-bars { height: 140px; }
+/* Reading Stats: "Last 14 days" bar chart. Each column's date label ("9/14/2026") has an intrinsic
+   min-width flexbox won't shrink below by default, so 14 of them add up to more than a narrow column
+   fits - overflow-x:auto plus a fixed column width (instead of flex:1 dividing whatever space happens to
+   be available) makes it scroll horizontally rather than silently clipping the later days, same pattern
+   as .heatmap-scroll below. */
+.chart-bars { height: 140px; overflow-x: auto; padding-bottom: 2px; }
 .chart-bar-col {
-    flex: 1;
+    flex: 0 0 38px;
     display: flex;
     flex-direction: column;
     align-items: center;
