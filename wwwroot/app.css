@@ -839,6 +839,16 @@ a.card:hover { transform: translateY(-1px); }
     background: var(--ap-surface); color: var(--ap-text);
     border: 1px solid var(--ap-border); border-radius: var(--ap-radius-md);
     box-shadow: var(--ap-shadow-md);
+    /* The bell sits near the left edge on mobile, so anchoring the panel to its own right edge (extending
+       leftward) pushes most of a fixed 340px width off-screen. Below 480px, anchor to the left edge
+       instead (extending rightward, where the viewport actually has room) and cap the width to fit. */
+}
+@media (max-width: 480px) {
+    .notif-panel {
+        left: 0;
+        right: auto;
+        width: min(340px, calc(100vw - 2rem));
+    }
 }
 .notif-head {
     display: flex; justify-content: space-between; align-items: center;
