@@ -427,6 +427,15 @@ a.card:hover { transform: translateY(-1px); }
     font-variant-numeric: tabular-nums;
     color: var(--ap-accent);
 }
+/* The one stat-num that holds text rather than a number (Dashboard's "Top category") - a category name
+   like "Community" or "Product Launches" overflows the card at the numeric size, so it gets a smaller
+   size plus ellipsis truncation instead of the same treatment as a short digit count. */
+.stat-num-text {
+    font-size: 1.3rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
 .stat-label {
     font-size: .85rem; color: var(--ap-text-secondary); margin-top: .3rem;
     display: inline-flex; align-items: center; gap: .35rem; justify-content: center; width: 100%;
