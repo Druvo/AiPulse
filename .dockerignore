@@ -1,0 +1,15 @@
+bin/
+obj/
+publish/
+out/
+App_Data/
+DeployAiPulse/
+.vs/
+.vscode/
+.git/
+.github/
+*.log
+graphify-out/
+appsettings.Development.json
+appsettings.Local.json
+appsettings.Production.json

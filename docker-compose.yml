@@ -1,0 +1,17 @@
+services:
+  aipulse:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    volumes:
+      - aipulse-data:/app/App_Data
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+      # TLS termination happens at a reverse proxy (Nginx/Caddy) in front of this container -
+      # see Program.cs's ForwardedHeaders setup. Don't try to serve HTTPS from Kestrel directly here.
+
+volumes:
+  aipulse-data:

@@ -8,6 +8,8 @@ using AspNet.Security.OAuth.GitHub;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.Google;
+using Microsoft.AspNetCore.DataProtection;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -50,6 +52,13 @@ builder.Services.AddHttpClient("ollama", c =>
 var dbPath = Path.Combine(builder.Environment.ContentRootPath, "App_Data", "aipulse.db");
 Directory.CreateDirectory(Path.GetDirectoryName(dbPath)!);
 builder.Services.AddDbContextFactory<AiPulseDbContext>(options => options.UseSqlite($"Data Source={dbPath}"));
+
+// Data Protection keys persisted to App_Data (the same volume the SQLite DB lives on) rather than the
+// OS-default location - without this, a container recreate (Docker) or a machine move rotates the key
+// ring, and every OAuth ClientSecret encrypted with the old key becomes permanently undecryptable.
+builder.Services.AddDataProtection()
+    .SetApplicationName("AiPulse")
+    .PersistKeysToFileSystem(new DirectoryInfo(Path.Combine(builder.Environment.ContentRootPath, "App_Data", "dp-keys")));
 
 // Core app services.
 builder.Services.AddSingleton<KnowledgeBaseService>();
@@ -207,9 +216,31 @@ async Task HandleExternalTicketReceivedAsync(TicketReceivedContext ctx, string p
 }
 builder.Services.AddCascadingAuthenticationState();
 
+// A reverse proxy or uptime monitor pings this to know the process is alive AND the DB is actually
+// reachable, not just that Kestrel is accepting connections.
+builder.Services.AddHealthChecks()
+    .AddCheck<DbHealthCheck>("sqlite");
+
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
+
+// TLS termination is expected to happen at a reverse proxy (Nginx/Caddy) in front of this app, not in
+// Kestrel itself - standard for the Docker/VPS deploy this app targets. Without this, Kestrel only ever
+// sees the plain-HTTP hop from the proxy, so UseHttpsRedirection() redirect-loops, secure-cookie logic
+// misfires, and any code reading Request.Scheme (e.g. the OAuth callback, /sitemap.xml) thinks the site
+// is HTTP even when the visitor is on HTTPS. KnownNetworks/KnownProxies are cleared because the proxy
+// hop's source IP isn't a fixed, known value in every deployment topology (e.g. proxy and app in
+// separate Docker containers) - safe as long as the app's own port is never exposed directly to the
+// public internet, only reachable through the proxy (bind to localhost, or firewall it).
+var forwardedHeadersOptions = new ForwardedHeadersOptions
+{
+    ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto
+};
+forwardedHeadersOptions.KnownNetworks.Clear();
+forwardedHeadersOptions.KnownProxies.Clear();
+app.UseForwardedHeaders(forwardedHeadersOptions);
+
 if (!app.Environment.IsDevelopment())
 {
     app.UseExceptionHandler("/Error", createScopeForErrors: true);
@@ -232,6 +263,9 @@ app.UseAntiforgery();
 
 app.UseAuthentication();
 app.UseAuthorization();
+
+// Unauthenticated on purpose - a reverse proxy or uptime monitor hits this without a session.
+app.MapHealthChecks("/health");
 
 // Sign out and return to the login page.
 app.MapPost("/auth/logout", async (HttpContext http) =>
