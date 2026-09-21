@@ -18,6 +18,16 @@
     </p>
 </div>
 
+@{
+    var totalFailing = TotalFailingCount();
+}
+@if (totalFailing > 0)
+{
+    <div class="alert alert-warning py-2 small">
+        <strong>@totalFailing source(s)</strong> failing to fetch right now — look for the "failing" badge on each category below, or switch to <strong>Flat list</strong> and sort by name to find them directly.
+    </div>
+}
+
 @if (_opmlResult is { } r)
 {
     <div class="alert @(r.Unreachable > 0 ? "alert-warning" : "alert-success") py-2 small">
@@ -478,6 +488,10 @@ else
 
         return q;
     }
+
+    /// <summary>Unfiltered count across every source, not just the current search/category view - so the page-level warning banner
+    /// reflects the whole picture even while a search or a collapsed category is hiding some rows.</summary>
+    private int TotalFailingCount() => Kb.SourceRecords.Count(s => Feeds.GetFailureStreak(s.Name) > 0);
 
     /// <summary>Collapsible-groups view: same filtered rows as the flat table, partitioned by category (folders), sorted by name within each.</summary>
     private List<(string Category, List<SourceRow> Rows)> GetGroups() =>

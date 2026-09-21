@@ -168,10 +168,10 @@
     <div class="col-lg-6">
         <h4 class="section-title"><Icon Name="user" /> Account</h4>
         <p class="text-muted">Signed in as <strong>@_username</strong>.</p>
-        <div class="row g-2 mb-2">
-            <div class="col-md-4"><input type="password" class="form-control" placeholder="Current password" @bind="_currentPassword" /></div>
-            <div class="col-md-4"><input type="password" class="form-control" placeholder="New password" @bind="_newPassword" /></div>
-            <div class="col-md-4"><input type="password" class="form-control" placeholder="Confirm new password" @bind="_confirmPassword" /></div>
+        <div class="mb-2">
+            <input type="password" class="form-control mb-2" placeholder="Current password" @bind="_currentPassword" />
+            <input type="password" class="form-control mb-2" placeholder="New password" @bind="_newPassword" />
+            <input type="password" class="form-control" placeholder="Confirm new password" @bind="_confirmPassword" />
         </div>
         <button class="btn btn-primary" @onclick="ChangePassword">Change password</button>
         @if (_passwordChangeMessage is not null)
@@ -186,9 +186,9 @@
             Shown on your public profile page at <a href="@($"u/{_username}")" target="_blank">/u/@_username</a> —
             visible to anyone, signed in or not.
         </p>
-        <div class="row g-2 mb-2">
-            <div class="col-md-6"><input class="form-control" placeholder="Display name (optional - defaults to your username)" @bind="_profileDisplayName" /></div>
-            <div class="col-md-6"><input class="form-control" placeholder="Website (optional)" @bind="_profileWebsiteUrl" /></div>
+        <div class="mb-2">
+            <input class="form-control mb-2" placeholder="Display name (optional - defaults to your username)" @bind="_profileDisplayName" />
+            <input class="form-control" placeholder="Website (optional)" @bind="_profileWebsiteUrl" />
         </div>
         <div class="mb-2">
             <input class="form-control" placeholder="Avatar image URL (optional)" @bind="_profileAvatarUrl" />
