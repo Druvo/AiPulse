@@ -1,3 +1,7 @@
+@using AiPulse.Models
+@inject FeedAggregatorService Feeds
+@inject ReadingStateService Reading
+
 <div class="top-row ps-3 navbar navbar-dark">
     <div class="container-fluid">
         <a class="navbar-brand d-flex align-items-center gap-2" href="dashboard">
@@ -22,6 +26,10 @@
             <NavLink class="nav-link" href="news">
                 <Icon Name="rss" />
                 <span>News Feed</span>
+                @if (_unreadCount is > 0)
+                {
+                    <span class="badge bg-secondary ms-auto" title="@_unreadCount unread">@(_unreadCount > 99 ? "99+" : _unreadCount)</span>
+                }
             </NavLink>
         </div>
         <div class="nav-item px-3">
@@ -122,3 +130,29 @@
         <a href="https://github.com/Druvo" target="_blank" rel="noopener">Druvo</a>
     </p>
 </div>
+
+@code {
+    private int? _unreadCount;
+
+    /// <summary>
+    /// Same base pipeline as News.razor's Filtered() "Unread" tab (Release items excluded, muted
+    /// sources/exclude-filters applied) minus the page's own search/category/tag refinements - this is
+    /// "how many would show up if you opened News Feed right now with no extra filters", not a live-updating
+    /// count. Uses PeekCache(), not GetAsync() - this component renders on every page, so it must never be
+    /// what triggers a live poll across 100+ sources sharing a rate-limited host (can take minutes) just to
+    /// draw a sidebar badge. No cached result yet this run (server just started) -> no badge, until the
+    /// News page or the background watcher populates the cache for everyone.
+    /// </summary>
+    protected override void OnParametersSet()
+    {
+        var result = Feeds.PeekCache();
+        if (result is null) { _unreadCount = null; return; }
+
+        IEnumerable<FeedItem> items = result.Items.Where(i => i.ContentType != "Release");
+        if (Reading.ExcludeFilters.Count > 0)
+            items = items.Where(i => !Reading.IsExcluded(i.Title + " " + i.Summary));
+        if (Reading.MutedSources.Count > 0)
+            items = items.Where(i => !Reading.IsSourceMuted(i.SourceName));
+        _unreadCount = items.Count(i => !Reading.IsRead(i.Link));
+    }
+}

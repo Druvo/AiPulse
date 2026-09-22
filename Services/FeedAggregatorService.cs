@@ -52,6 +52,14 @@ public sealed class FeedAggregatorService
     /// <summary>Consecutive failed fetches for a source since its last success (0 = healthy or unknown).</summary>
     public int GetFailureStreak(string sourceName) => _failureStreaks.GetValueOrDefault(sourceName);
 
+    /// <summary>
+    /// The current cache, or null if nothing has been fetched yet this run - never triggers a fetch, unlike
+    /// GetAsync(). For callers that render on every page (e.g. the sidebar's unread-count badge) and must
+    /// never be the thing that kicks off a live poll across 100+ sources sharing a rate-limited host, which
+    /// can take minutes and would otherwise block that unrelated page's render until it finished.
+    /// </summary>
+    public FeedResult? PeekCache() => _cache;
+
     /// <summary>Returns cached results if fresh; otherwise fetches. Pass force=true to bypass the cache.</summary>
     public async Task<FeedResult> GetAsync(bool force = false, CancellationToken ct = default)
     {
