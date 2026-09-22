@@ -156,6 +156,78 @@ else if (OpmlAdded is not null)
     </div>
 }
 
+@if (_editingId is not null)
+{
+    <div class="card mb-3">
+        <div class="card-body">
+            <h6 class="section-title">Edit source</h6>
+            <EditForm Model="_form" OnValidSubmit="SaveEdit">
+                <div class="row g-2">
+                    <div class="col-md-4"><input class="form-control" placeholder="Name" @bind="_form.Name" /></div>
+                    <div class="col-md-8"><input class="form-control" placeholder="Feed URL (RSS/Atom)" @bind="_form.Url" /></div>
+                    <div class="col-md-3">
+                        <select class="form-select" @bind="_form.Category">
+                            @foreach (var c in _categories) { <option value="@c">@c</option> }
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <select class="form-select" @bind="_form.ContentType">
+                            @foreach (var c in _contentTypes) { <option value="@c">@c</option> }
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <select class="form-select" @bind="_form.Level">
+                            @foreach (var l in _levels) { <option value="@l">@l</option> }
+                        </select>
+                    </div>
+                    <div class="col-md-3"><input class="form-control" placeholder="Tags (comma-separated)" @bind="_form.TagsCsv" /></div>
+                    <div class="col-md-9"><input class="form-control" placeholder="Note (what it gives you)" @bind="_form.Note" /></div>
+                    <div class="col-md-3 d-flex align-items-center">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="editEnabled" @bind="_form.Enabled" />
+                            <label class="form-check-label" for="editEnabled">Enabled</label>
+                        </div>
+                    </div>
+                    <div class="col-md-4 d-flex align-items-center">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="editFullText" @bind="_form.FullTextFetch" />
+                            <label class="form-check-label" for="editFullText">Fetch full article text</label>
+                        </div>
+                    </div>
+                    <div class="col-md-5 d-flex align-items-center">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="editIsScrape" @bind="_form.IsScrape" />
+                            <label class="form-check-label" for="editIsScrape">Scrape HTML (no RSS feed)</label>
+                        </div>
+                    </div>
+                    @if (_form.IsScrape)
+                    {
+                        <div class="col-12">
+                            <div class="alert alert-light border small mb-0">
+                                <strong>Scrape selectors (XPath)</strong> — the URL above is the page to scrape, not an RSS feed.
+                                <div class="row g-2 mt-1">
+                                    <div class="col-md-6"><input class="form-control form-control-sm" placeholder="Item container XPath, e.g. //article" @bind="_form.ScrapeItemXPath" /></div>
+                                    <div class="col-md-6"><input class="form-control form-control-sm" placeholder="Link XPath (relative) — default .//a" @bind="_form.ScrapeLinkXPath" /></div>
+                                    <div class="col-md-6"><input class="form-control form-control-sm" placeholder="Title XPath (relative, optional)" @bind="_form.ScrapeTitleXPath" /></div>
+                                    <div class="col-md-6"><input class="form-control form-control-sm" placeholder="Date XPath (relative, optional)" @bind="_form.ScrapeDateXPath" /></div>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                </div>
+                @if (_error is not null)
+                {
+                    <div class="alert alert-danger mt-2 py-2 small mb-0">@_error</div>
+                }
+                <div class="mt-3">
+                    <button type="submit" class="btn btn-success">Save</button>
+                    <button type="button" class="btn btn-outline-secondary" @onclick="CancelEdit">Cancel</button>
+                </div>
+            </EditForm>
+        </div>
+    </div>
+}
+
 <div class="mb-2">
     <input class="form-control form-control-sm" style="max-width:280px" placeholder="Search sources…"
            value="@_search" @oninput="e => { _search = (string)e.Value!; _page = 1; }" />
@@ -254,73 +326,7 @@ else
             @foreach (var row in pageRows)
             {
                 var s = row.Source;
-                @if (_editingId == s.Id)
-                {
-                    <tr>
-                        <td colspan="10">
-                            <div class="row g-2">
-                                <div class="col-md-4"><input class="form-control form-control-sm" @bind="_form.Name" /></div>
-                                <div class="col-md-8"><input class="form-control form-control-sm" @bind="_form.Url" /></div>
-                                <div class="col-md-3">
-                                    <select class="form-select form-select-sm" @bind="_form.Category">
-                                        @foreach (var c in _categories) { <option value="@c">@c</option> }
-                                    </select>
-                                </div>
-                                <div class="col-md-3">
-                                    <select class="form-select form-select-sm" @bind="_form.ContentType">
-                                        @foreach (var c in _contentTypes) { <option value="@c">@c</option> }
-                                    </select>
-                                </div>
-                                <div class="col-md-3">
-                                    <select class="form-select form-select-sm" @bind="_form.Level">
-                                        @foreach (var l in _levels) { <option value="@l">@l</option> }
-                                    </select>
-                                </div>
-                                <div class="col-md-3"><input class="form-control form-control-sm" placeholder="Tags" @bind="_form.TagsCsv" /></div>
-                                <div class="col-md-9"><input class="form-control form-control-sm" placeholder="Note" @bind="_form.Note" /></div>
-                                <div class="col-md-3 d-flex align-items-center">
-                                    <div class="form-check">
-                                        <input class="form-check-input" type="checkbox" id="editEnabled" @bind="_form.Enabled" />
-                                        <label class="form-check-label" for="editEnabled">Enabled</label>
-                                    </div>
-                                </div>
-                                <div class="col-md-4 d-flex align-items-center">
-                                    <div class="form-check">
-                                        <input class="form-check-input" type="checkbox" id="editFullText" @bind="_form.FullTextFetch" />
-                                        <label class="form-check-label" for="editFullText">Fetch full article text</label>
-                                    </div>
-                                </div>
-                                <div class="col-md-5 d-flex align-items-center">
-                                    <div class="form-check">
-                                        <input class="form-check-input" type="checkbox" id="editIsScrape" @bind="_form.IsScrape" />
-                                        <label class="form-check-label" for="editIsScrape">Scrape HTML (no RSS feed)</label>
-                                    </div>
-                                </div>
-                                @if (_form.IsScrape)
-                                {
-                                    <div class="col-12">
-                                        <div class="alert alert-light border small mb-0">
-                                            <strong>Scrape selectors (XPath)</strong> — the URL above is the page to scrape, not an RSS feed.
-                                            <div class="row g-2 mt-1">
-                                                <div class="col-md-6"><input class="form-control form-control-sm" placeholder="Item container XPath, e.g. //article" @bind="_form.ScrapeItemXPath" /></div>
-                                                <div class="col-md-6"><input class="form-control form-control-sm" placeholder="Link XPath (relative) — default .//a" @bind="_form.ScrapeLinkXPath" /></div>
-                                                <div class="col-md-6"><input class="form-control form-control-sm" placeholder="Title XPath (relative, optional)" @bind="_form.ScrapeTitleXPath" /></div>
-                                                <div class="col-md-6"><input class="form-control form-control-sm" placeholder="Date XPath (relative, optional)" @bind="_form.ScrapeDateXPath" /></div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                }
-                            </div>
-                            <div class="mt-2">
-                                <button class="btn btn-sm btn-success" @onclick="SaveEdit">Save</button>
-                                <button class="btn btn-sm btn-outline-secondary" @onclick="CancelEdit">Cancel</button>
-                            </div>
-                        </td>
-                    </tr>
-                }
-                else
-                {
-                    <tr>
+                <tr class="@(_editingId == s.Id ? "table-active" : "")">
                         <td>
                             <span class="d-inline-flex align-items-center gap-2">
                                 @if (HostOf(s.Url) is { } flatHost)
@@ -395,7 +401,6 @@ else
                             <button class="btn btn-sm btn-link p-0 text-danger" title="Delete" @onclick="() => DeleteSource(s.Id)"><Icon Name="trash" Size="15" /></button>
                         </td>
                     </tr>
-                }
             }
         </tbody>
     </table>
