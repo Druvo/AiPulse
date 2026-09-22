@@ -985,6 +985,20 @@ a.heatmap-cell:hover { outline: 2px solid var(--ap-accent-hover); }
 /* Sources page: small per-source favicon next to its name, in both the grouped and flat-list tables. */
 .source-favicon { width: 16px; height: 16px; border-radius: 3px; flex-shrink: 0; object-fit: contain; }
 
+/* Settings > Backup & restore: the native file input's own "No file chosen" label doesn't shrink
+   gracefully, so at narrow widths it and the "Restore from backup" button fought for space and the
+   label rendered as an unreadable "N...". Stack them instead of forcing them onto one row. */
+@media (max-width: 480px) {
+    .restore-backup-group {
+        flex-direction: column;
+    }
+    .restore-backup-group input,
+    .restore-backup-group button {
+        width: 100% !important;
+        border-radius: var(--ap-radius-sm, 6px) !important;
+    }
+}
+
 /* ============================================================
    Feed item cards (News/Bookmarks/Digest/Home share FeedItemCard.razor)
    ============================================================ */

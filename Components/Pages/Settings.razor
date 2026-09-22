@@ -373,7 +373,7 @@
 
                 <form method="post" action="/backup/restore" enctype="multipart/form-data"
                       onsubmit="return confirm('This overwrites ALL current sources, bookmarks, chat history and feed history with the contents of this backup. Continue?');">
-                    <div class="input-group">
+                    <div class="input-group restore-backup-group">
                         <input type="file" name="file" accept=".zip" class="form-control" required />
                         <button type="submit" class="btn btn-warning">Restore from backup</button>
                     </div>
