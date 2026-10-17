@@ -214,7 +214,7 @@ else
     }
     else
     {
-        <Pager TotalItems="totalItems" @bind-CurrentPage="_page" @bind-PageSize="_pageSize" />
+        <Pager TotalItems="totalItems" @bind-CurrentPage="_page" PageSize="_pageSize" PageSizeChanged="OnPageSizeChanged" />
     }
 }
 </div>
@@ -378,7 +378,12 @@ else
     private DateOnly? _dateTo;
     private string _view = "Grid";
     private int _page = 1;
-    private int _pageSize = 100;
+    // Starts small: rendering 100 cards cost 170-320 ms per interaction (vs 37-51 ms for 20) and shipped a
+    // 468 KB document - fine on a desktop, a 46,000 px scroll and laggy typing on a phone. Grows to 100 on
+    // wide viewports once the circuit can ask the browser (OnAfterRenderAsync); a size the user picks wins.
+    private const int WidePageSize = 100;
+    private int _pageSize = 20;
+    private bool _pageSizeChosen;
     private DateTimeOffset _sinceVisit = DateTimeOffset.MinValue;
     private List<FeedItem> _visibleItems = new();
     private readonly HashSet<string> _expandedLinks = new();
@@ -879,7 +884,23 @@ else
         if (!firstRender) return;
         Reading.TouchNewsVisit(); // now that _sinceVisit is already committed to this render, safe to mark the visit
         _dotNetRef = DotNetObjectReference.Create(this);
-        try { await JS.InvokeVoidAsync("aipulseKeyboard.register", _dotNetRef); } catch { /* circuit may already be gone */ }
+        try
+        {
+            await JS.InvokeVoidAsync("aipulseKeyboard.register", _dotNetRef);
+
+            if (!_pageSizeChosen && await JS.InvokeAsync<bool>("aipulseKeyboard.isWideViewport"))
+            {
+                _pageSize = WidePageSize;
+                StateHasChanged();
+            }
+        }
+        catch { /* circuit may already be gone */ }
+    }
+
+    private void OnPageSizeChanged(int size)
+    {
+        _pageSize = size;
+        _pageSizeChosen = true;
     }
 
     [JSInvokable]

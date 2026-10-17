@@ -31,6 +31,10 @@ window.aipulseKeyboard = {
         if (el) el.scrollIntoView({ block: 'center', behavior: 'smooth' });
     },
 
+    isWideViewport() {
+        return window.matchMedia('(min-width: 768px)').matches;
+    },
+
     openLink(url) {
         if (url) window.open(url, '_blank', 'noopener');
     }
