@@ -341,19 +341,25 @@ app.MapPost("/backup/restore", async (HttpRequest request, BackupService backup)
 // need this too - but NOT a general-purpose open proxy: {host} must belong to a currently configured
 // source, so an anonymous caller can't use this endpoint to make the server fetch/probe an arbitrary
 // (e.g. internal-network) host. Uri.CheckHostName still runs first as a cheap format guard.
-app.MapGet("/favicon-proxy/{host}", async (string host, FaviconService favicons, KnowledgeBaseService kb) =>
+app.MapGet("/favicon-proxy/{host}", async (string host, HttpContext http, FaviconService favicons, KnowledgeBaseService kb) =>
 {
     if (Uri.CheckHostName(host) is UriHostNameType.Unknown or UriHostNameType.Basic)
         return Results.BadRequest();
 
-    var isKnownSourceHost = kb.SourceRecords.Any(s =>
-        Uri.TryCreate(s.Url, UriKind.Absolute, out var sourceUri) &&
-        string.Equals(sourceUri.Host, host, StringComparison.OrdinalIgnoreCase));
-    if (!isKnownSourceHost)
+    if (!kb.IsConfiguredSourceHost(host))
         return Results.NotFound();
 
     var favicon = await favicons.GetFaviconAsync(host);
-    return favicon is null ? Results.NotFound() : Results.File(favicon.Value.Bytes, favicon.Value.ContentType);
+    if (favicon is null)
+    {
+        // A configured source whose site simply has no favicon (e.g. mastodon.social) - let the browser remember that for a while instead of re-asking on every page load.
+        http.Response.Headers.CacheControl = "public, max-age=3600";
+        return Results.NotFound();
+    }
+
+    // Without this the browser re-requests every favicon on every page load, for bytes that only change if the site redesigns.
+    http.Response.Headers.CacheControl = "public, max-age=86400";
+    return Results.File(favicon.Value.Bytes, favicon.Value.ContentType);
 });
 
 // Bulk import/export of sources via OPML - the standard RSS-reader interchange format.

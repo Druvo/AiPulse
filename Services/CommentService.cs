@@ -45,6 +45,19 @@ public sealed class CommentService
         return await db.Comments.CountAsync(c => c.ArticleLink == articleLink && c.DeletedAt == null);
     }
 
+    /// <summary>Live-comment counts for many links in one query - links with no comments are simply absent from the result.</summary>
+    public async Task<Dictionary<string, int>> GetCommentCountsAsync(IReadOnlyCollection<string> articleLinks)
+    {
+        if (articleLinks.Count == 0) return new();
+        await using var db = await _dbFactory.CreateDbContextAsync();
+        await EnsureSchemaAsync(db);
+        return await db.Comments
+            .Where(c => articleLinks.Contains(c.ArticleLink) && c.DeletedAt == null)
+            .GroupBy(c => c.ArticleLink)
+            .Select(g => new { Link = g.Key, Count = g.Count() })
+            .ToDictionaryAsync(x => x.Link, x => x.Count);
+    }
+
     /// <summary>Public activity feed for a user's profile page.</summary>
     public async Task<List<CommentView>> GetByUserAsync(int userId, int take = 20)
     {

@@ -79,15 +79,16 @@
     <div class="btn-group flex-wrap" role="group">
         @foreach (var f in _filters)
         {
-            @* "Following" only means something for a signed-in user - nothing to follow yet otherwise. *@
-            @if (f != "Following" || _userId is not null)
+            @* "Following" and "New" only mean something for a signed-in user - nothing to follow, and no remembered
+               last visit to be new since (so an anonymous visitor saw every single item as New), otherwise. *@
+            @if (f is not ("Following" or "New") || _userId is not null)
             {
                 <button class="btn btn-sm @(_filter == f ? "btn-dark" : "btn-outline-dark")"
                         @onclick="() => SetFilter(f)">
                     @f
-                    @if (f == "New" && _newCount > 0)
+                    @if (f == "New" && NewCount() is > 0 and var newCount)
                     {
-                        <span class="badge bg-info ms-1">@_newCount</span>
+                        <span class="badge bg-info ms-1">@newCount.ToString("N0")</span>
                     }
                 </button>
             }
@@ -136,6 +137,7 @@ else
 {
     var (items, totalItems) = GetPage();
     _visibleItems = items;
+    RequestCommentCounts(items);
 
     @if (_result.Errors.Count > 0)
     {
@@ -147,7 +149,7 @@ else
         </details>
     }
 
-    <p class="text-muted small">@totalItems items</p>
+    <p class="text-muted small">@totalItems.ToString("N0") items</p>
 
     @if (_view == "Grid")
     {
@@ -156,7 +158,7 @@ else
             {
                 <div class="col" id="news-item-@idx">
                     <FeedItemCard Item="item" Layout="Grid"
-                                  IsNew="item.Published > _sinceVisit"
+                                  IsNew="IsNewItem(item)"
                                   WatchedKeyword='@Reading.MatchWatchlist(item.Title + " " + item.Summary)'
                                   IsRead="Reading.IsRead(item.Link)"
                                   IsBookmarked="Reading.IsBookmarked(item.Link)"
@@ -184,7 +186,7 @@ else
         {
             <div id="news-item-@idx" class="mb-2">
                 <FeedItemCard Item="item" Layout="List"
-                              IsNew="item.Published > _sinceVisit"
+                              IsNew="IsNewItem(item)"
                               WatchedKeyword='@Reading.MatchWatchlist(item.Title + " " + item.Summary)'
                               IsRead="Reading.IsRead(item.Link)"
                               IsBookmarked="Reading.IsBookmarked(item.Link)"
@@ -378,7 +380,6 @@ else
     private int _page = 1;
     private int _pageSize = 100;
     private DateTimeOffset _sinceVisit = DateTimeOffset.MinValue;
-    private int _newCount;
     private List<FeedItem> _visibleItems = new();
     private readonly HashSet<string> _expandedLinks = new();
     private readonly HashSet<string> _expandedComments = new();
@@ -399,10 +400,18 @@ else
     private readonly string[] _levels = { "Beginner", "Intermediate", "Advanced" };
     private readonly string[] _sortOptions = { "newest", "oldest", "source", "title" };
 
-    protected override void OnInitialized()
+    /// <summary>
+    /// Filter state is read from the query string, absent meaning "default" - SyncUrl omits defaults, so the
+    /// two are exact mirrors. Runs on every parameter change, not just first load: otherwise following any
+    /// in-app link to /news (sidebar "News Feed", a tag link, global search) while already on this page
+    /// rewrote the URL but silently kept the old filters applied, and a refresh then jumped somewhere else.
+    /// </summary>
+    protected override void OnParametersSet() => ApplyQueryParams();
+
+    private void ApplyQueryParams()
     {
-        if (!string.IsNullOrWhiteSpace(TagParam))
-            _tag = TagParam;
+        _tag = !string.IsNullOrWhiteSpace(TagParam) ? TagParam : "";
+
         if (DateOnly.TryParse(DateFromParam, out var dFrom) && DateOnly.TryParse(DateToParam, out var dTo))
         {
             _dateFrom = dFrom < dTo ? dFrom : dTo;
@@ -413,20 +422,25 @@ else
             _dateFrom = d;
             _dateTo = d;
         }
-        if (ViewParam is "List" or "Grid")
-            _view = ViewParam;
-        if (!string.IsNullOrWhiteSpace(FilterParam) && _filters.Contains(FilterParam))
-            _filter = FilterParam;
-        if (!string.IsNullOrWhiteSpace(ContentTypeParam) && _contentTypes.Contains(ContentTypeParam))
-            _contentType = ContentTypeParam;
-        if (!string.IsNullOrWhiteSpace(CategoryParam) && _categories.Contains(CategoryParam))
-            _category = CategoryParam;
-        if (!string.IsNullOrWhiteSpace(LevelParam) && _levels.Contains(LevelParam))
-            _level = LevelParam;
-        if (!string.IsNullOrWhiteSpace(SourceParam))
-            _sources = new HashSet<string>(SourceParam.Split(',').Select(Uri.UnescapeDataString), StringComparer.OrdinalIgnoreCase);
-        if (!string.IsNullOrWhiteSpace(SortParam) && _sortOptions.Contains(SortParam))
-            _sort = SortParam;
+        else
+        {
+            _dateFrom = null;
+            _dateTo = null;
+        }
+
+        _view = ViewParam is "List" or "Grid" ? ViewParam : "Grid";
+        _filter = !string.IsNullOrWhiteSpace(FilterParam) && _filters.Contains(FilterParam) ? FilterParam : "Unread";
+        _contentType = !string.IsNullOrWhiteSpace(ContentTypeParam) && _contentTypes.Contains(ContentTypeParam) ? ContentTypeParam : "";
+        _category = !string.IsNullOrWhiteSpace(CategoryParam) && _categories.Contains(CategoryParam) ? CategoryParam : "";
+        _level = !string.IsNullOrWhiteSpace(LevelParam) && _levels.Contains(LevelParam) ? LevelParam : "";
+        _sources = !string.IsNullOrWhiteSpace(SourceParam)
+            ? new HashSet<string>(SourceParam.Split(',').Select(Uri.UnescapeDataString), StringComparer.OrdinalIgnoreCase)
+            : new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        _sort = !string.IsNullOrWhiteSpace(SortParam) && _sortOptions.Contains(SortParam) ? SortParam : "newest";
+    }
+
+    protected override void OnInitialized()
+    {
 
         // Peek (don't mark yet) so prerender + the interactive circuit's own OnInitializedAsync - two
         // separate component instances, both hitting this - agree on the same cutoff. Marking the visit
@@ -443,7 +457,6 @@ else
         if (historyItems.Count > 0)
         {
             _result = new FeedResult { Items = historyItems.ToList(), Errors = new(), FetchedAt = DateTimeOffset.MinValue };
-            _newCount = historyItems.Count(i => i.Published > _sinceVisit);
         }
 
         // Progressive fill-in: as each source finishes during the live fetch, update the list instead of
@@ -516,10 +529,22 @@ else
         _pendingNewCount = candidate.Items.Count(i => !currentLinks.Contains(i.Link));
     }
 
-    private void ApplyResult(FeedResult result)
+    /// <summary>
+    /// A live fetch (partial or final) only contains what feeds serve right now, so showing it as-is made the
+    /// list collapse from the whole saved history (~15k items) to whatever the first few sources had returned
+    /// (20 items, then slowly growing) the moment the first progress tick landed - and the final result never
+    /// brought the saved items back. Merging history in by link keeps the list from ever shrinking below what's
+    /// saved; the live copy wins for items in both. History is recorded from already-deduped live results, so
+    /// this doesn't resurrect near-duplicates the live pass folded into "+N more sources".
+    /// </summary>
+    private void ApplyResult(FeedResult live)
     {
-        _result = result;
-        _newCount = result.Items.Count(i => i.Published > _sinceVisit);
+        var liveLinks = new HashSet<string>(live.Items.Select(i => i.Link), StringComparer.OrdinalIgnoreCase);
+        var merged = live.Items
+            .Concat(History.Items.Where(i => !liveLinks.Contains(i.Link)))
+            .OrderByDescending(i => i.Published)
+            .ToList();
+        _result = new FeedResult { Items = merged, Errors = live.Errors, FetchedAt = live.FetchedAt };
     }
 
     private void ApplyPending()
@@ -683,9 +708,10 @@ else
             : all.Where(s => s.Contains(_sourceSearch.Trim(), StringComparison.OrdinalIgnoreCase)).ToList();
     }
 
-    private List<FeedItem> Filtered()
+    /// <summary>What the feed can ever show before any tab/search refinement - shared by Filtered() and the "New" tab badge so the badge can't count items (releases, muted sources, exclude-filter hits) that the tab itself hides.</summary>
+    private IEnumerable<FeedItem> VisibleBase()
     {
-        if (_result is null) return new();
+        if (_result is null) return Enumerable.Empty<FeedItem>();
         IEnumerable<FeedItem> q = _result.Items;
 
         // GitHub release items now live on Explore's GitHub Trending tab instead of the News feed -
@@ -698,6 +724,18 @@ else
 
         if (Reading.MutedSources.Count > 0)
             q = q.Where(i => !Reading.IsSourceMuted(i.SourceName));
+
+        return q;
+    }
+
+    private int NewCount() => VisibleBase().Count(i => i.Published > _sinceVisit);
+
+    private bool IsNewItem(FeedItem item) => _userId is not null && item.Published > _sinceVisit;
+
+    private List<FeedItem> Filtered()
+    {
+        if (_result is null) return new();
+        var q = VisibleBase();
 
         q = _filter switch
         {
@@ -753,6 +791,13 @@ else
     private (List<FeedItem> PageItems, int Total) GetPage()
     {
         var filtered = Filtered();
+
+        // Marking items read (or muting a source) on the Unread tab shrinks the list under the user's feet;
+        // without this, being on the last page when that happens left an out-of-range page: an empty grid
+        // under a pager reading "Showing 3101-3054 of 3054".
+        var lastPage = Math.Max(1, (int)Math.Ceiling(filtered.Count / (double)_pageSize));
+        if (_page > lastPage) _page = lastPage;
+
         var page = filtered.Skip((_page - 1) * _pageSize).Take(_pageSize).ToList();
         return (page, filtered.Count);
     }
@@ -809,21 +854,23 @@ else
             _expandedComments.Remove(link);
     }
 
-    /// <summary>Memoized per-link comment count for the "💬 N comments" badge - fetched lazily (once per
-    /// distinct link per circuit) rather than a bulk query for every visible item on every render, same
-    /// "ensure fetch started, return cached in the meantime" shape FeedItemCard already uses for favicon
-    /// theme colors.</summary>
-    private int GetCommentCount(FeedItem item)
+    private int GetCommentCount(FeedItem item) => _commentCounts.GetValueOrDefault(item.Link);
+
+    /// <summary>Fetches counts for the links on the page being rendered that haven't been asked about yet, as one
+    /// batched query and one re-render. It used to be one query plus one full-page re-render per visible card -
+    /// 100 of each on every page load, measured against the server log.</summary>
+    private void RequestCommentCounts(List<FeedItem> items)
     {
-        if (_commentCounts.TryGetValue(item.Link, out var count)) return count;
-        if (_commentCountsRequested.Add(item.Link))
-            _ = LoadCommentCountAsync(item.Link);
-        return 0;
+        var missing = items.Select(i => i.Link).Where(_commentCountsRequested.Add).ToList();
+        if (missing.Count > 0)
+            _ = LoadCommentCountsAsync(missing);
     }
 
-    private async Task LoadCommentCountAsync(string link)
+    private async Task LoadCommentCountsAsync(List<string> links)
     {
-        _commentCounts[link] = await CommentsSvc.GetCommentCountAsync(link);
+        var counts = await CommentsSvc.GetCommentCountsAsync(links);
+        foreach (var link in links)
+            _commentCounts[link] = counts.GetValueOrDefault(link);
         await InvokeAsync(StateHasChanged);
     }
 

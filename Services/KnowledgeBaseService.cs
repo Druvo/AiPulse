@@ -21,6 +21,8 @@ public sealed class KnowledgeBaseService
     private readonly IDbContextFactory<AiPulseDbContext> _dbFactory;
     private readonly object _sourcesLock = new();
     private List<SourceRecord> _sourceRecords = new();
+    private Dictionary<string, string> _sourceHostByName = new(StringComparer.OrdinalIgnoreCase);
+    private HashSet<string> _sourceHosts = new(StringComparer.OrdinalIgnoreCase);
 
     public KnowledgeBaseService(IWebHostEnvironment env, IDbContextFactory<AiPulseDbContext> dbFactory)
     {
@@ -57,6 +59,17 @@ public sealed class KnowledgeBaseService
     public IReadOnlyList<FeedSource> Sources
     {
         get { lock (_sourcesLock) return _sourceRecords.Select(s => s.ToFeedSource()).ToList(); }
+    }
+
+    /// <summary>Host of the configured source's feed URL, by source name - what a card's favicon/theme color should key on. An item's own link host is wrong for that: Mastodon posts link to the poster's instance, arXiv abstracts to arxiv.org while the feed is export.arxiv.org, so neither matches a configured source.</summary>
+    public string? SourceHostFor(string sourceName)
+    {
+        lock (_sourcesLock) return _sourceHostByName.TryGetValue(sourceName, out var host) ? host : null;
+    }
+
+    public bool IsConfiguredSourceHost(string host)
+    {
+        lock (_sourcesLock) return _sourceHosts.Contains(host);
     }
 
     /// <summary>Sources with their DB Id, for the Sources page's edit/delete UI.</summary>
@@ -334,7 +347,22 @@ public sealed class KnowledgeBaseService
         try
         {
             var list = await db.Sources.OrderBy(s => s.Category).ThenBy(s => s.Name).ToListAsync();
-            lock (_sourcesLock) _sourceRecords = list;
+
+            var hostByName = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            var hosts = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var s in list)
+            {
+                if (!Uri.TryCreate(s.Url, UriKind.Absolute, out var uri)) continue;
+                hosts.Add(uri.Host);
+                hostByName.TryAdd(s.Name, uri.Host);
+            }
+
+            lock (_sourcesLock)
+            {
+                _sourceRecords = list;
+                _sourceHostByName = hostByName;
+                _sourceHosts = hosts;
+            }
         }
         finally
         {

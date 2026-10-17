@@ -4,6 +4,7 @@
    reimplementing its own card markup. *@
 @using AiPulse.Models
 @inject FaviconService Favicons
+@inject KnowledgeBaseService Kb
 @inject IJSRuntime JS
 
 <div class="card h-100 feed-card-clickable @(Layout == "Grid" ? "feed-grid-card" : "feed-card-row") feed-card-accent @(IsRead ? "read-item" : "") @(WatchedKeyword is not null ? "watched-item" : "") @CssClass"
@@ -206,7 +207,7 @@
 
     protected override void OnParametersSet()
     {
-        _host = HostOf(Item.Link);
+        _host = Kb.SourceHostFor(Item.SourceName);
         _accentColor = AvatarColor(Item.SourceName);
 
         if (_host is null) return;
@@ -227,6 +228,4 @@
         return $"hsl({hash % 360}, 58%, 42%)";
     }
 
-    private static string? HostOf(string url) =>
-        Uri.TryCreate(url, UriKind.Absolute, out var uri) ? uri.Host : null;
 }

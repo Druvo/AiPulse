@@ -3,9 +3,7 @@
 @{
     var monthStart = _displayMonth;
     var monthEnd = monthStart.AddMonths(1).AddDays(-1);
-    var counts = CountsOverride ?? Items
-        .GroupBy(i => DateOnly.FromDateTime(i.Published.LocalDateTime))
-        .ToDictionary(g => g.Key, g => g.Count());
+    var counts = CountsOverride ?? _itemCounts;
     var max = counts.Count > 0 ? counts.Values.Max() : 0;
     var today = DateOnly.FromDateTime(DateTime.Today);
 
@@ -86,8 +84,24 @@
     private DateOnly _displayMonth = DateOnly.FromDateTime(DateTime.Today).AddDays(1 - DateTime.Today.Day);
     private bool _initialized;
 
+    private IReadOnlyList<FeedItem>? _countedItems;
+    private int _countedItemsLength = -1;
+    private Dictionary<DateOnly, int> _itemCounts = new();
+
     protected override void OnParametersSet()
     {
+        // The parent re-renders on every keystroke/filter click and passes the same (mutable, so always
+        // "changed" to Blazor) list each time - regrouping 16k items by date on every one of those is what
+        // made typing in the search box do a full calendar recompute. Only regroup when the list changed.
+        if (CountsOverride is null && (!ReferenceEquals(Items, _countedItems) || Items.Count != _countedItemsLength))
+        {
+            _countedItems = Items;
+            _countedItemsLength = Items.Count;
+            _itemCounts = Items
+                .GroupBy(i => DateOnly.FromDateTime(i.Published.LocalDateTime))
+                .ToDictionary(g => g.Key, g => g.Count());
+        }
+
         if (_initialized) return;
         _initialized = true;
         var anchor = RangeStart ?? DateOnly.FromDateTime(DateTime.Today);
