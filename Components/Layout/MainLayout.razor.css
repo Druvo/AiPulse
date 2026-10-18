@@ -6,6 +6,9 @@
 
 main {
     flex: 1;
+    /* A flex item won't shrink below its content's minimum width, so without this the top bar's unwrapped contents pushed
+       the whole page wider than the viewport between the mobile and wide-desktop breakpoints. */
+    min-width: 0;
 }
 
 .top-row {
@@ -66,6 +69,13 @@ main {
         position: sticky;
         top: 0;
         z-index: 1;
+        /* Wrap rather than overflow when the sidebar leaves the content column too narrow for search + links. */
+        flex-wrap: wrap;
+        height: auto;
+        min-height: 3.5rem;
+        row-gap: .25rem;
+        padding-top: .35rem;
+        padding-bottom: .35rem;
     }
 
     .top-row.auth ::deep a:first-child {
