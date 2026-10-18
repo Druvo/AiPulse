@@ -20,4 +20,14 @@
     <Content Update="Data\**\*.json" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
+  <ItemGroup>
+    <!-- The test project lives inside this folder but is its own project (kept out of AiPulse.sln so the
+         root "dotnet publish" used for deploys never builds or ships it). Without these removes, its
+         sources would be compiled into the web app. -->
+    <Compile Remove="tests\**" />
+    <Content Remove="tests\**" />
+    <EmbeddedResource Remove="tests\**" />
+    <None Remove="tests\**" />
+  </ItemGroup>
+
 </Project>

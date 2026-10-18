@@ -1,0 +1,210 @@
+@page "/ask"
+@attribute [Authorize]
+@rendermode InteractiveServer
+@using System.Security.Claims
+@using System.Text.RegularExpressions
+@using AiPulse.Services.Ai.Agent
+@using AiPulse.Services.Ai.Llm
+@using AiPulse.Services.Ai.Rag
+@using Microsoft.Extensions.Options
+@inject RagAgent Agent
+@inject ILlmClient Llm
+@inject KnowledgeCorpus Corpus
+@inject IOptions<AiPulse.Services.Ai.AiOptions> AiOptions
+
+<PageTitle>AiPulse · Ask</PageTitle>
+
+<div class="page-header">
+    <h1><Icon Name="sparkle" Size="22" /> Ask AiPulse</h1>
+    <p class="lead">
+        Answers come only from AiPulse's own glossary, tools, learning guides and recent news. Every sentence shows the source
+        behind it, and anything that can't be checked against a source is left out.
+    </p>
+</div>
+
+<form class="ask-form mb-2" @onsubmit="() => AskAsync(_question)" @onsubmit:preventDefault>
+    <div class="input-group">
+        <input class="form-control" type="text" maxlength="@AiOptions.Value.MaxQuestionLength" autocomplete="off"
+               placeholder="e.g. How does prompt caching cut cost?" aria-label="Your question"
+               @bind="_question" @bind:event="onchange" disabled="@_busy" />
+        <button class="btn btn-primary" type="submit" disabled="@(_busy || string.IsNullOrWhiteSpace(_question))">
+            @if (_busy) { <span class="spinner"></span> } else { <Icon Name="search" Size="15" /> }
+            Ask
+        </button>
+    </div>
+</form>
+
+<div class="ask-examples mb-3">
+    <span class="text-muted small me-1">Try:</span>
+    @foreach (var example in _examples)
+    {
+        <button type="button" class="btn btn-sm btn-outline-secondary" disabled="@_busy" @onclick="() => AskAsync(example)">@example</button>
+    }
+</div>
+
+@if (_busy)
+{
+    <p class="text-muted"><span class="spinner"></span> Looking through the sources…</p>
+}
+else if (_result is { } r)
+{
+    <div class="card ask-result mb-3">
+        <div class="card-body">
+            <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
+                @switch (r.Status)
+                {
+                    case AskStatus.Answered:
+                        <span class="badge bg-success">Every sentence matched to a source</span>
+                        <span class="badge bg-secondary" title="@ModeHint(r)">@ModeLabel(r)</span>
+                        break;
+                    case AskStatus.Refused:
+                        <span class="badge bg-danger">Refused</span>
+                        break;
+                    case AskStatus.RateLimited:
+                        <span class="badge bg-warning text-dark">Slow down</span>
+                        break;
+                    case AskStatus.NotFound:
+                        <span class="badge bg-secondary">Not in the sources</span>
+                        break;
+                }
+                <span class="text-muted small ms-auto">@r.Elapsed.TotalSeconds.ToString("0.0")s</span>
+            </div>
+
+            <p class="ask-answer mb-2">
+                @foreach (var part in Segments(r.Answer))
+                {
+                    if (part.Cite is int n)
+                    {
+                        <a class="cite" href="@($"#src-{n}")" title="@SourceTitle(r, n)">@n</a>
+                    }
+                    else
+                    {
+                        @part.Text
+                    }
+                }
+            </p>
+
+            @if (r.Notice is not null)
+            {
+                <div class="alert alert-warning small py-2 mb-2">@r.Notice</div>
+            }
+
+            @if (r.Sources.Count > 0)
+            {
+                <h2 class="h6 mt-3">Sources</h2>
+                <ol class="ask-sources">
+                    @foreach (var s in r.Sources)
+                    {
+                        <li id="@($"src-{s.Number}")">
+                            <span class="badge bg-light text-dark border me-1">@s.Kind</span>
+                            @if (!string.IsNullOrEmpty(s.Url) && s.Url.StartsWith('/'))
+                            {
+                                <a href="@s.Url">@s.Title</a>
+                            }
+                            else if (!string.IsNullOrEmpty(s.Url))
+                            {
+                                <a href="@s.Url" target="_blank" rel="noopener noreferrer">@s.Title</a>
+                            }
+                            else
+                            {
+                                @s.Title
+                            }
+                            @if (s.Published is { } published)
+                            {
+                                <span class="text-muted small"> · @published.ToLocalTime().ToString("d MMM yyyy")</span>
+                            }
+                            <div class="text-muted small ask-snippet">@s.Snippet</div>
+                        </li>
+                    }
+                </ol>
+            }
+
+            <details class="mt-3 small">
+                <summary class="text-muted">How this answer was made</summary>
+                <ul class="mt-2 mb-0">
+                    @foreach (var step in r.Trace)
+                    {
+                        <li><strong>@step.Step</strong>: @step.Detail</li>
+                    }
+                </ul>
+            </details>
+        </div>
+    </div>
+}
+
+<p class="text-muted small">
+    @if (Llm.Providers.Count == 0)
+    {
+        <span>No language model is configured, so answers are quoted straight from the sources.</span>
+    }
+    else
+    {
+        <span>Language model: @string.Join(", then ", Llm.Providers.Select(p => $"{p.Name} ({p.Model})")).</span>
+    }
+    <span> Searching @Corpus.Stats.Documents.ToString("N0") passages.</span>
+</p>
+
+@code {
+    private static readonly string[] _examples =
+    {
+        "What is RAG?",
+        "How do I cut token costs?",
+        "Which tool runs models locally?",
+        "What does MCP stand for?"
+    };
+
+    [CascadingParameter] private Task<AuthenticationState>? AuthState { get; set; }
+
+    private string _question = "";
+    private AskResult? _result;
+    private bool _busy;
+
+    private async Task AskAsync(string question)
+    {
+        if (_busy || string.IsNullOrWhiteSpace(question)) return;
+
+        _question = question;
+        _busy = true;
+        _result = null;
+        StateHasChanged();
+
+        try
+        {
+            var caller = await CallerKeyAsync();
+            _result = await Agent.AskAsync(question, caller);
+        }
+        finally
+        {
+            _busy = false;
+        }
+    }
+
+    private async Task<string> CallerKeyAsync()
+    {
+        if (AuthState is null) return "anonymous";
+        var user = (await AuthState).User;
+        return user.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? user.Identity?.Name ?? "anonymous";
+    }
+
+    private static string ModeLabel(AskResult r) => r.Mode == "model" ? $"Written by {r.Model}" : "Quoted from the sources";
+
+    private static string ModeHint(AskResult r) => r.Mode == "model"
+        ? $"A language model ({r.Provider}) wrote this from the sources, and each sentence was then checked against them."
+        : "No language model was used: these are sentences taken directly from the sources.";
+
+    private static string SourceTitle(AskResult r, int number) => r.Sources.FirstOrDefault(s => s.Number == number)?.Title ?? "";
+
+    private static readonly Regex CitePattern = new(@"\[(\d+)\]", RegexOptions.Compiled);
+
+    private static IEnumerable<(string? Text, int? Cite)> Segments(string answer)
+    {
+        var last = 0;
+        foreach (Match m in CitePattern.Matches(answer))
+        {
+            if (m.Index > last) yield return (answer[last..m.Index], null);
+            yield return (null, int.Parse(m.Groups[1].Value));
+            last = m.Index + m.Length;
+        }
+        if (last < answer.Length) yield return (answer[last..], null);
+    }
+}

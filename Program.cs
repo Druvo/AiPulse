@@ -4,6 +4,7 @@ using System.Text;
 using AiPulse.Components;
 using AiPulse.Models;
 using AiPulse.Services;
+using AiPulse.Services.Ai;
 using AspNet.Security.OAuth.GitHub;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
@@ -87,6 +88,9 @@ builder.Services.AddSingleton<FollowService>();
 builder.Services.AddSingleton<CommentService>();
 builder.Services.AddSingleton<ProfileService>();
 builder.Services.AddHttpContextAccessor();
+
+// "Ask AiPulse": grounded Q&A over the knowledge base and news, with pluggable language-model providers.
+builder.Services.AddAiAssistant(builder.Configuration);
 
 // WebSub (PubSubHubbub): subscribe to feeds that push updates instead of polling. Inert unless
 // WebSub:PublicBaseUrl is configured - a hub can't call back to "localhost".
