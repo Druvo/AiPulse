@@ -1148,3 +1148,22 @@ a.heatmap-cell:hover { outline: 2px solid var(--ap-accent-hover); }
 .ask-snippet { max-width: 70ch; overflow-wrap: anywhere; }
 .ask-examples { display: flex; flex-wrap: wrap; align-items: center; gap: .4rem; }
 .ask-form .input-group > .form-control { min-width: 0; }
+
+/* ---------- AI summaries on feed cards ---------- */
+.ai-summary {
+    padding: .45rem .6rem;
+    color: var(--ap-text-secondary);
+    background: var(--ap-accent-soft);
+    border-left: 3px solid var(--ap-accent);
+    border-radius: var(--ap-radius-sm);
+}
+.ai-summary-label {
+    display: block;
+    margin-bottom: .1rem;
+    font-size: .72rem;
+    font-weight: 600;
+    letter-spacing: .03em;
+    text-transform: uppercase;
+    color: var(--ap-accent-soft-text);
+}
+.ai-summary-error { background: var(--ap-warning-soft); border-left-color: var(--ap-warning); color: var(--ap-warning-soft-text); }

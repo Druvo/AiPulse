@@ -1,6 +1,8 @@
 using AiPulse.Services.Ai;
 using AiPulse.Services.Ai.Agent;
 using AiPulse.Services.Ai.Llm;
+using AiPulse.Services.Ai.Summaries;
+using AiPulse.Models;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Xunit;
@@ -88,5 +90,36 @@ public class LiveGeminiTests
         var result = await agent.AskAsync("What is the weather in Paris tomorrow?", "live");
 
         Assert.False(result.HasAnswer);
+    }
+
+    [LiveFact]
+    public async Task A_real_model_summarises_an_item_from_its_own_text_and_the_summary_is_grounded()
+    {
+        var item = SummaryFixtures.Item();
+        var service = new ItemSummaryService(Gemini(), new SummaryStore(null), new AskRateLimiter(), Options.Create(new AiOptions()), NullLogger<ItemSummaryService>.Instance);
+
+        var result = await service.SummarizeAsync(item, "live");
+
+        _output.WriteLine($"SUMMARY [{result.Status}]: {result.Summary?.Text ?? result.Message}");
+        Assert.True(result.Ok, result.Message);
+        Assert.True(ItemSummaryService.IsGrounded(result.Summary!.Text, item.Title + " " + item.Summary));
+    }
+
+    [LiveFact]
+    public async Task A_real_model_explains_a_glossary_term_using_only_its_definition()
+    {
+        var term = TestData.Load<GlossaryTerm>("glossary.json").First(t => t.Term == "Quantization");
+        var llm = Gemini();
+        var options = new LlmOptions { Providers = { new LlmProviderOptions { Name = "gemini", BaseUrl = "https://x", Model = "m" } } };
+        var store = new SummaryStore(null);
+        var summarizer = new LlmSummarizer(llm, Options.Create(options),
+            new ItemSummaryService(llm, store, new AskRateLimiter(), Options.Create(new AiOptions()), NullLogger<ItemSummaryService>.Instance),
+            store, name => name == term.Term ? term : null, NullLogger<LlmSummarizer>.Instance);
+
+        var text = await summarizer.ExplainTermAsync("Quantization");
+
+        _output.WriteLine("EXPLANATION: " + text);
+        Assert.False(string.IsNullOrWhiteSpace(text));
+        Assert.Equal(text, await summarizer.ExplainTermAsync("Quantization")); // second call is the saved one
     }
 }

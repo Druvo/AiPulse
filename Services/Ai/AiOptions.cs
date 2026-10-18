@@ -14,6 +14,9 @@ public sealed class AiOptions
     /// <summary>Questions one person may ask per rolling hour (0 = unlimited).</summary>
     public int MaxQuestionsPerHour { get; set; } = 30;
 
+    /// <summary>Item summaries one person may request per rolling hour; a summary already saved for an item is free and does not count (0 = unlimited).</summary>
+    public int MaxSummariesPerHour { get; set; } = 60;
+
     /// <summary>Newest feed items indexed for answers (the saved history holds far more).</summary>
     public int NewsDocLimit { get; set; } = 4000;
 

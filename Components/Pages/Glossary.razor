@@ -312,7 +312,6 @@
     private async Task Explain(string term)
     {
         var text = await Ai.ExplainTermAsync(term);
-        if (text is not null)
-            _explanations[term] = text;
+        _explanations[term] = text ?? "Couldn't generate an explanation right now. Try again in a moment.";
     }
 }

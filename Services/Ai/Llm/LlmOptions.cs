@@ -37,7 +37,11 @@ public sealed class LlmProviderOptions
 
     public bool Enabled { get; set; } = true;
 
-    public int TimeoutSeconds { get; set; } = 90;
+    /// <summary>
+    /// How long to wait for one provider before moving on to the next. Short on purpose: a hosted model that is overloaded can
+    /// take well over a minute to answer a one-line prompt, and nobody should stare at a spinner that long before the fallback kicks in.
+    /// </summary>
+    public int TimeoutSeconds { get; set; } = 30;
 
     /// <summary>
     /// Sent as <c>reasoning_effort</c> by OpenAI-compatible providers when set ("low", "medium", "high"; some also accept "none").

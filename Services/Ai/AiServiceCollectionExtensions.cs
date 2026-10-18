@@ -1,6 +1,8 @@
+using AiPulse.Models;
 using AiPulse.Services.Ai.Agent;
 using AiPulse.Services.Ai.Llm;
 using AiPulse.Services.Ai.Rag;
+using AiPulse.Services.Ai.Summaries;
 using Microsoft.Extensions.Options;
 
 namespace AiPulse.Services.Ai;
@@ -40,6 +42,22 @@ public static class AiServiceCollectionExtensions
         });
 
         services.AddSingleton<RagAgent>();
+
+        // Saved summaries live beside the other App_Data files, so a backup/restore carries them along.
+        services.AddSingleton(sp => new SummaryStore(Path.Combine(sp.GetRequiredService<IWebHostEnvironment>().ContentRootPath, "App_Data", "summaries.jsonl")));
+        services.AddSingleton<ItemSummaryService>();
+        services.AddSingleton<ISummarizer>(sp =>
+        {
+            var kb = sp.GetRequiredService<KnowledgeBaseService>();
+            return new LlmSummarizer(
+                sp.GetRequiredService<ILlmClient>(),
+                sp.GetRequiredService<IOptions<LlmOptions>>(),
+                sp.GetRequiredService<ItemSummaryService>(),
+                sp.GetRequiredService<SummaryStore>(),
+                name => kb.Glossary.FirstOrDefault(t => string.Equals(t.Term, name, StringComparison.OrdinalIgnoreCase)),
+                sp.GetRequiredService<ILogger<LlmSummarizer>>());
+        });
+
         return services;
     }
 }

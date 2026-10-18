@@ -279,7 +279,7 @@
 
         <div class="alert @(Ai.Enabled ? "alert-success" : "alert-secondary") mt-3 small">
             <strong>AI layer:</strong>
-            @(Ai.Enabled ? "Enabled." : "Off (standalone). Plug in Claude later via ISummarizer.")
+            @(Ai.Enabled ? "Enabled: summaries, glossary explanations and Ask AiPulse use your configured language model." : "Off (standalone). Add a provider under Llm:Providers to enable summaries and explanations.")
         </div>
     </div>
 </div>

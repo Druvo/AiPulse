@@ -66,6 +66,29 @@
             <p class="card-text small text-muted mb-2 @(Layout == "Grid" ? "line-clamp-3" : "line-clamp-2")">@Item.Summary</p>
         }
 
+        @if (Layout != "Compact" && OnSummarize.HasDelegate)
+        {
+            @if (string.IsNullOrEmpty(AiSummary))
+            {
+                <button class="btn btn-sm btn-outline-primary mb-2 align-self-start" disabled="@AiSummaryBusy" @onclick="OnSummarize" @onclick:stopPropagation="true"
+                        title="A short summary written by the language model from this item's own text">
+                    @if (AiSummaryBusy) { <span class="spinner"></span> } else { <Icon Name="sparkle" Size="13" /> }
+                    @(AiSummaryBusy ? "Summarizing…" : "Summarize")
+                </button>
+            }
+            else
+            {
+                <div class="ai-summary @(AiSummaryIsError ? "ai-summary-error" : "") small mb-2" @onclick:stopPropagation="true">
+                    @if (!AiSummaryIsError) { <span class="ai-summary-label"><Icon Name="sparkle" Size="11" /> AI summary</span> }
+                    @AiSummary
+                    @if (AiSummaryIsError)
+                    {
+                        <button class="btn btn-sm btn-link p-0 ms-1 align-baseline" @onclick="OnSummarize">Try again</button>
+                    }
+                </div>
+            }
+        }
+
         @if (ShowFullTextToggle && !string.IsNullOrWhiteSpace(Item.FullText))
         {
             <button class="btn btn-sm btn-outline-secondary mb-2 align-self-start" @onclick="OnToggleExpanded" @onclick:stopPropagation="true">
@@ -174,6 +197,11 @@
     /// <summary>Bubbles the post-mutation count up to whatever cache the caller keeps, in addition to this
     /// card's own immediate display update.</summary>
     [Parameter] public EventCallback<int> OnCommentCountChanged { get; set; }
+    /// <summary>Optional - only wired up where the AI layer is on and the viewer is signed in. Asks for a short model-written summary of this item.</summary>
+    [Parameter] public EventCallback OnSummarize { get; set; }
+    [Parameter] public string? AiSummary { get; set; }
+    [Parameter] public bool AiSummaryIsError { get; set; }
+    [Parameter] public bool AiSummaryBusy { get; set; }
     [Parameter] public bool ShowFullTextToggle { get; set; }
     [Parameter] public bool Expanded { get; set; }
     [Parameter] public EventCallback OnToggleExpanded { get; set; }

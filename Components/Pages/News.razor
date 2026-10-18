@@ -10,6 +10,8 @@
 @inject NavigationManager Nav
 @inject IJSRuntime JS
 @inject ToastService Toasts
+@inject ISummarizer Ai
+@inject ILogger<News> Log
 
 <PageTitle>AiPulse · News Feed</PageTitle>
 
@@ -175,6 +177,10 @@ else
                                   CommentsExpanded="_expandedComments.Contains(item.Link)"
                                   OnToggleComments="() => ToggleComments(item.Link)"
                                   OnCommentCountChanged="c => _commentCounts[item.Link] = c"
+                                  OnSummarize="@(CanSummarize ? EventCallback.Factory.Create(this, () => SummarizeAsync(item)) : default)"
+                                  AiSummary="@GetSummaryText(item)"
+                                  AiSummaryIsError="IsSummaryError(item)"
+                                  AiSummaryBusy="_summarizing.Contains(item.Link)"
                                   CssClass='@(idx == _focusedIndex ? "kb-focused" : "")' />
                 </div>
             }
@@ -203,6 +209,10 @@ else
                               CommentsExpanded="_expandedComments.Contains(item.Link)"
                               OnToggleComments="() => ToggleComments(item.Link)"
                               OnCommentCountChanged="c => _commentCounts[item.Link] = c"
+                              OnSummarize="@(CanSummarize ? EventCallback.Factory.Create(this, () => SummarizeAsync(item)) : default)"
+                              AiSummary="@GetSummaryText(item)"
+                              AiSummaryIsError="IsSummaryError(item)"
+                              AiSummaryBusy="_summarizing.Contains(item.Link)"
                               CssClass='@(idx == _focusedIndex ? "kb-focused" : "")' />
             </div>
         }
@@ -805,6 +815,40 @@ else
 
         var page = filtered.Skip((_page - 1) * _pageSize).Take(_pageSize).ToList();
         return (page, filtered.Count);
+    }
+
+    private readonly Dictionary<string, (string Text, bool IsError)> _summaries = new();
+    private readonly HashSet<string> _summarizing = new();
+
+    /// <summary>Summaries cost a model call, so only signed-in people get the button, and only when a language model is configured.</summary>
+    private bool CanSummarize => Ai.Enabled && _userId is not null;
+
+    private string? GetSummaryText(FeedItem item) => _summaries.TryGetValue(item.Link, out var s) ? s.Text : null;
+
+    private bool IsSummaryError(FeedItem item) => _summaries.TryGetValue(item.Link, out var s) && s.IsError;
+
+    private async Task SummarizeAsync(FeedItem item)
+    {
+        if (_userId is not { } uid || !_summarizing.Add(item.Link)) return;
+
+        _summaries.Remove(item.Link);
+        try
+        {
+            var result = await Ai.SummarizeItemAsync(item, $"user:{uid}");
+            _summaries[item.Link] = result.Ok
+                ? (result.Summary!.Text, false)
+                : (result.Message ?? "Couldn't summarize this item.", true);
+        }
+        catch (Exception ex)
+        {
+            // An unhandled exception in an event handler ends the whole circuit; a failed summary must not.
+            Log.LogWarning(ex, "Summarizing {Link} failed", item.Link);
+            _summaries[item.Link] = ("Couldn't summarize this item right now.", true);
+        }
+        finally
+        {
+            _summarizing.Remove(item.Link);
+        }
     }
 
     private void Toggle(FeedItem item) => Reading.ToggleBookmark(item);

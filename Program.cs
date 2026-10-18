@@ -105,8 +105,6 @@ builder.Services.AddHostedService(sp => sp.GetRequiredService<FreeApiDiscoverySe
 builder.Services.Configure<NotificationOptions>(builder.Configuration.GetSection("Notifications"));
 builder.Services.AddHostedService<FeedWatcherService>();
 
-// AI hook: standalone by default. Swap NullSummarizer for a real implementation to enable AI.
-builder.Services.AddSingleton<ISummarizer, NullSummarizer>();
 
 // Email hook: standalone by default. Password-reset links always work (shown in the server log, or
 // via Users.razor's admin "Generate reset link" button) - only real delivery needs Smtp:Host configured.

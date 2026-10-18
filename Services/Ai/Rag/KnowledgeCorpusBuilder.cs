@@ -1,5 +1,4 @@
 using System.Globalization;
-using System.Net;
 using System.Text.RegularExpressions;
 using AiPulse.Models;
 
@@ -20,9 +19,6 @@ public static class KnowledgeCorpusBuilder
 {
     private const int MaxSummaryChars = 1200;
     private const int MaxFullTextChars = 800;
-
-    private static readonly Regex Tags = new("<[^>]+>", RegexOptions.Compiled);
-    private static readonly Regex Spaces = new(@"\s+", RegexOptions.Compiled);
 
     public static List<KnowledgeDocument> Build(KnowledgeInputs input)
     {
@@ -77,8 +73,8 @@ public static class KnowledgeCorpusBuilder
         {
             if (string.IsNullOrWhiteSpace(n.Link)) continue;
 
-            var summary = Clip(Clean(n.Summary), MaxSummaryChars);
-            var full = string.IsNullOrWhiteSpace(n.FullText) ? "" : Clip(Clean(n.FullText), MaxFullTextChars);
+            var summary = TextClean.Clip(TextClean.Plain(n.Summary), MaxSummaryChars);
+            var full = string.IsNullOrWhiteSpace(n.FullText) ? "" : TextClean.Clip(TextClean.Plain(n.FullText), MaxFullTextChars);
             var when = n.Published == default
                 ? ""
                 : $"Published {n.Published.ToString("d MMMM yyyy", CultureInfo.InvariantCulture)} ({n.Published.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)}).";
@@ -99,10 +95,6 @@ public static class KnowledgeCorpusBuilder
 
     private static string Join(params string[] parts) =>
         string.Join(' ', parts.Where(p => !string.IsNullOrWhiteSpace(p)).Select(p => p.Trim()));
-
-    private static string Clean(string html) => Spaces.Replace(WebUtility.HtmlDecode(Tags.Replace(html ?? "", " ")), " ").Trim();
-
-    private static string Clip(string text, int max) => text.Length <= max ? text : text[..max].TrimEnd() + "…";
 
     private static string Slug(string value) =>
         Regex.Replace(value.ToLowerInvariant(), "[^a-z0-9]+", "-").Trim('-');
