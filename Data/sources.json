@@ -96,15 +96,6 @@
     "Tags": []
   },
   {
-    "Name": "VentureBeat \u00b7 AI",
-    "Url": "https://venturebeat.com/category/ai/feed/",
-    "Category": "News",
-    "Note": "Enterprise AI news and analysis.",
-    "ContentType": "News",
-    "Level": "Intermediate",
-    "Tags": []
-  },
-  {
     "Name": "TechCrunch \u00b7 AI",
     "Url": "https://techcrunch.com/category/artificial-intelligence/feed/",
     "Category": "News",

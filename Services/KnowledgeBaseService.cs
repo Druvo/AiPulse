@@ -97,7 +97,15 @@ public sealed class KnowledgeBaseService
                 Note = s.Note,
                 ContentType = s.ContentType,
                 Level = s.Level,
-                Tags = s.Tags
+                Tags = s.Tags,
+                // Without these, seed entries defined as scrape sources (the two GitHub Trending ones) landed
+                // as plain RSS feeds pointing at HTML pages, and failed forever with "406 Not Acceptable".
+                FullTextFetch = s.FullTextFetch,
+                IsScrape = s.IsScrape,
+                ScrapeItemXPath = s.ScrapeItemXPath,
+                ScrapeTitleXPath = s.ScrapeTitleXPath,
+                ScrapeLinkXPath = s.ScrapeLinkXPath,
+                ScrapeDateXPath = s.ScrapeDateXPath
             }));
             await db.SaveChangesAsync();
         }
