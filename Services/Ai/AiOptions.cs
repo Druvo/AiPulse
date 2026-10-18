@@ -5,6 +5,12 @@ public sealed class AiOptions
 {
     public const string Section = "Ai";
 
+    /// <summary>
+    /// Hard override from configuration: when false no model is ever called and the admin screen cannot turn that back on (Ai__Enabled=false).
+    /// The day-to-day switches live on the AI Settings page; this is for an operator who wants it off regardless.
+    /// </summary>
+    public bool Enabled { get; set; } = true;
+
     /// <summary>How many passages are put in front of the model.</summary>
     public int TopK { get; set; } = 6;
 

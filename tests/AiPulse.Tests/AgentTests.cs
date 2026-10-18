@@ -241,6 +241,32 @@ public class RagAgentTests
     }
 
     [Fact]
+    public async Task Quoted_answers_skip_sentences_that_are_links_or_sign_offs()
+    {
+        var noisy = TestData.Doc("n:yt", "RAG walkthrough", "RAG ReRanking Pipeline part 2 YouTube walkthrough: https://www.youtube.com/watch?v=abc123 FULL CODE (clone it here). " +
+            "Retrieval augmented generation fetches relevant documents before the model answers. Subscribe!", "News");
+
+        var result = await TestData.AgentFor(TestData.CorpusOf(noisy), new OfflineLlm()).AskAsync("What is retrieval augmented generation?", "u");
+
+        Assert.Equal(AskStatus.Answered, result.Status);
+        Assert.DoesNotContain("http", result.Answer);
+        Assert.DoesNotContain("FULL CODE", result.Answer);
+        Assert.Contains("fetches relevant documents", result.Answer);
+    }
+
+    [Fact]
+    public async Task A_passage_with_no_readable_sentence_is_left_out_of_a_quoted_answer()
+    {
+        var onlyLinks = TestData.Doc("n:links", "Prompt caching link", "https://example.com/prompt-caching https://example.com/more", "News");
+
+        var result = await TestData.AgentFor(TestData.CorpusOf(onlyLinks, Caching), new OfflineLlm()).AskAsync(CachingQuestion, "u");
+
+        Assert.Equal(AskStatus.Answered, result.Status);
+        Assert.DoesNotContain("example.com", result.Answer);
+        Assert.Contains("90%", result.Answer);
+    }
+
+    [Fact]
     public async Task Quoted_answers_survive_the_same_verification_as_model_answers()
     {
         var result = await TestData.AgentFor(Corpus(), new OfflineLlm()).AskAsync(CachingQuestion, "u");
@@ -334,27 +360,87 @@ public class FeedPollOrderTests
 
 public class AssistantRegistrationTests
 {
-    /// <summary>The app refused to start once because the container could not pick an LlmClient constructor; unit tests that
-    /// construct objects by hand cannot see that, so this builds the real registrations with validation on.</summary>
-    [Fact]
-    public void The_real_registrations_build_with_validation_and_resolve_the_model_client()
+    private sealed class TempEnvironment : Microsoft.AspNetCore.Hosting.IWebHostEnvironment
     {
-        var config = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
-        {
-            ["Ollama:BaseUrl"] = "http://localhost:11434"
-        }).Build();
+        public string ApplicationName { get; set; } = "AiPulse.Tests";
+        public Microsoft.Extensions.FileProviders.IFileProvider WebRootFileProvider { get; set; } = new Microsoft.Extensions.FileProviders.NullFileProvider();
+        public string WebRootPath { get; set; } = "";
+        public string EnvironmentName { get; set; } = "Testing";
+        public string ContentRootPath { get; set; } = Path.Combine(Path.GetTempPath(), "aipulse-test-" + Guid.NewGuid().ToString("N"));
+        public Microsoft.Extensions.FileProviders.IFileProvider ContentRootFileProvider { get; set; } = new Microsoft.Extensions.FileProviders.NullFileProvider();
+    }
+
+    private static ServiceProvider Build(Dictionary<string, string?>? extra = null, TempEnvironment? env = null)
+    {
+        var values = new Dictionary<string, string?> { ["Ollama:BaseUrl"] = "http://localhost:11434" };
+        foreach (var kv in extra ?? new()) values[kv.Key] = kv.Value;
+        var config = new ConfigurationBuilder().AddInMemoryCollection(values).Build();
 
         var services = new ServiceCollection();
         services.AddLogging();
         services.AddSingleton<IConfiguration>(config);
+        services.AddSingleton<Microsoft.AspNetCore.Hosting.IWebHostEnvironment>(env ?? new TempEnvironment());
         services.AddAiAssistant(config);
 
-        using var provider = services.BuildServiceProvider(new ServiceProviderOptions { ValidateOnBuild = true, ValidateScopes = true });
+        // The app refused to start once because the container could not pick an LlmClient constructor; unit tests that
+        // construct objects by hand cannot see that, so this builds the real registrations with validation on.
+        return services.BuildServiceProvider(new ServiceProviderOptions { ValidateOnBuild = true, ValidateScopes = true });
+    }
+
+    [Fact]
+    public void The_real_registrations_build_with_validation_and_resolve_the_model_client()
+    {
+        using var provider = Build();
 
         var llm = provider.GetRequiredService<ILlmClient>();
         Assert.True(llm.HasProviders);
         Assert.Equal("ollama", Assert.Single(llm.Providers).Kind);
         Assert.Same(llm, provider.GetRequiredService<ILlmClient>());
         Assert.NotNull(provider.GetRequiredService<AskRateLimiter>());
+    }
+
+    [Fact]
+    public void The_client_and_the_settings_service_share_one_gate_so_a_switch_takes_effect_at_once()
+    {
+        using var provider = Build();
+        var llm = provider.GetRequiredService<ILlmClient>();
+        var settings = provider.GetRequiredService<AiSettingsService>();
+
+        Assert.Same(settings, provider.GetRequiredService<IAiGate>());
+        Assert.True(llm.HasProviders);
+
+        settings.Update(s => s with { Enabled = false });
+
+        Assert.False(llm.HasProviders);
+        Assert.Empty(llm.Providers);
+        Assert.Single(llm.AllProviders);
+    }
+
+    [Fact]
+    public void Configuration_can_force_model_calls_off_whatever_the_saved_switches_say()
+    {
+        using var provider = Build(new() { ["Ai:Enabled"] = "false" });
+        var settings = provider.GetRequiredService<AiSettingsService>();
+
+        settings.Update(s => s with { Enabled = true });
+
+        Assert.True(settings.ForcedOffByConfiguration);
+        Assert.False(settings.ModelCallsAllowed);
+        Assert.False(provider.GetRequiredService<ILlmClient>().HasProviders);
+    }
+
+    [Fact]
+    public void Saved_switches_are_loaded_back_from_the_apps_data_folder_after_a_restart()
+    {
+        var env = new TempEnvironment();
+        try
+        {
+            using (var first = Build(env: env))
+                first.GetRequiredService<AiSettingsService>().Update(s => s with { Summaries = false });
+
+            using var second = Build(env: env);
+            Assert.False(second.GetRequiredService<AiSettingsService>().Current.Summaries);
+        }
+        finally { if (Directory.Exists(env.ContentRootPath)) Directory.Delete(env.ContentRootPath, true); }
     }
 }

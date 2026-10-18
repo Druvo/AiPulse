@@ -821,7 +821,7 @@ else
     private readonly HashSet<string> _summarizing = new();
 
     /// <summary>Summaries cost a model call, so only signed-in people get the button, and only when a language model is configured.</summary>
-    private bool CanSummarize => Ai.Enabled && _userId is not null;
+    private bool CanSummarize => Ai.SummariesEnabled && _userId is not null;
 
     private string? GetSummaryText(FeedItem item) => _summaries.TryGetValue(item.Link, out var s) ? s.Text : null;
 

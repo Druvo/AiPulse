@@ -9,6 +9,7 @@
 @using Microsoft.Extensions.Options
 @inject RagAgent Agent
 @inject ILlmClient Llm
+@inject AiPulse.Services.Ai.IAiGate Gate
 @inject KnowledgeCorpus Corpus
 @inject IOptions<AiPulse.Services.Ai.AiOptions> AiOptions
 
@@ -133,7 +134,15 @@ else if (_result is { } r)
 }
 
 <p class="text-muted small">
-    @if (Llm.Providers.Count == 0)
+    @if (!Gate.AskMayUseModel)
+    {
+        <span>AI model calls for Ask are switched off (an admin can turn them on under AI Settings), so answers are quoted straight from the sources.</span>
+    }
+    else if (Llm.Providers.Count == 0 && Llm.AllProviders.Count > 0)
+    {
+        <span>Every language-model provider is switched off, so answers are quoted straight from the sources.</span>
+    }
+    else if (Llm.Providers.Count == 0)
     {
         <span>No language model is configured, so answers are quoted straight from the sources.</span>
     }

@@ -19,11 +19,18 @@ public static class AiServiceCollectionExtensions
         services.AddHttpClient("llm", c => c.Timeout = Timeout.InfiniteTimeSpan);
 
         // LlmClient has a second constructor that lets tests inject providers, which the container cannot choose between.
+        // The live on/off switches, saved beside the other App_Data files. Registered as the gate every model call asks first.
+        services.AddSingleton(sp => new AiSettingsService(
+            Path.Combine(sp.GetRequiredService<IWebHostEnvironment>().ContentRootPath, "App_Data", "ai-settings.json"),
+            sp.GetRequiredService<IOptions<AiOptions>>().Value.Enabled));
+        services.AddSingleton<IAiGate>(sp => sp.GetRequiredService<AiSettingsService>());
+
         services.AddSingleton<ILlmClient>(sp => new LlmClient(
             sp.GetRequiredService<IHttpClientFactory>(),
             sp.GetRequiredService<IOptions<LlmOptions>>(),
             sp.GetRequiredService<IConfiguration>(),
-            sp.GetRequiredService<ILogger<LlmClient>>()));
+            sp.GetRequiredService<ILogger<LlmClient>>(),
+            sp.GetRequiredService<IAiGate>()));
         services.AddSingleton<AskRateLimiter>();
 
         services.AddSingleton(sp =>
@@ -55,7 +62,8 @@ public static class AiServiceCollectionExtensions
                 sp.GetRequiredService<ItemSummaryService>(),
                 sp.GetRequiredService<SummaryStore>(),
                 name => kb.Glossary.FirstOrDefault(t => string.Equals(t.Term, name, StringComparison.OrdinalIgnoreCase)),
-                sp.GetRequiredService<ILogger<LlmSummarizer>>());
+                sp.GetRequiredService<ILogger<LlmSummarizer>>(),
+                sp.GetRequiredService<IAiGate>());
         });
 
         return services;

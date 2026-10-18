@@ -39,9 +39,10 @@ public sealed class LlmSummarizer : ISummarizer
     private readonly SummaryStore _store;
     private readonly Func<string, GlossaryTerm?> _findTerm;
     private readonly ILogger<LlmSummarizer> _log;
+    private readonly IAiGate _gate;
 
     public LlmSummarizer(ILlmClient llm, IOptions<LlmOptions> llmOptions, ItemSummaryService items, SummaryStore store,
-        Func<string, GlossaryTerm?> findTerm, ILogger<LlmSummarizer> log)
+        Func<string, GlossaryTerm?> findTerm, ILogger<LlmSummarizer> log, IAiGate? gate = null)
     {
         _llm = llm;
         _llmOptions = llmOptions;
@@ -49,22 +50,30 @@ public sealed class LlmSummarizer : ISummarizer
         _store = store;
         _findTerm = findTerm;
         _log = log;
+        _gate = gate ?? OpenGate.Instance;
     }
 
     /// <summary>
-    /// True only when a provider was configured on purpose. The built-in default (a local Ollama that may not be running) is enough to
-    /// answer questions on the Ask page, which falls back to quoting, but a button that can only fail should not be shown.
+    /// A provider was configured on purpose (the built-in default, a local Ollama that may not be running, answers questions on the
+    /// Ask page by falling back to quoting, but a button that can only fail should not be shown) and an admin has not switched it off.
     /// </summary>
-    public bool Enabled => _llm.HasProviders && _llmOptions.Value.Providers.Any(p => p.Enabled && !string.IsNullOrWhiteSpace(p.BaseUrl));
+    private bool ProviderAvailable => _llm.HasProviders
+        && _llmOptions.Value.Providers.Any(p => p.Enabled && !string.IsNullOrWhiteSpace(p.BaseUrl) && _gate.IsProviderEnabled(p.Name));
+
+    public bool SummariesEnabled => ProviderAvailable && _gate.SummariesAllowed;
+
+    public bool ExplanationsEnabled => ProviderAvailable && _gate.ExplanationsAllowed;
+
+    public bool Enabled => SummariesEnabled || ExplanationsEnabled;
 
     public Task<ItemSummaryResult> SummarizeItemAsync(FeedItem item, string callerKey, CancellationToken ct = default) =>
-        Enabled
+        SummariesEnabled
             ? _items.SummarizeAsync(item, callerKey, ct)
-            : Task.FromResult(new ItemSummaryResult(ItemSummaryStatus.Unavailable, null, "No language model is configured."));
+            : Task.FromResult(new ItemSummaryResult(ItemSummaryStatus.Unavailable, null, "AI summaries are switched off."));
 
     public async Task<string?> ExplainTermAsync(string term, CancellationToken ct = default)
     {
-        if (!Enabled || _findTerm(term) is not { } entry) return null;
+        if (!ExplanationsEnabled || _findTerm(term) is not { } entry) return null;
 
         var definition = string.Join(' ', new[] { entry.ShortDef, entry.Details, string.IsNullOrWhiteSpace(entry.WhenToUse) ? "" : "When to use: " + entry.WhenToUse }
             .Where(s => !string.IsNullOrWhiteSpace(s)));
@@ -98,7 +107,7 @@ public sealed class LlmSummarizer : ISummarizer
 
     public async Task<string?> SummarizeDigestAsync(IReadOnlyList<FeedItem> items, CancellationToken ct = default)
     {
-        if (!Enabled || items.Count == 0) return null;
+        if (!SummariesEnabled || items.Count == 0) return null;
 
         var picked = items.Take(15).ToList();
         var evidence = picked.Select(i => $"{i.Title}. {TextClean.Clip(TextClean.Plain(i.Summary), 400)}").ToList();

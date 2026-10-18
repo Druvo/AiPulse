@@ -60,6 +60,8 @@ internal sealed class FakeLlm : ILlmClient
     public List<LlmRequest> Requests { get; } = new();
     public bool HasProviders => true;
     public IReadOnlyList<LlmProviderInfo> Providers => new[] { new LlmProviderInfo("fake", "test", "fake-1", 0) };
+    public IReadOnlyList<LlmProviderInfo> AllProviders => Providers;
+    public IReadOnlyList<ProviderStats> Stats => Array.Empty<ProviderStats>();
 
     public Task<LlmResponse> ChatAsync(LlmRequest request, CancellationToken ct = default)
     {
@@ -72,6 +74,8 @@ internal sealed class OfflineLlm : ILlmClient
 {
     public bool HasProviders { get; init; } = true;
     public IReadOnlyList<LlmProviderInfo> Providers => Array.Empty<LlmProviderInfo>();
+    public IReadOnlyList<LlmProviderInfo> AllProviders => Array.Empty<LlmProviderInfo>();
+    public IReadOnlyList<ProviderStats> Stats => Array.Empty<ProviderStats>();
 
     public Task<LlmResponse> ChatAsync(LlmRequest request, CancellationToken ct = default) =>
         throw new LlmUnavailableException(new[] { new LlmAttempt("offline", "connection refused") });

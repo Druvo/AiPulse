@@ -47,8 +47,9 @@ public sealed class RagAgent
     private readonly AiOptions _options;
     private readonly ILogger<RagAgent> _log;
     private readonly TimeProvider _time;
+    private readonly IAiGate _gate;
 
-    public RagAgent(KnowledgeCorpus corpus, ILlmClient llm, AskRateLimiter limiter, IOptions<AiOptions> options, ILogger<RagAgent> log, TimeProvider? time = null)
+    public RagAgent(KnowledgeCorpus corpus, ILlmClient llm, AskRateLimiter limiter, IOptions<AiOptions> options, ILogger<RagAgent> log, TimeProvider? time = null, IAiGate? gate = null)
     {
         _corpus = corpus;
         _llm = llm;
@@ -56,6 +57,7 @@ public sealed class RagAgent
         _options = options.Value;
         _log = log;
         _time = time ?? TimeProvider.System;
+        _gate = gate ?? OpenGate.Instance;
     }
 
     private sealed record Passage(int Number, ScoredDocument Hit, string Shown)
@@ -110,7 +112,7 @@ public sealed class RagAgent
         string? notice = null;
         var mode = "model";
 
-        if (_llm.HasProviders)
+        if (_llm.HasProviders && _gate.AskMayUseModel)
         {
             try
             {
@@ -136,9 +138,13 @@ public sealed class RagAgent
         }
         else
         {
-            trace.Add(new TraceStep("generate", "no language model configured"));
+            // Switched off by an admin (master/Ask switch, or every provider turned off) is different from never having set one up.
+            var switchedOff = !_gate.AskMayUseModel || _llm.AllProviders.Count > 0;
+            trace.Add(new TraceStep("generate", switchedOff ? "model calls are switched off" : "no language model configured"));
             (draft, mode) = (Extractive(text, passages), "extractive");
-            notice = "No language model is configured, so this is quoted straight from the sources.";
+            notice = switchedOff
+                ? "AI model calls are switched off, so this is quoted straight from the sources."
+                : "No language model is configured, so this is quoted straight from the sources.";
         }
 
         if (draft.Contains(NotFoundToken, StringComparison.Ordinal))
@@ -203,7 +209,12 @@ public sealed class RagAgent
 
         foreach (var passage in passages.Take(MaxExtractivePassages))
         {
-            var sentences = SentenceBreak.Split(Ref.Replace(passage.Shown, "")).Select(s => s.Trim()).Where(s => s.Length > 0).ToList();
+            // Quoted answers are only as clean as the sentences they pick from. Feed text is full of links, hashtags and sign-offs,
+            // so skip sentences that carry a URL or are too short or too long to read as an answer.
+            var sentences = SentenceBreak.Split(Ref.Replace(passage.Shown, ""))
+                .Select(s => s.Trim())
+                .Where(s => s.Length is >= 25 and <= 320 && !s.Contains("http", StringComparison.OrdinalIgnoreCase) && !s.Contains("www.", StringComparison.OrdinalIgnoreCase))
+                .ToList();
             if (sentences.Count == 0) continue;
 
             var best = sentences

@@ -1,0 +1,140 @@
+@page "/ai-settings"
+@attribute [Authorize(Roles = "Admin")]
+@rendermode InteractiveServer
+@implements IDisposable
+@using AiPulse.Services.Ai
+@using AiPulse.Services.Ai.Llm
+@inject AiSettingsService Settings
+@inject ILlmClient Llm
+@inject ISummarizer Ai
+
+<PageTitle>AiPulse · AI Settings</PageTitle>
+
+<div class="page-header">
+    <h1><Icon Name="zap" Size="22" /> AI Settings</h1>
+    <p class="lead">
+        Switch AI features and language-model providers on or off. Changes take effect on the very next request, no restart needed,
+        and are remembered. Providers and their API keys are set in configuration (<code>Llm:Providers</code>); this page only turns them on and off.
+    </p>
+</div>
+
+@if (Settings.ForcedOffByConfiguration)
+{
+    <div class="alert alert-warning">
+        <strong>Model calls are forced off by configuration</strong> (<code>Ai:Enabled</code> is false). The switches below are saved
+        but have no effect until that setting is changed and the app restarted.
+    </div>
+}
+
+<div class="card mb-4">
+    <div class="card-body">
+        <div class="d-flex flex-wrap align-items-center gap-2 mb-1">
+            <h2 class="h5 mb-0">AI features</h2>
+            @if (Settings.ModelCallsAllowed)
+            {
+                <span class="badge bg-success">On</span>
+            }
+            else
+            {
+                <span class="badge bg-secondary">Off: no model is being called</span>
+            }
+        </div>
+        <p class="text-muted small">The master switch overrides everything below it. With it off, nothing is sent to any provider and Ask AiPulse only quotes the sources.</p>
+
+        <div class="form-check form-switch mb-3">
+            <input class="form-check-input" type="checkbox" role="switch" id="aiMaster" checked="@Settings.Current.Enabled"
+                   @onchange="e => Settings.Update(s => s with { Enabled = (bool)e.Value! })" />
+            <label class="form-check-label fw-semibold" for="aiMaster">Allow AI model calls</label>
+        </div>
+
+        <div class="ps-4 @(Settings.Current.Enabled ? "" : "opacity-50")">
+            <div class="form-check form-switch mb-2">
+                <input class="form-check-input" type="checkbox" role="switch" id="aiAsk" checked="@Settings.Current.AskUsesModel"
+                       disabled="@(!Settings.Current.Enabled)" @onchange="e => Settings.Update(s => s with { AskUsesModel = (bool)e.Value! })" />
+                <label class="form-check-label" for="aiAsk">
+                    <strong>Ask AiPulse</strong> uses a model to write answers
+                    <span class="text-muted small d-block">Off: it still answers, by quoting the matching sentences from its sources.</span>
+                </label>
+            </div>
+            <div class="form-check form-switch mb-2">
+                <input class="form-check-input" type="checkbox" role="switch" id="aiSummaries" checked="@Settings.Current.Summaries"
+                       disabled="@(!Settings.Current.Enabled)" @onchange="e => Settings.Update(s => s with { Summaries = (bool)e.Value! })" />
+                <label class="form-check-label" for="aiSummaries">
+                    <strong>Summarize</strong> button on news cards
+                    <span class="text-muted small d-block">Signed-in people only. Summaries already saved are not deleted.</span>
+                </label>
+            </div>
+            <div class="form-check form-switch">
+                <input class="form-check-input" type="checkbox" role="switch" id="aiExplain" checked="@Settings.Current.Explanations"
+                       disabled="@(!Settings.Current.Enabled)" @onchange="e => Settings.Update(s => s with { Explanations = (bool)e.Value! })" />
+                <label class="form-check-label" for="aiExplain">
+                    <strong>Explain with AI</strong> in the glossary
+                    <span class="text-muted small d-block">Anyone who can open the glossary can use it, but each term is generated once and then saved.</span>
+                </label>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card mb-3">
+    <div class="card-body">
+        <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-2">
+            <h2 class="h5 mb-0">Language-model providers</h2>
+            <button class="btn btn-sm btn-outline-secondary" @onclick="() => StateHasChanged()"><Icon Name="refresh" Size="14" /> Refresh counts</button>
+        </div>
+        <p class="text-muted small">
+            Tried in this order; the first to answer wins and the rest are fallbacks. Counts are since the app last started.
+        </p>
+
+        @if (Llm.AllProviders.Count == 0)
+        {
+            <p class="mb-0">No provider is configured. Ask AiPulse quotes its sources, and the Summarize and Explain buttons stay hidden. Add one under <code>Llm:Providers</code>.</p>
+        }
+        else
+        {
+            var stats = Llm.Stats.ToDictionary(s => s.Name, StringComparer.OrdinalIgnoreCase);
+            <div class="table-responsive">
+                <table class="table table-sm align-middle mb-0">
+                    <thead>
+                        <tr>
+                            <th>On</th><th>Provider</th><th>Model</th><th class="text-end">Calls</th><th class="text-end">Failed</th>
+                            <th class="text-end">Avg time</th><th class="text-end">Tokens in / out</th><th>Last problem</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var p in Llm.AllProviders)
+                        {
+                            var st = stats.GetValueOrDefault(p.Name);
+                            <tr class="@(p.Enabled ? "" : "text-muted")">
+                                <td>
+                                    <div class="form-check form-switch mb-0">
+                                        <input class="form-check-input" type="checkbox" role="switch" aria-label="@($"Use {p.Name}")" checked="@p.Enabled"
+                                               @onchange="e => Settings.SetProviderEnabled(p.Name, (bool)e.Value!)" />
+                                    </div>
+                                </td>
+                                <td><strong>@p.Name</strong> <span class="badge bg-light text-dark border">@p.Kind</span></td>
+                                <td class="small">@p.Model</td>
+                                <td class="text-end">@(st?.Calls ?? 0)</td>
+                                <td class="text-end">@(st?.Failures ?? 0)</td>
+                                <td class="text-end">@(st is { Successes: > 0 } ? $"{st.AverageLatency.TotalSeconds:0.0}s" : "-")</td>
+                                <td class="text-end small">@($"{st?.PromptTokens ?? 0:N0} / {st?.CompletionTokens ?? 0:N0}")</td>
+                                <td class="small" title="@st?.LastError">@Shorten(st?.LastError)</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </div>
+</div>
+
+@code {
+    protected override void OnInitialized() => Settings.Changed += OnChanged;
+
+    private void OnChanged() => _ = InvokeAsync(StateHasChanged);
+
+    public void Dispose() => Settings.Changed -= OnChanged;
+
+    private static string Shorten(string? text) =>
+        string.IsNullOrEmpty(text) ? "" : text.Length <= 70 ? text : text[..70] + "…";
+}

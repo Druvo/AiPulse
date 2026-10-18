@@ -161,7 +161,7 @@
                 {
                     <a href="@term.LearnMoreUrl" target="_blank" rel="noopener" class="small">Learn more ↗</a>
                 }
-                @if (Ai.Enabled)
+                @if (Ai.ExplanationsEnabled)
                 {
                     <button class="btn btn-sm btn-outline-primary" @onclick="() => Explain(term.Term)">Explain with AI</button>
                 }

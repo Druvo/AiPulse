@@ -10,8 +10,14 @@ namespace AiPulse.Services;
 /// </summary>
 public interface ISummarizer
 {
-    /// <summary>Whether a language model is configured. UI that depends on the AI layer is hidden when this is false.</summary>
+    /// <summary>Whether any AI feature is available: a provider is configured and switched on, model calls are allowed, and at least one feature is on.</summary>
     bool Enabled { get; }
+
+    /// <summary>Whether the per-item Summarize button should be offered.</summary>
+    bool SummariesEnabled { get; }
+
+    /// <summary>Whether the glossary's "Explain with AI" button should be offered.</summary>
+    bool ExplanationsEnabled { get; }
 
     /// <summary>One or two sentences about a single item, from that item's own text. <paramref name="callerKey"/> identifies the person for rate limiting.</summary>
     Task<ItemSummaryResult> SummarizeItemAsync(FeedItem item, string callerKey, CancellationToken ct = default);

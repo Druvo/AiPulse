@@ -94,6 +94,8 @@ public sealed class EvalRunner
     {
         public bool HasProviders => false;
         public IReadOnlyList<LlmProviderInfo> Providers => Array.Empty<LlmProviderInfo>();
+        public IReadOnlyList<LlmProviderInfo> AllProviders => Array.Empty<LlmProviderInfo>();
+        public IReadOnlyList<ProviderStats> Stats => Array.Empty<ProviderStats>();
         public Task<LlmResponse> ChatAsync(LlmRequest request, CancellationToken ct = default) =>
             throw new LlmUnavailableException(Array.Empty<LlmAttempt>());
     }
@@ -104,6 +106,8 @@ public sealed class EvalRunner
         public ScriptedModelClient(string reply) => _reply = reply;
         public bool HasProviders => true;
         public IReadOnlyList<LlmProviderInfo> Providers => new[] { new LlmProviderInfo("scripted", "eval", "scripted", 0) };
+        public IReadOnlyList<LlmProviderInfo> AllProviders => Providers;
+        public IReadOnlyList<ProviderStats> Stats => Array.Empty<ProviderStats>();
         public Task<LlmResponse> ChatAsync(LlmRequest request, CancellationToken ct = default) =>
             Task.FromResult(new LlmResponse(_reply, "scripted", "scripted", null, null, TimeSpan.Zero));
     }
