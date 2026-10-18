@@ -84,7 +84,7 @@ public sealed class FeedAggregatorService
 
     private async Task<FeedResult> FetchAllAsync(CancellationToken ct)
     {
-        var sources = _kb.Sources.Where(s => s.Enabled).ToList();
+        var sources = FeedPollOrder.Order(_kb.Sources.Where(s => s.Enabled).ToList());
         var items = new ConcurrentBag<FeedItem>();
         var errors = new ConcurrentBag<string>();
 
