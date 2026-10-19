@@ -1,5 +1,6 @@
 @page "/settings"
 @attribute [Authorize]
+@inject SiteStatsService Stats
 @rendermode InteractiveServer
 @inject ReadingStateService Reading
 @inject ObsidianExportService Export
@@ -215,7 +216,7 @@
         <button class="btn btn-outline-secondary" @onclick="TestNotification">Send test</button>
         <p class="text-muted small mt-2">
             Background alerts (releases/watchlist) only fire for items published <em>after</em> the app's first poll on startup,
-            and re-check every <code>Notifications:PollMinutes</code> (default 15 min, in <code>appsettings.json</code>) —
+            and re-check every <code>Notifications:PollMinutes</code> (currently every <strong>@Stats.Current.PollMinutes</strong> min, set in <code>appsettings</code>) —
             so nothing shows in the first few minutes after a restart even when everything's working correctly.
         </p>
 

@@ -2,20 +2,21 @@
 @layout AiPulse.Components.Layout.LandingLayout
 @inject AuthenticationStateProvider AuthState
 @inject NavigationManager Nav
+@inject SiteStatsService StatsService
 
 <PageTitle>AiPulse — Self-hosted AI news, tools &amp; learning dashboard</PageTitle>
 <HeadContent>
     <meta name="robots" content="index, follow" />
-    <meta name="description" content="AiPulse aggregates 200+ AI news, research and tool sources into one feed, plus a glossary, a tools comparison, and a 17-module learning path. Self-hosted, standalone, no AI required to run it." />
+    <meta name="description" content="AiPulse aggregates @_sources AI news, research and tool sources into one feed, plus a glossary, a tools comparison, and a @_modules-module learning path. Self-hosted, standalone, no AI required to run it." />
     <link rel="canonical" href="/" />
     <meta property="og:type" content="website" />
     <meta property="og:title" content="AiPulse — Self-hosted AI news, tools &amp; learning dashboard" />
-    <meta property="og:description" content="200+ sources, one feed, zero API keys. A self-hosted dashboard to keep developers current on the AI world." />
+    <meta property="og:description" content="@_sources sources, one feed, zero API keys. A self-hosted dashboard to keep developers current on the AI world." />
     <meta property="og:image" content="/favicon.png" />
     <meta property="og:url" content="/" />
     <meta name="twitter:card" content="summary" />
     <meta name="twitter:title" content="AiPulse — Self-hosted AI news, tools &amp; learning dashboard" />
-    <meta name="twitter:description" content="200+ sources, one feed, zero API keys. Self-hosted, standalone, no AI required to run it." />
+    <meta name="twitter:description" content="@_sources sources, one feed, zero API keys. Self-hosted, standalone, no AI required to run it." />
     <script type="application/ld+json">
         {
             "@@context": "https://schema.org",
@@ -50,10 +51,10 @@
                 <span>AiPulse</span>
             </a>
             <nav class="landing-nav__center">
-                <a class="landing-nav__link" href="/news">News</a>
-                <a class="landing-nav__link" href="/explore">Explore</a>
-                <a class="landing-nav__link" href="/glossary">Glossary</a>
-                <a class="landing-nav__link" href="/tools">Tools</a>
+                @foreach (var item in PublicSite.Menu)
+                {
+                    <a class="landing-nav__link" href="@item.Path">@item.Label</a>
+                }
                 <a class="landing-nav__link" href="https://github.com/Druvo/AiPulse" target="_blank" rel="noopener">GitHub</a>
             </nav>
             <div class="landing-nav__right">
@@ -65,11 +66,19 @@
 
     <main>
         <section class="landing-hero">
-            <h1 class="landing-hero__headline reveal" style="--i:0">202 sources. One feed. <span class="accent">Zero API keys.</span></h1>
+            <h1 class="landing-hero__headline reveal" style="--i:0">@_sources sources. One feed. <span class="accent">Zero API keys.</span></h1>
             <p class="landing-hero__sub reveal" style="--i:1">
                 AiPulse aggregates AI news, research and tools into a single dashboard — plus a glossary,
-                a tools comparison, and a 17-module learning path. Self-hosted. No AI required to run it.
+                a tools comparison, and a @_modules-module learning path. Self-hosted. No AI required to run it.
             </p>
+            @if (_stats.ItemsLast24Hours > 0)
+            {
+                var fresh = _stats.LastPolled ?? _stats.NewestItem;
+                <p class="landing-hero__live reveal" style="--i:2">
+                    <span class="live-dot" aria-hidden="true"></span>
+                    <strong>@_stats.ItemsLast24Hours.ToString("N0")</strong> new headlines in the last 24 hours@(fresh is { } when ? $" · updated {SiteStatsService.Ago(when, DateTimeOffset.UtcNow)}" : "")
+                </p>
+            }
             <div class="landing-hero__ctas reveal" style="--i:2">
                 <a class="landing-btn landing-btn--fill" href="/news">Browse the news feed</a>
                 <a class="landing-btn landing-btn--outline" href="/register">Create an account</a>
@@ -82,10 +91,11 @@
                     <Icon Name="rss" Size="26" CssClass="bento-icon" />
                     <h3>Every AI headline, one feed</h3>
                     <p>News, research and tool sources — arXiv, Hacker News, GitHub, Reddit, YouTube, RSS — cross-source dedup means the same story from 12 outlets shows once, not twelve times.</p>
+                    <a class="bento-link" href="/news">Open the feed &rarr;</a>
                 </article>
 
                 <article class="bento-cell bento-cell--stat reveal" style="--i:4">
-                    <span class="stat-num">202</span>
+                    <span class="stat-num">@_sources</span>
                     <span class="stat-label">sources tracked</span>
                 </article>
 
@@ -93,33 +103,44 @@
                     <Icon Name="trending-up" Size="22" CssClass="bento-icon" />
                     <h3>Explore</h3>
                     <p>GitHub Trending and Hugging Face models/datasets, refreshed daily with disk-persisted caching so a slow scrape never blocks the page.</p>
+                    <a class="bento-link" href="/explore">Explore &rarr;</a>
                 </article>
 
                 <article class="bento-cell bento-cell--stat reveal" style="--i:6">
-                    <span class="stat-num">36</span>
+                    <span class="stat-num">@_terms</span>
                     <span class="stat-label">glossary terms</span>
                 </article>
 
                 <article class="bento-cell bento-span-1x2 reveal" style="--i:7">
                     <Icon Name="graduation-cap" Size="22" CssClass="bento-icon" />
-                    <h3>Learning Hub</h3>
-                    <p>A 17-module roadmap from how LLMs actually work up through RAG and context engineering — with progress tracking, spaced-repetition resurfacing, and per-module notes exportable straight to Obsidian.</p>
+                    <h3>Learning Hub <span class="bento-badge">Members</span></h3>
+                    <p>A @_modules-module roadmap from how LLMs actually work up through RAG and context engineering — with progress tracking, spaced-repetition resurfacing, and per-module notes exportable straight to Obsidian.</p>
+                    <a class="bento-link" href="/login?ReturnUrl=%2Flearn">Sign in to open &rarr;</a>
                 </article>
 
                 <article class="bento-cell reveal" style="--i:8">
                     <Icon Name="tool" Size="22" CssClass="bento-icon" />
                     <h3>Tools &amp; Tips</h3>
                     <p>Compare AI dev tools side by side, sorted by live popularity.</p>
+                    <a class="bento-link" href="/tools">Compare tools &rarr;</a>
                 </article>
 
                 <article class="bento-cell reveal" style="--i:9">
                     <Icon Name="key" Size="22" CssClass="bento-icon" />
-                    <h3>Free AI APIs</h3>
+                    <h3>Free AI APIs <span class="bento-badge">Members</span></h3>
                     <p>A maintained directory of free-tier LLM APIs — rate limits, models, sign-up links.</p>
+                    <a class="bento-link" href="/login?ReturnUrl=%2Ffree-apis">Sign in to open &rarr;</a>
+                </article>
+
+                <article class="bento-cell reveal" style="--i:9">
+                    <Icon Name="sparkle" Size="22" CssClass="bento-icon" />
+                    <h3>Ask AiPulse <span class="bento-badge">Members</span></h3>
+                    <p>Ask a question and get an answer built only from our own sources, every sentence cited.</p>
+                    <a class="bento-link" href="/login?ReturnUrl=%2Fask">Sign in to ask &rarr;</a>
                 </article>
 
                 <article class="bento-cell bento-cell--stat reveal" style="--i:10">
-                    <span class="stat-num">17</span>
+                    <span class="stat-num">@_modules</span>
                     <span class="stat-label">learning modules</span>
                 </article>
 
@@ -158,8 +179,20 @@
 @code {
     private bool _checkedAuth;
 
+    // Counted from the live knowledge base so the page can never claim a number the site no longer has (it said "202 sources"
+    // long after the active list had been cut to about 80).
+    private SiteStats _stats = new(0, 0, 0, 0, null, null, 15);
+    private int _sources;
+    private int _terms;
+    private int _modules;
+
     protected override async Task OnInitializedAsync()
     {
+        _stats = StatsService.Current;
+        _sources = _stats.ActiveSources;
+        _terms = _stats.GlossaryTerms;
+        _modules = _stats.LearningModules;
+
         var state = await AuthState.GetAuthenticationStateAsync();
         if (state.User.Identity?.IsAuthenticated == true)
         {

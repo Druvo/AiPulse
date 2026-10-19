@@ -68,6 +68,7 @@ builder.Services.AddSingleton<FeedAggregatorService>();
 builder.Services.AddScoped<ReadingStateService>();
 builder.Services.AddScoped<ToastService>();
 builder.Services.AddSingleton<FeedHistoryService>();
+builder.Services.AddSingleton<SiteStatsService>();
 builder.Services.AddSingleton<UserService>();
 builder.Services.AddSingleton<NotificationService>();
 builder.Services.AddScoped<ObsidianExportService>();
@@ -295,22 +296,14 @@ app.MapGet("/auth/external/{provider}", async (string provider, OAuthSettingsSer
     return Results.Challenge(new AuthenticationProperties { RedirectUri = safeReturnUrl }, [scheme]);
 });
 
-// Generated at request time from the request's own Host header, not a static file - AiPulse is
-// self-hosted with no fixed domain, so a committed sitemap.xml would bake one deployment's URL (e.g.
-// the maintainer's own demo instance) into every other self-hoster's copy of the repo.
+// sitemap.xml and robots.txt are generated at request time from the request's own Host header, not static files - AiPulse is
+// self-hosted with no fixed domain, so a committed copy would bake one deployment's URL (e.g. the maintainer's own demo
+// instance) into every other self-hoster's repo. Both are built from PublicSite, the same list the public menus use.
 app.MapGet("/sitemap.xml", (HttpRequest request) =>
-{
-    var origin = $"{request.Scheme}://{request.Host}";
-    var xml = $"""
-        <?xml version="1.0" encoding="UTF-8"?>
-        <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-          <url><loc>{origin}/</loc><changefreq>weekly</changefreq><priority>1.0</priority></url>
-          <url><loc>{origin}/register</loc><changefreq>monthly</changefreq><priority>0.5</priority></url>
-          <url><loc>{origin}/login</loc><changefreq>monthly</changefreq><priority>0.3</priority></url>
-        </urlset>
-        """;
-    return Results.Text(xml, "application/xml");
-});
+    Results.Text(PublicSite.Sitemap($"{request.Scheme}://{request.Host}"), "application/xml"));
+
+app.MapGet("/robots.txt", (HttpRequest request) =>
+    Results.Text(PublicSite.Robots($"{request.Scheme}://{request.Host}"), "text/plain"));
 
 // Dev-only helper: generate a PBKDF2 hash to paste into appsettings ("Auth:PasswordHash").
 if (app.Environment.IsDevelopment())

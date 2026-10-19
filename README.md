@@ -7,7 +7,7 @@
 
 **A standalone, self-hosted dashboard to keep developers current on the AI world** — news, jargon, the right tool for the right task, token-optimization tips, and a structured learning roadmap.
 
-It aggregates ~51 RSS/Atom sources (blogs, news outlets, arXiv, Hacker News, Reddit, YouTube channels, dev.to, Product Hunt, Mastodon, GitHub release feeds, and scraped GitHub Trending pages) and pairs them with a curated, editable knowledge base. **It runs with zero AI and no API keys** — the optional AI layer is stubbed behind an interface for when you want it.
+It aggregates a configurable list of RSS/Atom sources (about 200 are seeded; you choose which are active) (blogs, news outlets, arXiv, Hacker News, Reddit, YouTube channels, dev.to, Product Hunt, Mastodon, GitHub release feeds, and scraped GitHub Trending pages) and pairs them with a curated, editable knowledge base. **It runs with zero AI and no API keys** — the optional AI layer is stubbed behind an interface for when you want it.
 
 > Built with ASP.NET Core + Blazor (Server interactivity), targeting .NET 8. MIT licensed.
 
@@ -25,7 +25,7 @@ It aggregates ~51 RSS/Atom sources (blogs, news outlets, arXiv, Hacker News, Red
 
 ## ✨ Features
 
-- **📡 Live news feed** from ~51 sources, with search and filters (✨ New / Unread / Today / News / Research / Tools / Community), plus richer **content-type** (News/Tutorial/Release/Paper/Discussion/Video), **level** (Beginner/Intermediate/Advanced), **source**, and **topic tag** filters, a **sort** order (Newest/Oldest/Source A-Z/Title A-Z), and a **List/Grid** view toggle. Items newer than your last visit are badged **NEW**. Resilient parser with a lenient fallback for awkward feeds. Links have tracking params (`utm_*`, `fbclid`, etc.) stripped automatically. Paginated (20/page) rather than one unbounded scroll.
+- **📡 Live news feed** from your active sources, with search and filters (✨ New / Unread / Today / News / Research / Tools / Community), plus richer **content-type** (News/Tutorial/Release/Paper/Discussion/Video), **level** (Beginner/Intermediate/Advanced), **source**, and **topic tag** filters, a **sort** order (Newest/Oldest/Source A-Z/Title A-Z), and a **List/Grid** view toggle. Items newer than your last visit are badged **NEW**. Resilient parser with a lenient fallback for awkward feeds. Links have tracking params (`utm_*`, `fbclid`, etc.) stripped automatically. Paginated (20/page) rather than one unbounded scroll.
 - **📅 Calendar date filtering** — an Obsidian-style month calendar, opened as a slide-out panel from the right edge of the News Feed, with per-day item-count shading. Click a day to filter to it, shift-click another day to select a date range; month navigation and a "Today" shortcut included.
 - **⌨️ Full keyboard navigation** on the News feed — `j`/`k` move focus, `o`/`Enter` opens the focused item, `m` toggles read, `b` toggles bookmark, `?` shows the cheat sheet (inactive while typing in a text field).
 - **🚫 Exclude filters** — the inverse of the watchlist: hide items matching a plain-text or regex pattern, so a noisy topic disappears from the feed entirely instead of just being unhighlighted.
@@ -37,10 +37,12 @@ It aggregates ~51 RSS/Atom sources (blogs, news outlets, arXiv, Hacker News, Red
 - **🔭 Explore** — trending models & datasets (live from the Hugging Face Hub API), curated benchmark/leaderboard links, recently-popular AI repos (via GitHub's Search API), and a "try a model" directory with Ollama/Hugging Face deep-links.
 - **🔔 Desktop notifications** for big tool/model releases (`ContentType: Release`) and your keyword watchlist (a background watcher polls feeds and raises browser notifications).
 - **⭐ Keyword watchlist** — flag topics you care about (e.g. `MCP`, `Blazor`, `RAG`); matching items get highlighted and notify you.
-- **🎓 Learning Hub** — a 10-module roadmap from tokens → prompting → context engineering → RAG → tool use → agents → MCP → local models → evals → tool selection, **plus a live "Fresh tutorials" feed** pulled from your News sources so it never goes stale. Each module: *why it matters* + concrete steps + key terms.
-- **📖 Glossary** — 28 developer-focused definitions, searchable, with aliases so mis-heard terms still resolve (RAG, MCP, agents, agentic loops, headroom, caveman prompting, quantization…), each showing **recent live mentions** pulled straight from the News feed.
+- **🎓 Learning Hub** — a 17-module roadmap from tokens → prompting → context engineering → RAG → tool use → agents → MCP → local models → evals → tool selection, **plus a live "Fresh tutorials" feed** pulled from your News sources so it never goes stale. Each module: *why it matters* + concrete steps + key terms.
+- **📖 Glossary** — 36 developer-focused definitions, searchable, with aliases so mis-heard terms still resolve (RAG, MCP, agents, agentic loops, headroom, caveman prompting, quantization…), each showing **recent live mentions** pulled straight from the News feed.
 - **🧰 Tools & Tips** — a "right tool for the right task" matrix (Claude Code vs Copilot vs Codex vs Cline/Aider/Ollama…) plus token-optimization tips.
 - **🔖 Reading List** — bookmark articles (filterable by content-type/level/tag, same as News); persists to disk; one-click **export to an Obsidian-ready Markdown note** with tags carried through as `#hashtags`.
+- **✨ Ask AiPulse** — ask a question and get an answer written only from AiPulse's own glossary, tools, guides and recent news, every sentence cited to a source; anything it can't verify is dropped. Optional summaries on news cards and glossary explanations use the same layer. Connect any Ollama or OpenAI-compatible provider (including Gemini) under `Llm:Providers`; an admin can switch each feature and provider on or off live from **AI Settings**, and `Ai:Enabled=false` turns it all off.
+- **⚡ Live updates** — the News Feed, dashboard and the sidebar's unread badge pick up new items from the background poll while the page is open (a "N new items" banner, never a surprise reshuffle).
 - **👥 Multi-user with roles** — cookie auth backed by a real Users table. Self-registration (`/register`) creates a **Pending** account that an **Admin** approves at `/users`; roles are **Admin** (manages Sources/Users/Backup/Playground) and **User** (everything else). Each account gets its own bookmarks, watchlist, and learning progress. Users can change their own password in **Settings**; Admins can rename another user's username or reset their password inline from the Users page (migrates their bookmarks/chat history to the new name automatically).
 - **📥 OPML import/export** — bulk-import feeds from any RSS reader's export, or export AiPulse's sources to use elsewhere. Every newly imported URL gets a quick reachability check so dead links are flagged immediately instead of silently failing later. Admin-only, from the Sources page.
 - **🕸️ Scrape sites with no RSS feed** — for pages that don't publish RSS/Atom at all, configure XPath selectors (item container, link, title, date) and AiPulse scrapes the HTML directly instead.
@@ -82,9 +84,9 @@ A fresh clone isn't blank, but it also won't look "full" right away — there's 
 seeded and what only builds up once AiPulse has been running for a while:
 
 **Seeded immediately, same for everyone:**
-- The **~51 curated sources**, from `Data/sources.json` (one-time DB seed — editing that file later has no
+- The **curated seed sources** (about 200), from `Data/sources.json` (one-time DB seed — editing that file later has no
   effect; use the Sources page instead)
-- **Glossary** (28 terms), **Tools & Tips**, **Learning Hub** (10 modules), benchmarks, model directory — all
+- **Glossary** (36 terms), **Tools & Tips**, **Learning Hub** (17 modules), benchmarks, model directory — all
   static JSON, loaded live on every page view, not dependent on any accumulated history
 - The bootstrapped **Admin** account from `Auth:Username`/`Password`
 - The **News Feed itself** — a live fetch across all sources on first visit, so real articles should show up

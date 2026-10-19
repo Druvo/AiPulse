@@ -298,3 +298,56 @@ body { overflow-x: clip; }
     .landing-btn, .bento-cell, .landing-nav { transition-duration: 1ms; }
     .reveal { animation: landing-reveal 150ms linear forwards; }
 }
+
+/* Feature cards: a link at the foot of each, and a marker on the ones that need an account. */
+.bento-cell .bento-link {
+    margin-top: auto;
+    padding-top: .35rem;
+    font-size: .82rem;
+    font-weight: 600;
+    text-decoration: none;
+    color: var(--ap-accent);
+}
+.bento-cell .bento-link:hover { text-decoration: underline; }
+.bento-badge {
+    display: inline-block;
+    margin-left: .35rem;
+    padding: .05rem .45rem;
+    font-size: .62rem;
+    font-weight: 600;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+    vertical-align: middle;
+    color: var(--ap-accent-soft-text);
+    background: var(--ap-accent-soft);
+    border-radius: 999px;
+}
+
+/* "Live" line under the hero: how much is new right now, so the page shows the feed is alive rather than just claiming it. */
+.landing-hero__live {
+    display: inline-flex;
+    align-items: center;
+    gap: .5rem;
+    margin: 0 0 1.25rem;
+    padding: .3rem .8rem;
+    font-size: .88rem;
+    color: var(--ap-text-secondary);
+    background: var(--ap-accent-soft);
+    border-radius: 999px;
+}
+.landing-hero__live strong { color: var(--ap-accent-soft-text); }
+.landing-hero__live .live-dot {
+    width: .55rem;
+    height: .55rem;
+    background: var(--ap-success);
+    border-radius: 50%;
+    animation: live-pulse 2s ease-out infinite;
+}
+@keyframes live-pulse {
+    0%   { box-shadow: 0 0 0 0 color-mix(in oklab, var(--ap-success) 55%, transparent); }
+    70%  { box-shadow: 0 0 0 .5rem transparent; }
+    100% { box-shadow: 0 0 0 0 transparent; }
+}
+@media (prefers-reduced-motion: reduce) {
+    .landing-hero__live .live-dot { animation: none; }
+}
