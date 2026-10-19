@@ -1,4 +1,5 @@
 @using AiPulse.Models
+@implements IDisposable
 @inject FeedAggregatorService Feeds
 @inject ReadingStateService Reading
 
@@ -151,15 +152,35 @@
     private int? _unreadCount;
 
     /// <summary>
-    /// Same base pipeline as News.razor's Filtered() "Unread" tab (Release items excluded, muted
-    /// sources/exclude-filters applied) minus the page's own search/category/tag refinements - this is
-    /// "how many would show up if you opened News Feed right now with no extra filters", not a live-updating
-    /// count. Uses PeekCache(), not GetAsync() - this component renders on every page, so it must never be
-    /// what triggers a live poll across 100+ sources sharing a rate-limited host (can take minutes) just to
-    /// draw a sidebar badge. No cached result yet this run (server just started) -> no badge, until the
-    /// News page or the background watcher populates the cache for everyone.
+    /// Follows both things that change the count: a new poll result (the background watcher runs whether or not a page is open) and
+    /// the person marking items read in this tab. Both arrive on other threads, so they hop onto the render thread first.
     /// </summary>
-    protected override void OnParametersSet()
+    protected override void OnInitialized()
+    {
+        Feeds.CacheUpdated += OnFeedsUpdated;
+        Reading.ReadChanged += OnReadChanged;
+    }
+
+    protected override void OnParametersSet() => Recompute();
+
+    private void OnFeedsUpdated(FeedResult _) => Refresh();
+
+    private void OnReadChanged() => Refresh();
+
+    private void Refresh() => _ = InvokeAsync(() =>
+    {
+        Recompute();
+        StateHasChanged();
+    });
+
+    /// <summary>
+    /// Same base pipeline as News.razor's Filtered() "Unread" tab (Release items excluded, muted sources/exclude-filters applied) minus the
+    /// page's own search/category/tag refinements - "how many would show up if you opened News Feed right now with no extra filters".
+    /// Uses PeekCache(), not GetAsync() - this component renders on every page, so it must never be what triggers a live poll across
+    /// 100+ sources sharing a rate-limited host (can take minutes) just to draw a sidebar badge. No cached result yet this run -> no badge,
+    /// until a poll finishes (which now updates it live).
+    /// </summary>
+    private void Recompute()
     {
         var result = Feeds.PeekCache();
         if (result is null) { _unreadCount = null; return; }
@@ -170,5 +191,11 @@
         if (Reading.MutedSources.Count > 0)
             items = items.Where(i => !Reading.IsSourceMuted(i.SourceName));
         _unreadCount = items.Count(i => !Reading.IsRead(i.Link));
+    }
+
+    public void Dispose()
+    {
+        Feeds.CacheUpdated -= OnFeedsUpdated;
+        Reading.ReadChanged -= OnReadChanged;
     }
 }

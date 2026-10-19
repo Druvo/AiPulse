@@ -360,16 +360,6 @@ public class FeedPollOrderTests
 
 public class AssistantRegistrationTests
 {
-    private sealed class TempEnvironment : Microsoft.AspNetCore.Hosting.IWebHostEnvironment
-    {
-        public string ApplicationName { get; set; } = "AiPulse.Tests";
-        public Microsoft.Extensions.FileProviders.IFileProvider WebRootFileProvider { get; set; } = new Microsoft.Extensions.FileProviders.NullFileProvider();
-        public string WebRootPath { get; set; } = "";
-        public string EnvironmentName { get; set; } = "Testing";
-        public string ContentRootPath { get; set; } = Path.Combine(Path.GetTempPath(), "aipulse-test-" + Guid.NewGuid().ToString("N"));
-        public Microsoft.Extensions.FileProviders.IFileProvider ContentRootFileProvider { get; set; } = new Microsoft.Extensions.FileProviders.NullFileProvider();
-    }
-
     private static ServiceProvider Build(Dictionary<string, string?>? extra = null, TempEnvironment? env = null)
     {
         var values = new Dictionary<string, string?> { ["Ollama:BaseUrl"] = "http://localhost:11434" };

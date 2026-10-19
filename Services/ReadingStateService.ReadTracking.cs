@@ -4,6 +4,13 @@ namespace AiPulse.Services;
 
 public sealed partial class ReadingStateService
 {
+    /// <summary>
+    /// Raised after any change to which items count as read. This service is scoped to one browser tab's connection, so the event only
+    /// reaches components in that same tab: the sidebar's unread badge uses it to follow what you read, without any polling.
+    /// Always raised outside the lock, so a handler may read the state.
+    /// </summary>
+    public event Action? ReadChanged;
+
     public bool IsRead(string link)
     {
         EnsureLoaded();
@@ -19,24 +26,27 @@ public sealed partial class ReadingStateService
     public void MarkRead(string link, bool read)
     {
         EnsureLoaded();
+        bool changed;
         lock (_lock)
         {
-            var changed = read ? _state!.ReadLinks.Add(link) : _state!.ReadLinks.Remove(link);
+            changed = read ? _state!.ReadLinks.Add(link) : _state!.ReadLinks.Remove(link);
             if (changed) Save();
         }
+        if (changed) ReadChanged?.Invoke();
     }
 
     /// <summary>Bulk unread - the Undo side of <see cref="EnsureReadBulk"/>, same one-save-at-the-end reasoning.</summary>
     public void MarkUnreadBulk(IEnumerable<string> links)
     {
         EnsureLoaded();
+        var changed = false;
         lock (_lock)
         {
-            var changed = false;
             foreach (var link in links)
                 if (_state!.ReadLinks.Remove(link)) changed = true;
             if (changed) Save();
         }
+        if (changed) ReadChanged?.Invoke();
     }
 
     /// <summary>
@@ -63,6 +73,7 @@ public sealed partial class ReadingStateService
             });
             Save();
         }
+        ReadChanged?.Invoke();
     }
 
     /// <summary>
@@ -75,9 +86,9 @@ public sealed partial class ReadingStateService
     public int EnsureReadBulk(IEnumerable<FeedItem> items)
     {
         EnsureLoaded();
+        var marked = 0;
         lock (_lock)
         {
-            var marked = 0;
             foreach (var item in items)
             {
                 if (!_state!.ReadLinks.Add(item.Link)) continue;
@@ -94,17 +105,19 @@ public sealed partial class ReadingStateService
                 marked++;
             }
             if (marked > 0) Save();
-            return marked;
         }
+        if (marked > 0) ReadChanged?.Invoke();
+        return marked;
     }
 
     /// <summary>Toggles read state and returns the new value. Appends a <see cref="ReadEvent"/> when transitioning to read, for the Reading Stats page.</summary>
     public bool ToggleRead(FeedItem item)
     {
         EnsureLoaded();
+        bool nowRead;
         lock (_lock)
         {
-            var nowRead = !_state!.ReadLinks.Contains(item.Link);
+            nowRead = !_state!.ReadLinks.Contains(item.Link);
             var changed = nowRead ? _state.ReadLinks.Add(item.Link) : _state.ReadLinks.Remove(item.Link);
             if (nowRead)
                 _state.ReadHistory.Add(new ReadEvent
@@ -118,8 +131,9 @@ public sealed partial class ReadingStateService
                     Category = item.Category
                 });
             if (changed || nowRead) Save();
-            return nowRead;
         }
+        ReadChanged?.Invoke();
+        return nowRead;
     }
 
     /// <summary>Read-only peek at the last News-feed visit, for pages (e.g. Dashboard) that want to show a "new since" count without marking the feed as visited.</summary>

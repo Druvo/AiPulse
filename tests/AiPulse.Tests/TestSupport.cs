@@ -130,3 +130,19 @@ internal sealed class StubHttpHandler : HttpMessageHandler
     public static HttpResponseMessage JsonResponse(string json, HttpStatusCode status = HttpStatusCode.OK) =>
         new(status) { Content = new StringContent(json, Encoding.UTF8, "application/json") };
 }
+
+/// <summary>A web host environment rooted in a throwaway temp folder, for services that keep files under App_Data.</summary>
+internal sealed class TempEnvironment : Microsoft.AspNetCore.Hosting.IWebHostEnvironment, IDisposable
+{
+    public string ApplicationName { get; set; } = "AiPulse.Tests";
+    public Microsoft.Extensions.FileProviders.IFileProvider WebRootFileProvider { get; set; } = new Microsoft.Extensions.FileProviders.NullFileProvider();
+    public string WebRootPath { get; set; } = "";
+    public string EnvironmentName { get; set; } = "Testing";
+    public string ContentRootPath { get; set; } = Path.Combine(Path.GetTempPath(), "aipulse-test-" + Guid.NewGuid().ToString("N"));
+    public Microsoft.Extensions.FileProviders.IFileProvider ContentRootFileProvider { get; set; } = new Microsoft.Extensions.FileProviders.NullFileProvider();
+
+    public void Dispose()
+    {
+        if (Directory.Exists(ContentRootPath)) Directory.Delete(ContentRootPath, true);
+    }
+}

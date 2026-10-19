@@ -24,6 +24,9 @@ public sealed class FeedHistoryService
         _byLink = Load();
     }
 
+    /// <summary>Raised after a Record() that actually added or removed items, once the history is saved. Lets the dashboard offer "N new items" without a reload.</summary>
+    public event Action? Changed;
+
     public IReadOnlyList<FeedItem> Items
     {
         get { lock (_lock) return _byLink.Values.OrderByDescending(i => i.Published).ToList(); }
@@ -32,9 +35,10 @@ public sealed class FeedHistoryService
     /// <summary>Adds any not-yet-seen items (by link) and prunes anything older than the retention window.</summary>
     public void Record(IEnumerable<FeedItem> items)
     {
+        bool changed;
         lock (_lock)
         {
-            var changed = false;
+            changed = false;
             foreach (var item in items)
             {
                 if (string.IsNullOrEmpty(item.Link) || _byLink.ContainsKey(item.Link))
@@ -52,6 +56,7 @@ public sealed class FeedHistoryService
 
             if (changed) Save();
         }
+        if (changed) Changed?.Invoke();
     }
 
     /// <summary>

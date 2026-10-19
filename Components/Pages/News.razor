@@ -116,6 +116,14 @@
     }
 </div>
 
+@if (_loadError is not null)
+{
+    <div class="alert alert-warning d-flex flex-wrap justify-content-between align-items-center gap-2 py-2 mb-3" role="alert">
+        <span>@_loadError</span>
+        <button class="btn btn-sm btn-outline-dark" disabled="@_loading" @onclick="() => Load(true)">Try again</button>
+    </div>
+}
+
 @if (_pendingNewCount > 0)
 {
     <div class="alert alert-info d-flex flex-wrap justify-content-between align-items-center gap-2 py-2 mb-3">
@@ -375,6 +383,7 @@ else
     private FeedResult? _pendingResult;
     private int _pendingNewCount;
     private bool _loading;
+    private string? _loadError;
     private string _filter = "Unread";
     private string _search = "";
     private string _contentType = "";
@@ -478,6 +487,7 @@ else
         // waiting for the entire batch - with 100+ Reddit sources sharing one rate-limited host, "the whole
         // batch" can take 10+ minutes, so a one-shot swap at the end would leave the page looking frozen.
         Feeds.PartialProgress += OnPartialProgress;
+        Feeds.CacheUpdated += OnCacheUpdated;
 
         // Fire-and-forget: this page must render immediately instead of blocking behind Feeds.GetAsync()
         // on a cold cache - a blocking OnInitializedAsync would leave the page showing nothing at all for
@@ -510,6 +520,18 @@ else
         var following = await Follow.ToggleFollowSourceAsync(uid, sourceName);
         if (following) _followedSources.Add(sourceName); else _followedSources.Remove(sourceName);
     }
+
+    /// <summary>
+    /// A poll finished somewhere else: the background watcher (every few minutes, whether or not anyone is looking) or a WebSub push. Route it
+    /// through the same buffer as everything else, so an open tab shows the "N new items ready" banner instead of the list silently going stale
+    /// or jumping under the reader. A fetch started by this very tab already delivers its own result, so it is skipped here.
+    /// </summary>
+    private void OnCacheUpdated(FeedResult result) => _ = InvokeAsync(() =>
+    {
+        if (_loading) return;
+        BufferOrApply(result);
+        StateHasChanged();
+    });
 
     private void OnPartialProgress(IReadOnlyList<FeedItem> items)
     {
@@ -620,9 +642,16 @@ else
     private async Task Load(bool force)
     {
         _loading = true;
+        _loadError = null;
         try
         {
             BufferOrApply(await Feeds.GetAsync(force));
+        }
+        catch (Exception ex)
+        {
+            // Fire-and-forget from OnInitialized: without a catch the failure vanished and the page sat on "saved history" with no clue why.
+            Log.LogWarning(ex, "Loading the feed failed");
+            _loadError = "Couldn't fetch the latest items just now. You're seeing saved history.";
         }
         finally
         {
@@ -997,6 +1026,7 @@ else
     public async ValueTask DisposeAsync()
     {
         Feeds.PartialProgress -= OnPartialProgress;
+        Feeds.CacheUpdated -= OnCacheUpdated;
         if (_dotNetRef is null) return;
         try { await JS.InvokeVoidAsync("aipulseKeyboard.unregister"); } catch { /* circuit may already be gone */ }
         _dotNetRef.Dispose();

@@ -80,10 +80,10 @@
     <div class="card-body">
         <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-2">
             <h2 class="h5 mb-0">Language-model providers</h2>
-            <button class="btn btn-sm btn-outline-secondary" @onclick="() => StateHasChanged()"><Icon Name="refresh" Size="14" /> Refresh counts</button>
+            <span class="text-muted small"><span class="spinner"></span> updating live</span>
         </div>
         <p class="text-muted small">
-            Tried in this order; the first to answer wins and the rest are fallbacks. Counts are since the app last started.
+            Tried in this order; the first to answer wins and the rest are fallbacks. Counts are since the app last started and update live.
         </p>
 
         @if (Llm.AllProviders.Count == 0)
@@ -129,11 +129,37 @@
 </div>
 
 @code {
-    protected override void OnInitialized() => Settings.Changed += OnChanged;
+    private readonly CancellationTokenSource _stop = new();
+
+    protected override void OnInitialized()
+    {
+        Settings.Changed += OnChanged;
+        _ = TickAsync();
+    }
+
+    /// <summary>The call counters change whenever anyone asks a question or summarises an item, so redraw every few seconds while this page is open.</summary>
+    private async Task TickAsync()
+    {
+        try
+        {
+            using var timer = new PeriodicTimer(TimeSpan.FromSeconds(4));
+            while (await timer.WaitForNextTickAsync(_stop.Token))
+                await InvokeAsync(StateHasChanged);
+        }
+        catch (OperationCanceledException)
+        {
+            // Page closed.
+        }
+    }
 
     private void OnChanged() => _ = InvokeAsync(StateHasChanged);
 
-    public void Dispose() => Settings.Changed -= OnChanged;
+    public void Dispose()
+    {
+        Settings.Changed -= OnChanged;
+        _stop.Cancel();
+        _stop.Dispose();
+    }
 
     private static string Shorten(string? text) =>
         string.IsNullOrEmpty(text) ? "" : text.Length <= 70 ? text : text[..70] + "…";

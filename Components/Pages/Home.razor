@@ -1,6 +1,7 @@
 @page "/dashboard"
 @attribute [Authorize]
 @rendermode InteractiveServer
+@implements IDisposable
 @inject KnowledgeBaseService Kb
 @inject ReadingStateService Reading
 @inject ISummarizer Ai
@@ -9,6 +10,7 @@
 @inject HuggingFaceService HuggingFace
 @inject GitHubTrendingService GitHubTrending
 @inject NavigationManager Nav
+@inject SiteStatsService Stats
 
 <PageTitle>AiPulse · Dashboard</PageTitle>
 
@@ -16,6 +18,14 @@
     <h1><Icon Name="zap" Size="22" /> Dashboard</h1>
     <p class="lead">Your everyday station to read the AI world and level up as a developer — news, jargon, tools, and a learning roadmap. Runs standalone, no AI required.</p>
 </div>
+
+@if (_pendingNew > 0)
+{
+    <div class="alert alert-info d-flex flex-wrap justify-content-between align-items-center gap-2 py-2 mb-3" role="status">
+        <span><Icon Name="rss" Size="14" /> @_pendingNew.ToString("N0") new item@(_pendingNew == 1 ? "" : "s") arrived since you opened this page</span>
+        <button class="btn btn-sm btn-primary" @onclick="ApplyNewItems">Update dashboard</button>
+    </div>
+}
 
 @if (!_welcomeDismissed)
 {
@@ -25,7 +35,7 @@
                 <div class="flex-grow-1">
                     <h5 class="mb-1"><Icon Name="sparkle" Size="18" /> New here? Three things to try</h5>
                     <p class="text-muted small mb-2">
-                        AiPulse aggregates ~51 AI news/research/tool sources into one feed, plus a glossary, a tools
+                        AiPulse aggregates @Stats.Current.ActiveSources AI news/research/tool sources into one feed, plus a glossary, a tools
                         comparison, and a learning roadmap — all standalone, no AI required to run it.
                     </p>
                     <div class="d-flex flex-column gap-1 mb-2">
@@ -330,7 +340,34 @@
         // everything else on the page (stat cards, trending panel, biggest stories all render right away).
         _ = LoadNewSinceVisitAsync();
         _ = LoadTrendingAsync();
+
+        History.Changed += OnHistoryChanged;
     }
+
+    private int _pendingNew;
+    private HashSet<string>? _snapshotLinks;
+
+    /// <summary>
+    /// The background watcher saved new items. Count them against what this page is showing and offer an update, rather than re-sorting
+    /// the dashboard while someone is reading it (the same rule News follows).
+    /// </summary>
+    private void OnHistoryChanged() => _ = InvokeAsync(() =>
+    {
+        _snapshotLinks ??= _historyItems.Select(i => i.Link).ToHashSet();
+        _pendingNew = History.Items.Count(i => !_snapshotLinks.Contains(i.Link));
+        StateHasChanged();
+    });
+
+    private void ApplyNewItems()
+    {
+        _historyItems = History.Items;
+        _snapshotLinks = null;
+        _pendingNew = 0;
+        RecomputeRange();
+        _ = LoadNewSinceVisitAsync();
+    }
+
+    public void Dispose() => History.Changed -= OnHistoryChanged;
 
     private async Task LoadNewSinceVisitAsync()
     {

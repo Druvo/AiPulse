@@ -8,6 +8,7 @@
 @using AiPulse.Services.Ai.Rag
 @using Microsoft.Extensions.Options
 @inject RagAgent Agent
+@inject ILogger<Ask> Log
 @inject ILlmClient Llm
 @inject AiPulse.Services.Ai.IAiGate Gate
 @inject KnowledgeCorpus Corpus
@@ -46,6 +47,13 @@
 @if (_busy)
 {
     <p class="text-muted"><span class="spinner"></span> Looking through the sources…</p>
+}
+else if (_error is not null)
+{
+    <div class="alert alert-warning d-flex flex-wrap justify-content-between align-items-center gap-2" role="alert">
+        <span>@_error</span>
+        <button class="btn btn-sm btn-outline-dark" @onclick="() => AskAsync(_question)">Try again</button>
+    </div>
 }
 else if (_result is { } r)
 {
@@ -167,6 +175,7 @@ else if (_result is { } r)
     private string _question = "";
     private AskResult? _result;
     private bool _busy;
+    private string? _error;
 
     private async Task AskAsync(string question)
     {
@@ -177,10 +186,17 @@ else if (_result is { } r)
         _result = null;
         StateHasChanged();
 
+        _error = null;
         try
         {
             var caller = await CallerKeyAsync();
             _result = await Agent.AskAsync(question, caller);
+        }
+        catch (Exception ex)
+        {
+            // An exception escaping a click handler ends the whole connection, so a failure here must become a message instead.
+            Log.LogWarning(ex, "Ask failed");
+            _error = "Something went wrong while answering. Please try again.";
         }
         finally
         {

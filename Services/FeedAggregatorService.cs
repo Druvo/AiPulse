@@ -49,6 +49,23 @@ public sealed class FeedAggregatorService
     /// </summary>
     public event Action<IReadOnlyList<FeedItem>>? PartialProgress;
 
+    /// <summary>
+    /// Raised whenever the cached result is replaced: after every full poll (including the background watcher's, which runs whether or
+    /// not anyone has a page open) and after a WebSub push is merged in. Lets open pages show new items without a reload. Handlers run on
+    /// the polling thread, so a UI subscriber must marshal with InvokeAsync, and must unsubscribe when it is disposed.
+    /// </summary>
+    public event Action<FeedResult>? CacheUpdated;
+
+    private void RaiseCacheUpdated(FeedResult result)
+    {
+        // One listener at a time: a page that throws must not stop the poll, nor silence the pages after it in the invocation list.
+        foreach (var listener in CacheUpdated?.GetInvocationList() ?? Array.Empty<Delegate>())
+        {
+            try { ((Action<FeedResult>)listener)(result); }
+            catch (Exception ex) { _log.LogDebug(ex, "CacheUpdated subscriber threw"); }
+        }
+    }
+
     /// <summary>Consecutive failed fetches for a source since its last success (0 = healthy or unknown).</summary>
     public int GetFailureStreak(string sourceName) => _failureStreaks.GetValueOrDefault(sourceName);
 
@@ -74,6 +91,7 @@ public sealed class FeedAggregatorService
                 return _cache;
 
             _cache = await FetchAllAsync(ct);
+            RaiseCacheUpdated(_cache);
             return _cache;
         }
         finally
@@ -265,6 +283,7 @@ public sealed class FeedAggregatorService
             _refreshLock.Release();
         }
 
+        if (_cache is not null) RaiseCacheUpdated(_cache);
         return items;
     }
 
