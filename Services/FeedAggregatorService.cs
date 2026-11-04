@@ -25,6 +25,12 @@ public sealed class FeedAggregatorService
     private readonly SemaphoreSlim _refreshLock = new(1, 1);
     private FeedResult? _cache;
 
+    /// <summary>Polls so far; drives which slice of a rate-limit-prone host's sources is due (see <see cref="FeedPollOrder.SelectForRound"/>).</summary>
+    private int _round;
+
+    /// <summary>Each source's items from its last successful fetch, so a source skipped this round keeps its place in the cached result instead of vanishing from it until its turn.</summary>
+    private readonly ConcurrentDictionary<string, List<FeedItem>> _lastItemsBySource = new();
+
     public FeedAggregatorService(IHttpClientFactory httpFactory, KnowledgeBaseService kb, SourceHealthService health, ContentExtractorService extractor, WebSubService webSub, ILogger<FeedAggregatorService> log)
     {
         _httpFactory = httpFactory;
@@ -102,7 +108,11 @@ public sealed class FeedAggregatorService
 
     private async Task<FeedResult> FetchAllAsync(CancellationToken ct)
     {
-        var sources = FeedPollOrder.Order(_kb.Sources.Where(s => s.Enabled).ToList());
+        var enabled = _kb.Sources.Where(s => s.Enabled).ToList();
+        var (due, notDue) = FeedPollOrder.SelectForRound(enabled, Interlocked.Increment(ref _round) - 1);
+        var sources = FeedPollOrder.Order(due);
+        if (notDue.Count > 0)
+            _log.LogInformation("Poll {Round}: fetching {Due} of {Total} sources; {Skipped} rate-limit-prone sources wait for a later poll", _round, due.Count, enabled.Count, notDue.Count);
         var items = new ConcurrentBag<FeedItem>();
         var errors = new ConcurrentBag<string>();
 
@@ -116,7 +126,10 @@ public sealed class FeedAggregatorService
             try
             {
                 sw.Start(); // only measures the actual fetch - FetchOneAsync awaits its own per-host cooldown slot first
-                foreach (var item in await FetchOneAsync(source, ct))
+                var fetched = await FetchOneAsync(source, ct);
+                // Only rotated hosts need the carry-over; keeping every source's items would just duplicate the cache.
+                if (FeedPollOrder.BatchSizeFor(FeedDomainThrottle.GetHost(source.Url)) is not null) _lastItemsBySource[source.Name] = fetched;
+                foreach (var item in fetched)
                     items.Add(item);
                 _failureStreaks[source.Name] = 0;
                 _health.RecordResult(source.Name, true, sw.Elapsed);
@@ -139,6 +152,11 @@ public sealed class FeedAggregatorService
         });
 
         await Task.WhenAll(tasks);
+
+        // Sources that were not due this round are not "gone": carry what they last returned into the result.
+        foreach (var source in notDue)
+            if (_lastItemsBySource.TryGetValue(source.Name, out var previous))
+                foreach (var item in previous) items.Add(item);
 
         return new FeedResult
         {

@@ -356,6 +356,76 @@ public class FeedPollOrderTests
 
     [Fact]
     public void Empty_input_is_fine() => Assert.Empty(AiPulse.Services.FeedPollOrder.Order(new List<AiPulse.Models.FeedSource>()));
+
+    private static List<AiPulse.Models.FeedSource> Reddit(int count) =>
+        Enumerable.Range(1, count).Select(i => Source($"r/s{i}", $"https://www.reddit.com/r/s{i}/.rss")).ToList();
+
+    [Fact]
+    public void Each_poll_fetches_only_one_batch_of_reddit_and_everything_else()
+    {
+        var sources = Reddit(16);
+        sources.Add(Source("blog", "https://blog.example.com/feed"));
+        sources.AddRange(Enumerable.Range(1, 12).Select(i => Source($"y{i}", $"https://www.youtube.com/feeds/{i}")));   // crowded but not rate-limit-prone
+
+        var (due, skipped) = AiPulse.Services.FeedPollOrder.SelectForRound(sources, 0);
+
+        Assert.Equal(AiPulse.Services.FeedPollOrder.RedditBatchSize, due.Count(s => s.Url.Contains("reddit.com")));
+        Assert.Equal(12, skipped.Count);
+        Assert.All(skipped, s => Assert.Contains("reddit.com", s.Url));
+        Assert.Contains(due, s => s.Name == "blog");
+        Assert.Equal(12, due.Count(s => s.Name.StartsWith('y')));
+        Assert.Equal(sources.Count, due.Count + skipped.Count);
+    }
+
+    [Theory]
+    [InlineData(16)]
+    [InlineData(13)]   // not a multiple of the batch: the window wraps
+    [InlineData(5)]
+    [InlineData(37)]
+    public void Every_subreddit_comes_up_within_one_cycle_of_polls(int count)
+    {
+        var sources = Reddit(count);
+        var batch = AiPulse.Services.FeedPollOrder.RedditBatchSize;
+        var cycle = (int)Math.Ceiling(count / (double)batch);
+
+        var seen = new HashSet<string>();
+        for (var round = 0; round < cycle; round++)
+            foreach (var s in AiPulse.Services.FeedPollOrder.SelectForRound(sources, round).Due) seen.Add(s.Name);
+
+        Assert.Equal(count, seen.Count);
+    }
+
+    [Fact]
+    public void Consecutive_polls_fetch_different_subreddits_and_the_pattern_repeats()
+    {
+        var sources = Reddit(16);
+        string Key(int round) => string.Join(",", AiPulse.Services.FeedPollOrder.SelectForRound(sources, round).Due.Select(s => s.Name));
+
+        Assert.NotEqual(Key(0), Key(1));
+        Assert.Equal(Key(0), Key(4));   // 16 / 4 = a 4-poll cycle
+        Assert.Equal("r/s1,r/s2,r/s3,r/s4", Key(0));
+    }
+
+    [Fact]
+    public void A_small_reddit_list_is_fetched_whole_and_nothing_is_skipped()
+    {
+        var sources = Reddit(AiPulse.Services.FeedPollOrder.RedditBatchSize);
+        var (due, skipped) = AiPulse.Services.FeedPollOrder.SelectForRound(sources, 7);
+
+        Assert.Equal(sources.Count, due.Count);
+        Assert.Empty(skipped);
+    }
+
+    [Fact]
+    public void A_negative_or_huge_round_number_never_crashes_or_loses_a_source()
+    {
+        var sources = Reddit(16);
+        foreach (var round in new[] { -5, 0, int.MaxValue })
+        {
+            var (due, skipped) = AiPulse.Services.FeedPollOrder.SelectForRound(sources, round);
+            Assert.Equal(16, due.Count + skipped.Count);
+        }
+    }
 }
 
 public class AssistantRegistrationTests
