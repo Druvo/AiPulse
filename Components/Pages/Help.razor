@@ -1,18 +1,18 @@
 @page "/help"
 @inject SiteStatsService Stats
 
-<PageTitle>AiPulse · Help</PageTitle>
+<PageTitle>Lumen · Help</PageTitle>
 
 <div class="page-header">
     <h1><Icon Name="help-circle" Size="22" /> Help &amp; Getting Started</h1>
-    <p class="lead">What AiPulse is, what every page does, and how to actually use it day to day.</p>
+    <p class="lead">What Lumen is, what every page does, and how to actually use it day to day.</p>
 </div>
 
 <div class="card mb-4">
     <div class="card-body">
         <h4 class="section-title"><Icon Name="zap" /> What is this?</h4>
         <p>
-            AiPulse is your personal, self-hosted station for keeping up with AI news and leveling up as a developer.
+            Lumen is your personal, self-hosted station for keeping up with AI news and leveling up as a developer.
             It pulls live updates from @Stats.Current.ActiveSources sources (blogs, research feeds, GitHub releases, YouTube, Reddit, Mastodon…),
             and pairs that feed with a curated glossary, a tools comparison, and a learning roadmap — all in one place,
             so you don't have to piece it together from a dozen tabs.
@@ -20,7 +20,7 @@
         <p class="mb-0">
             <strong>It runs standalone — no AI, no API key, nothing to configure to get value from it.</strong>
             The core (aggregation, tagging, digest, search) is plain code: HTTP fetches, XML parsing, keyword matching.
-            AI features, namely <strong>Ask AiPulse</strong>, news summaries and glossary explanations, are optional extras that only
+            AI features, namely <strong>Ask Lumen</strong>, news summaries and glossary explanations, are optional extras that only
             appear when an admin connects a language model, and an admin can switch them off again at any time.
         </p>
     </div>
@@ -46,7 +46,7 @@
 <div class="alert alert-light border mb-4">
     <h6 class="section-title"><Icon Name="sparkle" Size="16" /> New install? A few things are supposed to look empty at first</h6>
     <p class="mb-1">
-        The News Feed itself is live from the first visit, but a few things only build up the longer AiPulse
+        The News Feed itself is live from the first visit, but a few things only build up the longer Lumen
         keeps running — none of this is broken, it just needs time:
     </p>
     <ul class="mb-0 small">
@@ -75,7 +75,7 @@
         <tbody>
             <tr><td><a href="dashboard">Dashboard</a></td><td>Home base — trending topics, activity heatmap, continue-learning shortcuts, recent bookmarks, and a Today/This Week/This Month digest (biggest multi-source stories, top category, day-by-day counts).</td></tr>
             <tr><td><a href="news">News Feed</a></td><td>The live feed itself. Search, filter, bookmark, mark read - the <strong>Calendar</strong> sits in a fixed panel on the right for an Obsidian-style month view: click a day to filter to it, shift-click another day to select a date range. <code>j</code>/<code>k</code>/<code>o</code>/<code>m</code>/<code>b</code> for keyboard navigation — press <code>?</code> on that page for the full list.</td></tr>
-            <tr><td><a href="ask">Ask AiPulse</a></td><td>Ask a question and get an answer written only from AiPulse's own glossary, tools, guides and recent news, with every sentence cited to its source. Anything it can't back up is left out. Needs a connected language model to write answers; without one it quotes the matching sources.</td></tr>
+            <tr><td><a href="ask">Ask Lumen</a></td><td>Ask a question and get an answer written only from Lumen's own glossary, tools, guides and recent news, with every sentence cited to its source. Anything it can't back up is left out. Needs a connected language model to write answers; without one it quotes the matching sources.</td></tr>
             <tr><td><a href="explore">Explore</a></td><td>What's trending right now on Hugging Face (models/datasets) and GitHub (repos + developers), plus benchmark links and a "try a model" directory.</td></tr>
             <tr><td><a href="learn">Learning Hub</a></td><td>A @Stats.Current.LearningModules-module roadmap, tokens → agents. Mark modules complete to track progress. Includes live "fresh tutorials" and free courses.</td></tr>
             <tr><td><a href="glossary">Glossary</a></td><td>@Stats.Current.GlossaryTerms terms explained for developers, with aliases so slang/mis-heard versions still find the right entry.</td></tr>
@@ -113,7 +113,7 @@
 <p>The full list of what is followed is public on <a href="coverage">Sources we follow</a>.</p>
 <ul class="mb-4">
     <li>Most sources are plain RSS/Atom feeds, fetched and refreshed automatically.</li>
-    <li>Some sources have no title per item (Mastodon posts, for example) — AiPulse shows the start of the post text instead, rather than a blank "(untitled)".</li>
+    <li>Some sources have no title per item (Mastodon posts, for example) — Lumen shows the start of the post text instead, rather than a blank "(untitled)".</li>
     <li>When the same story is covered by multiple sources, they're merged into one card badged "+N more sources" instead of repeating.</li>
     <li>An admin can flag a source to fetch the <strong>full article text</strong> (not just the teaser) or to <strong>scrape a page with no RSS feed at all</strong> — both configured from the <a href="sources">Sources</a> page.</li>
 </ul>

@@ -5,7 +5,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta property="og:type" content="website" />
-    <meta property="og:image" content="favicon.png" />
+    <meta property="og:image" content="img/og-image.png" />
     @* description/og:title/og:description are set per-layout below (MainLayout vs. Login/Register's own
        HeadContent) rather than here, so a page-level override doesn't end up duplicating a static default -
        browsers/crawlers don't reliably pick one when the same meta name appears twice. *@
@@ -13,14 +13,14 @@
     <link rel="stylesheet" href="bootstrap/bootstrap.min.css" />
     <link rel="stylesheet" href="app.css" />
     <link rel="stylesheet" href="AiPulse.styles.css" />
-    <meta name="theme-color" content="#f4f9fa" />
+    <meta name="theme-color" content="#faf9ff" />
     <link rel="icon" type="image/png" href="favicon.png" />
     <link rel="manifest" href="manifest.webmanifest" />
     <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-title" content="AiPulse" />
-    <link rel="alternate" type="application/atom+xml" title="AiPulse - latest AI news" href="feed.xml" />
+    <meta name="apple-mobile-web-app-title" content="Lumen" />
+    <link rel="alternate" type="application/atom+xml" title="Lumen - latest AI news" href="feed.xml" />
     <HeadOutlet />
     <script>
         // Apply the saved theme/accent/custom-CSS immediately (avoids a flash of the wrong appearance).
@@ -32,30 +32,19 @@
             var t = savedTheme() || systemTheme();
             document.documentElement.setAttribute('data-theme', t);
             var bar = document.querySelector('meta[name="theme-color"]');
-            if (bar) bar.setAttribute('content', t === 'dark' ? '#0b1114' : '#f4f9fa');
+            if (bar) bar.setAttribute('content', t === 'dark' ? '#0f0c1a' : '#faf9ff');
             var accent = localStorage.getItem('aipulse-accent');
             if (accent) document.documentElement.setAttribute('data-accent', accent);
             else document.documentElement.removeAttribute('data-accent');
             applyCustomCss();
-            applyLogo();
         }
         applyTheme();
-        function applyLogo() {
-            var logo = localStorage.getItem('aipulse-logo') || 'v1';
-            document.querySelectorAll('.app-logo').forEach(function (img) {
-                img.src = '/img/logo-' + logo + '.png';
-            });
-        }
-        function setLogo(v) {
-            localStorage.setItem('aipulse-logo', v);
-            applyLogo();
-        }
         function toggleTheme() {
             var cur = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
             document.documentElement.setAttribute('data-theme', cur);
             try { localStorage.setItem('aipulse-theme', cur); } catch (e) { }
             var bar = document.querySelector('meta[name="theme-color"]');
-            if (bar) bar.setAttribute('content', cur === 'dark' ? '#0b1114' : '#f4f9fa');
+            if (bar) bar.setAttribute('content', cur === 'dark' ? '#0f0c1a' : '#faf9ff');
         }
         // Until someone picks a theme, keep following the operating system if it flips (e.g. automatic dark at sunset).
         if (window.matchMedia) {

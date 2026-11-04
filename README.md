@@ -1,4 +1,4 @@
-# ⚡ AiPulse
+# ⚡ Lumen
 
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![.NET 8](https://img.shields.io/badge/.NET-8.0-512BD4?logo=dotnet)](https://dotnet.microsoft.com/download)
@@ -32,7 +32,7 @@ It aggregates a configurable list of RSS/Atom sources (about 200 are seeded; you
 - **🔁 Cross-source dedup** — when multiple sources cover the same story, they're merged into one item badged "+N more sources" (title-similarity matching within a time window — no AI).
 - **📅 Weekly Digest** — a 7-day rollup: item/source counts, top category, "biggest stories" ranked by how many sources covered them, and a day-by-day breakdown.
 - **🏷️ Auto-tagging** — every item is tagged against the curated glossary (RAG, MCP, agents…) by matching its title/summary against each term and its aliases, so tags stay consistent with the Glossary page for free.
-- **🔥 Trending panel & 📅 Activity heatmap** — the Dashboard shows top tags/sources over the last 7 days and a GitHub-style contribution heatmap backed by a small persisted history log (`App_Data/feed-history.json`) that grows the longer AiPulse runs. Click any tag or day to jump into a pre-filtered News Feed. A third panel mirrors Explore's live top Hugging Face models and GitHub repos, for an at-a-glance view without leaving the Dashboard.
+- **🔥 Trending panel & 📅 Activity heatmap** — the Dashboard shows top tags/sources over the last 7 days and a GitHub-style contribution heatmap backed by a small persisted history log (`App_Data/feed-history.json`) that grows the longer Lumen runs. Click any tag or day to jump into a pre-filtered News Feed. A third panel mirrors Explore's live top Hugging Face models and GitHub repos, for an at-a-glance view without leaving the Dashboard.
 - **🆕 New-since-last-visit count & biggest story of the week** — the Dashboard's stat row shows how many items have arrived since you last opened the News Feed (click through to jump straight to them), and a standalone highlight for the week's most multi-source-covered story, without needing to open the Weekly Digest.
 - **🔭 Explore** — trending models & datasets (live from the Hugging Face Hub API), curated benchmark/leaderboard links, recently-popular AI repos (via GitHub's Search API), and a "try a model" directory with Ollama/Hugging Face deep-links.
 - **🔔 Desktop notifications** for big tool/model releases (`ContentType: Release`) and your keyword watchlist (a background watcher polls feeds and raises browser notifications).
@@ -41,21 +41,21 @@ It aggregates a configurable list of RSS/Atom sources (about 200 are seeded; you
 - **📖 Glossary** — 36 developer-focused definitions, searchable, with aliases so mis-heard terms still resolve (RAG, MCP, agents, agentic loops, headroom, caveman prompting, quantization…), each showing **recent live mentions** pulled straight from the News feed.
 - **🧰 Tools & Tips** — a "right tool for the right task" matrix (Claude Code vs Copilot vs Codex vs Cline/Aider/Ollama…) plus token-optimization tips.
 - **🔖 Reading List** — bookmark articles (filterable by content-type/level/tag, same as News); persists to disk; one-click **export to an Obsidian-ready Markdown note** with tags carried through as `#hashtags`.
-- **✨ Ask AiPulse** — ask a question and get an answer written only from AiPulse's own glossary, tools, guides and recent news, every sentence cited to a source; anything it can't verify is dropped. Optional summaries on news cards and glossary explanations use the same layer. Connect any Ollama or OpenAI-compatible provider (including Gemini) under `Llm:Providers`; an admin can switch each feature and provider on or off live from **AI Settings**, and `Ai:Enabled=false` turns it all off.
+- **✨ Ask Lumen** — ask a question and get an answer written only from Lumen's own glossary, tools, guides and recent news, every sentence cited to a source; anything it can't verify is dropped. Optional summaries on news cards and glossary explanations use the same layer. Connect any Ollama or OpenAI-compatible provider (including Gemini) under `Llm:Providers`; an admin can switch each feature and provider on or off live from **AI Settings**, and `Ai:Enabled=false` turns it all off.
 - **⚡ Live updates** — the News Feed, dashboard and the sidebar's unread badge pick up new items from the background poll while the page is open (a "N new items" banner, never a surprise reshuffle).
 - **👥 Multi-user with roles** — cookie auth backed by a real Users table. Self-registration (`/register`) creates a **Pending** account that an **Admin** approves at `/users`; roles are **Admin** (manages Sources/Users/Backup/Playground) and **User** (everything else). Each account gets its own bookmarks, watchlist, and learning progress. Users can change their own password in **Settings**; Admins can rename another user's username or reset their password inline from the Users page (migrates their bookmarks/chat history to the new name automatically).
-- **📥 OPML import/export** — bulk-import feeds from any RSS reader's export, or export AiPulse's sources to use elsewhere. Every newly imported URL gets a quick reachability check so dead links are flagged immediately instead of silently failing later. Admin-only, from the Sources page.
-- **🕸️ Scrape sites with no RSS feed** — for pages that don't publish RSS/Atom at all, configure XPath selectors (item container, link, title, date) and AiPulse scrapes the HTML directly instead.
-- **📄 Full-text fetching** — for feeds that only publish a teaser, flip on "Fetch full article text" and AiPulse pulls the whole article (readability-style extraction, cached per link) so you can read it inline via a "Read full text" toggle instead of clicking out.
-- **⚡ WebSub push** (optional) — for the rare feed that still declares a hub, AiPulse subscribes so updates get pushed to it the moment they're published instead of waiting for the next poll. Off unless you set `WebSub:PublicBaseUrl` to your public URL (a hub can't call back to `localhost`); the Sources page shows a **Push** column with live status per source.
+- **📥 OPML import/export** — bulk-import feeds from any RSS reader's export, or export Lumen's sources to use elsewhere. Every newly imported URL gets a quick reachability check so dead links are flagged immediately instead of silently failing later. Admin-only, from the Sources page.
+- **🕸️ Scrape sites with no RSS feed** — for pages that don't publish RSS/Atom at all, configure XPath selectors (item container, link, title, date) and Lumen scrapes the HTML directly instead.
+- **📄 Full-text fetching** — for feeds that only publish a teaser, flip on "Fetch full article text" and Lumen pulls the whole article (readability-style extraction, cached per link) so you can read it inline via a "Read full text" toggle instead of clicking out.
+- **⚡ WebSub push** (optional) — for the rare feed that still declares a hub, Lumen subscribes so updates get pushed to it the moment they're published instead of waiting for the next poll. Off unless you set `WebSub:PublicBaseUrl` to your public URL (a hub can't call back to `localhost`); the Sources page shows a **Push** column with live status per source.
 - **📈 Source health history** — a rolling 30-day uptime % per source on the Sources page, so "flaky feed" is something you can see, not just guess at.
 - **🔢 Sortable, searchable, paginated admin tables** — Sources, Users, and the Weekly Digest's day-by-day table all have a search box, clickable sortable column headers, and page-size/prev-next controls, so they stay usable as they grow.
 - **🌗 Light/Dark theme + accent colors + custom CSS**, remembered in the browser across every navigation. Pick from 5 accent presets or drop in your own CSS for full control.
 - **🔎 Global search** (`Ctrl`/`Cmd`+`K`) — instantly search across the Glossary, Tools & Tips, and Learning Hub from anywhere in the app.
 - **🪝 Outbound webhooks** — send release/watchlist alerts to Slack, Discord, or any generic JSON endpoint, so you're notified even when no tab is open.
-- **📱 Mobile client support (Fever API)** — read AiPulse from Reeder, ReadKit, Fiery Feeds, or any other Fever-compatible RSS app, using a separate per-user API password set in Settings.
+- **📱 Mobile client support (Fever API)** — read Lumen from Reeder, ReadKit, Fiery Feeds, or any other Fever-compatible RSS app, using a separate per-user API password set in Settings.
 - **🧩 Custom Dashboard widgets** — embed your own iframe or raw HTML snippet (a status page, another dashboard, a note) right on the Dashboard.
-- **❓ In-app Help page** (`/help`) — what AiPulse is, a typical daily workflow, and a full page-by-page reference, plus a dismissible welcome banner for first-time visitors.
+- **❓ In-app Help page** (`/help`) — what Lumen is, a typical daily workflow, and a full page-by-page reference, plus a dismissible welcome banner for first-time visitors.
 
 Sources are managed dynamically from the **Sources page** (add/edit/remove feeds, no restart needed) — see [below](#customize-the-content). Glossary, Tools, Practices, and Learning Hub content stays as **editable JSON files in `Data/`** — no code needed to grow it.
 
@@ -65,7 +65,7 @@ Sources are managed dynamically from the **Sources page** (add/edit/remove feeds
 
 ```bash
 git clone https://github.com/Druvo/AiPulse.git
-cd AiPulse
+cd Lumen
 dotnet run
 ```
 
@@ -81,7 +81,7 @@ That account is seeded once, on first run, from the `Auth` section of `appsettin
 ### What to expect on first run
 
 A fresh clone isn't blank, but it also won't look "full" right away — there's a real split between what's
-seeded and what only builds up once AiPulse has been running for a while:
+seeded and what only builds up once Lumen has been running for a while:
 
 **Seeded immediately, same for everyone:**
 - The **curated seed sources** (about 200), from `Data/sources.json` (one-time DB seed — editing that file later has no
@@ -136,7 +136,7 @@ against yet.
 Keep personal overrides (your password hash, etc.) out of source control by putting them in `appsettings.Development.json` (git-ignored).
 
 ### Customize the content
-**Sources are dynamic** — add, edit, or disable feeds from the **Sources page** in the app; changes apply immediately, no restart needed. They're stored in SQLite (`App_Data/aipulse.db`). `Data/sources.json` is only read once, to **seed** the database the first time you run AiPulse — after that it's not read again, so editing it later has no effect (edit through the UI instead).
+**Sources are dynamic** — add, edit, or disable feeds from the **Sources page** in the app; changes apply immediately, no restart needed. They're stored in SQLite (`App_Data/aipulse.db`). `Data/sources.json` is only read once, to **seed** the database the first time you run Lumen — after that it's not read again, so editing it later has no effect (edit through the UI instead).
 
 Everything else is still just editable JSON in `Data/`:
 
@@ -166,12 +166,12 @@ Set these in the in-app **Settings** page (stored per-user in `App_Data/users/{u
 ## 🔐 Security
 
 - The dashboard needs sign-in. Open to everyone: the landing page, `/news`, `/topics`, `/releases`, `/explore`, `/glossary`, `/tools`, `/help`, `/login`, `/register`, plus `/feed.xml` (Atom). `PublicSite` is the single list behind the menu, `sitemap.xml` and `robots.txt`.
-- **Optional Clerk sign-in** (Settings → *Sign in with Clerk*, admin only): paste the app's *publishable key* and tick Enabled. Clerk handles sign-up and email verification; AiPulse verifies Clerk's signed session token against the instance's public keys (no Clerk secret key is stored), then issues its normal cookie. Local username/password login keeps working either way, approval and roles still apply, and an account is only matched to an existing one by a *verified* email.
+- **Optional Clerk sign-in** (Settings → *Sign in with Clerk*, admin only): paste the app's *publishable key* and tick Enabled. Clerk handles sign-up and email verification; Lumen verifies Clerk's signed session token against the instance's public keys (no Clerk secret key is stored), then issues its normal cookie. Local username/password login keeps working either way, approval and roles still apply, and an account is only matched to an existing one by a *verified* email.
 - The site is installable (web manifest + a service worker that only shows an offline notice; it caches no pages).
 - Registration never auto-approves — new accounts are **Pending** until an Admin approves them at `/users`, so a public-facing instance can't be self-signed-up-into by strangers.
 - Sources, Users, Backup/Restore, and Playground (talks to the host's local Ollama instance — a shared machine resource, not per-user) are **Admin-only**; everything else (News, Learning Hub, Bookmarks, etc.) is open to any approved account.
 - `/websub/callback/*` is intentionally unauthenticated (external hubs are anonymous servers) — it's instead secured by matching the hub's topic against what was actually subscribed to, and requiring a valid per-subscription HMAC signature on every content push. Fully inert unless you set `WebSub:PublicBaseUrl`.
-- `/fever/` is likewise unauthenticated at the ASP.NET Core level (mobile RSS clients don't send AiPulse's login cookie) — it's secured instead by the Fever protocol's own `api_key`, checked per-user inside `FeverApiService`. No-op until a user sets a Fever API password in Settings.
+- `/fever/` is likewise unauthenticated at the ASP.NET Core level (mobile RSS clients don't send Lumen's login cookie) — it's secured instead by the Fever protocol's own `api_key`, checked per-user inside `FeverApiService`. No-op until a user sets a Fever API password in Settings.
 - The **Dashboard widgets "HTML" type renders raw markup unsanitized** (`MarkupString`) — it's opt-in, per-user, and runs as your own logged-in session, so only use it with content you trust (same trust model as the custom-CSS box).
 - For a real bootstrap password, generate a hash (Development only):
   `http://localhost:5257/auth/hash?password=YOUR-PASSWORD` → paste the result into `Auth:PasswordHash` and clear `Auth:Password`. Accounts created via `/register` or `/users` are always hashed automatically.
@@ -237,4 +237,4 @@ PRs welcome — especially **new sources** and **glossary terms**. The lowest-fr
 
 ---
 
-<p align="center">Made with ❤️ by <a href="https://github.com/Druvo"><strong>Druvo</strong></a><br/>If AiPulse is useful to you, consider starring the repo ⭐</p>
+<p align="center">Made with ❤️ by <a href="https://github.com/Druvo"><strong>Druvo</strong></a><br/>If Lumen is useful to you, consider starring the repo ⭐</p>

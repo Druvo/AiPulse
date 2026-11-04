@@ -23,7 +23,7 @@ builder.Services.AddRazorComponents()
 builder.Services.AddHttpClient("feeds", c =>
 {
     c.Timeout = TimeSpan.FromSeconds(20);
-    c.DefaultRequestHeaders.UserAgent.ParseAdd("AiPulse/1.0 (+https://localhost; personal AI news dashboard)");
+    c.DefaultRequestHeaders.UserAgent.ParseAdd("Lumen/1.0 (+https://localhost; personal AI news dashboard)");
     c.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/rss+xml"));
     c.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/atom+xml"));
     c.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/xml"));
@@ -35,7 +35,7 @@ builder.Services.AddHttpClient("feeds", c =>
 builder.Services.AddHttpClient("explore", c =>
 {
     c.Timeout = TimeSpan.FromSeconds(15);
-    c.DefaultRequestHeaders.UserAgent.ParseAdd("AiPulse/1.0 (+https://localhost; personal AI news dashboard)");
+    c.DefaultRequestHeaders.UserAgent.ParseAdd("Lumen/1.0 (+https://localhost; personal AI news dashboard)");
     c.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
     c.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("text/html", 0.9));
 });
@@ -90,7 +90,7 @@ builder.Services.AddSingleton<CommentService>();
 builder.Services.AddSingleton<ProfileService>();
 builder.Services.AddHttpContextAccessor();
 
-// "Ask AiPulse": grounded Q&A over the knowledge base and news, with pluggable language-model providers.
+// "Ask Lumen": grounded Q&A over the knowledge base and news, with pluggable language-model providers.
 builder.Services.AddAiAssistant(builder.Configuration);
 
 // WebSub (PubSubHubbub): subscribe to feeds that push updates instead of polling. Inert unless
@@ -200,7 +200,7 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
 builder.Services.AddAuthorization();
 
 // Shared by both providers' OnTicketReceived above: resolve/create the local AppUser (ExternalAuthService),
-// then replace the provider's own principal with AiPulse's own 4-claim shape (same one Login.razor's
+// then replace the provider's own principal with Lumen's own 4-claim shape (same one Login.razor's
 // SignIn builds) before letting the framework's default post-TicketReceived flow sign in under the
 // cookie scheme and redirect to whatever RedirectUri the /auth/external/{provider} endpoint set below.
 async Task HandleExternalTicketReceivedAsync(TicketReceivedContext ctx, string provider)
@@ -306,7 +306,7 @@ app.MapGet("/auth/external/{provider}", async (string provider, OAuthSettingsSer
 
 // Second half of "Sign in with Clerk": the login page's script (js/clerk-login.js) lets Clerk's own component do the sign-in/verification,
 // then posts the session token here. We verify it, find or create the local account (admin approval and roles still apply), and issue
-// the normal AiPulse cookie. JSON-only on purpose: a cross-site form cannot send application/json, so a hostile page cannot sign a visitor
+// the normal Lumen cookie. JSON-only on purpose: a cross-site form cannot send application/json, so a hostile page cannot sign a visitor
 // in as someone else's Clerk user.
 app.MapPost("/auth/clerk/session", async (ClerkSessionRequest body, HttpContext http, ClerkAuthService clerk) =>
 {
@@ -333,7 +333,7 @@ app.MapPost("/auth/clerk/session", async (ClerkSessionRequest body, HttpContext 
     return Results.Json(new { redirect = returnUrl });
 });
 
-// sitemap.xml and robots.txt are generated at request time from the request's own Host header, not static files - AiPulse is
+// sitemap.xml and robots.txt are generated at request time from the request's own Host header, not static files - Lumen is
 // self-hosted with no fixed domain, so a committed copy would bake one deployment's URL (e.g. the maintainer's own demo
 // instance) into every other self-hoster's repo. Both are built from PublicSite, the same list the public menus use.
 app.MapGet("/sitemap.xml", (HttpRequest request, FeedHistoryService history) =>
@@ -352,7 +352,7 @@ app.MapGet("/feed.xml", (HttpRequest request, FeedHistoryService history, string
     var wanted = string.IsNullOrWhiteSpace(tag) ? null : tag.Trim();
     var items = wanted is null ? history.Items.Where(PublicFeeds.IsHeadline).Take(PublicFeeds.FeedLimit).ToList() : PublicFeeds.ForTag(history.Items, wanted, PublicFeeds.FeedLimit).ToList();
     var self = wanted is null ? "/feed.xml" : "/feed.xml?tag=" + Uri.EscapeDataString(wanted);
-    var title = wanted is null ? "AiPulse - latest AI news" : $"AiPulse - {wanted}";
+    var title = wanted is null ? "Lumen - latest AI news" : $"Lumen - {wanted}";
     return Results.Text(PublicFeeds.Atom(items, origin, title, self, now), "application/atom+xml; charset=utf-8");
 });
 
@@ -385,7 +385,7 @@ app.MapPost("/backup/restore", async (HttpRequest request, BackupService backup)
     return Results.Redirect("/settings?restored=true");
 }).RequireAuthorization(policy => policy.RequireRole("Admin"));
 
-// Per-source favicon, fetched and cached by AiPulse itself (never a third-party favicon CDN - see
+// Per-source favicon, fetched and cached by Lumen itself (never a third-party favicon CDN - see
 // FaviconService for why). Anonymous, since News/Explore/Glossary/Tools are public pages whose cards
 // need this too - but NOT a general-purpose open proxy: {host} must belong to a currently configured
 // source, so an anonymous caller can't use this endpoint to make the server fetch/probe an arbitrary
@@ -462,7 +462,7 @@ app.MapPost("/websub/callback/{sourceId:int}", async (int sourceId, HttpRequest 
     return Results.Ok();
 });
 
-// Fever API - lets mobile RSS clients (Reeder, ReadKit, Fiery Feeds, etc.) read AiPulse's feed. Unauthenticated
+// Fever API - lets mobile RSS clients (Reeder, ReadKit, Fiery Feeds, etc.) read Lumen's feed. Unauthenticated
 // at the ASP.NET Core level like the WebSub callback (mobile apps don't send our login cookie); auth is the
 // protocol's own api_key, checked per-user inside FeverApiService. Force feed refresh isn't triggered here -
 // it reads whatever FeedHistoryService already has, which the background watcher keeps current.

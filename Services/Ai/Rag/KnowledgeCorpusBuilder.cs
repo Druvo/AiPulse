@@ -14,7 +14,7 @@ public sealed record KnowledgeInputs(
     IEnumerable<ModelDirectoryEntry> Models,
     IEnumerable<FeedItem> News);
 
-/// <summary>Turns AiPulse's curated knowledge base and recent feed items into <see cref="KnowledgeDocument"/>s. Pure: no I/O, so it can be tested directly.</summary>
+/// <summary>Turns Lumen's curated knowledge base and recent feed items into <see cref="KnowledgeDocument"/>s. Pure: no I/O, so it can be tested directly.</summary>
 public static class KnowledgeCorpusBuilder
 {
     private const int MaxSummaryChars = 1200;

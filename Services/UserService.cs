@@ -335,8 +335,8 @@ public sealed class UserService
         if (user is null) return;
 
         var (token, url) = await CreateResetTokenAsync(db, user, buildResetUrl);
-        await _emailSender.SendAsync(email, "Reset your AiPulse password",
-            $"Someone requested a password reset for your AiPulse account.\n\nReset it here (valid 1 hour): {url}\n\nIf this wasn't you, ignore this email.");
+        await _emailSender.SendAsync(email, "Reset your Lumen password",
+            $"Someone requested a password reset for your Lumen account.\n\nReset it here (valid 1 hour): {url}\n\nIf this wasn't you, ignore this email.");
     }
 
     /// <summary>Admin escape hatch when no SMTP is configured at all - returns the raw URL directly so Users.razor can show it inline for the admin to copy and hand to the user.</summary>

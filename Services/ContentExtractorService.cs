@@ -6,7 +6,7 @@ namespace AiPulse.Services;
 
 /// <summary>
 /// Fetches an article's full HTML and extracts the main readable content, for feeds that only publish a
-/// teaser summary - so you can read the whole thing in AiPulse instead of clicking out. A simple
+/// teaser summary - so you can read the whole thing in Lumen instead of clicking out. A simple
 /// readability heuristic (prefer &lt;article&gt;/&lt;main&gt;, else the densest text block), not AI.
 /// Results are cached by URL for the life of the process so repeated polls don't re-fetch the same page.
 /// </summary>

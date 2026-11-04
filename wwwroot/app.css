@@ -227,24 +227,29 @@ h1:focus {
    hairline borders over heavy shadow, one signal accent.
    ============================================================ */
 :root {
-    --ap-bg: oklch(98% .006 200);
-    --ap-surface: oklch(99.2% .004 200);
-    --ap-surface-2: oklch(95.5% .008 200);
-    --ap-text: oklch(22% .02 220);
-    --ap-text-secondary: oklch(40% .018 215);
-    --ap-muted: oklch(52% .014 210);
-    --ap-link: oklch(48% .15 235);
-    --ap-border: oklch(90% .008 205);
-    --ap-border-strong: oklch(82% .012 205);
+    --ap-bg: oklch(98.4% .004 280);
+    --ap-surface: oklch(100% 0 0);
+    --ap-surface-2: oklch(96% .008 280);
+    --ap-text: oklch(21% .03 280);
+    --ap-text-secondary: oklch(38% .025 280);
+    --ap-muted: oklch(49% .02 280);
+    --ap-link: oklch(46% .19 275);
+    --ap-border: oklch(92% .01 280);
+    --ap-border-strong: oklch(84% .014 280);
 
-    --ap-accent: oklch(52% .13 200);
-    --ap-accent-hover: oklch(45% .13 200);
-    --ap-accent-2: oklch(68% .12 195);
-    --ap-accent-soft: oklch(93% .05 200);
-    --ap-accent-soft-text: oklch(32% .09 205);
+    --ap-accent: oklch(52% .22 280);
+    --ap-accent-hover: oklch(45% .22 280);
+    --ap-accent-2: oklch(66% .15 220);
+    --ap-accent-soft: oklch(95% .04 280);
+    --ap-accent-soft-text: oklch(34% .15 280);
     /* Text that sits ON the accent color (filled buttons). White passes on the light theme's deeper accent; the dark theme's accent is lighter, so it needs dark text. */
     --ap-on-accent: #fff;
     color-scheme: light;
+
+    /* Brand gradient: indigo to cyan, used sparingly (logo, hero, primary actions' glow, focus accents) */
+    --ap-gradient: linear-gradient(135deg, oklch(54% .23 285), oklch(66% .15 220));
+    --ap-gradient-soft: linear-gradient(135deg, oklch(96% .035 285), oklch(96% .03 220));
+    --ap-glow: 0 8px 28px oklch(52% .22 280 / .28);
 
     --ap-success: oklch(55% .15 150);
     --ap-success-soft: oklch(94% .05 150);
@@ -256,20 +261,21 @@ h1:focus {
     --ap-danger-soft: oklch(93% .06 20);
     --ap-danger-soft-text: oklch(35% .12 20);
 
-    /* Hairlines carry the structure; shadows are a barely-there lift, not blur-heavy depth */
-    --ap-shadow-sm: 0 1px 2px oklch(20% .02 220 / .06);
-    --ap-shadow-md: 0 4px 16px oklch(20% .02 220 / .08), 0 1px 3px oklch(20% .02 220 / .05);
-    --ap-radius-sm: 6px;
-    --ap-radius-md: 8px;
-    --ap-radius-lg: 12px;
+    /* Soft, tinted elevation instead of hairline-only: cards float a little, interactive ones lift on hover */
+    --ap-shadow-sm: 0 1px 2px oklch(25% .05 280 / .06), 0 1px 1px oklch(25% .05 280 / .04);
+    --ap-shadow-md: 0 8px 24px oklch(25% .06 280 / .09), 0 2px 6px oklch(25% .05 280 / .05);
+    --ap-shadow-lg: 0 18px 48px oklch(25% .07 280 / .14), 0 4px 12px oklch(25% .05 280 / .06);
+    --ap-radius-sm: 8px;
+    --ap-radius-md: 12px;
+    --ap-radius-lg: 18px;
 
     /* Sidebar follows the theme (see [data-theme="dark"] below for the dark variant) */
-    --ap-sidebar-bg: oklch(96% .008 200);
-    --ap-sidebar-border: oklch(90% .008 205);
-    --ap-sidebar-text: oklch(40% .018 215);
-    --ap-sidebar-text-active: oklch(20% .02 220);
-    --ap-sidebar-hover: oklch(20% .02 220 / .05);
-    --ap-sidebar-hover-strong: oklch(20% .02 220 / .09);
+    --ap-sidebar-bg: oklch(97% .008 280);
+    --ap-sidebar-border: oklch(92% .01 280);
+    --ap-sidebar-text: oklch(38% .025 280);
+    --ap-sidebar-text-active: oklch(20% .03 280);
+    --ap-sidebar-hover: oklch(25% .05 280 / .05);
+    --ap-sidebar-hover-strong: oklch(25% .05 280 / .09);
 }
 
 /* ============================================================
@@ -277,6 +283,9 @@ h1:focus {
    Default (no attribute) keeps the cyan values defined above. Each preset holds the
    same lightness/chroma discipline as the default, just rotated to a different hue.
    ============================================================ */
+[data-accent="cyan"] { --ap-accent: oklch(52% .13 200); --ap-accent-hover: oklch(45% .13 200); --ap-accent-2: oklch(68% .12 195); --ap-accent-soft: oklch(93% .05 200); --ap-accent-soft-text: oklch(32% .09 205); --ap-gradient: linear-gradient(135deg, oklch(52% .13 200), oklch(68% .12 195)); --ap-glow: 0 8px 28px oklch(52% .13 200 / .28); }
+[data-theme="dark"][data-accent="cyan"] { --ap-accent: oklch(74% .14 200); --ap-accent-hover: oklch(80% .13 200); --ap-accent-2: oklch(70% .12 195); --ap-accent-soft: oklch(30% .09 200 / .35); --ap-accent-soft-text: oklch(85% .08 200); --ap-gradient: linear-gradient(135deg, oklch(74% .14 200), oklch(70% .12 195)); }
+
 [data-accent="violet"] { --ap-accent: oklch(56% .19 300); --ap-accent-hover: oklch(48% .2 300); --ap-accent-2: oklch(68% .16 300); --ap-accent-soft: oklch(93% .06 300); --ap-accent-soft-text: oklch(34% .14 300); }
 [data-theme="dark"][data-accent="violet"] { --ap-accent: oklch(76% .15 300); --ap-accent-hover: oklch(82% .13 300); --ap-accent-2: oklch(70% .14 300); }
 
@@ -290,23 +299,27 @@ h1:focus {
 [data-theme="dark"][data-accent="emerald"] { --ap-accent: oklch(74% .15 155); --ap-accent-hover: oklch(80% .13 155); --ap-accent-2: oklch(68% .13 155); }
 
 [data-theme="dark"] {
-    --ap-bg: oklch(15% .014 220);
-    --ap-surface: oklch(19% .016 220);
-    --ap-surface-2: oklch(24% .018 218);
-    --ap-text: oklch(94% .01 210);
-    --ap-text-secondary: oklch(74% .014 210);
-    --ap-muted: oklch(68% .014 210);
-    --ap-link: oklch(78% .12 230);
-    --ap-border: oklch(28% .016 215);
-    --ap-border-strong: oklch(35% .018 215);
+    --ap-bg: oklch(14% .02 280);
+    --ap-surface: oklch(18.5% .024 280);
+    --ap-surface-2: oklch(23% .028 280);
+    --ap-text: oklch(95% .01 280);
+    --ap-text-secondary: oklch(76% .016 280);
+    --ap-muted: oklch(70% .016 280);
+    --ap-link: oklch(78% .13 275);
+    --ap-border: oklch(27% .026 280);
+    --ap-border-strong: oklch(35% .03 280);
 
-    --ap-accent: oklch(74% .14 200);
-    --ap-accent-hover: oklch(80% .13 200);
-    --ap-accent-2: oklch(70% .12 195);
-    --ap-accent-soft: oklch(30% .09 200 / .35);
-    --ap-accent-soft-text: oklch(85% .08 200);
-    --ap-on-accent: oklch(17% .02 220);
+    --ap-accent: oklch(72% .17 280);
+    --ap-accent-hover: oklch(78% .15 280);
+    --ap-accent-2: oklch(74% .13 215);
+    --ap-accent-soft: oklch(32% .12 280 / .4);
+    --ap-accent-soft-text: oklch(86% .09 280);
+    --ap-on-accent: oklch(16% .03 280);
     color-scheme: dark;
+
+    --ap-gradient: linear-gradient(135deg, oklch(66% .21 285), oklch(74% .13 215));
+    --ap-gradient-soft: linear-gradient(135deg, oklch(26% .06 285 / .55), oklch(26% .05 220 / .45));
+    --ap-glow: 0 8px 32px oklch(66% .21 285 / .35);
 
     --ap-success: oklch(72% .15 150);
     --ap-success-soft: oklch(30% .09 150 / .35);
@@ -318,13 +331,14 @@ h1:focus {
     --ap-danger-soft: oklch(32% .1 20 / .35);
     --ap-danger-soft-text: oklch(84% .1 20);
 
-    --ap-shadow-sm: 0 1px 2px oklch(0% 0 0 / .35);
-    --ap-shadow-md: 0 8px 24px oklch(0% 0 0 / .4), 0 2px 6px oklch(0% 0 0 / .3);
+    --ap-shadow-sm: 0 1px 2px oklch(0% 0 0 / .4);
+    --ap-shadow-md: 0 8px 24px oklch(0% 0 0 / .42), 0 2px 6px oklch(0% 0 0 / .3);
+    --ap-shadow-lg: 0 20px 56px oklch(0% 0 0 / .5), 0 4px 14px oklch(0% 0 0 / .35);
 
-    --ap-sidebar-bg: oklch(13% .014 220);
-    --ap-sidebar-border: oklch(24% .016 218);
-    --ap-sidebar-text: oklch(66% .014 210);
-    --ap-sidebar-text-active: oklch(97% .006 210);
+    --ap-sidebar-bg: oklch(12% .02 280);
+    --ap-sidebar-border: oklch(23% .026 280);
+    --ap-sidebar-text: oklch(68% .016 280);
+    --ap-sidebar-text-active: oklch(97% .008 280);
     --ap-sidebar-hover: oklch(100% 0 0 / .06);
     --ap-sidebar-hover-strong: oklch(100% 0 0 / .1);
 }
@@ -749,14 +763,6 @@ a.card:hover { transform: translateY(-1px); }
     cursor: pointer; padding: 0;
 }
 .accent-swatch:hover { border-color: var(--ap-text); transform: scale(1.08); }
-
-/* Logo picker swatches (Settings > Appearance) */
-.logo-swatch {
-    width: 72px; height: 44px; border-radius: 8px; border: 2px solid var(--ap-border);
-    cursor: pointer; padding: 4px; background: #fff; display: flex; align-items: center; justify-content: center;
-}
-.logo-swatch img { max-width: 100%; max-height: 100%; }
-.logo-swatch:hover { border-color: var(--ap-accent); }
 
 /* Custom Dashboard widgets (Settings > Dashboard widgets) */
 .dashboard-widget-frame { width: 100%; height: 320px; border: 0; border-radius: 0 0 var(--ap-radius, 8px) var(--ap-radius, 8px); }

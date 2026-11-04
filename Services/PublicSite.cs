@@ -73,7 +73,7 @@ public static class PublicSite
     public static string Robots(string origin)
     {
         var sb = new StringBuilder();
-        sb.Append("# AiPulse is mostly a signed-in dashboard, but the pages in its public menu are open to everyone and worth indexing.\n");
+        sb.Append("# Lumen is mostly a signed-in dashboard, but the pages in its public menu are open to everyone and worth indexing.\n");
         sb.Append("# Everything not listed here (the dashboard, member pages, admin screens, profiles) stays off limits.\n");
         sb.Append("# Allow: /$ matches the exact root only; the rest of the site still falls under Disallow: /, because Google and Bing\n");
         sb.Append("# resolve overlapping rules by specificity.\n");

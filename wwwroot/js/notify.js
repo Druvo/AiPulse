@@ -1,4 +1,4 @@
-// Browser desktop-notification helpers for AiPulse.
+// Browser desktop-notification helpers for Lumen.
 window.aipulseNotify = {
     async requestPermission() {
         if (!("Notification" in window)) return "unsupported";
