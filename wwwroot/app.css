@@ -1245,3 +1245,8 @@ pre code { color: inherit; }
 /* A long unbroken name (a GitHub "owner/repository", a URL) in a flex row beside a badge used to push the row wider than a 320px
    screen; flex children refuse to shrink below their content unless told they may. */
 .card-body .d-flex > a { min-width: 0; overflow-wrap: anywhere; }
+
+.coverage-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 18rem), 1fr)); gap: .35rem .75rem; }
+.coverage-item { display: flex; flex-wrap: wrap; align-items: baseline; gap: .4rem; padding: .35rem 0; border-bottom: 1px solid var(--ap-border); min-width: 0; }
+.coverage-item__name { font-weight: 600; overflow-wrap: anywhere; }
+.coverage-item__site { color: var(--ap-muted); overflow-wrap: anywhere; }

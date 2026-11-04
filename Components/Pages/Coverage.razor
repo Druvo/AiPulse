@@ -1,0 +1,48 @@
+@page "/coverage"
+@inject KnowledgeBaseService Kb
+
+<PageTitle>AiPulse · Coverage</PageTitle>
+
+<div class="page-header">
+    <h1><Icon Name="database" Size="22" /> What AiPulse follows</h1>
+    <p class="lead">Every source behind the news feed, grouped by kind. Nothing is hidden: if a story shows up, it came from one of these.</p>
+</div>
+
+@{
+    var sources = Kb.Sources.Where(s => s.Enabled).ToList();
+    var groups = sources.GroupBy(s => s.Category).OrderByDescending(g => g.Count()).ThenBy(g => g.Key).ToList();
+}
+
+@if (sources.Count == 0)
+{
+    <div class="alert alert-light">No sources are switched on yet.</div>
+}
+else
+{
+    <p class="text-muted">@sources.Count sources in @groups.Count categories.</p>
+    @foreach (var group in groups)
+    {
+        <h2 class="h5 section-title mt-4">@group.Key <span class="text-muted fw-normal small">(@group.Count())</span></h2>
+        <ul class="coverage-list list-unstyled mb-0">
+            @foreach (var s in group.OrderBy(s => s.Name, StringComparer.OrdinalIgnoreCase))
+            {
+                <li class="coverage-item">
+                    <span class="coverage-item__name">@s.Name</span>
+                    <span class="badge bg-secondary">@s.ContentType</span>
+                    @if (SiteOf(s) is { } site)
+                    {
+                        <a class="coverage-item__site small" href="@site" target="_blank" rel="noopener noreferrer">@(new Uri(site).Host)</a>
+                    }
+                </li>
+            }
+        </ul>
+    }
+}
+
+<p class="text-muted small mt-4">Want to follow it all yourself? <a href="feed.xml">Subscribe to the Atom feed</a> or browse <a href="topics">Topics</a>.</p>
+
+@code {
+    /// <summary>The source's own site (scheme + host), not the feed address, which is often an internal-looking path.</summary>
+    private static string? SiteOf(AiPulse.Models.FeedSource s) =>
+        Uri.TryCreate(s.Url, UriKind.Absolute, out var u) && (u.Scheme == Uri.UriSchemeHttp || u.Scheme == Uri.UriSchemeHttps) ? $"{u.Scheme}://{u.Host}" : null;
+}
