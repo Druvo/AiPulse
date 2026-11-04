@@ -1,0 +1,10 @@
+@* Light/dark switch for the public pages and login screens. The theme itself (saved choice, OS default, attribute on <html>) lives in
+   App.razor's early script so there is no flash of the wrong theme; this is just the button. *@
+<button type="button" class="theme-switch @CssClass" onclick="toggleTheme()" title="Switch between light and dark theme" aria-label="Switch between light and dark theme">
+    <Icon Name="sun" Size="18" CssClass="icon-light" />
+    <Icon Name="moon" Size="18" CssClass="icon-dark" />
+</button>
+
+@code {
+    [Parameter] public string? CssClass { get; set; }
+}

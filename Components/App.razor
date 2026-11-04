@@ -14,13 +14,20 @@
     <link rel="stylesheet" href="bootstrap/bootstrap.min.css" />
     <link rel="stylesheet" href="app.css" />
     <link rel="stylesheet" href="AiPulse.styles.css" />
+    <meta name="theme-color" content="#f4f9fa" />
     <link rel="icon" type="image/png" href="favicon.png" />
     <HeadOutlet />
     <script>
         // Apply the saved theme/accent/custom-CSS immediately (avoids a flash of the wrong appearance).
+        // localStorage can throw (blocked cookies, some private modes); a missing saved choice must never break the page.
+        function savedTheme() { try { return localStorage.getItem('aipulse-theme'); } catch (e) { return null; } }
+        function systemTheme() { return window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'; }
         function applyTheme() {
-            var t = localStorage.getItem('aipulse-theme') || 'light';
+            // A choice the person made always wins; with none saved, follow the operating system (so dark-mode users get dark on first visit).
+            var t = savedTheme() || systemTheme();
             document.documentElement.setAttribute('data-theme', t);
+            var bar = document.querySelector('meta[name="theme-color"]');
+            if (bar) bar.setAttribute('content', t === 'dark' ? '#0b1114' : '#f4f9fa');
             var accent = localStorage.getItem('aipulse-accent');
             if (accent) document.documentElement.setAttribute('data-accent', accent);
             else document.documentElement.removeAttribute('data-accent');
@@ -41,7 +48,16 @@
         function toggleTheme() {
             var cur = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
             document.documentElement.setAttribute('data-theme', cur);
-            localStorage.setItem('aipulse-theme', cur);
+            try { localStorage.setItem('aipulse-theme', cur); } catch (e) { }
+            var bar = document.querySelector('meta[name="theme-color"]');
+            if (bar) bar.setAttribute('content', cur === 'dark' ? '#0b1114' : '#f4f9fa');
+        }
+        // Until someone picks a theme, keep following the operating system if it flips (e.g. automatic dark at sunset).
+        if (window.matchMedia) {
+            var watcher = window.matchMedia('(prefers-color-scheme: dark)');
+            var onSystemChange = function () { if (!savedTheme()) applyTheme(); };
+            if (watcher.addEventListener) watcher.addEventListener('change', onSystemChange);
+            else if (watcher.addListener) watcher.addListener(onSystemChange);
         }
         function setAccent(name) {
             if (name) { document.documentElement.setAttribute('data-accent', name); localStorage.setItem('aipulse-accent', name); }

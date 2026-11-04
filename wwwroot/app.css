@@ -173,7 +173,7 @@ html, body {
 }
 
 a, .btn-link {
-    color: #006bb7;
+    color: var(--ap-link);
 }
 
 .btn-primary {
@@ -233,14 +233,18 @@ h1:focus {
     --ap-text: oklch(22% .02 220);
     --ap-text-secondary: oklch(40% .018 215);
     --ap-muted: oklch(52% .014 210);
+    --ap-link: oklch(48% .15 235);
     --ap-border: oklch(90% .008 205);
     --ap-border-strong: oklch(82% .012 205);
 
-    --ap-accent: oklch(58% .14 200);
-    --ap-accent-hover: oklch(50% .15 200);
+    --ap-accent: oklch(52% .13 200);
+    --ap-accent-hover: oklch(45% .13 200);
     --ap-accent-2: oklch(68% .12 195);
     --ap-accent-soft: oklch(93% .05 200);
     --ap-accent-soft-text: oklch(32% .09 205);
+    /* Text that sits ON the accent color (filled buttons). White passes on the light theme's deeper accent; the dark theme's accent is lighter, so it needs dark text. */
+    --ap-on-accent: #fff;
+    color-scheme: light;
 
     --ap-success: oklch(55% .15 150);
     --ap-success-soft: oklch(94% .05 150);
@@ -291,7 +295,8 @@ h1:focus {
     --ap-surface-2: oklch(24% .018 218);
     --ap-text: oklch(94% .01 210);
     --ap-text-secondary: oklch(74% .014 210);
-    --ap-muted: oklch(58% .014 210);
+    --ap-muted: oklch(68% .014 210);
+    --ap-link: oklch(78% .12 230);
     --ap-border: oklch(28% .016 215);
     --ap-border-strong: oklch(35% .018 215);
 
@@ -300,6 +305,8 @@ h1:focus {
     --ap-accent-2: oklch(70% .12 195);
     --ap-accent-soft: oklch(30% .09 200 / .35);
     --ap-accent-soft-text: oklch(85% .08 200);
+    --ap-on-accent: oklch(17% .02 220);
+    color-scheme: dark;
 
     --ap-success: oklch(72% .15 150);
     --ap-success-soft: oklch(30% .09 150 / .35);
@@ -382,11 +389,14 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
 }
 .card:hover { box-shadow: var(--ap-shadow-md); border-color: var(--ap-border-strong); }
 a.card:hover { transform: translateY(-1px); }
-.card .text-muted { color: var(--ap-muted) !important; }
+/* Everywhere, not only inside .card: the login and register screens use .login-card and were left with Bootstrap's fixed gray. */
+.text-muted { color: var(--ap-muted) !important; }
+.text-danger { color: var(--ap-danger) !important; }
 
 /* Buttons */
 .btn { border-radius: var(--ap-radius-sm); font-weight: 500; }
 .btn-primary {
+    color: var(--ap-on-accent);
     background-color: var(--ap-accent);
     border-color: var(--ap-accent);
     box-shadow: var(--ap-shadow-sm);
@@ -396,7 +406,7 @@ a.card:hover { transform: translateY(-1px); }
     border-color: var(--ap-accent-hover);
 }
 .btn-outline-primary { color: var(--ap-accent); border-color: var(--ap-accent); }
-.btn-outline-primary:hover { background-color: var(--ap-accent); border-color: var(--ap-accent); }
+.btn-outline-primary:hover { color: var(--ap-on-accent); background-color: var(--ap-accent); border-color: var(--ap-accent); }
 .btn-outline-dark, .btn-outline-secondary { color: var(--ap-text-secondary); border-color: var(--ap-border-strong); }
 .btn-outline-dark:hover, .btn-outline-secondary:hover {
     background-color: var(--ap-surface-2); border-color: var(--ap-border-strong); color: var(--ap-text);
@@ -965,7 +975,7 @@ a.heatmap-cell:hover { outline: 2px solid var(--ap-accent-hover); }
 .month-calendar { max-width: 420px; }
 .month-calendar-header { display: flex; align-items: center; justify-content: center; gap: 0.5rem; margin-bottom: 0.5rem; }
 .month-calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 3px; }
-.month-calendar-weekday { text-align: center; font-size: 0.7rem; color: var(--ap-text-muted, #888); text-transform: uppercase; padding-bottom: 2px; }
+.month-calendar-weekday { text-align: center; font-size: 0.7rem; color: var(--ap-muted); text-transform: uppercase; padding-bottom: 2px; }
 .month-calendar-cell {
     position: relative;
     aspect-ratio: 1 / 1;
@@ -1167,3 +1177,43 @@ a.heatmap-cell:hover { outline: 2px solid var(--ap-accent-hover); }
     color: var(--ap-accent-soft-text);
 }
 .ai-summary-error { background: var(--ap-warning-soft); border-left-color: var(--ap-warning); color: var(--ap-warning-soft-text); }
+
+/* ---------- Light/dark switch for the public pages and login screens (the signed-in sidebar has its own .theme-toggle) ---------- */
+.theme-switch {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    width: 2.75rem;
+    height: 2.75rem;
+    padding: 0;
+    color: var(--ap-text-secondary);
+    background: transparent;
+    border: 1px solid var(--ap-border-strong);
+    border-radius: var(--ap-radius-sm);
+    cursor: pointer;
+    transition: background var(--ap-dur-fast) var(--ap-ease-out), color var(--ap-dur-fast) var(--ap-ease-out);
+}
+.theme-switch:hover { color: var(--ap-text); background: var(--ap-surface-2); }
+.theme-switch:focus-visible { outline: 2px solid var(--ap-accent); outline-offset: 2px; }
+/* The icon shows where a click takes you: the moon in the light theme, the sun in the dark one. */
+.theme-switch .icon-light { display: none; }
+[data-theme="dark"] .theme-switch .icon-light { display: inline-block; }
+[data-theme="dark"] .theme-switch .icon-dark { display: none; }
+.theme-switch--floating { position: fixed; top: 1rem; right: 1rem; z-index: 5; }
+
+/* ---------- Themed alerts and success text ----------
+   Bootstrap's alert and text-success colors are fixed light-theme values; in the dark theme they left pale boxes with light text
+   (e.g. the "new items ready" banner on /news) and a green that missed AA. They now follow the same soft/soft-text pairs as the badges. */
+.alert { color: var(--ap-text); border-color: var(--ap-border); }
+.alert-success { background-color: var(--ap-success-soft); color: var(--ap-success-soft-text); border-color: transparent; }
+.alert-warning { background-color: var(--ap-warning-soft); color: var(--ap-warning-soft-text); border-color: transparent; }
+.alert-danger  { background-color: var(--ap-danger-soft);  color: var(--ap-danger-soft-text);  border-color: transparent; }
+.alert-info, .alert-secondary { background-color: var(--ap-accent-soft); color: var(--ap-accent-soft-text); border-color: transparent; }
+.alert-light { background-color: var(--ap-surface-2); color: var(--ap-text); border-color: var(--ap-border); }
+.alert a { color: inherit; text-decoration: underline; }
+.text-success { color: var(--ap-success-soft-text) !important; }
+.text-primary { color: var(--ap-link) !important; }
+/* Bootstrap's inline-code pink fails AA on both themes' surfaces. */
+code { color: var(--ap-accent-soft-text); }
+pre code { color: inherit; }

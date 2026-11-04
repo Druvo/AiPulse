@@ -107,9 +107,11 @@ body { overflow-x: clip; }
     outline: 2px solid var(--ap-accent);
     outline-offset: 2px;
 }
+/* "a.landing-btn--fill" on purpose: ".landing a { color: inherit }" above outranks a bare class, which left this button with the page text color. */
+.landing a.landing-btn--fill,
 .landing-btn--fill {
     background: var(--ap-accent);
-    color: white;
+    color: var(--ap-on-accent);
     border: 1px solid transparent;
 }
 .landing-btn--fill:hover { background: var(--ap-accent-hover); transform: translateY(-1px); }
@@ -306,7 +308,7 @@ body { overflow-x: clip; }
     font-size: .82rem;
     font-weight: 600;
     text-decoration: none;
-    color: var(--ap-accent);
+    color: var(--ap-link);
 }
 .bento-cell .bento-link:hover { text-decoration: underline; }
 .bento-badge {
@@ -351,3 +353,6 @@ body { overflow-x: clip; }
 @media (prefers-reduced-motion: reduce) {
     .landing-hero__live .live-dot { animation: none; }
 }
+
+/* The theme switch sits beside Sign in / Get started in the landing nav. */
+.landing-nav__right { display: flex; align-items: center; gap: .5rem; }
