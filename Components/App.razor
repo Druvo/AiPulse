@@ -4,7 +4,6 @@
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="theme-color" content="#00919b" />
     <meta property="og:type" content="website" />
     <meta property="og:image" content="favicon.png" />
     @* description/og:title/og:description are set per-layout below (MainLayout vs. Login/Register's own
@@ -16,6 +15,12 @@
     <link rel="stylesheet" href="AiPulse.styles.css" />
     <meta name="theme-color" content="#f4f9fa" />
     <link rel="icon" type="image/png" href="favicon.png" />
+    <link rel="manifest" href="manifest.webmanifest" />
+    <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="AiPulse" />
+    <link rel="alternate" type="application/atom+xml" title="AiPulse - latest AI news" href="feed.xml" />
     <HeadOutlet />
     <script>
         // Apply the saved theme/accent/custom-CSS immediately (avoids a flash of the wrong appearance).
@@ -154,6 +159,12 @@
     <script src="js/playground.js"></script>
     <script src="js/keyboard.js"></script>
     <script src="js/scrollTop.js"></script>
+    <script>
+        // Makes the site installable ("Add to home screen") and gives a friendly page when offline. Needs https or localhost.
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', function () { navigator.serviceWorker.register('sw.js').catch(function () { }); });
+        }
+    </script>
 </body>
 
 </html>

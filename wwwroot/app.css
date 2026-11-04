@@ -1217,3 +1217,31 @@ a.heatmap-cell:hover { outline: 2px solid var(--ap-accent-hover); }
 /* Bootstrap's inline-code pink fails AA on both themes' surfaces. */
 code { color: var(--ap-accent-soft-text); }
 pre code { color: inherit; }
+
+/* ---------- Public topic / release pages ---------- */
+.topic-cloud { display: flex; flex-wrap: wrap; gap: .5rem; padding: 0; }
+.topic-chip {
+    display: inline-flex; align-items: center; gap: .5rem;
+    min-height: 2.75rem; padding: 0 1rem;
+    color: var(--ap-text); text-decoration: none;
+    background: var(--ap-surface); border: 1px solid var(--ap-border-strong); border-radius: 999px;
+    /* Busier topics read a little stronger: border and tint grow with --weight (0-100). */
+    background-image: linear-gradient(var(--ap-accent-soft), var(--ap-accent-soft));
+    background-size: calc(var(--weight, 0) * 1%) 100%; background-repeat: no-repeat;
+    transition: border-color var(--ap-dur-fast) var(--ap-ease-out);
+}
+.topic-chip:hover { border-color: var(--ap-accent); color: var(--ap-text); }
+.topic-chip__name { font-weight: 600; }
+.topic-chip__count { font-size: .8rem; color: var(--ap-muted); font-variant-numeric: tabular-nums; }
+
+.public-items { display: flex; flex-direction: column; }
+.public-item { padding: .85rem 0; border-bottom: 1px solid var(--ap-border); }
+.public-item:last-child { border-bottom: 0; }
+.public-item__title { font-weight: 600; font-size: 1.02rem; line-height: 1.35; overflow-wrap: anywhere; text-decoration: none; }
+.public-item__title:hover { text-decoration: underline; }
+.public-item__meta { display: flex; flex-wrap: wrap; gap: .35rem; margin-top: .2rem; font-size: .82rem; color: var(--ap-muted); }
+.public-item__tags { display: flex; flex-wrap: wrap; gap: .35rem; margin-top: .4rem; }
+
+/* A long unbroken name (a GitHub "owner/repository", a URL) in a flex row beside a badge used to push the row wider than a 320px
+   screen; flex children refuse to shrink below their content unless told they may. */
+.card-body .d-flex > a { min-width: 0; overflow-wrap: anywhere; }

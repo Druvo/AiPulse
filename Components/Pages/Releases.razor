@@ -1,0 +1,20 @@
+@page "/releases"
+@using AiPulse.Services
+@inject FeedHistoryService History
+
+<PageTitle>AiPulse · Releases</PageTitle>
+
+<div class="page-header">
+    <h1><Icon Name="zap" Size="22" /> Releases</h1>
+    <p class="lead">New versions of the AI libraries, models and tools AiPulse follows, as they are published.</p>
+</div>
+
+<PublicItemList Items="_items" ShowTags="false" EmptyText="No releases collected yet." />
+
+<p class="text-muted small mt-4">Headlines and analysis are on the <a href="news">News Feed</a>; the busiest subjects are under <a href="topics">Topics</a>.</p>
+
+@code {
+    private IReadOnlyList<AiPulse.Models.FeedItem> _items = Array.Empty<AiPulse.Models.FeedItem>();
+
+    protected override void OnInitialized() => _items = PublicFeeds.Releases(History.Items, DateTimeOffset.UtcNow);
+}

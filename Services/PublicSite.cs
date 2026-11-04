@@ -15,7 +15,9 @@ public static class PublicSite
     public static readonly IReadOnlyList<PublicPage> Menu = new[]
     {
         new PublicPage("/news", "News Feed", "daily", 0.9),
+        new PublicPage("/topics", "Topics", "daily", 0.8),
         new PublicPage("/explore", "Explore", "daily", 0.8),
+        new PublicPage("/releases", "Releases", "daily", 0.7),
         new PublicPage("/glossary", "Glossary", "weekly", 0.7),
         new PublicPage("/tools", "Tools & Tips", "weekly", 0.7),
         new PublicPage("/help", "Help", "monthly", 0.5),
@@ -36,14 +38,20 @@ public static class PublicSite
     /// </summary>
     public static readonly IReadOnlyList<string> UnlistedPublicRoutes = new[]
     {
-        "/forgot-password", "/reset-password", "/access-denied", "/u/{Username}", "/Error"
+        "/forgot-password", "/reset-password", "/access-denied", "/u/{Username}", "/Error",
+        // Reached from /topics; the sitemap lists the busiest ones individually (see Sitemap's extraPaths).
+        "/topics/{Tag}"
     };
+
+    /// <summary>Machine-readable endpoints crawlers and feed readers may fetch (not pages, so not in the menu).</summary>
+    public static readonly IReadOnlyList<string> Feeds = new[] { "/feed.xml" };
 
     /// <summary>Every path a crawler may fetch.</summary>
     public static IEnumerable<string> CrawlablePaths =>
-        new[] { LandingPath }.Concat(Menu.Select(p => p.Path)).Concat(Entry.Select(p => p.Path)).Append("/forgot-password");
+        new[] { LandingPath }.Concat(Menu.Select(p => p.Path)).Concat(Entry.Select(p => p.Path)).Concat(Feeds).Append("/forgot-password");
 
-    public static string Sitemap(string origin)
+    /// <param name="extraPaths">Dynamic public pages worth indexing, e.g. the busiest /topics/{tag} pages.</param>
+    public static string Sitemap(string origin, IEnumerable<string>? extraPaths = null)
     {
         var sb = new StringBuilder();
         sb.Append("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<urlset xmlns=\"http://www.sitemaps.org/schemas/sitemap/0.9\">\n");
@@ -54,6 +62,8 @@ public static class PublicSite
         Add(LandingPath, "weekly", 1.0);
         foreach (var page in Menu) Add(page.Path, page.ChangeFrequency, page.Priority);
         foreach (var page in Entry) Add(page.Path, page.ChangeFrequency, page.Priority);
+
+        foreach (var path in extraPaths ?? Enumerable.Empty<string>()) Add(path, "daily", 0.5);
 
         sb.Append("</urlset>\n");
         return sb.ToString();

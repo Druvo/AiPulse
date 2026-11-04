@@ -86,6 +86,14 @@ body { overflow-x: clip; }
 
 @media (max-width: 56.25rem) {
     .landing-nav__center { display: none; }
+    /* With the middle links gone, two equal 1fr columns left the right-hand buttons only half the bar and pushed "Get started" off a phone screen. */
+    .landing-nav__inner { grid-template-columns: 1fr auto; }
+}
+@media (max-width: 26rem) {
+    .landing-nav__right { gap: .25rem; }
+    .landing-nav__right .landing-btn { padding-inline: .75rem; }
+    /* The logo mark alone is enough here; the name returns from 26rem up. */
+    .landing-nav__brand span { display: none; }
 }
 
 /* ---------- Buttons (CTA voice per design.md: solid fill primary, outline secondary, radius-sm, no pills) ---------- */

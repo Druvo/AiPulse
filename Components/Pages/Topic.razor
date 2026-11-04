@@ -1,0 +1,25 @@
+@page "/topics/{Tag}"
+@using AiPulse.Services
+@inject FeedHistoryService History
+
+<PageTitle>AiPulse · @Tag</PageTitle>
+
+<div class="page-header">
+    <p class="mb-1 small"><a href="topics">← All topics</a></p>
+    <h1><Icon Name="trending-up" Size="22" /> @Tag</h1>
+    <p class="lead">@(_items.Count == 0 ? "No stories under this topic yet." : $"The latest {_items.Count} stories tagged {Tag}, newest first.")</p>
+</div>
+
+<PublicItemList Items="_items" EmptyText="Nothing has been tagged with this topic. Try another from the topic list." ShowTags="false" />
+
+<p class="text-muted small mt-4">
+    <a href="@($"feed.xml?tag={Uri.EscapeDataString(Tag)}")"><Icon Name="rss" Size="14" /> Follow this topic in a feed reader</a>
+</p>
+
+@code {
+    [Parameter] public string Tag { get; set; } = "";
+
+    private IReadOnlyList<AiPulse.Models.FeedItem> _items = Array.Empty<AiPulse.Models.FeedItem>();
+
+    protected override void OnParametersSet() => _items = PublicFeeds.ForTag(History.Items, Tag);
+}

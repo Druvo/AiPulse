@@ -299,8 +299,25 @@ app.MapGet("/auth/external/{provider}", async (string provider, OAuthSettingsSer
 // sitemap.xml and robots.txt are generated at request time from the request's own Host header, not static files - AiPulse is
 // self-hosted with no fixed domain, so a committed copy would bake one deployment's URL (e.g. the maintainer's own demo
 // instance) into every other self-hoster's repo. Both are built from PublicSite, the same list the public menus use.
-app.MapGet("/sitemap.xml", (HttpRequest request) =>
-    Results.Text(PublicSite.Sitemap($"{request.Scheme}://{request.Host}"), "application/xml"));
+app.MapGet("/sitemap.xml", (HttpRequest request, FeedHistoryService history) =>
+{
+    var now = DateTimeOffset.UtcNow;
+    var topics = PublicFeeds.Topics(history.Items, now.AddDays(-30), take: 30).Select(t => PublicFeeds.TagPath(t.Tag));
+    return Results.Text(PublicSite.Sitemap($"{request.Scheme}://{request.Host}", topics), "application/xml");
+});
+
+// Public Atom feed of the latest deduplicated headlines (optionally one topic: /feed.xml?tag=agents), so the news can be followed from
+// any feed reader without an account. Release notes stay out; they have their own page.
+app.MapGet("/feed.xml", (HttpRequest request, FeedHistoryService history, string? tag) =>
+{
+    var now = DateTimeOffset.UtcNow;
+    var origin = $"{request.Scheme}://{request.Host}";
+    var wanted = string.IsNullOrWhiteSpace(tag) ? null : tag.Trim();
+    var items = wanted is null ? history.Items.Where(PublicFeeds.IsHeadline).Take(PublicFeeds.FeedLimit).ToList() : PublicFeeds.ForTag(history.Items, wanted, PublicFeeds.FeedLimit).ToList();
+    var self = wanted is null ? "/feed.xml" : "/feed.xml?tag=" + Uri.EscapeDataString(wanted);
+    var title = wanted is null ? "AiPulse - latest AI news" : $"AiPulse - {wanted}";
+    return Results.Text(PublicFeeds.Atom(items, origin, title, self, now), "application/atom+xml; charset=utf-8");
+});
 
 app.MapGet("/robots.txt", (HttpRequest request) =>
     Results.Text(PublicSite.Robots($"{request.Scheme}://{request.Host}"), "text/plain"));

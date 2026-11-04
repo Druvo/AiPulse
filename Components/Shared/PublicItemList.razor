@@ -1,0 +1,44 @@
+@* Read-only list of headlines for the open pages (topics, releases). Plain server-rendered markup with no circuit behind it, so it
+   is light on phones and fully visible to crawlers. The signed-in News page keeps its own richer cards. *@
+@using AiPulse.Models
+
+@if (Items.Count == 0)
+{
+    <div class="alert alert-light mb-0">@EmptyText</div>
+}
+else
+{
+    <ul class="public-items list-unstyled mb-0">
+        @foreach (var item in Items)
+        {
+            <li class="public-item">
+                <a class="public-item__title" href="@item.Link" target="_blank" rel="noopener noreferrer">@item.Title</a>
+                <div class="public-item__meta">
+                    <span>@item.SourceName</span>
+                    <span aria-hidden="true">·</span>
+                    <time datetime="@item.Published.UtcDateTime.ToString("yyyy-MM-dd'T'HH:mm'Z'")">@item.Published.LocalDateTime.ToString("d MMM yyyy")</time>
+                    @if (item.AlsoSeenOn.Length > 0)
+                    {
+                        <span aria-hidden="true">·</span>
+                        <span>also on @string.Join(", ", item.AlsoSeenOn.Take(2))</span>
+                    }
+                </div>
+                @if (ShowTags && item.Tags.Length > 0)
+                {
+                    <div class="public-item__tags">
+                        @foreach (var tag in item.Tags.Take(5))
+                        {
+                            <a class="badge bg-secondary text-decoration-none" href="@PublicFeeds.TagPath(tag)">@tag</a>
+                        }
+                    </div>
+                }
+            </li>
+        }
+    </ul>
+}
+
+@code {
+    [Parameter, EditorRequired] public IReadOnlyList<FeedItem> Items { get; set; } = Array.Empty<FeedItem>();
+    [Parameter] public bool ShowTags { get; set; } = true;
+    [Parameter] public string EmptyText { get; set; } = "Nothing here yet.";
+}

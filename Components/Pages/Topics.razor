@@ -1,0 +1,39 @@
+@page "/topics"
+@using AiPulse.Services
+@inject FeedHistoryService History
+
+<PageTitle>AiPulse · Topics</PageTitle>
+
+<div class="page-header">
+    <h1><Icon Name="trending-up" Size="22" /> Topics</h1>
+    <p class="lead">What the AI world has been writing about in the last 30 days, grouped by topic. Pick one to see only those stories.</p>
+</div>
+
+@{
+    var topics = PublicFeeds.Topics(History.Items, DateTimeOffset.UtcNow.AddDays(-30));
+    var top = topics.Count > 0 ? topics[0].Count : 1;
+}
+
+@if (topics.Count == 0)
+{
+    <div class="alert alert-light">No topics yet. They appear once the first news has been collected.</div>
+}
+else
+{
+    <ul class="topic-cloud list-unstyled">
+        @foreach (var topic in topics)
+        {
+            <li>
+                <a class="topic-chip" href="@PublicFeeds.TagPath(topic.Tag)" style="--weight: @((topic.Count * 100 / top).ToString())">
+                    <span class="topic-chip__name">@topic.Tag</span>
+                    <span class="topic-chip__count">@topic.Count</span>
+                </a>
+            </li>
+        }
+    </ul>
+}
+
+<p class="text-muted small mt-4">
+    Prefer a feed reader? <a href="feed.xml"><Icon Name="rss" Size="14" /> Subscribe to the Atom feed</a>.
+    New releases of AI libraries and tools are on <a href="releases">Releases</a>.
+</p>

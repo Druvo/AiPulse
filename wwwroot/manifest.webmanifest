@@ -1,0 +1,21 @@
+{
+  "name": "AiPulse",
+  "short_name": "AiPulse",
+  "description": "Self-hosted AI news, tools and learning dashboard.",
+  "id": "/",
+  "start_url": "/news?source=pwa",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#0b1114",
+  "theme_color": "#0b1114",
+  "orientation": "any",
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "shortcuts": [
+    { "name": "News Feed", "url": "/news", "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192" }] },
+    { "name": "Ask AiPulse", "url": "/ask", "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192" }] }
+  ]
+}
