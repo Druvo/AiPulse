@@ -324,6 +324,7 @@
   {
     "Name": "r/artificial",
     "Url": "https://www.reddit.com/r/artificial/.rss",
+    "Enabled": false,
     "Category": "Community",
     "Note": "General AI news and discussion, broader and more beginner-friendly than r/MachineLearning.",
     "ContentType": "Discussion",
@@ -362,6 +363,7 @@
   {
     "Name": "r/LangChain",
     "Url": "https://www.reddit.com/r/LangChain/.rss",
+    "Enabled": false,
     "Category": "Community",
     "Note": "Agent/RAG framework community - build questions, patterns, and showcases.",
     "ContentType": "Discussion",
@@ -525,6 +527,7 @@
   {
     "Name": "r/Agent_AI",
     "Url": "https://www.reddit.com/r/Agent_AI/.rss",
+    "Enabled": false,
     "Category": "Community",
     "Note": "AI agents that plan, execute, learn autonomously.",
     "ContentType": "Discussion",
@@ -548,6 +551,7 @@
   {
     "Name": "r/AI_Tools_Land",
     "Url": "https://www.reddit.com/r/AI_Tools_Land/.rss",
+    "Enabled": false,
     "Category": "Community",
     "Note": "Best AI Tools.",
     "ContentType": "Discussion",
@@ -559,6 +563,7 @@
   {
     "Name": "r/AIAgentsInAction",
     "Url": "https://www.reddit.com/r/AIAgentsInAction/.rss",
+    "Enabled": false,
     "Category": "Community",
     "Note": "Automating tasks using AI.",
     "ContentType": "Discussion",
@@ -571,6 +576,7 @@
   {
     "Name": "r/AIAssisted",
     "Url": "https://www.reddit.com/r/AIAssisted/.rss",
+    "Enabled": false,
     "Category": "Community",
     "Note": "Real-world AI usage - prompts, tools, wins and fails.",
     "ContentType": "Discussion",
@@ -583,6 +589,7 @@
   {
     "Name": "r/AIDiscussion",
     "Url": "https://www.reddit.com/r/AIDiscussion/.rss",
+    "Enabled": false,
     "Category": "Community",
     "Note": "Technical and philosophical aspects of AI.",
     "ContentType": "Discussion",
@@ -594,6 +601,7 @@
   {
     "Name": "r/AIToolsAndTips",
     "Url": "https://www.reddit.com/r/AIToolsAndTips/.rss",
+    "Enabled": false,
     "Category": "Community",
     "Note": "Latest AI tools, automation hacks, productivity boosters.",
     "ContentType": "Discussion",
@@ -606,6 +614,7 @@
   {
     "Name": "r/Anthropic",
     "Url": "https://www.reddit.com/r/Anthropic/.rss",
+    "Enabled": false,
     "Category": "Community",
     "Note": "Anthropic and Claude community.",
     "ContentType": "Discussion",
@@ -618,6 +627,7 @@
   {
     "Name": "r/Bard",
     "Url": "https://www.reddit.com/r/Bard/.rss",
+    "Enabled": false,
     "Category": "Community",
     "Note": "Google Gemini (formerly Bard) AI discussions.",
     "ContentType": "Discussion",
@@ -630,6 +640,7 @@
   {
     "Name": "r/ChatGPT",
     "Url": "https://www.reddit.com/r/ChatGPT/.rss",
+    "Enabled": false,
     "Category": "Community",
     "Note": "ChatGPT and AI discussions.",
     "ContentType": "Discussion",
@@ -642,6 +653,7 @@
   {
     "Name": "r/ChatGPTCoding",
     "Url": "https://www.reddit.com/r/ChatGPTCoding/.rss",
+    "Enabled": false,
     "Category": "Community",
     "Note": "Coding with ChatGPT - interactions, tips, creations.",
     "ContentType": "Discussion",
@@ -654,6 +666,7 @@
   {
     "Name": "r/ChatGPTPro",
     "Url": "https://www.reddit.com/r/ChatGPTPro/.rss",
+    "Enabled": false,
     "Category": "Community",
     "Note": "Advanced/professional ChatGPT and LLM usage.",
     "ContentType": "Discussion",
@@ -678,6 +691,7 @@
   {
     "Name": "r/ClaudeMCP",
     "Url": "https://www.reddit.com/r/ClaudeMCP/.rss",
+    "Enabled": false,
     "Category": "Community",
     "Note": "Claude MCP - servers, tools, integrations, tutorials.",
     "ContentType": "Discussion",
@@ -690,6 +704,7 @@
   {
     "Name": "r/DeepSeek",
     "Url": "https://www.reddit.com/r/DeepSeek/.rss",
+    "Enabled": false,
     "Category": "Community",
     "Note": "DeepSeek AGI community.",
     "ContentType": "Discussion",
@@ -713,6 +728,7 @@
   {
     "Name": "r/GeminiCLI",
     "Url": "https://www.reddit.com/r/GeminiCLI/.rss",
+    "Enabled": false,
     "Category": "Community",
     "Note": "Gemini CLI features, tips, troubleshooting.",
     "ContentType": "Discussion",
@@ -725,6 +741,7 @@
   {
     "Name": "r/GeminiCodeAssist",
     "Url": "https://www.reddit.com/r/GeminiCodeAssist/.rss",
+    "Enabled": false,
     "Category": "Community",
     "Note": "Gemini Code Assist discussions.",
     "ContentType": "Discussion",
@@ -737,6 +754,7 @@
   {
     "Name": "r/GithubCopilot",
     "Url": "https://www.reddit.com/r/GithubCopilot/.rss",
+    "Enabled": false,
     "Category": "Community",
     "Note": "GitHub Copilot AI coding tool.",
     "ContentType": "Discussion",
@@ -772,6 +790,7 @@
   {
     "Name": "r/MLQuestions",
     "Url": "https://www.reddit.com/r/MLQuestions/.rss",
+    "Enabled": false,
     "Category": "Community",
     "Note": "Beginner ML questions and answers.",
     "ContentType": "Discussion",
@@ -783,6 +802,7 @@
   {
     "Name": "r/learnmachinelearning",
     "Url": "https://www.reddit.com/r/learnmachinelearning/.rss",
+    "Enabled": false,
     "Category": "Community",
     "Note": "ML learners and educators community.",
     "ContentType": "Discussion",
@@ -794,6 +814,7 @@
   {
     "Name": "r/CharacterAI",
     "Url": "https://www.reddit.com/r/CharacterAI/.rss",
+    "Enabled": false,
     "Category": "Community",
     "Note": "Character.AI - create and talk to advanced AI.",
     "ContentType": "Discussion",
@@ -805,6 +826,7 @@
   {
     "Name": "r/GoogleGeminiAI",
     "Url": "https://www.reddit.com/r/GoogleGeminiAI/.rss",
+    "Enabled": false,
     "Category": "Community",
     "Note": "Google Gemini multimodal LLM discussions.",
     "ContentType": "Discussion",
@@ -817,6 +839,7 @@
   {
     "Name": "r/hermesagent",
     "Url": "https://www.reddit.com/r/hermesagent/.rss",
+    "Enabled": false,
     "Category": "Community",
     "Note": "Hermes Agent by Nous Research community.",
     "ContentType": "Discussion",
@@ -840,6 +863,7 @@
   {
     "Name": "r/MediaSynthesis",
     "Url": "https://www.reddit.com/r/MediaSynthesis/.rss",
+    "Enabled": false,
     "Category": "Community",
     "Note": "AI-generated media - deepfakes, image/audio/text synthesis.",
     "ContentType": "Discussion",
@@ -851,6 +875,7 @@
   {
     "Name": "r/bigsleep",
     "Url": "https://www.reddit.com/r/bigsleep/.rss",
+    "Enabled": false,
     "Category": "Community",
     "Note": "AI imagery generated from text descriptions.",
     "ContentType": "Discussion",
@@ -862,6 +887,7 @@
   {
     "Name": "r/isthisAI",
     "Url": "https://www.reddit.com/r/isthisAI/.rss",
+    "Enabled": false,
     "Category": "Community",
     "Note": "Is this AI-generated? Detection discussions.",
     "ContentType": "Discussion",
@@ -873,6 +899,7 @@
   {
     "Name": "r/antiai",
     "Url": "https://www.reddit.com/r/antiai/.rss",
+    "Enabled": false,
     "Category": "Community",
     "Note": "Critical discussion on AI advancements.",
     "ContentType": "Discussion",
@@ -884,6 +911,7 @@
   {
     "Name": "r/algorithms",
     "Url": "https://www.reddit.com/r/algorithms/.rss",
+    "Enabled": false,
     "Category": "Community",
     "Note": "Computer Science for Computer Scientists.",
     "ContentType": "Discussion",
@@ -896,6 +924,7 @@
   {
     "Name": "r/coding",
     "Url": "https://www.reddit.com/r/coding/.rss",
+    "Enabled": false,
     "Category": "Community",
     "Note": "General coding discussions.",
     "ContentType": "Discussion",
@@ -907,6 +936,7 @@
   {
     "Name": "r/cpp",
     "Url": "https://www.reddit.com/r/cpp/.rss",
+    "Enabled": false,
     "Category": "Community",
     "Note": "C++ programming language discussions.",
     "ContentType": "Discussion",
@@ -930,6 +960,7 @@
   {
     "Name": "r/javascript",
     "Url": "https://www.reddit.com/r/javascript/.rss",
+    "Enabled": false,
     "Category": "Community",
     "Note": "JavaScript and TypeScript discussions.",
     "ContentType": "Discussion",
@@ -941,6 +972,7 @@
   {
     "Name": "r/learnjavascript",
     "Url": "https://www.reddit.com/r/learnjavascript/.rss",
+    "Enabled": false,
     "Category": "Community",
     "Note": "Learn JavaScript community.",
     "ContentType": "Discussion",
@@ -952,6 +984,7 @@
   {
     "Name": "r/learnprogramming",
     "Url": "https://www.reddit.com/r/learnprogramming/.rss",
+    "Enabled": false,
     "Category": "Community",
     "Note": "Programming questions in any language.",
     "ContentType": "Discussion",
@@ -963,6 +996,7 @@
   {
     "Name": "r/leetcode",
     "Url": "https://www.reddit.com/r/leetcode/.rss",
+    "Enabled": false,
     "Category": "Community",
     "Note": "Interview prep and leetcode questions.",
     "ContentType": "Discussion",
@@ -975,6 +1009,7 @@
   {
     "Name": "r/cscareerquestions",
     "Url": "https://www.reddit.com/r/cscareerquestions/.rss",
+    "Enabled": false,
     "Category": "Community",
     "Note": "CS career questions and industry navigation.",
     "ContentType": "Discussion",
@@ -986,6 +1021,7 @@
   {
     "Name": "r/ExperiencedDevs",
     "Url": "https://www.reddit.com/r/ExperiencedDevs/.rss",
+    "Enabled": false,
     "Category": "Community",
     "Note": "For experienced software developers.",
     "ContentType": "Discussion",
@@ -998,6 +1034,7 @@
   {
     "Name": "r/developersIndia",
     "Url": "https://www.reddit.com/r/developersIndia/.rss",
+    "Enabled": false,
     "Category": "Community",
     "Note": "Software and tech community in India.",
     "ContentType": "Discussion",
@@ -1009,6 +1046,7 @@
   {
     "Name": "r/BDDevs",
     "Url": "https://www.reddit.com/r/BDDevs/.rss",
+    "Enabled": false,
     "Category": "Community",
     "Note": "Tech community of Bangladesh.",
     "ContentType": "Discussion",
@@ -1020,6 +1058,7 @@
   {
     "Name": "r/gamedev",
     "Url": "https://www.reddit.com/r/gamedev/.rss",
+    "Enabled": false,
     "Category": "Community",
     "Note": "Game development - programming, design, art, marketing.",
     "ContentType": "Discussion",
@@ -1031,6 +1070,7 @@
   {
     "Name": "r/godot",
     "Url": "https://www.reddit.com/r/godot/.rss",
+    "Enabled": false,
     "Category": "Community",
     "Note": "Godot Engine community.",
     "ContentType": "Discussion",
@@ -1043,6 +1083,7 @@
   {
     "Name": "r/codex",
     "Url": "https://www.reddit.com/r/codex/.rss",
+    "Enabled": false,
     "Category": "Community",
     "Note": "OpenAI Codex tools - CLI, IDE Extension, Cloud.",
     "ContentType": "Discussion",
@@ -1055,6 +1096,7 @@
   {
     "Name": "r/ansible",
     "Url": "https://www.reddit.com/r/ansible/.rss",
+    "Enabled": false,
     "Category": "Community",
     "Note": "Ansible automation community.",
     "ContentType": "Discussion",
@@ -1067,6 +1109,7 @@
   {
     "Name": "r/Cloud",
     "Url": "https://www.reddit.com/r/Cloud/.rss",
+    "Enabled": false,
     "Category": "Community",
     "Note": "Cloud computing discussions.",
     "ContentType": "Discussion",
@@ -1078,6 +1121,7 @@
   {
     "Name": "r/cloudengineering",
     "Url": "https://www.reddit.com/r/cloudengineering/.rss",
+    "Enabled": false,
     "Category": "Community",
     "Note": "Cloud engineering discussions.",
     "ContentType": "Discussion",
@@ -1090,6 +1134,7 @@
   {
     "Name": "r/CLI",
     "Url": "https://www.reddit.com/r/CLI/.rss",
+    "Enabled": false,
     "Category": "Community",
     "Note": "Command line interface tools and discussions.",
     "ContentType": "Discussion",
@@ -1101,6 +1146,7 @@
   {
     "Name": "r/linuxadmin",
     "Url": "https://www.reddit.com/r/linuxadmin/.rss",
+    "Enabled": false,
     "Category": "Community",
     "Note": "Linux administration.",
     "ContentType": "Discussion",
@@ -1112,6 +1158,7 @@
   {
     "Name": "r/linuxquestions",
     "Url": "https://www.reddit.com/r/linuxquestions/.rss",
+    "Enabled": false,
     "Category": "Community",
     "Note": "Linux questions and help.",
     "ContentType": "Discussion",
@@ -1123,6 +1170,7 @@
   {
     "Name": "r/archlinux",
     "Url": "https://www.reddit.com/r/archlinux/.rss",
+    "Enabled": false,
     "Category": "Community",
     "Note": "Arch Linux user community.",
     "ContentType": "Discussion",
@@ -1135,6 +1183,7 @@
   {
     "Name": "r/n8n",
     "Url": "https://www.reddit.com/r/n8n/.rss",
+    "Enabled": false,
     "Category": "Community",
     "Note": "n8n workflow automation tool.",
     "ContentType": "Discussion",
@@ -1158,6 +1207,7 @@
   {
     "Name": "r/HomeDataCenter",
     "Url": "https://www.reddit.com/r/HomeDataCenter/.rss",
+    "Enabled": false,
     "Category": "Community",
     "Note": "Home datacenter hosting discussions.",
     "ContentType": "Discussion",
@@ -1169,6 +1219,7 @@
   {
     "Name": "r/HomeServer",
     "Url": "https://www.reddit.com/r/HomeServer/.rss",
+    "Enabled": false,
     "Category": "Community",
     "Note": "Home and small business server discussions.",
     "ContentType": "Discussion",
@@ -1180,6 +1231,7 @@
   {
     "Name": "r/HomeNetworking",
     "Url": "https://www.reddit.com/r/HomeNetworking/.rss",
+    "Enabled": false,
     "Category": "Community",
     "Note": "Home and small office networking.",
     "ContentType": "Discussion",
@@ -1191,6 +1243,7 @@
   {
     "Name": "r/homeassistant",
     "Url": "https://www.reddit.com/r/homeassistant/.rss",
+    "Enabled": false,
     "Category": "Community",
     "Note": "Open source home automation - local control, privacy.",
     "ContentType": "Discussion",
@@ -1202,6 +1255,7 @@
   {
     "Name": "r/jellyfin",
     "Url": "https://www.reddit.com/r/jellyfin/.rss",
+    "Enabled": false,
     "Category": "Community",
     "Note": "Jellyfin open source media server.",
     "ContentType": "Discussion",
@@ -1213,6 +1267,7 @@
   {
     "Name": "r/Bitwarden",
     "Url": "https://www.reddit.com/r/Bitwarden/.rss",
+    "Enabled": false,
     "Category": "Community",
     "Note": "Bitwarden password manager.",
     "ContentType": "Discussion",
@@ -1224,6 +1279,7 @@
   {
     "Name": "r/Entrepreneur",
     "Url": "https://www.reddit.com/r/Entrepreneur/.rss",
+    "Enabled": false,
     "Category": "Community",
     "Note": "Entrepreneurship community - problem-solving, networking.",
     "ContentType": "Discussion",
@@ -1235,6 +1291,7 @@
   {
     "Name": "r/EntrepreneurRideAlong",
     "Url": "https://www.reddit.com/r/EntrepreneurRideAlong/.rss",
+    "Enabled": false,
     "Category": "Community",
     "Note": "Real founders, raw journey of starting companies.",
     "ContentType": "Discussion",
@@ -1246,6 +1303,7 @@
   {
     "Name": "r/founder",
     "Url": "https://www.reddit.com/r/founder/.rss",
+    "Enabled": false,
     "Category": "Community",
     "Note": "Founder community.",
     "ContentType": "Discussion",
@@ -1257,6 +1315,7 @@
   {
     "Name": "r/Business_Ideas",
     "Url": "https://www.reddit.com/r/Business_Ideas/.rss",
+    "Enabled": false,
     "Category": "Community",
     "Note": "Business ideas and venture insights.",
     "ContentType": "Discussion",
@@ -1268,6 +1327,7 @@
   {
     "Name": "r/micro_saas",
     "Url": "https://www.reddit.com/r/micro_saas/.rss",
+    "Enabled": false,
     "Category": "Community",
     "Note": "Micro SaaS - small team, niche products.",
     "ContentType": "Discussion",
@@ -1279,6 +1339,7 @@
   {
     "Name": "r/microsaas",
     "Url": "https://www.reddit.com/r/microsaas/.rss",
+    "Enabled": false,
     "Category": "Community",
     "Note": "Micro SaaS apps community.",
     "ContentType": "Discussion",
@@ -1290,6 +1351,7 @@
   {
     "Name": "r/freelance",
     "Url": "https://www.reddit.com/r/freelance/.rss",
+    "Enabled": false,
     "Category": "Community",
     "Note": "Freelancing articles and discussions.",
     "ContentType": "Discussion",
@@ -1301,6 +1363,7 @@
   {
     "Name": "r/GrowthHacking",
     "Url": "https://www.reddit.com/r/GrowthHacking/.rss",
+    "Enabled": false,
     "Category": "Community",
     "Note": "Growth marketing experiments and tools.",
     "ContentType": "Discussion",
@@ -1312,6 +1375,7 @@
   {
     "Name": "r/content_marketing",
     "Url": "https://www.reddit.com/r/content_marketing/.rss",
+    "Enabled": false,
     "Category": "Community",
     "Note": "Content marketing feedback and resources.",
     "ContentType": "Discussion",
@@ -1323,6 +1387,7 @@
   {
     "Name": "r/ai_trading",
     "Url": "https://www.reddit.com/r/ai_trading/.rss",
+    "Enabled": false,
     "Category": "Community",
     "Note": "AI trading, investing, algotrading tools.",
     "ContentType": "Discussion",
@@ -1335,6 +1400,7 @@
   {
     "Name": "r/algotrading",
     "Url": "https://www.reddit.com/r/algotrading/.rss",
+    "Enabled": false,
     "Category": "Community",
     "Note": "Quantitative trading, automated strategies.",
     "ContentType": "Discussion",
@@ -1358,6 +1424,7 @@
   {
     "Name": "r/Futurology",
     "Url": "https://www.reddit.com/r/Futurology/.rss",
+    "Enabled": false,
     "Category": "Community",
     "Note": "Future studies - humanity, technology, civilization.",
     "ContentType": "Discussion",
@@ -1369,6 +1436,7 @@
   {
     "Name": "r/CyberNews",
     "Url": "https://www.reddit.com/r/CyberNews/.rss",
+    "Enabled": false,
     "Category": "Community",
     "Note": "Cybersecurity and technology news.",
     "ContentType": "Discussion",
@@ -1380,6 +1448,7 @@
   {
     "Name": "r/MachineLearningJobs",
     "Url": "https://www.reddit.com/r/MachineLearningJobs/.rss",
+    "Enabled": false,
     "Category": "Community",
     "Note": "AI/ML/DS careers and jobs.",
     "ContentType": "Discussion",
@@ -1404,6 +1473,7 @@
   {
     "Name": "r/AISEOInsider",
     "Url": "https://www.reddit.com/r/AISEOInsider/.rss",
+    "Enabled": false,
     "Category": "Community",
     "Note": "AI SEO strategies and tools.",
     "ContentType": "Discussion",
@@ -1416,6 +1486,7 @@
   {
     "Name": "r/freetoolsAI",
     "Url": "https://www.reddit.com/r/freetoolsAI/.rss",
+    "Enabled": false,
     "Category": "Community",
     "Note": "Free AI tools discovery.",
     "ContentType": "Discussion",
@@ -1428,6 +1499,7 @@
   {
     "Name": "r/MouseReview",
     "Url": "https://www.reddit.com/r/MouseReview/.rss",
+    "Enabled": false,
     "Category": "Community",
     "Note": "Computer mouse peripherals and accessories.",
     "ContentType": "Discussion",
@@ -1439,6 +1511,7 @@
   {
     "Name": "r/apple",
     "Url": "https://www.reddit.com/r/apple/.rss",
+    "Enabled": false,
     "Category": "Community",
     "Note": "Apple community - devices and software.",
     "ContentType": "Discussion",
@@ -1450,6 +1523,7 @@
   {
     "Name": "r/mac",
     "Url": "https://www.reddit.com/r/mac/.rss",
+    "Enabled": false,
     "Category": "Community",
     "Note": "Apple Mac computers.",
     "ContentType": "Discussion",
@@ -1462,6 +1536,7 @@
   {
     "Name": "r/oculus",
     "Url": "https://www.reddit.com/r/oculus/.rss",
+    "Enabled": false,
     "Category": "Community",
     "Note": "Oculus VR discussions.",
     "ContentType": "Discussion",
@@ -1473,6 +1548,7 @@
   {
     "Name": "r/MetaQuestVR",
     "Url": "https://www.reddit.com/r/MetaQuestVR/.rss",
+    "Enabled": false,
     "Category": "Community",
     "Note": "Meta Quest VR community.",
     "ContentType": "Discussion",
@@ -1484,6 +1560,7 @@
   {
     "Name": "r/LinusTechTips",
     "Url": "https://www.reddit.com/r/LinusTechTips/.rss",
+    "Enabled": false,
     "Category": "Community",
     "Note": "LinusTechTips and LMG content.",
     "ContentType": "Discussion",
@@ -1495,6 +1572,7 @@
   {
     "Name": "r/BD_CINEPHILES",
     "Url": "https://www.reddit.com/r/BD_CINEPHILES/.rss",
+    "Enabled": false,
     "Category": "Community",
     "Note": "Bangladesh cinema discussions.",
     "ContentType": "Discussion",
@@ -1506,6 +1584,7 @@
   {
     "Name": "r/Dhaka",
     "Url": "https://www.reddit.com/r/Dhaka/.rss",
+    "Enabled": false,
     "Category": "Community",
     "Note": "Dhaka, Bangladesh capital community.",
     "ContentType": "Discussion",
@@ -1517,6 +1596,7 @@
   {
     "Name": "r/mauritius",
     "Url": "https://www.reddit.com/r/mauritius/.rss",
+    "Enabled": false,
     "Category": "Community",
     "Note": "Mauritius community.",
     "ContentType": "Discussion",
@@ -1528,6 +1608,7 @@
   {
     "Name": "r/IndiaTech",
     "Url": "https://www.reddit.com/r/IndiaTech/.rss",
+    "Enabled": false,
     "Category": "Community",
     "Note": "Largest tech subreddit of India.",
     "ContentType": "Discussion",
@@ -1540,6 +1621,7 @@
   {
     "Name": "r/admincraft",
     "Url": "https://www.reddit.com/r/admincraft/.rss",
+    "Enabled": false,
     "Category": "Community",
     "Note": "Minecraft server administration and development.",
     "ContentType": "Discussion",
@@ -1551,6 +1633,7 @@
   {
     "Name": "r/AskReddit",
     "Url": "https://www.reddit.com/r/AskReddit/.rss",
+    "Enabled": false,
     "Category": "Community",
     "Note": "Thought-provoking questions.",
     "ContentType": "Discussion",
@@ -1562,6 +1645,7 @@
   {
     "Name": "r/FlockSurveillance",
     "Url": "https://www.reddit.com/r/FlockSurveillance/.rss",
+    "Enabled": false,
     "Category": "Community",
     "Note": "Flock Safety mass surveillance news and activism.",
     "ContentType": "Discussion",
@@ -1573,6 +1657,7 @@
   {
     "Name": "r/it",
     "Url": "https://www.reddit.com/r/it/.rss",
+    "Enabled": false,
     "Category": "Community",
     "Note": "Information technology discussions.",
     "ContentType": "Discussion",
@@ -1584,6 +1669,7 @@
   {
     "Name": "r/dataanalysiscareers",
     "Url": "https://www.reddit.com/r/dataanalysiscareers/.rss",
+    "Enabled": false,
     "Category": "Community",
     "Note": "Data analysis career discussions.",
     "ContentType": "Discussion",
