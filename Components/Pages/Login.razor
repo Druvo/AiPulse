@@ -5,6 +5,7 @@
 @using Microsoft.AspNetCore.Authentication.Cookies
 @inject UserService Users
 @inject OAuthSettingsService OAuthSettings
+@inject ClerkAuthService Clerk
 @inject IHttpContextAccessor Http
 @inject NavigationManager Nav
 
@@ -71,6 +72,14 @@
         </div>
     }
 
+    @if (_clerk is { } clerk)
+    {
+        <div class="d-flex align-items-center gap-2 my-3">
+            <hr class="flex-grow-1" /><span class="text-muted small">or with an email account</span><hr class="flex-grow-1" />
+        </div>
+        <div id="clerk-signin" data-host="@clerk.Host" data-key="@clerk.PublishableKey" data-return-url="@(ReturnUrl ?? "/dashboard")" data-remember="@(Input.Remember ? "true" : "false")"></div>
+    }
+
     <p class="text-center text-muted small mt-3 mb-0">
         <a href="/forgot-password">Forgot password?</a>
     </p>
@@ -88,11 +97,13 @@
     private string? _error;
     private bool _googleUsable;
     private bool _githubUsable;
+    private (string PublishableKey, string Host)? _clerk;
 
     protected override async Task OnInitializedAsync()
     {
         _googleUsable = await OAuthSettings.IsUsableAsync(OAuthProviders.Google);
         _githubUsable = await OAuthSettings.IsUsableAsync(OAuthProviders.GitHub);
+        _clerk = await Clerk.GetActiveAsync();
     }
 
     private async Task SignIn()

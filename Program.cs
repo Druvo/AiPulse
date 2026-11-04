@@ -123,6 +123,14 @@ builder.Services.Configure<AuthOptions>(builder.Configuration.GetSection("Auth")
 // registered even when neither provider is configured yet.
 builder.Services.AddSingleton<OAuthSettingsService>();
 builder.Services.AddSingleton<ExternalAuthService>();
+// Optional Clerk sign-in (admin switch in Settings). Tokens are verified against the instance's public keys - no secret key is stored.
+builder.Services.AddHttpClient("clerk", c => c.Timeout = TimeSpan.FromSeconds(10));
+builder.Services.AddSingleton(sp =>
+{
+    var http = sp.GetRequiredService<IHttpClientFactory>();
+    return new ClerkTokenValidator((url, ct) => http.CreateClient("clerk").GetStringAsync(url, ct));
+});
+builder.Services.AddSingleton<ClerkAuthService>();
 // Registered under IConfigureOptions<T> (the base interface), not IConfigureNamedOptions<T> directly -
 // OptionsFactory<T> only resolves IEnumerable<IConfigureOptions<T>> from DI and checks "is
 // IConfigureNamedOptions<T>" on each entry itself; registering under the derived interface means DI never
@@ -294,6 +302,35 @@ app.MapGet("/auth/external/{provider}", async (string provider, OAuthSettingsSer
         ? returnUrl
         : "/dashboard";
     return Results.Challenge(new AuthenticationProperties { RedirectUri = safeReturnUrl }, [scheme]);
+});
+
+// Second half of "Sign in with Clerk": the login page's script (js/clerk-login.js) lets Clerk's own component do the sign-in/verification,
+// then posts the session token here. We verify it, find or create the local account (admin approval and roles still apply), and issue
+// the normal AiPulse cookie. JSON-only on purpose: a cross-site form cannot send application/json, so a hostile page cannot sign a visitor
+// in as someone else's Clerk user.
+app.MapPost("/auth/clerk/session", async (ClerkSessionRequest body, HttpContext http, ClerkAuthService clerk) =>
+{
+    var origin = $"{http.Request.Scheme}://{http.Request.Host}";
+    var (result, user, error) = await clerk.SignInAsync(body.Token, origin, http.RequestAborted);
+
+    if (result == ExternalLoginResult.PendingApproval) return Results.Json(new { redirect = "/login?error=pending" });
+    if (user is null || result != ExternalLoginResult.Success)
+        return Results.Json(new { error = error ?? "Sign-in was not accepted." }, statusCode: error is null ? 403 : 401);
+
+    var claims = new[]
+    {
+        new Claim(ClaimTypes.Name, user.Username),
+        new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
+        new Claim(ClaimTypes.Role, user.Role),
+        new Claim("security_stamp", user.SecurityStamp)
+    };
+    await http.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme,
+        new ClaimsPrincipal(new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme)),
+        new AuthenticationProperties { IsPersistent = body.Remember });
+
+    var returnUrl = !string.IsNullOrWhiteSpace(body.ReturnUrl) && body.ReturnUrl.StartsWith('/') && !body.ReturnUrl.StartsWith("//") && !body.ReturnUrl.Contains('\\')
+        ? body.ReturnUrl : "/dashboard";
+    return Results.Json(new { redirect = returnUrl });
 });
 
 // sitemap.xml and robots.txt are generated at request time from the request's own Host header, not static files - AiPulse is

@@ -165,7 +165,9 @@ Set these in the in-app **Settings** page (stored per-user in `App_Data/users/{u
 
 ## 🔐 Security
 
-- All pages require sign-in except `/login` and `/register`.
+- The dashboard needs sign-in. Open to everyone: the landing page, `/news`, `/topics`, `/releases`, `/explore`, `/glossary`, `/tools`, `/help`, `/login`, `/register`, plus `/feed.xml` (Atom). `PublicSite` is the single list behind the menu, `sitemap.xml` and `robots.txt`.
+- **Optional Clerk sign-in** (Settings → *Sign in with Clerk*, admin only): paste the app's *publishable key* and tick Enabled. Clerk handles sign-up and email verification; AiPulse verifies Clerk's signed session token against the instance's public keys (no Clerk secret key is stored), then issues its normal cookie. Local username/password login keeps working either way, approval and roles still apply, and an account is only matched to an existing one by a *verified* email.
+- The site is installable (web manifest + a service worker that only shows an offline notice; it caches no pages).
 - Registration never auto-approves — new accounts are **Pending** until an Admin approves them at `/users`, so a public-facing instance can't be self-signed-up-into by strangers.
 - Sources, Users, Backup/Restore, and Playground (talks to the host's local Ollama instance — a shared machine resource, not per-user) are **Admin-only**; everything else (News, Learning Hub, Bookmarks, etc.) is open to any approved account.
 - `/websub/callback/*` is intentionally unauthenticated (external hubs are anonymous servers) — it's instead secured by matching the hub's topic against what was actually subscribed to, and requiring a valid per-subscription HMAC signature on every content push. Fully inert unless you set `WebSub:PublicBaseUrl`.

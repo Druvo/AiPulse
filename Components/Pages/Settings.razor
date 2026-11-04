@@ -365,6 +365,46 @@
                     or <code>https://your-domain/signin-github</code> (GitHub).
                 </p>
 
+                <h4 class="section-title"><Icon Name="user" /> Sign in with Clerk</h4>
+                <p class="text-muted">
+                    <a href="https://clerk.com" target="_blank" rel="noopener">Clerk</a> handles sign-up, email verification and sign-in (email codes, passkeys,
+                    social logins) so people do not need a separate AiPulse password. It runs <em>alongside</em> the normal username/password login, which keeps
+                    working either way. Switch it off here at any time; nobody is locked out. Paste your app's <strong>Publishable key</strong> (it is not a secret).
+                    No Clerk secret key is needed or stored.
+                </p>
+                <div class="row g-2 align-items-center mb-2">
+                    <div class="col-md-2 form-check ms-2">
+                        <input type="checkbox" class="form-check-input" id="clerk-enabled" @bind="_clerkEnabled" />
+                        <label class="form-check-label" for="clerk-enabled">Enabled</label>
+                    </div>
+                    <div class="col-md-7"><input class="form-control" placeholder="pk_test_… or pk_live_…" @bind="_clerkKey" autocomplete="off" spellcheck="false" /></div>
+                    <div class="col-md-2"><button class="btn btn-outline-primary w-100" @onclick="SaveClerk">Save</button></div>
+                </div>
+                @if (!string.IsNullOrWhiteSpace(_clerkKey))
+                {
+                    @if (ClerkKey.TryGetFrontendHost(_clerkKey, out var clerkHost))
+                    {
+                        <p class="small text-muted mb-1">Frontend API: <code>@clerkHost</code></p>
+                    }
+                    else
+                    {
+                        <p class="small text-danger mb-1">That does not look like a Clerk publishable key.</p>
+                    }
+                }
+                <details class="small text-muted mb-3">
+                    <summary>Setup steps</summary>
+                    <ol class="mt-2">
+                        <li>In the Clerk dashboard create an application and copy its Publishable key here.</li>
+                        <li>
+                            Under <em>Sessions &rarr; Customize session token</em> add these claims so AiPulse can link an existing account by <em>verified</em> email:
+                            <pre class="mb-0"><code>{ "email": "{{user.primary_email_address}}", "email_verified": "{{user.email_verified}}", "name": "{{user.full_name}}" }</code></pre>
+                            Without them people still sign in, but get a new account instead of being matched to an existing one.
+                        </li>
+                        <li>Add this site's address (<code>@Nav.BaseUri.TrimEnd('/')</code>) to the application's allowed origins / domains. For a live production site Clerk needs its DNS records for the domain.</li>
+                        <li>Tick <em>Enabled</em> and Save. A "with an email account" section appears on the sign-in page. New accounts follow the same approval setting as every other sign-up.</li>
+                    </ol>
+                </details>
+
                 <h4 class="section-title"><Icon Name="database" /> Backup &amp; restore</h4>
                 <p class="text-muted">
                     Sources, all users' bookmarks/watchlists, Playground chat history, and feed history all live in <code>App_Data/</code>.
@@ -448,8 +488,26 @@
         if (state.User.IsInRole("Admin"))
         {
             var rows = await OAuthSettings.GetAllAsync();
-            _oauthForms = rows.Select(r => new OAuthFormRow { Provider = r.Provider, Enabled = r.Enabled, ClientId = r.ClientId, ClientSecret = r.ClientSecret }).ToList();
+            var clerk = rows.FirstOrDefault(r => r.Provider == ClerkAuthService.Provider);
+            _clerkEnabled = clerk?.Enabled ?? false;
+            _clerkKey = clerk?.ClientId ?? "";
+            _oauthForms = rows.Where(r => r.Provider != ClerkAuthService.Provider).Select(r => new OAuthFormRow { Provider = r.Provider, Enabled = r.Enabled, ClientId = r.ClientId, ClientSecret = r.ClientSecret }).ToList();
         }
+    }
+
+    private bool _clerkEnabled;
+    private string _clerkKey = "";
+
+    private async Task SaveClerk()
+    {
+        var key = _clerkKey.Trim();
+        if (_clerkEnabled && !ClerkKey.TryGetFrontendHost(key, out _))
+        {
+            Toasts.Show("Paste a valid Clerk publishable key (pk_test_… or pk_live_…) before enabling.");
+            return;
+        }
+        await OAuthSettings.SaveAsync(ClerkAuthService.Provider, _clerkEnabled, key, "");
+        Toasts.Show(_clerkEnabled ? "Clerk sign-in is on." : "Clerk sign-in is off.");
     }
 
     private async Task SaveOAuthProvider(OAuthFormRow p)

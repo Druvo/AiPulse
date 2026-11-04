@@ -1,0 +1,31 @@
+@page "/login/clerk"
+@layout AiPulse.Components.Layout.EmptyLayout
+
+<PageTitle>AiPulse · Signing in</PageTitle>
+<HeadContent>
+    <meta name="robots" content="noindex" />
+</HeadContent>
+
+<div class="login-shell-inner">
+    <div class="login-card text-center">
+        <h1 class="login-brand-mark">AiPulse</h1>
+        @if (_clerk is { } clerk)
+        {
+            <div id="clerk-finish" class="mt-3" data-host="@clerk.Host" data-key="@clerk.PublishableKey" data-return-url="@(ReturnUrl ?? "/dashboard")" data-remember="@(Remember ?? "true")"></div>
+        }
+        else
+        {
+            <p class="text-muted mt-3">Sign-in with Clerk is not turned on here.</p>
+            <a href="/login">Back to sign in</a>
+        }
+    </div>
+</div>
+
+@code {
+    [Inject] private ClerkAuthService Clerk { get; set; } = default!;
+    [SupplyParameterFromQuery] private string? ReturnUrl { get; set; }
+    [SupplyParameterFromQuery] private string? Remember { get; set; }
+    private (string PublishableKey, string Host)? _clerk;
+
+    protected override async Task OnInitializedAsync() => _clerk = await Clerk.GetActiveAsync();
+}

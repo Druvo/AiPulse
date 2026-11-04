@@ -23,7 +23,13 @@ public sealed class ExternalAuthService
         _users = users;
     }
 
-    public async Task<(ExternalLoginResult Result, AppUser? User)> CompleteAsync(string provider, ClaimsPrincipal externalPrincipal)
+    /// <param name="emailVerified">
+    /// Whether the provider vouches that the person controls the email. Null keeps the long-standing Google/GitHub behaviour (link to a
+    /// local account with the same email; Google counts as verified). Providers that say so explicitly (Clerk) get the strict rule: an
+    /// unverified email is never used to attach someone to an existing account, because that would let anyone who types an admin's
+    /// address into a sign-up form walk into the admin account.
+    /// </param>
+    public async Task<(ExternalLoginResult Result, AppUser? User)> CompleteAsync(string provider, ClaimsPrincipal externalPrincipal, bool? emailVerified = null)
     {
         var providerKey = externalPrincipal.FindFirstValue(ClaimTypes.NameIdentifier);
         if (string.IsNullOrEmpty(providerKey))
@@ -40,7 +46,7 @@ public sealed class ExternalAuthService
             : null;
 
         // No link yet, but the provider's email matches an existing password account - link rather than duplicate.
-        if (user is null && !string.IsNullOrEmpty(email))
+        if (user is null && !string.IsNullOrEmpty(email) && emailVerified != false)
             user = await db.Users.FirstOrDefaultAsync(u => u.Email != null && u.Email.ToLower() == email.ToLower());
 
         var isNewUser = false;
@@ -52,7 +58,7 @@ public sealed class ExternalAuthService
                 Username = await GenerateUniqueUsernameAsync(db, displayName ?? email ?? $"{provider.ToLower()}user"),
                 PasswordHash = "", // OAuth-only account - PasswordHasher.Verify will never match an empty hash
                 Email = email,
-                EmailVerified = provider == OAuthProviders.Google && email is not null,
+                EmailVerified = email is not null && (emailVerified ?? provider == OAuthProviders.Google),
                 Role = UserRoles.User,
                 Status = _users.RequireApproval ? UserStatuses.Pending : UserStatuses.Approved
             };
