@@ -4,7 +4,7 @@ using System.Net.Mail;
 namespace AiPulse.Services;
 
 /// <summary>
-/// Optional email delivery, mirroring ISummarizer's "standalone by default" shape. Lumen never requires
+/// Optional email delivery, mirroring ISummarizer's "standalone by default" shape. AiPulse never requires
 /// SMTP to function - password-reset links are always generated, just delivered differently depending on
 /// whether Smtp:Host is configured (see Program.cs's conditional registration).
 /// </summary>
@@ -43,7 +43,7 @@ public sealed class SmtpOptions
     public int Port { get; set; } = 587;
     public string Username { get; set; } = "";
     public string Password { get; set; } = "";
-    public string From { get; set; } = "Lumen <noreply@localhost>";
+    public string From { get; set; } = "AiPulse <noreply@localhost>";
     public bool EnableSsl { get; set; } = true;
 }
 

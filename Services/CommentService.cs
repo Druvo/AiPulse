@@ -4,7 +4,7 @@ using Microsoft.EntityFrameworkCore;
 namespace AiPulse.Services;
 
 /// <summary>
-/// Comments on articles, keyed by ArticleLink (FeedItem.Link - Lumen has no internal article page of its
+/// Comments on articles, keyed by ArticleLink (FeedItem.Link - AiPulse has no internal article page of its
 /// own, Link always points at the original external site). Same EnsureCreated caveat as other DB-backed
 /// services here - the Comments table is reconciled with a one-time raw-SQL check on first use (same
 /// pattern as UserService.EnsureSchemaAsync).

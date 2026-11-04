@@ -11,7 +11,7 @@ namespace AiPulse.Services;
 /// <summary>
 /// Admin-configurable OAuth provider credentials (Google/GitHub), stored in the DB rather than
 /// appsettings.json so an admin can enable/disable and rotate them from Settings.razor without touching
-/// config files or restarting Lumen. The actual authentication handlers (registered unconditionally in
+/// config files or restarting AiPulse. The actual authentication handlers (registered unconditionally in
 /// Program.cs) read their ClientId/ClientSecret live from here on every request via
 /// GoogleOptionsConfigurator/GitHubOptionsConfigurator below - SaveAsync invalidates the options cache so
 /// a change takes effect on the very next sign-in attempt, no restart needed.

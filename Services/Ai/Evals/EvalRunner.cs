@@ -8,7 +8,7 @@ namespace AiPulse.Services.Ai.Evals;
 
 /// <summary>
 /// Runs a golden question set through the real pipeline (guardrails, retrieval, verification) against the real knowledge
-/// corpus. Model replies are scripted per case, so a run is deterministic and needs no model - it measures Lumen's own
+/// corpus. Model replies are scripted per case, so a run is deterministic and needs no model - it measures AiPulse's own
 /// logic, which is what a regression would break.
 /// </summary>
 public sealed class EvalRunner

@@ -56,12 +56,12 @@ public static class PublicFeeds
 
         var feed = new XElement(atom + "feed",
             new XElement(atom + "title", title),
-            new XElement(atom + "subtitle", "Deduplicated AI news from the sources Lumen follows."),
+            new XElement(atom + "subtitle", "Deduplicated AI news from the sources AiPulse follows."),
             new XElement(atom + "id", $"{origin}{selfPath}"),
             new XElement(atom + "updated", updated.ToUniversalTime().ToString("yyyy-MM-dd'T'HH:mm:ss'Z'")),
             new XElement(atom + "link", new XAttribute("rel", "self"), new XAttribute("href", $"{origin}{selfPath}")),
             new XElement(atom + "link", new XAttribute("rel", "alternate"), new XAttribute("href", $"{origin}/news")),
-            new XElement(atom + "generator", "Lumen"));
+            new XElement(atom + "generator", "AiPulse"));
 
         foreach (var item in list)
         {

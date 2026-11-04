@@ -7,7 +7,7 @@ using AiPulse.Models;
 namespace AiPulse.Services;
 
 /// <summary>
-/// Talks to a locally-running Ollama instance so models can be pulled and chatted with from Lumen.
+/// Talks to a locally-running Ollama instance so models can be pulled and chatted with from AiPulse.
 /// Base URL is configurable via appsettings ("Ollama:BaseUrl"), defaults to http://localhost:11434.
 /// </summary>
 public sealed class OllamaService

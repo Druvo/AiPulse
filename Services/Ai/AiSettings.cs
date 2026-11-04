@@ -8,7 +8,7 @@ public interface IAiGate
     /// <summary>The master switch: when false, no model is called for anything.</summary>
     bool ModelCallsAllowed { get; }
 
-    /// <summary>Whether Ask Lumen may have a model write its answers (otherwise it quotes the sources).</summary>
+    /// <summary>Whether Ask AiPulse may have a model write its answers (otherwise it quotes the sources).</summary>
     bool AskMayUseModel { get; }
 
     bool SummariesAllowed { get; }

@@ -1,6 +1,6 @@
 {
-  "name": "Lumen",
-  "short_name": "Lumen",
+  "name": "AiPulse",
+  "short_name": "AiPulse",
   "description": "Self-hosted AI news, tools and learning dashboard.",
   "id": "/",
   "start_url": "/news?source=pwa",
@@ -16,6 +16,6 @@
   ],
   "shortcuts": [
     { "name": "News Feed", "url": "/news", "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192" }] },
-    { "name": "Ask Lumen", "url": "/ask", "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192" }] }
+    { "name": "Ask AiPulse", "url": "/ask", "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192" }] }
   ]
 }

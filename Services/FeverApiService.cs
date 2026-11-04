@@ -5,13 +5,13 @@ namespace AiPulse.Services;
 
 /// <summary>
 /// Implements the Fever API (the sync protocol originally from the Fever RSS reader, still supported as
-/// a compatibility target by many mobile RSS clients - Reeder, ReadKit, Fiery Feeds, etc.) so Lumen's
+/// a compatibility target by many mobile RSS clients - Reeder, ReadKit, Fiery Feeds, etc.) so AiPulse's
 /// feed can be read from those apps. Auth is per-user via a separate "Fever API password" (Settings page)
 /// since the protocol requires an MD5("username:password") the server can compare directly - something
 /// we can't derive from the PBKDF2 hash used for the real login.
 ///
 /// Stable numeric item/feed ids are required by the protocol for since_id paging and read/saved tracking,
-/// but Lumen's FeedItem is keyed by link (a string) - a small persisted link-to-id map bridges the two,
+/// but AiPulse's FeedItem is keyed by link (a string) - a small persisted link-to-id map bridges the two,
 /// assigning the next id the first time a link is seen (so ids grow roughly in discovery order, which is
 /// exactly what since_id-based incremental sync needs).
 /// </summary>

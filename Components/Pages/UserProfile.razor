@@ -5,7 +5,7 @@
 @inject CommentService CommentsSvc
 @inject FollowService Follow
 
-<PageTitle>Lumen · @(_user?.Username ?? "Profile")</PageTitle>
+<PageTitle>AiPulse · @(_user?.Username ?? "Profile")</PageTitle>
 
 @* Hard privacy boundary: this page only ever calls UserService/ProfileService/CommentService/FollowService,
    never ReadingStateService - bookmarks, read history, watchlist, muted sources, saved searches, webhook
@@ -22,7 +22,7 @@ else if (_user is null)
 else
 {
     <HeadContent>
-        <meta name="description" content="@(string.IsNullOrWhiteSpace(_profile?.Bio) ? $"{_user.Username}'s profile on Lumen" : _profile!.Bio)" />
+        <meta name="description" content="@(string.IsNullOrWhiteSpace(_profile?.Bio) ? $"{_user.Username}'s profile on AiPulse" : _profile!.Bio)" />
     </HeadContent>
 
     <div class="page-header d-flex align-items-center gap-3">

@@ -1,8 +1,8 @@
 // "Sign in with Clerk" glue. Clerk's own component handles sign-in, sign-up and email verification; this script only
 //   1. on /login   (#clerk-signin) mounts that component and sends the person on to /login/clerk when they finish, and
-//   2. on /login/clerk (#clerk-finish) hands the new Clerk session token to Lumen, which verifies it and issues its own cookie.
-// Clerk's session is then ended on purpose: Lumen keeps its own session, and a lingering Clerk one would sign the person
-// straight back in right after they log out of Lumen.
+//   2. on /login/clerk (#clerk-finish) hands the new Clerk session token to AiPulse, which verifies it and issues its own cookie.
+// Clerk's session is then ended on purpose: AiPulse keeps its own session, and a lingering Clerk one would sign the person
+// straight back in right after they log out of AiPulse.
 (function () {
     'use strict';
 
@@ -60,9 +60,9 @@
             body: JSON.stringify({ token: token, remember: el.dataset.remember !== 'false', returnUrl: el.dataset.returnUrl || null })
         });
         var body = await res.json().catch(function () { return {}; });
-        try { await clerk.signOut(); } catch (e) { /* the Lumen cookie is what matters */ }
+        try { await clerk.signOut(); } catch (e) { /* the AiPulse cookie is what matters */ }
         if (res.ok && body.redirect) { location.replace(body.redirect); return; }
-        say(el, (body && body.error) || 'Lumen did not accept that sign-in.', true);
+        say(el, (body && body.error) || 'AiPulse did not accept that sign-in.', true);
         var back = document.createElement('a');
         back.href = '/login';
         back.className = 'd-block mt-2 small';

@@ -3,7 +3,7 @@ using System.Text.RegularExpressions;
 namespace AiPulse.Services;
 
 /// <summary>
-/// Periodically checks a community-curated "free LLM API" list for providers not yet on Lumen's own
+/// Periodically checks a community-curated "free LLM API" list for providers not yet on AiPulse's own
 /// Data/free-apis.json, and re-checks existing entries' signup/docs links for rot. Never publishes
 /// anything automatically - new finds land in a review queue (KnowledgeBaseService.AddCandidateIfNewAsync)
 /// that an admin approves or dismisses from the Free AI APIs page, which is what keeps the page's

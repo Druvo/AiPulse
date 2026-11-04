@@ -37,7 +37,7 @@ public sealed class OpmlService
         var doc = new XDocument(
             new XDeclaration("1.0", "utf-8", null),
             new XElement("opml", new XAttribute("version", "2.0"),
-                new XElement("head", new XElement("title", "Lumen Sources")),
+                new XElement("head", new XElement("title", "AiPulse Sources")),
                 body));
 
         using var ms = new MemoryStream();

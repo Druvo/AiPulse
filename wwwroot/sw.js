@@ -1,4 +1,4 @@
-// Minimal service worker. Its jobs are (1) make Lumen installable and (2) show a friendly page instead of the browser's
+// Minimal service worker. Its jobs are (1) make AiPulse installable and (2) show a friendly page instead of the browser's
 // "no internet" dinosaur when a navigation fails. It deliberately does NOT cache pages or API calls: the app is a live Blazor Server
 // circuit, and serving a stale page that cannot reach its server would be worse than the offline notice.
 const VERSION = 'aipulse-sw-1';

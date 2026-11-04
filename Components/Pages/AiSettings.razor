@@ -8,7 +8,7 @@
 @inject ILlmClient Llm
 @inject ISummarizer Ai
 
-<PageTitle>Lumen · AI Settings</PageTitle>
+<PageTitle>AiPulse · AI Settings</PageTitle>
 
 <div class="page-header">
     <h1><Icon Name="zap" Size="22" /> AI Settings</h1>
@@ -39,7 +39,7 @@
                 <span class="badge bg-secondary">Off: no model is being called</span>
             }
         </div>
-        <p class="text-muted small">The master switch overrides everything below it. With it off, nothing is sent to any provider and Ask Lumen only quotes the sources.</p>
+        <p class="text-muted small">The master switch overrides everything below it. With it off, nothing is sent to any provider and Ask AiPulse only quotes the sources.</p>
 
         <div class="form-check form-switch mb-3">
             <input class="form-check-input" type="checkbox" role="switch" id="aiMaster" checked="@Settings.Current.Enabled"
@@ -52,7 +52,7 @@
                 <input class="form-check-input" type="checkbox" role="switch" id="aiAsk" checked="@Settings.Current.AskUsesModel"
                        disabled="@(!Settings.Current.Enabled)" @onchange="e => Settings.Update(s => s with { AskUsesModel = (bool)e.Value! })" />
                 <label class="form-check-label" for="aiAsk">
-                    <strong>Ask Lumen</strong> uses a model to write answers
+                    <strong>Ask AiPulse</strong> uses a model to write answers
                     <span class="text-muted small d-block">Off: it still answers, by quoting the matching sentences from its sources.</span>
                 </label>
             </div>
@@ -88,7 +88,7 @@
 
         @if (Llm.AllProviders.Count == 0)
         {
-            <p class="mb-0">No provider is configured. Ask Lumen quotes its sources, and the Summarize and Explain buttons stay hidden. Add one under <code>Llm:Providers</code>.</p>
+            <p class="mb-0">No provider is configured. Ask AiPulse quotes its sources, and the Summarize and Explain buttons stay hidden. Add one under <code>Llm:Providers</code>.</p>
         }
         else
         {

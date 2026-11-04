@@ -12,7 +12,7 @@ internal static class FeedScraper
             throw new InvalidOperationException("Scrape source is missing an item XPath selector.");
 
         using var http = new HttpClient();
-        http.DefaultRequestHeaders.UserAgent.ParseAdd("Lumen/1.0 (+https://localhost; personal AI news dashboard)");
+        http.DefaultRequestHeaders.UserAgent.ParseAdd("AiPulse/1.0 (+https://localhost; personal AI news dashboard)");
         var html = await http.GetStringAsync(source.Url, ct);
 
         var doc = new HtmlDocument();

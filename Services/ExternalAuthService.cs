@@ -7,7 +7,7 @@ namespace AiPulse.Services;
 public enum ExternalLoginResult { Success, PendingApproval, Disabled }
 
 /// <summary>
-/// Handles the Lumen side of a completed Google/GitHub OAuth handshake: find-or-create the local
+/// Handles the AiPulse side of a completed Google/GitHub OAuth handshake: find-or-create the local
 /// AppUser, link the external identity, and hand back who to sign in. The actual SignInAsync/redirect
 /// happens in Program.cs's OnTicketReceived handler, keeping HttpContext ceremony out of this service -
 /// same split as UserService.TryLoginAsync/Login.razor.

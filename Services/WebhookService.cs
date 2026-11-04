@@ -30,7 +30,7 @@ public sealed class WebhookService
     }
 
     public async Task<(bool Success, string? Error)> SendTestAsync(string webhookUrl, CancellationToken ct = default)
-        => await PostAsync(webhookUrl, "Lumen test notification — webhooks are working.", ct);
+        => await PostAsync(webhookUrl, "AiPulse test notification — webhooks are working.", ct);
 
     private async Task<(bool Success, string? Error)> PostAsync(string webhookUrl, string text, CancellationToken ct)
     {
@@ -43,7 +43,7 @@ public sealed class WebhookService
         else if (webhookUrl.Contains("hooks.slack.com"))
             payload = new { text };
         else
-            payload = new { message = text, source = "Lumen" };
+            payload = new { message = text, source = "AiPulse" };
 
         try
         {

@@ -37,9 +37,9 @@ public sealed class ObsidianExportService
         sb.AppendLine($"updated: {DateTimeOffset.Now:yyyy-MM-dd HH:mm}");
         sb.AppendLine("---");
         sb.AppendLine();
-        sb.AppendLine("# 🔖 Lumen Reading List");
+        sb.AppendLine("# 🔖 AiPulse Reading List");
         sb.AppendLine();
-        sb.AppendLine($"Exported from Lumen on {DateTimeOffset.Now:f}. {items.Count} saved article(s).");
+        sb.AppendLine($"Exported from AiPulse on {DateTimeOffset.Now:f}. {items.Count} saved article(s).");
         sb.AppendLine();
 
         if (items.Count == 0)
@@ -85,7 +85,7 @@ public sealed class ObsidianExportService
         sb.AppendLine($"updated: {DateTimeOffset.Now:yyyy-MM-dd HH:mm}");
         sb.AppendLine("---");
         sb.AppendLine();
-        sb.AppendLine("# 🎓 Lumen Learning Notes");
+        sb.AppendLine("# 🎓 AiPulse Learning Notes");
         sb.AppendLine();
 
         var withContent = modules

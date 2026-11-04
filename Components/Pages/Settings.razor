@@ -14,11 +14,11 @@
 @inject FollowService Follow
 @inject ProfileService Profile
 
-<PageTitle>Lumen · Settings</PageTitle>
+<PageTitle>AiPulse · Settings</PageTitle>
 
 <div class="page-header">
     <h1><Icon Name="settings" Size="22" /> Settings</h1>
-    <p class="lead">Your personal preferences — watchlist, filters, notifications, and export. New to Lumen? See the <a href="help">Help page</a> first.</p>
+    <p class="lead">Your personal preferences — watchlist, filters, notifications, and export. New to AiPulse? See the <a href="help">Help page</a> first.</p>
 </div>
 
 <div class="row g-4">
@@ -153,6 +153,13 @@
             <button class="accent-swatch" style="background:oklch(55% .14 155)" title="Emerald" @onclick='() => SetAccent("emerald")'></button>
         </div>
 
+        <h6 class="mb-2">Logo</h6>
+        <p class="text-muted x-small mb-2">Shown in the sidebar and on the sign-in page. Remembered on this browser.</p>
+        <div class="d-flex gap-2 mb-3">
+            <button class="logo-swatch" title="Logo V1" @onclick='() => SetLogo("v1")'><img src="/img/logo-v1.png" alt="Logo V1" /></button>
+            <button class="logo-swatch" title="Logo V2" @onclick='() => SetLogo("v2")'><img src="/img/logo-v2.png" alt="Logo V2" /></button>
+        </div>
+
         <details>
             <summary class="small text-muted mb-2" style="cursor:pointer">Advanced: custom CSS</summary>
             <textarea class="form-control form-control-sm font-monospace mt-2" rows="6" placeholder="e.g. .stat-num { font-size: 2.5rem; }" @bind="_customCss"></textarea>
@@ -258,7 +265,7 @@
 
         <h4 class="section-title"><Icon Name="rss" /> Mobile apps (Fever API)</h4>
         <p class="text-muted">
-            Read Lumen from an RSS app that supports the <strong>Fever API</strong> (Reeder, ReadKit, Fiery Feeds, and others).
+            Read AiPulse from an RSS app that supports the <strong>Fever API</strong> (Reeder, ReadKit, Fiery Feeds, and others).
             Set a separate password here — it's not your login password, just for this.
         </p>
         <div class="input-group mb-2">
@@ -362,7 +369,7 @@
                 <h4 class="section-title"><Icon Name="user" /> Sign in with Clerk</h4>
                 <p class="text-muted">
                     <a href="https://clerk.com" target="_blank" rel="noopener">Clerk</a> handles sign-up, email verification and sign-in (email codes, passkeys,
-                    social logins) so people do not need a separate Lumen password. It runs <em>alongside</em> the normal username/password login, which keeps
+                    social logins) so people do not need a separate AiPulse password. It runs <em>alongside</em> the normal username/password login, which keeps
                     working either way. Switch it off here at any time; nobody is locked out. Paste your app's <strong>Publishable key</strong> (it is not a secret).
                     No Clerk secret key is needed or stored.
                 </p>
@@ -390,7 +397,7 @@
                     <ol class="mt-2">
                         <li>In the Clerk dashboard create an application and copy its Publishable key here.</li>
                         <li>
-                            Under <em>Sessions &rarr; Customize session token</em> add these claims so Lumen can link an existing account by <em>verified</em> email:
+                            Under <em>Sessions &rarr; Customize session token</em> add these claims so AiPulse can link an existing account by <em>verified</em> email:
                             <pre class="mb-0"><code>{ "email": "{{user.primary_email_address}}", "email_verified": "{{user.email_verified}}", "name": "{{user.full_name}}" }</code></pre>
                             Without them people still sign in, but get a new account instead of being matched to an existing one.
                         </li>
@@ -412,11 +419,11 @@
                         <input type="file" name="file" accept=".zip" class="form-control" required />
                         <button type="submit" class="btn btn-warning">Restore from backup</button>
                     </div>
-                    <p class="text-muted small mt-1">Restart Lumen after restoring so every page picks up the restored data.</p>
+                    <p class="text-muted small mt-1">Restart AiPulse after restoring so every page picks up the restored data.</p>
                 </form>
                 @if (RestoredParam == "true")
                 {
-                    <div class="alert alert-success mt-2 py-2 small">Backup restored. Please restart Lumen now.</div>
+                    <div class="alert alert-success mt-2 py-2 small">Backup restored. Please restart AiPulse now.</div>
                 }
             </Authorized>
         </AuthorizeView>
@@ -583,6 +590,11 @@
         try { await JS.InvokeVoidAsync("setAccent", name); } catch { }
     }
 
+    private async Task SetLogo(string version)
+    {
+        try { await JS.InvokeVoidAsync("setLogo", version); } catch { }
+    }
+
     private async Task SaveCustomCss()
     {
         try { await JS.InvokeVoidAsync("setCustomCss", _customCss); } catch { }
@@ -646,7 +658,7 @@
     private async Task TestNotification()
     {
         string result;
-        try { result = await JS.InvokeAsync<string>("aipulseNotify.show", "Lumen", "Notifications are working.", ""); }
+        try { result = await JS.InvokeAsync<string>("aipulseNotify.show", "AiPulse", "Notifications are working.", ""); }
         catch (Exception ex) { result = "error: " + ex.Message; }
 
         Toasts.Show(result switch

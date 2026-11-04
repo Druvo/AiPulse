@@ -4,24 +4,24 @@
 @inject NavigationManager Nav
 @inject SiteStatsService StatsService
 
-<PageTitle>Lumen — Self-hosted AI news, tools &amp; learning dashboard</PageTitle>
+<PageTitle>AiPulse — Self-hosted AI news, tools &amp; learning dashboard</PageTitle>
 <HeadContent>
     <meta name="robots" content="index, follow" />
-    <meta name="description" content="Lumen aggregates @_sources AI news, research and tool sources into one feed, plus a glossary, a tools comparison, and a @_modules-module learning path. Self-hosted, standalone, no AI required to run it." />
+    <meta name="description" content="AiPulse aggregates @_sources AI news, research and tool sources into one feed, plus a glossary, a tools comparison, and a @_modules-module learning path. Self-hosted, standalone, no AI required to run it." />
     <link rel="canonical" href="/" />
     <meta property="og:type" content="website" />
-    <meta property="og:title" content="Lumen — Self-hosted AI news, tools &amp; learning dashboard" />
+    <meta property="og:title" content="AiPulse — Self-hosted AI news, tools &amp; learning dashboard" />
     <meta property="og:description" content="@_sources sources, one feed, zero API keys. A self-hosted dashboard to keep developers current on the AI world." />
-    <meta property="og:image" content="/img/og-image.png" />
+    <meta property="og:image" content="/favicon.png" />
     <meta property="og:url" content="/" />
     <meta name="twitter:card" content="summary" />
-    <meta name="twitter:title" content="Lumen — Self-hosted AI news, tools &amp; learning dashboard" />
+    <meta name="twitter:title" content="AiPulse — Self-hosted AI news, tools &amp; learning dashboard" />
     <meta name="twitter:description" content="@_sources sources, one feed, zero API keys. Self-hosted, standalone, no AI required to run it." />
     <script type="application/ld+json">
         {
             "@@context": "https://schema.org",
             "@@type": "SoftwareApplication",
-            "name": "Lumen",
+            "name": "AiPulse",
             "applicationCategory": "DeveloperApplication",
             "operatingSystem": "Self-hosted (.NET 8, cross-platform)",
             "description": "A standalone, self-hosted dashboard that aggregates AI news and research, a glossary, a tools comparison, and a structured learning roadmap into one feed. Runs with zero AI and no API keys.",
@@ -47,8 +47,8 @@
     <header class="landing-nav">
         <div class="landing-nav__inner">
             <a class="landing-nav__brand" href="/">
-                <img src="/img/logo.svg" alt="" />
-                <span>Lumen</span>
+                <img src="/img/logo-v1.png" alt="" />
+                <span>AiPulse</span>
             </a>
             <nav class="landing-nav__center">
                 @foreach (var item in PublicSite.Menu)
@@ -69,7 +69,7 @@
         <section class="landing-hero">
             <h1 class="landing-hero__headline reveal" style="--i:0">@_sources sources. One feed. <span class="accent">Zero API keys.</span></h1>
             <p class="landing-hero__sub reveal" style="--i:1">
-                Lumen aggregates AI news, research and tools into a single dashboard — plus a glossary,
+                AiPulse aggregates AI news, research and tools into a single dashboard — plus a glossary,
                 a tools comparison, and a @_modules-module learning path. Self-hosted. No AI required to run it.
             </p>
             @if (_stats.ItemsLast24Hours > 0)
@@ -135,7 +135,7 @@
 
                 <article class="bento-cell reveal" style="--i:9">
                     <Icon Name="sparkle" Size="22" CssClass="bento-icon" />
-                    <h3>Ask Lumen <span class="bento-badge">Members</span></h3>
+                    <h3>Ask AiPulse <span class="bento-badge">Members</span></h3>
                     <p>Ask a question and get an answer built only from our own sources, every sentence cited.</p>
                     <a class="bento-link" href="/login?ReturnUrl=%2Fask">Sign in to ask &rarr;</a>
                 </article>
@@ -164,7 +164,7 @@
     </section>
 
     <footer class="landing-footer">
-        <p class="wordmark">Lumen</p>
+        <p class="wordmark">AiPulse</p>
         <p class="tagline">Your AI reading &amp; learning station.</p>
         <p class="links">
             <a href="https://github.com/Druvo/AiPulse" target="_blank" rel="noopener">GitHub</a>

@@ -12,7 +12,7 @@
 @inject NavigationManager Nav
 @inject SiteStatsService Stats
 
-<PageTitle>Lumen · Dashboard</PageTitle>
+<PageTitle>AiPulse · Dashboard</PageTitle>
 
 <div class="page-header">
     <h1><Icon Name="zap" Size="22" /> Dashboard</h1>
@@ -35,7 +35,7 @@
                 <div class="flex-grow-1">
                     <h5 class="mb-1"><Icon Name="sparkle" Size="18" /> New here? Three things to try</h5>
                     <p class="text-muted small mb-2">
-                        Lumen aggregates @Stats.Current.ActiveSources AI news/research/tool sources into one feed, plus a glossary, a tools
+                        AiPulse aggregates @Stats.Current.ActiveSources AI news/research/tool sources into one feed, plus a glossary, a tools
                         comparison, and a learning roadmap — all standalone, no AI required to run it.
                     </p>
                     <div class="d-flex flex-column gap-1 mb-2">
@@ -151,7 +151,7 @@
         <p class="text-muted small">Ranked by how many of your sources covered the same story — the more sources reporting it, the bigger the signal.</p>
         @if (_biggestStories.Count == 0)
         {
-            <p class="text-muted">Not enough data yet — check back after Lumen has been running a few days.</p>
+            <p class="text-muted">Not enough data yet — check back after AiPulse has been running a few days.</p>
         }
         else
         {
@@ -289,7 +289,7 @@
 
         <div class="alert @(Ai.Enabled ? "alert-success" : "alert-secondary") mt-3 small">
             <strong>AI layer:</strong>
-            @(Ai.Enabled ? "Enabled: summaries, glossary explanations and Ask Lumen use your configured language model." : "Off (standalone). Add a provider under Llm:Providers to enable summaries and explanations.")
+            @(Ai.Enabled ? "Enabled: summaries, glossary explanations and Ask AiPulse use your configured language model." : "Off (standalone). Add a provider under Llm:Providers to enable summaries and explanations.")
         </div>
     </div>
 </div>

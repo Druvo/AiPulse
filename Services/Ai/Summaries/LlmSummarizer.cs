@@ -9,7 +9,7 @@ using Microsoft.Extensions.Options;
 
 namespace AiPulse.Services.Ai.Summaries;
 
-/// <summary>The app's <see cref="ISummarizer"/>: per-item summaries, glossary explanations and day digests, all written from Lumen's own text and checked against it.</summary>
+/// <summary>The app's <see cref="ISummarizer"/>: per-item summaries, glossary explanations and day digests, all written from AiPulse's own text and checked against it.</summary>
 public sealed class LlmSummarizer : ISummarizer
 {
     private const string ExplainPrompt = """

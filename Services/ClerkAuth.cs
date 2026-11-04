@@ -50,7 +50,7 @@ public static class ClerkKey
 
 /// <summary>
 /// Verifies a Clerk session token (a JWT signed RS256 with the instance's private key) against the instance's public keys, with no call
-/// to Clerk's secret API, so no secret key is ever stored in Lumen. Written against the JWT rules directly rather than trusting
+/// to Clerk's secret API, so no secret key is ever stored in AiPulse. Written against the JWT rules directly rather than trusting
 /// whatever the token claims about itself: only RS256 is accepted (so "alg: none" and HS256-with-the-public-key tricks are refused), the
 /// signing key must come from the instance's own JWKS, and issuer, expiry, not-before and authorized party are all checked.
 /// </summary>

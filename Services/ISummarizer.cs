@@ -4,7 +4,7 @@ using AiPulse.Services.Ai.Summaries;
 namespace AiPulse.Services;
 
 /// <summary>
-/// The optional AI layer: short summaries and explanations written by a language model from Lumen's own text and
+/// The optional AI layer: short summaries and explanations written by a language model from AiPulse's own text and
 /// checked against it. The dashboard works fully without it; it is on only when an LLM provider is configured
 /// (see <c>Llm:Providers</c>), implemented by <see cref="LlmSummarizer"/>.
 /// </summary>
