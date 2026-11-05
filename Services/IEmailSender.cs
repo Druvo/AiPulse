@@ -14,6 +14,13 @@ public interface IEmailSender
     bool Enabled { get; }
 
     Task SendAsync(string toEmail, string subject, string bodyText, CancellationToken ct = default);
+
+    /// <summary>
+    /// Sends a message with a plain-text part and an HTML alternative (e.g. the weekly digest). Senders that cannot do HTML fall back
+    /// to the text part, which is why the text is always required. Optional extra headers (e.g. List-Unsubscribe) are best-effort.
+    /// </summary>
+    Task SendAsync(string toEmail, string subject, string bodyText, string? bodyHtml, IReadOnlyDictionary<string, string>? headers, CancellationToken ct = default)
+        => SendAsync(toEmail, subject, bodyText, ct);
 }
 
 /// <summary>
@@ -71,6 +78,28 @@ public sealed class SmtpEmailSender : IEmailSender
                 : new NetworkCredential(_options.Username, _options.Password)
         };
         using var message = new MailMessage(_options.From, toEmail, subject, bodyText);
+        await SendMessageAsync(client, message, toEmail, ct);
+    }
+
+    public async Task SendAsync(string toEmail, string subject, string bodyText, string? bodyHtml, IReadOnlyDictionary<string, string>? headers, CancellationToken ct = default)
+    {
+        using var client = new SmtpClient(_options.Host, _options.Port)
+        {
+            EnableSsl = _options.EnableSsl,
+            Credentials = string.IsNullOrEmpty(_options.Username)
+                ? null
+                : new NetworkCredential(_options.Username, _options.Password)
+        };
+        using var message = new MailMessage(_options.From, toEmail, subject, bodyText);
+        if (!string.IsNullOrEmpty(bodyHtml))
+            message.AlternateViews.Add(AlternateView.CreateAlternateViewFromString(bodyHtml, System.Text.Encoding.UTF8, "text/html"));
+        foreach (var (name, value) in headers ?? new Dictionary<string, string>())
+            message.Headers.Add(name, value);
+        await SendMessageAsync(client, message, toEmail, ct);
+    }
+
+    private async Task SendMessageAsync(SmtpClient client, MailMessage message, string toEmail, CancellationToken ct)
+    {
         try
         {
             await client.SendMailAsync(message, ct);

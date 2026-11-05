@@ -105,6 +105,7 @@ builder.Services.AddHostedService(sp => sp.GetRequiredService<FreeApiDiscoverySe
 // Background watcher that raises desktop notifications for big releases & watchlist hits.
 builder.Services.Configure<NotificationOptions>(builder.Configuration.GetSection("Notifications"));
 builder.Services.AddHostedService<FeedWatcherService>();
+AiPulse.Services.Productivity.ProductivityExtensions.AddProductivityFeatures(builder);
 
 
 // Email hook: standalone by default. Password-reset links always work (shown in the server log, or
@@ -475,6 +476,8 @@ app.MapMethods("/fever/", new[] { "GET", "POST" }, async (HttpRequest request, F
     var response = await fever.BuildResponseAsync(userKey, request.Query, form);
     return Results.Json(response);
 });
+
+AiPulse.Services.Productivity.ProductivityExtensions.MapProductivityEndpoints(app);
 
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
