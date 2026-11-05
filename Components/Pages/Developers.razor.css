@@ -1,0 +1,136 @@
+/* /developers - reference layout. Colours come only from the --ap-* tokens so both themes stay AA. */
+
+.dev-toc {
+    display: flex;
+    flex-wrap: wrap;
+    gap: .4rem;
+    margin-bottom: 1.5rem;
+}
+.dev-toc a {
+    padding: .2rem .65rem;
+    border: 1px solid var(--ap-border);
+    border-radius: 999px;
+    background: var(--ap-surface);
+    color: var(--ap-link);
+    font-size: .85rem;
+    text-decoration: none;
+}
+.dev-toc a:hover, .dev-toc a:focus-visible { background: var(--ap-accent-soft); color: var(--ap-accent-soft-text); }
+
+.dev-section {
+    margin-bottom: 2rem;
+    scroll-margin-top: 4.5rem;
+    max-width: 52rem;
+}
+.dev-section p, .dev-section li, .dev-section dd { overflow-wrap: anywhere; }
+
+.dev-code {
+    margin: 0 0 1rem;
+    padding: .85rem 1rem;
+    padding-top: 1.9rem;
+    overflow-x: auto;
+    max-width: 100%;
+    background: var(--ap-surface-2);
+    color: var(--ap-text);
+    border: 1px solid var(--ap-border);
+    border-radius: var(--ap-radius-sm, 8px);
+    font-family: var(--ap-font-mono);
+    font-size: .8rem;
+    line-height: 1.5;
+}
+.dev-code code { color: inherit; white-space: pre; }
+.dev-code:focus-visible { outline: 2px solid var(--ap-accent); outline-offset: 2px; }
+
+.dev-steps, .dev-facts { padding-left: 1.25rem; }
+.dev-steps li, .dev-facts li { margin-bottom: .35rem; }
+
+.dev-defs { margin: 0 0 1rem; }
+.dev-defs dt { font-weight: 600; margin-top: .5rem; }
+.dev-defs dd { margin: 0 0 0 0; color: var(--ap-text-secondary); }
+.dev-errors dt { scroll-margin-top: 4.5rem; }
+.dev-errors dt:target { background: var(--ap-accent-soft); color: var(--ap-accent-soft-text); border-radius: 4px; }
+.dev-status {
+    display: inline-block;
+    min-width: 2.6rem;
+    padding: 0 .35rem;
+    border-radius: 4px;
+    background: var(--ap-surface-2);
+    border: 1px solid var(--ap-border);
+    color: var(--ap-text);
+    font-family: var(--ap-font-mono);
+    font-size: .8rem;
+    text-align: center;
+}
+
+.dev-group {
+    margin: 1.5rem 0 .6rem;
+    color: var(--ap-text-secondary);
+    text-transform: uppercase;
+    letter-spacing: .04em;
+    font-size: .8rem;
+    font-weight: 700;
+}
+
+.dev-endpoint {
+    padding: .9rem 1rem;
+    margin-bottom: .75rem;
+    background: var(--ap-surface);
+    border: 1px solid var(--ap-border);
+    border-radius: var(--ap-radius-md, 12px);
+    scroll-margin-top: 4.5rem;
+}
+.dev-endpoint__head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: .5rem;
+    margin-bottom: .4rem;
+}
+.dev-endpoint__path {
+    margin: 0;
+    font-family: var(--ap-font-mono);
+    font-size: .95rem;
+    font-weight: 600;
+    overflow-wrap: anywhere;
+    color: var(--ap-text);
+}
+.dev-method {
+    padding: .05rem .45rem;
+    border-radius: 4px;
+    background: var(--ap-success-soft);
+    color: var(--ap-success-soft-text);
+    font-family: var(--ap-font-mono);
+    font-size: .75rem;
+    font-weight: 700;
+}
+.dev-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: .25rem;
+    margin-left: auto;
+    padding: .05rem .5rem;
+    border-radius: 999px;
+    border: 1px solid var(--ap-border);
+    color: var(--ap-text-secondary);
+    font-size: .75rem;
+}
+.dev-badge--token { background: var(--ap-warning-soft); color: var(--ap-warning-soft-text); border-color: transparent; }
+.dev-endpoint__summary { margin-bottom: .5rem; color: var(--ap-text); }
+
+.dev-params {
+    margin: 0 0 .5rem;
+    padding: .5rem .75rem;
+    background: var(--ap-surface-2);
+    border-radius: var(--ap-radius-sm, 8px);
+}
+.dev-params dt { margin-top: .35rem; font-weight: 400; }
+.dev-params dt:first-child { margin-top: 0; }
+.dev-params dd { margin: 0; color: var(--ap-text-secondary); font-size: .875rem; }
+.dev-param-meta { color: var(--ap-muted); font-size: .8rem; }
+.dev-endpoint__try { font-size: .875rem; overflow-wrap: anywhere; }
+
+@media (max-width: 420px) {
+    .dev-endpoint { padding: .75rem; }
+    .dev-badge { margin-left: 0; }
+    .dev-code { font-size: .75rem; padding-left: .75rem; padding-right: .75rem; }
+}

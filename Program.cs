@@ -476,6 +476,8 @@ app.MapMethods("/fever/", new[] { "GET", "POST" }, async (HttpRequest request, F
     return Results.Json(response);
 });
 
+app.MapPublicApi(); // read-only JSON API under /api/v1 (Services/Api, docs at /developers)
+
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
 
