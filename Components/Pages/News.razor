@@ -285,21 +285,21 @@
             <label>
                 <span>Category</span>
                 <select class="form-select form-select-sm" @bind="_category" @bind:after="SyncUrl">
-                    <option value="">All categories</option>
+                    <option value="">All</option>
                     @foreach (var cat in _categories) { <option value="@cat">@cat</option> }
                 </select>
             </label>
             <label>
                 <span>Type</span>
                 <select class="form-select form-select-sm" @bind="_contentType" @bind:after="SyncUrl">
-                    <option value="">All content types</option>
+                    <option value="">All</option>
                     @foreach (var ct in _contentTypes) { <option value="@ct">@ct</option> }
                 </select>
             </label>
             <label>
                 <span>Level</span>
                 <select class="form-select form-select-sm" @bind="_level" @bind:after="SyncUrl">
-                    <option value="">All levels</option>
+                    <option value="">All</option>
                     @foreach (var lvl in _levels) { <option value="@lvl">@lvl</option> }
                 </select>
             </label>

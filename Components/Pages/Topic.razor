@@ -4,22 +4,52 @@
 
 <PageTitle>AiPulse · @Tag</PageTitle>
 
-<div class="page-header">
-    <p class="mb-1 small"><a href="topics">← All topics</a></p>
-    <h1><Icon Name="trending-up" Size="22" /> @Tag</h1>
-    <p class="lead">@(_items.Count == 0 ? "No stories under this topic yet." : $"The latest {_items.Count} stories tagged {Tag}, newest first.")</p>
-</div>
+<nav class="tg-crumbs" aria-label="Breadcrumb"><a href="topics">← All topics</a></nav>
 
-<PublicItemList Items="_items" EmptyText="Nothing has been tagged with this topic. Try another from the topic list." ShowTags="false" />
+<header class="tg-hero">
+    <div class="tg-hero-text">
+        <h1 class="tg-h1"><span class="tg-hash" aria-hidden="true">#</span>@Tag</h1>
+        <p class="tg-lead">@(_items.Count == 0 ? "No stories under this topic yet." : $"The latest {_items.Count} {(_items.Count == 1 ? "story" : "stories")} tagged {Tag}, newest first.")</p>
+    </div>
+    @if (_items.Count > 0)
+    {
+        <div class="tg-stats">
+            <svg class="tg-spark" viewBox="0 0 160 40" preserveAspectRatio="none" role="img" aria-label="@($"Stories per day over the last 30 days, peak {_daily.Max()}")">
+                <path d="@(ContentUi.SparkPath(_daily, 160, 40) + " L160,40 L0,40 Z")" class="tg-spark-fill" />
+                <path d="@ContentUi.SparkPath(_daily, 160, 40)" class="tg-spark-line" />
+            </svg>
+            <span class="tg-stat-note">last 30 days · @_daily.Sum().ToString("N0") stories</span>
+        </div>
+    }
+    <a class="tg-feed" href="@($"feed.xml?tag={Uri.EscapeDataString(Tag)}")"><Icon Name="rss" Size="15" /> Follow in a feed reader</a>
+</header>
 
-<p class="text-muted small mt-4">
-    <a href="@($"feed.xml?tag={Uri.EscapeDataString(Tag)}")"><Icon Name="rss" Size="14" /> Follow this topic in a feed reader</a>
-</p>
+@if (_related.Count > 0)
+{
+    <section class="tg-related" aria-labelledby="related">
+        <h2 id="related" class="tg-related-title">Related topics</h2>
+        <ul>
+            @foreach (var r in _related)
+            {
+                <li><a href="@PublicFeeds.TagPath(r.Tag)">#@r.Tag <span>@r.Count</span></a></li>
+            }
+        </ul>
+    </section>
+}
+
+<PublicItemList Items="_items" GroupByDay="true" ShowTags="false" EmptyText="Nothing has been tagged with this topic. Try another from the topic list." />
 
 @code {
     [Parameter] public string Tag { get; set; } = "";
 
     private IReadOnlyList<AiPulse.Models.FeedItem> _items = Array.Empty<AiPulse.Models.FeedItem>();
+    private IReadOnlyList<TopicCount> _related = Array.Empty<TopicCount>();
+    private int[] _daily = Array.Empty<int>();
 
-    protected override void OnParametersSet() => _items = PublicFeeds.ForTag(History.Items, Tag);
+    protected override void OnParametersSet()
+    {
+        _items = PublicFeeds.ForTag(History.Items, Tag);
+        _related = ContentUi.RelatedTags(_items, Tag, 10);
+        _daily = ContentUi.DailyCounts(_items.Select(i => i.Published), DateTimeOffset.Now, 30);
+    }
 }

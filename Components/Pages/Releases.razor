@@ -4,14 +4,29 @@
 
 <PageTitle>AiPulse · Releases</PageTitle>
 
-<div class="page-header">
-    <h1><Icon Name="zap" Size="22" /> Releases</h1>
-    <p class="lead">New versions of the AI libraries, models and tools AiPulse follows, as they are published.</p>
-</div>
+@{
+    var projects = _items.Select(i => i.SourceName).Distinct(StringComparer.OrdinalIgnoreCase).Count();
+    var thisWeek = _items.Count(i => i.Published >= DateTimeOffset.Now.AddDays(-7));
+}
 
-<PublicItemList Items="_items" ShowTags="false" EmptyText="No releases collected yet." />
+<header class="rl-hero">
+    <div>
+        <h1 class="rl-h1"><Icon Name="zap" Size="24" /> Releases</h1>
+        <p class="rl-lead">New versions of the AI libraries, models and tools AiPulse follows, as they are published.</p>
+    </div>
+    @if (_items.Count > 0)
+    {
+        <dl class="rl-stats">
+            <div><dt>This week</dt><dd>@thisWeek.ToString("N0")</dd></div>
+            <div><dt>Projects</dt><dd>@projects.ToString("N0")</dd></div>
+            <div><dt>Shown</dt><dd>@_items.Count.ToString("N0")</dd></div>
+        </dl>
+    }
+</header>
 
-<p class="text-muted small mt-4">Headlines and analysis are on the <a href="news">News Feed</a>; the busiest subjects are under <a href="topics">Topics</a>.</p>
+<PublicItemList Items="_items" GroupByDay="true" ReleaseStyle="true" ShowTags="false" EmptyText="No releases collected yet. They appear here once a tracked project publishes a new version." />
+
+<p class="rl-foot">Headlines and analysis are on the <a href="news">News Feed</a>; the busiest subjects are under <a href="topics">Topics</a>.</p>
 
 @code {
     private IReadOnlyList<AiPulse.Models.FeedItem> _items = Array.Empty<AiPulse.Models.FeedItem>();

@@ -14,25 +14,20 @@
 
 <PageTitle>AiPulse · Explore</PageTitle>
 
-<div class="page-header">
-    <h1><Icon Name="trending-up" Size="22" /> Explore</h1>
-    <p class="lead">What's trending across models, datasets, benchmarks, and the open-source AI ecosystem right now.</p>
-</div>
+<header class="ex-hero">
+    <h1 class="ex-h1"><Icon Name="trending-up" Size="24" /> Explore</h1>
+    <p class="ex-lead">What's trending across models, datasets, benchmarks and the open-source AI ecosystem right now.</p>
+</header>
 
-<div class="btn-group mb-4 flex-wrap" role="group">
-    <button class="btn btn-sm @(_section == "github" ? "btn-dark" : "btn-outline-dark")" @onclick='() => SetSection("github")'>
-        <Icon Name="code" Size="14" /> GitHub Trending
-    </button>
-    <button class="btn btn-sm @(_section == "models" ? "btn-dark" : "btn-outline-dark")" @onclick='() => SetSection("models")'>
-        <Icon Name="sparkle" Size="14" /> Models &amp; Datasets
-    </button>
-    <button class="btn btn-sm @(_section == "try" ? "btn-dark" : "btn-outline-dark")" @onclick='() => SetSection("try")'>
-        <Icon Name="play" Size="14" /> Try a Model
-    </button>
-    <button class="btn btn-sm @(_section == "benchmarks" ? "btn-dark" : "btn-outline-dark")" @onclick='() => SetSection("benchmarks")'>
-        <Icon Name="trending-up" Size="14" /> Benchmarks
-    </button>
-</div>
+<nav class="ex-tabs" role="tablist" aria-label="Explore sections">
+    @foreach (var (key, label, icon) in Sections)
+    {
+        <button type="button" role="tab" class="ex-tab @(_section == key ? "is-active" : "")" aria-selected="@(_section == key ? "true" : "false")"
+                @onclick="() => SetSection(key)">
+            <Icon Name="@icon" Size="16" /> @label
+        </button>
+    }
+</nav>
 
 @if (_section == "models")
 {
@@ -47,7 +42,7 @@
         <div class="input-group" style="max-width: 420px;">
             <input class="form-control" placeholder="Search Hugging Face by keyword…" @bind="_hfQuery"
                    @onkeydown="@(async e => { if (e.Key == "Enter") await SearchHuggingFace(); })" />
-            <button class="btn btn-primary" disabled="@_hfSearching" @onclick="SearchHuggingFace">
+            <button class="btn btn-primary" disabled="@_hfSearching" aria-label="Search Hugging Face" @onclick="SearchHuggingFace">
                 @if (_hfSearching) { <span class="spinner"></span> }
                 <Icon Name="search" Size="14" />
             </button>
@@ -66,7 +61,7 @@
             <h6 class="section-title mb-2">@(string.IsNullOrWhiteSpace(_hfActiveQuery) ? "Trending models" : "Models")</h6>
             @foreach (var m in _models.Skip((_modelPage - 1) * _modelPageSize).Take(_modelPageSize))
             {
-                <div class="card mb-2">
+                <div class="card mb-2 ex-card">
                     <div class="card-body py-2">
                         <div class="d-flex justify-content-between align-items-center">
                             <a href="@m.Url" target="_blank" rel="noopener" class="fw-bold small text-decoration-none">@m.Id</a>
@@ -133,7 +128,7 @@
             <h6 class="section-title mb-2">@(string.IsNullOrWhiteSpace(_hfActiveQuery) ? "Trending datasets" : "Datasets")</h6>
             @foreach (var d in _datasets.Skip((_datasetPage - 1) * _datasetPageSize).Take(_datasetPageSize))
             {
-                <div class="card mb-2">
+                <div class="card mb-2 ex-card">
                     <div class="card-body py-2">
                         <a href="@d.Url" target="_blank" rel="noopener" class="fw-bold small text-decoration-none d-block">@d.Id</a>
                         <div class="x-small text-muted">
@@ -200,7 +195,7 @@ else if (_section == "benchmarks")
             @foreach (var b in group)
             {
                 <div class="col-md-6">
-                    <a href="@b.Url" target="_blank" rel="noopener" class="card h-100 text-decoration-none">
+                    <a href="@b.Url" target="_blank" rel="noopener" class="card h-100 text-decoration-none ex-card ex-card--link">
                         <div class="card-body py-2">
                             <div class="fw-bold small">@b.Name <span class="x-small">↗</span></div>
                             <div class="x-small text-muted">@b.Description</div>
@@ -220,7 +215,7 @@ else if (_section == "github")
                 : "Repo keyword search uses GitHub's official Search API instead (trending pages aren't searchable).")
             <a href="https://trendshift.io" target="_blank" rel="noopener" class="ms-1">Also see Trendshift ↗</a>
         </p>
-        <select class="form-select form-select-sm w-auto" value="@_since" @onchange="OnSinceChanged">
+        <select class="form-select form-select-sm w-auto" aria-label="Trending period" value="@_since" @onchange="OnSinceChanged">
             <option value="daily">Today</option>
             <option value="weekly">This week</option>
             <option value="monthly">This month</option>
@@ -234,7 +229,7 @@ else if (_section == "github")
                 <div class="d-flex align-items-center gap-2">
                     @if (_historyDate is not null)
                     {
-                        <span class="badge bg-info text-dark">Viewing: @_historyDate.Value.ToString("MMM d, yyyy")</span>
+                        <span class="badge bg-info">Viewing: @_historyDate.Value.ToString("MMM d, yyyy")</span>
                         <button class="btn btn-sm btn-outline-secondary" @onclick="BackToLiveRepos">Back to live</button>
                     }
                     else
@@ -245,7 +240,7 @@ else if (_section == "github")
                             Refresh
                         </button>
                     }
-                    <button class="btn btn-sm btn-outline-secondary" title="Browse past trending days" @onclick="() => _showHistoryCalendar = !_showHistoryCalendar">
+                    <button class="btn btn-sm btn-outline-secondary" title="Browse past trending days" aria-label="Browse past trending days" aria-expanded="@(_showHistoryCalendar ? "true" : "false")" @onclick="() => _showHistoryCalendar = !_showHistoryCalendar">
                         <Icon Name="calendar" Size="13" />
                     </button>
                 </div>
@@ -258,13 +253,13 @@ else if (_section == "github")
             <div class="input-group">
                 <input class="form-control" placeholder="Search GitHub repos by keyword…" @bind="_repoQuery"
                        @onkeydown="@(async e => { if (e.Key == "Enter") await SearchRepos(); })" />
-                <button class="btn btn-primary" disabled="@_repoSearching" @onclick="SearchRepos">
+                <button class="btn btn-primary" disabled="@_repoSearching" aria-label="Search repositories" @onclick="SearchRepos">
                     @if (_repoSearching) { <span class="spinner"></span> }
                     <Icon Name="search" Size="14" />
                 </button>
                 @if (!string.IsNullOrWhiteSpace(_repoActiveQuery))
                 {
-                    <button class="btn btn-outline-secondary" @onclick="ClearRepoSearch">✕</button>
+                    <button class="btn btn-outline-secondary" title="Clear search" aria-label="Clear search" @onclick="ClearRepoSearch">✕</button>
                 }
             </div>
             </FilterBar>
@@ -274,7 +269,7 @@ else if (_section == "github")
             }
             @foreach (var r in _repos.Skip((_repoPage - 1) * _repoPageSize).Take(_repoPageSize))
             {
-                <div class="card mb-2">
+                <div class="card mb-2 ex-card">
                     <div class="card-body py-2">
                         <div class="d-flex justify-content-between align-items-start gap-2">
                             <a href="@r.Url" target="_blank" rel="noopener" class="fw-bold text-decoration-none"><Icon Name="code" Size="14" /> @r.FullName</a>
@@ -306,7 +301,7 @@ else if (_section == "github")
                                     @foreach (var c in r.Contributors.Take(6))
                                     {
                                         <a href="@c.ProfileUrl" target="_blank" rel="noopener" title="@c.Username">
-                                            <img src="@c.AvatarUrl" alt="@c.Username" class="contributor-avatar" />
+                                            <img src="@c.AvatarUrl" alt="@c.Username" class="contributor-avatar" loading="lazy" width="20" height="20" />
                                         </a>
                                     }
                                 </span>
@@ -345,9 +340,9 @@ else if (_section == "github")
             </div>
             @foreach (var d in _developers.Skip((_devPage - 1) * _devPageSize).Take(_devPageSize))
             {
-                <div class="card mb-2">
+                <div class="card mb-2 ex-card">
                     <div class="card-body py-2 d-flex align-items-center gap-3">
-                        <img src="@d.AvatarUrl" alt="@d.Username" class="dev-avatar" />
+                        <img src="@d.AvatarUrl" alt="" class="dev-avatar" loading="lazy" width="48" height="48" />
                         <div class="flex-grow-1">
                             <a href="@d.ProfileUrl" target="_blank" rel="noopener" class="fw-bold text-decoration-none">@d.Username</a>
                             @if (!string.IsNullOrWhiteSpace(d.PopularRepoName))
@@ -457,7 +452,7 @@ else if (_section == "try")
                                     <AuthorizeView Roles="Admin">
                                         <Authorized><a class="btn btn-sm btn-outline-primary" href="@($"playground?model={Uri.EscapeDataString(im.Name)}")"><Icon Name="play" Size="13" /> Chat</a></Authorized>
                                     </AuthorizeView>
-                                    <button class="btn btn-sm btn-outline-danger" @onclick="() => RemoveModel(im.Name)"><Icon Name="trash" Size="13" /></button>
+                                    <button class="btn btn-sm btn-outline-danger" title="Remove @im.Name" aria-label="Remove @im.Name" @onclick="() => RemoveModel(im.Name)"><Icon Name="trash" Size="13" /></button>
                                 </div>
                             </div>
                         </div>
@@ -563,7 +558,7 @@ else if (_section == "try")
             <div class="input-group" style="max-width: 420px;">
                 <input class="form-control" placeholder="Search GGUF models by keyword…" @bind="_ggufQuery"
                        @onkeydown="@(async e => { if (e.Key == "Enter") await SearchGguf(); })" />
-                <button class="btn btn-primary" disabled="@_ggufSearching" @onclick="SearchGguf">
+                <button class="btn btn-primary" disabled="@_ggufSearching" aria-label="Search GGUF models" @onclick="SearchGguf">
                     @if (_ggufSearching) { <span class="spinner"></span> }
                     <Icon Name="search" Size="14" />
                 </button>
@@ -642,6 +637,14 @@ else if (_section == "try")
     public string? TabParam { get; set; }
 
     private static readonly HashSet<string> ValidSections = new() { "models", "benchmarks", "github", "try" };
+
+    private static readonly (string Key, string Label, string Icon)[] Sections =
+    {
+        ("github", "GitHub Trending", "code"),
+        ("models", "Models & Datasets", "sparkle"),
+        ("try", "Try a Model", "play"),
+        ("benchmarks", "Benchmarks", "activity"),
+    };
 
     private string _section = "github";
     private bool _modelsLoading = true;

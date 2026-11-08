@@ -176,6 +176,41 @@ public class ContentUiTests
         Assert.Equal(new[] { "a", "b" }, groups[0].Items.Select(i => i.Title)); // order within a day is preserved
     }
 
+    [Fact]
+    public void Daily_counts_bucket_by_local_day_oldest_first_and_ignore_out_of_range()
+    {
+        var times = new[] { Now.AddHours(-1), Now.AddHours(-2), Now.AddHours(-20), Now.AddDays(-6), Now.AddDays(-30), Now.AddDays(1) };
+        var counts = ContentUi.DailyCounts(times, Now, 7);
+        Assert.Equal(new[] { 1, 0, 0, 0, 0, 1, 2 }, counts); // -6d, ..., yesterday, today
+        Assert.Empty(ContentUi.DailyCounts(times, Now, 0));
+    }
+
+    [Fact]
+    public void Spark_path_spans_the_box_with_the_peak_at_the_top()
+    {
+        var path = ContentUi.SparkPath(new[] { 0, 5, 10 }, 100, 20);
+        Assert.Equal("M0,18.5 L50,10 L100,1.5", path);
+        Assert.Equal("", ContentUi.SparkPath(Array.Empty<int>(), 100, 20));
+        Assert.Equal("M0,18.5 L100,18.5", ContentUi.SparkPath(new[] { 0, 0 }, 100, 20)); // all-zero stays a flat baseline
+    }
+
+    [Fact]
+    public void Related_tags_rank_co_occurring_tags_and_exclude_the_topic_itself()
+    {
+        var items = new[]
+        {
+            Item("a", tags: new[] { "RAG", "agents", "LLM" }),
+            Item("b", tags: new[] { "rag", "agents" }),
+            Item("c", tags: new[] { "Rag", "vector-db" }),
+            Item("d", tags: new[] { "agents", "LLM" }) // no RAG: doesn't count
+        };
+
+        var related = ContentUi.RelatedTags(items, "rag");
+
+        Assert.Equal(new[] { "agents", "LLM", "vector-db" }, related.Select(t => t.Tag));
+        Assert.Equal(new[] { 2, 1, 1 }, related.Select(t => t.Count));
+    }
+
     [Theory]
     [InlineData("huggingface/transformers v4.46.0", "huggingface/transformers", "v4.46.0")]
     [InlineData("ollama 0.5.1-rc2", "ollama", "0.5.1-rc2")]

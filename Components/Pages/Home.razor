@@ -29,7 +29,7 @@
         <a class="dash-stat" href="news">
             <span class="dash-stat-icon"><Icon Name="inbox" Size="18" /></span>
             <span class="dash-stat-num">@_summary.UnreadThisWeek.ToString("N0")</span>
-            <span class="dash-stat-label">Unread this week</span>
+            <span class="dash-stat-label">Unread, last 7 days</span>
         </a>
         <a class="dash-stat" href="reading-stats">
             <span class="dash-stat-icon"><Icon Name="activity" Size="18" /></span>
@@ -39,7 +39,7 @@
         <a class="dash-stat dash-stat--topic" href="@(_summary.TopTopic is null ? "topics" : PublicFeeds.TagPath(_summary.TopTopic).TrimStart('/'))">
             <span class="dash-stat-icon"><Icon Name="trending-up" Size="18" /></span>
             <span class="dash-stat-num dash-stat-text" title="@_summary.TopTopic">@(_summary.TopTopic is null ? "—" : "#" + _summary.TopTopic)</span>
-            <span class="dash-stat-label">Top topic this week@(_summary.TopTopicCount > 0 ? $" · {_summary.TopTopicCount:N0}" : "")</span>
+            <span class="dash-stat-label">Top topic@(_summary.TopTopicCount > 0 ? $" · {_summary.TopTopicCount:N0} stories" : "")</span>
         </a>
     </div>
 </section>
@@ -82,7 +82,7 @@
                             <Icon Name="help-circle" Size="14" /> Read the full guide
                         </a>
                     </div>
-                    <button class="btn btn-sm btn-outline-secondary tile-btn" @onclick="DismissWelcome" title="Dismiss">
+                    <button class="btn btn-sm btn-outline-secondary tile-btn text-nowrap" @onclick="DismissWelcome" title="Dismiss">
                         <Icon Name="check" Size="16" /> Got it
                     </button>
                 </div>

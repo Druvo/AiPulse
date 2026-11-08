@@ -1,0 +1,47 @@
+.ex-hero { margin-bottom: 1.25rem; }
+.ex-h1 { display: flex; align-items: center; gap: .55rem; margin: 0; font-size: clamp(1.6rem, 1.25rem + 1.4vw, 2.25rem); letter-spacing: -0.02em; }
+.ex-lead { margin: .4rem 0 0; max-width: 42rem; color: var(--ap-text-secondary); }
+
+.ex-tabs {
+    display: flex;
+    gap: .25rem;
+    margin-bottom: 1.5rem;
+    padding: 4px;
+    overflow-x: auto;
+    scrollbar-width: none;
+    background: var(--ap-surface-2);
+    border: 1px solid var(--ap-border);
+    border-radius: 999px;
+    width: fit-content;
+    max-width: 100%;
+}
+.ex-tabs::-webkit-scrollbar { display: none; }
+.ex-tab {
+    display: inline-flex;
+    align-items: center;
+    gap: .45rem;
+    flex-shrink: 0;
+    min-height: 40px;
+    padding: 0 1rem;
+    font-size: .875rem;
+    font-weight: 500;
+    color: var(--ap-text-secondary);
+    background: transparent;
+    border: 0;
+    border-radius: 999px;
+    white-space: nowrap;
+}
+.ex-tab:hover { color: var(--ap-text); }
+.ex-tab.is-active { color: var(--ap-text); background: var(--ap-surface); box-shadow: var(--ap-shadow-sm); font-weight: 600; }
+.ex-tab.is-active ::deep .ap-icon { color: var(--ap-accent); }
+
+.ex-card { transition: border-color var(--ap-dur-base) var(--ap-ease-out), box-shadow var(--ap-dur-base) var(--ap-ease-out); }
+.ex-card:hover { border-color: var(--ap-border-strong); }
+.ex-card ::deep a { overflow-wrap: anywhere; }
+.ex-card .btn-link { min-height: 36px; display: inline-flex; align-items: center; }
+.ex-card--link:hover { border-color: color-mix(in oklab, var(--ap-accent) 45%, var(--ap-border)); }
+
+@media (max-width: 575.98px) {
+    .ex-tabs { width: auto; border-radius: var(--ap-radius-md); }
+    .ex-tab { padding: 0 .8rem; }
+}

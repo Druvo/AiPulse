@@ -221,6 +221,45 @@ public static class ContentUi
             : day.ToString("MMM d, yyyy", CultureInfo.InvariantCulture);
     }
 
+    /// <summary>Items per local day for the <paramref name="days"/> days ending today (oldest first), for topic sparklines.</summary>
+    public static int[] DailyCounts(IEnumerable<DateTimeOffset> published, DateTimeOffset now, int days)
+    {
+        var today = DateOnly.FromDateTime(now.DateTime);
+        var counts = new int[Math.Max(0, days)];
+        foreach (var p in published)
+        {
+            var back = today.DayNumber - DateOnly.FromDateTime(p.ToOffset(now.Offset).DateTime).DayNumber;
+            if (back >= 0 && back < counts.Length) counts[counts.Length - 1 - back]++;
+        }
+        return counts;
+    }
+
+    /// <summary>An SVG polyline path ("M x,y L ...") through <paramref name="values"/>, scaled to the box with the maximum at the top. Empty for no values.</summary>
+    public static string SparkPath(IReadOnlyList<int> values, double width, double height)
+    {
+        if (values.Count == 0) return "";
+        var max = Math.Max(1, values.Max());
+        var step = values.Count == 1 ? 0 : width / (values.Count - 1);
+        var pad = 1.5; // keep the stroke inside the box
+        var points = values.Select((v, i) =>
+            $"{(i * step).ToString("0.##", CultureInfo.InvariantCulture)},{(pad + (height - 2 * pad) * (1 - v / (double)max)).ToString("0.##", CultureInfo.InvariantCulture)}");
+        return "M" + string.Join(" L", points);
+    }
+
+    /// <summary>Tags that most often appear alongside <paramref name="tag"/> (case-insensitive, the tag itself excluded), for "related topics".</summary>
+    public static IReadOnlyList<TopicCount> RelatedTags(IEnumerable<FeedItem> items, string tag, int take = 8)
+    {
+        bool Has(FeedItem i) => i.Tags.Any(t => string.Equals(t.Trim(), tag, StringComparison.OrdinalIgnoreCase));
+        return items.Where(Has)
+            .SelectMany(i => i.Tags.Select(t => t.Trim()).Where(t => t.Length > 0 && !string.Equals(t, tag, StringComparison.OrdinalIgnoreCase))
+                .Distinct(StringComparer.OrdinalIgnoreCase))
+            .GroupBy(t => t, StringComparer.OrdinalIgnoreCase)
+            .Select(g => new TopicCount(g.GroupBy(x => x).OrderByDescending(x => x.Count()).First().Key, g.Count()))
+            .OrderByDescending(t => t.Count).ThenBy(t => t.Tag, StringComparer.OrdinalIgnoreCase)
+            .Take(take)
+            .ToList();
+    }
+
     private static readonly Regex VersionPattern = new(@"(?<![\w.])v?\d+(?:\.\d+)+(?:[-+][0-9A-Za-z][0-9A-Za-z.\-]*)?(?![\w])", RegexOptions.Compiled);
 
     /// <summary>
