@@ -1,8 +1,8 @@
-@* Obsidian-style month calendar: click a day to select it, shift-click to extend into a range. *@
+@* Obsidian-style month calendar: click a day to select it, shift-click to extend into a range. Days are real buttons (keyboard and
+   screen-reader reachable), shaded by how many items they hold. Styles in MonthCalendar.razor.css. *@
 
 @{
     var monthStart = _displayMonth;
-    var monthEnd = monthStart.AddMonths(1).AddDays(-1);
     var counts = CountsOverride ?? _itemCounts;
     var max = counts.Count > 0 ? counts.Values.Max() : 0;
     var today = DateOnly.FromDateTime(DateTime.Today);
@@ -11,57 +11,57 @@
     var totalCells = 42; // always 6 full weeks, so the grid height doesn't jump between months
 }
 
-<div class="month-calendar">
-    <div class="month-calendar-header">
-        <button type="button" class="btn btn-sm btn-outline-secondary" @onclick="PrevMonth" title="Previous month">‹</button>
-        <span class="fw-bold">@monthStart.ToString("MMMM yyyy")</span>
-        <button type="button" class="btn btn-sm btn-outline-secondary" @onclick="NextMonth" title="Next month">›</button>
-        <button type="button" class="btn btn-sm btn-outline-secondary ms-2" @onclick="GoToday">Today</button>
+<div class="mc">
+    <div class="mc-head">
+        <button type="button" class="mc-nav" @onclick="PrevMonth" title="Previous month" aria-label="Previous month">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M15 6l-6 6 6 6" /></svg>
+        </button>
+        <span class="mc-title" aria-live="polite">@monthStart.ToString("MMMM yyyy")</span>
+        <button type="button" class="mc-nav" @onclick="NextMonth" title="Next month" aria-label="Next month">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M9 6l6 6-6 6" /></svg>
+        </button>
+        <button type="button" class="mc-today" @onclick="GoToday">Today</button>
     </div>
-    <div class="month-calendar-grid">
-        @foreach (var wd in new[] { "Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat" })
+    <div class="mc-grid" role="group" aria-label="@monthStart.ToString("MMMM yyyy")">
+        @foreach (var wd in new[] { "Su", "Mo", "Tu", "We", "Th", "Fr", "Sa" })
         {
-            <div class="month-calendar-weekday">@wd</div>
+            <div class="mc-weekday" aria-hidden="true">@wd</div>
         }
         @for (var i = 0; i < totalCells; i++)
         {
             var day = gridStart.AddDays(i);
             var inMonth = day.Month == monthStart.Month;
             var count = counts.GetValueOrDefault(day);
-            var level = Level(count, max);
-            var inRange = RangeStart is not null && RangeEnd is not null && day >= RangeStart.Value && day <= RangeEnd.Value;
+            var level = inMonth ? ContentUi.HeatLevel(count, max) : 0;
+            var selected = RangeStart is not null && RangeEnd is not null && day >= RangeStart.Value && day <= RangeEnd.Value;
             var isToday = day == today;
             var capturedDay = day;
-            var cellTitle = count > 0 ? $"{day:MMM d, yyyy}: {count} item(s)" : day.ToString("MMM d, yyyy");
-            <div class="month-calendar-cell heatmap-@level @(inMonth ? "" : "month-calendar-outside") @(inRange ? "month-calendar-selected" : "") @(isToday ? "month-calendar-today" : "")"
-                 title="@cellTitle"
-                 @onclick="@(e => DayClicked(capturedDay, e))">
-                <span class="month-calendar-daynum">@day.Day</span>
-                @if (count > 0)
-                {
-                    <span class="month-calendar-dot"></span>
-                }
-            </div>
+            var label = $"{day:dddd, MMMM d}: {(count == 0 ? "no items" : count == 1 ? "1 item" : $"{count:N0} items")}";
+            <button type="button" class="mc-cell mc-l@(level) @(inMonth ? "" : "mc-outside") @(selected ? "is-selected" : "") @(isToday ? "is-today" : "")"
+                    title="@label" aria-label="@label" aria-pressed="@(selected ? "true" : "false")"
+                    @onclick="@(e => DayClicked(capturedDay, e))">
+                @day.Day
+            </button>
         }
     </div>
-    @if (RangeStart is not null)
-    {
-        <p class="text-muted x-small mt-2 mb-0">
+    <p class="mc-hint">
+        @if (RangeStart is not null)
+        {
             @if (RangeEnd is not null && RangeEnd != RangeStart)
             {
-                <text>Selected: @RangeStart.Value.ToString("MMM d") – @RangeEnd.Value.ToString("MMM d, yyyy")</text>
+                <text>@RangeStart.Value.ToString("MMM d") – @RangeEnd.Value.ToString("MMM d, yyyy")</text>
             }
             else
             {
-                <text>Selected: @RangeStart.Value.ToString("MMM d, yyyy")</text>
+                <text>@RangeStart.Value.ToString("MMM d, yyyy")</text>
             }
-            <span> · shift-click another day to select a range</span>
-        </p>
-    }
-    else
-    {
-        <p class="text-muted x-small mt-2 mb-0">Click a day to filter the feed to it · shift-click another day to select a range.</p>
-    }
+            <text> selected · shift-click another day for a range</text>
+        }
+        else
+        {
+            <text>Pick a day to filter · shift-click a second day for a range</text>
+        }
+    </p>
 </div>
 
 @code {
@@ -124,18 +124,5 @@
         {
             await OnRangeChanged.InvokeAsync((day, day));
         }
-    }
-
-    private static int Level(int count, int max)
-    {
-        if (count == 0 || max == 0) return 0;
-        var ratio = (double)count / max;
-        return ratio switch
-        {
-            <= 0.25 => 1,
-            <= 0.5 => 2,
-            <= 0.75 => 3,
-            _ => 4
-        };
     }
 }

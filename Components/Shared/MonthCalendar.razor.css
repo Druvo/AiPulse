@@ -1,0 +1,50 @@
+.mc { width: 100%; max-width: 420px; }
+.mc-head { display: flex; align-items: center; gap: .25rem; margin-bottom: .5rem; }
+.mc-title { flex: 1; text-align: center; font-family: var(--ap-font-display); font-weight: 600; font-size: .95rem; }
+.mc-nav, .mc-today {
+    display: inline-grid;
+    place-items: center;
+    height: 36px;
+    min-width: 36px;
+    padding: 0 .4rem;
+    font-size: .8rem;
+    font-weight: 500;
+    color: var(--ap-text-secondary);
+    background: transparent;
+    border: 1px solid var(--ap-border-strong);
+    border-radius: var(--ap-radius-sm);
+}
+.mc-nav:hover, .mc-today:hover { background: var(--ap-surface-2); color: var(--ap-text); }
+.mc-today { padding: 0 .65rem; margin-left: .25rem; }
+
+.mc-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 3px; }
+.mc-weekday { text-align: center; font-size: .68rem; font-weight: 600; color: var(--ap-muted); padding-bottom: 2px; }
+
+.mc-cell {
+    aspect-ratio: 1 / 1;
+    min-height: 32px;
+    display: grid;
+    place-items: center;
+    padding: 0;
+    font-size: .8rem;
+    font-variant-numeric: tabular-nums;
+    color: var(--ap-text);
+    border: 0;
+    border-radius: 7px;
+    background: var(--ap-surface-2);
+    transition: transform var(--ap-dur-fast) var(--ap-ease-out);
+}
+/* Shades: dark text on the lighter ones, the theme's on-accent color on the solid accent (contrast holds in both themes). */
+.mc-l1 { background: color-mix(in oklab, var(--ap-accent) 20%, var(--ap-surface-2)); }
+.mc-l2 { background: color-mix(in oklab, var(--ap-accent) 35%, var(--ap-surface-2)); }
+.mc-l3 { background: color-mix(in oklab, var(--ap-accent) 50%, var(--ap-surface-2)); }
+.mc-l4 { background: var(--ap-accent); color: var(--ap-on-accent); font-weight: 600; }
+.mc-outside { background: transparent; color: var(--ap-muted); }
+.mc-cell.is-today { box-shadow: inset 0 0 0 2px var(--ap-text); }
+.mc-cell.is-selected { outline: 2px solid var(--ap-accent); outline-offset: 1px; font-weight: 700; position: relative; z-index: 1; }
+.mc-cell:hover { box-shadow: inset 0 0 0 2px var(--ap-accent); }
+.mc-cell:focus-visible { outline: 2px solid var(--ap-text); outline-offset: 1px; }
+
+.mc-hint { margin: .5rem 0 0; font-size: .74rem; color: var(--ap-muted); }
+
+@media (prefers-reduced-motion: reduce) { .mc-cell { transition: none; } }
