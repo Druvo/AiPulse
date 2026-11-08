@@ -29,6 +29,7 @@ public static class PublicSite
     public static readonly IReadOnlyList<PublicPage> Entry = new[]
     {
         new PublicPage("/coverage", "Sources we follow", "weekly", 0.5),
+        new PublicPage("/this-week", "This week in AI", "daily", 0.7),
         new PublicPage("/register", "Get started", "monthly", 0.5),
         new PublicPage("/login", "Sign in", "monthly", 0.3),
     };
@@ -41,11 +42,13 @@ public static class PublicSite
     {
         "/forgot-password", "/reset-password", "/login/clerk", "/access-denied", "/u/{Username}", "/Error",
         // Reached from /topics; the sitemap lists the busiest ones individually (see Sitemap's extraPaths).
-        "/topics/{Tag}"
+        "/topics/{Tag}",
+        // Reached only from the weekly email's signed link.
+        "/digest/unsubscribe"
     };
 
     /// <summary>Machine-readable endpoints crawlers and feed readers may fetch (not pages, so not in the menu).</summary>
-    public static readonly IReadOnlyList<string> Feeds = new[] { "/feed.xml" };
+    public static readonly IReadOnlyList<string> Feeds = new[] { "/feed.xml", "/this-week.xml" };
 
     /// <summary>Every path a crawler may fetch.</summary>
     public static IEnumerable<string> CrawlablePaths =>

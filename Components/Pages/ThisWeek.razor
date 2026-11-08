@@ -1,0 +1,119 @@
+@page "/this-week"
+@inject FeedHistoryService History
+@inject TimeProvider Clock
+
+@* Public, static server-rendered weekly round-up built by WeeklyDigest from the saved history (no interactivity needed). *@
+
+<PageTitle>This week in AI · AiPulse</PageTitle>
+<HeadContent>
+    <meta name="description" content="@WeeklyDigest.Summary(_digest)" />
+    <link rel="alternate" type="application/atom+xml" title="AiPulse - This week in AI" href="this-week.xml" />
+</HeadContent>
+
+<div class="page-header">
+    <h1><Icon Name="calendar" Size="22" /> This week in AI</h1>
+    <p class="lead">
+        The last seven days at a glance (@WeeklyDigest.RangeText(_digest.From, _digest.To)): the stories most sources covered,
+        the busiest topics and what shipped.
+    </p>
+</div>
+
+@if (_digest.IsEmpty)
+{
+    <div class="tw-empty">
+        <h2 class="h5">A quiet week so far</h2>
+        <p class="mb-0">Nothing has been collected in the last seven days yet. Check back once the first feeds have been polled, or browse <a href="news">the News Feed</a>.</p>
+    </div>
+}
+else
+{
+    <dl class="tw-stats">
+        <div><dt>Stories</dt><dd>@_digest.StoryCount.ToString("N0")</dd></div>
+        <div><dt>Sources</dt><dd>@_digest.SourceCount.ToString("N0")</dd></div>
+        <div><dt>Projects with releases</dt><dd>@_digest.NewReleases.Count.ToString("N0")</dd></div>
+    </dl>
+
+    <div class="tw-grid">
+        <section class="tw-section tw-stories" aria-labelledby="tw-stories">
+            <h2 id="tw-stories" class="tw-heading">Most-covered stories</h2>
+            @if (_digest.MostCovered.Count == 0)
+            {
+                <p class="text-muted">No story was picked up by more than one source this week.</p>
+            }
+            else
+            {
+                <ol class="tw-story-list">
+                    @foreach (var s in _digest.MostCovered)
+                    {
+                        <li class="tw-story">
+                            <a class="tw-story-title" href="@WeeklyDigest.SafeHref(s.Item.Link)" target="_blank" rel="noopener noreferrer">@s.Item.Title</a>
+                            <span class="tw-story-meta">
+                                <span class="tw-coverage">@s.Coverage sources</span>
+                                <span>@string.Join(", ", s.Sources.Take(4))@(s.Sources.Count > 4 ? $" +{s.Sources.Count - 4}" : "")</span>
+                                <span>@s.Item.Published.ToUniversalTime().ToString("ddd MMM d")</span>
+                            </span>
+                        </li>
+                    }
+                </ol>
+            }
+        </section>
+
+        <div class="tw-side">
+            <section class="tw-section" aria-labelledby="tw-topics">
+                <h2 id="tw-topics" class="tw-heading">Top topics</h2>
+                @if (_digest.TopTopics.Count == 0)
+                {
+                    <p class="text-muted">Not enough tagged stories yet.</p>
+                }
+                else
+                {
+                    var top = _digest.TopTopics[0].Count;
+                    <ul class="tw-topics list-unstyled">
+                        @foreach (var t in _digest.TopTopics)
+                        {
+                            <li>
+                                <a class="tw-topic" href="@PublicFeeds.TagPath(t.Tag)">
+                                    <span class="tw-topic-name">@t.Tag</span>
+                                    <span class="tw-topic-bar" aria-hidden="true"><span style="width: @((t.Count * 100 / top).ToString())%"></span></span>
+                                    <span class="tw-topic-count">@t.Count</span>
+                                </a>
+                            </li>
+                        }
+                    </ul>
+                }
+            </section>
+
+            <section class="tw-section" aria-labelledby="tw-releases">
+                <h2 id="tw-releases" class="tw-heading">New releases</h2>
+                @if (_digest.NewReleases.Count == 0)
+                {
+                    <p class="text-muted">No releases this week.</p>
+                }
+                else
+                {
+                    <ul class="tw-releases list-unstyled">
+                        @foreach (var r in _digest.NewReleases)
+                        {
+                            <li>
+                                <span class="tw-release-source">@r.SourceName</span>
+                                <a href="@WeeklyDigest.SafeHref(r.Latest.Link)" target="_blank" rel="noopener noreferrer">@r.Latest.Title</a>
+                                @if (r.Count > 1) { <span class="text-muted small">+@(r.Count - 1) more</span> }
+                            </li>
+                        }
+                    </ul>
+                    <p class="small mb-0"><a href="releases">All releases</a></p>
+                }
+            </section>
+        </div>
+    </div>
+}
+
+<p class="tw-follow text-muted small">
+    Follow it every week: <a href="this-week.xml"><Icon Name="rss" Size="14" /> Atom feed</a>, or sign in and switch on the weekly email in Settings.
+</p>
+
+@code {
+    private WeeklyDigestModel _digest = null!;
+
+    protected override void OnInitialized() => _digest = WeeklyDigest.LastSevenDays(History.Items, Clock.GetUtcNow());
+}

@@ -1,0 +1,18 @@
+@* Distraction-free shell for the reading view: no sidebar, no top bar, just the article (the page draws its own slim toolbar). *@
+@inherits LayoutComponentBase
+
+<HeadContent>
+    <meta name="robots" content="noindex, nofollow" />
+</HeadContent>
+
+<main id="main" class="reader-shell">
+    @Body
+</main>
+
+<ToastHost />
+
+<div id="blazor-error-ui">
+    An unhandled error has occurred.
+    <a href="" class="reload">Reload</a>
+    <a class="dismiss">🗙</a>
+</div>

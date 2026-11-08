@@ -1,0 +1,343 @@
+@page "/saved"
+@attribute [Authorize]
+@rendermode InteractiveServer
+@using AiPulse.Services.Productivity
+@inject SavedSearchService Searches
+@inject FeedHistoryService History
+@inject KnowledgeBaseService Kb
+@inject ReadingStateService Reading
+@inject AuthenticationStateProvider Auth
+@inject ToastService Toasts
+
+<PageTitle>AiPulse · Saved searches</PageTitle>
+
+<div class="page-header">
+    <h1><Icon Name="search" Size="22" /> Saved searches</h1>
+    <p class="lead">Keep the News queries you run often, see how many stories match, and get an alert when something new turns up.</p>
+</div>
+
+@if (_userId is null)
+{
+    <p>Sign in to keep saved searches.</p>
+}
+else
+{
+    <div class="ss-toolbar">
+        @if (!_editing)
+        {
+            <button type="button" class="btn btn-primary" @onclick="StartNew"><Icon Name="sparkle" Size="15" /> New saved search</button>
+        }
+        <span class="ss-count text-muted">@_rules.Count of @SavedSearchService.MaxRulesPerUser</span>
+    </div>
+
+    @if (_editing)
+    {
+        <section class="ss-form card" aria-labelledby="ss-form-title">
+            <div class="card-body">
+                <h2 id="ss-form-title" class="h5 mb-3">@(_draft.Id == 0 ? "New saved search" : "Edit saved search")</h2>
+                @if (_error is not null)
+                {
+                    <div class="alert alert-danger py-2" role="alert">@_error</div>
+                }
+                <div class="ss-grid">
+                    <div class="ss-field">
+                        <label class="form-label" for="ss-name">Name</label>
+                        <input id="ss-name" class="form-control" maxlength="@SavedSearchService.MaxNameLength" @bind="_draft.Name" @bind:event="oninput" placeholder="e.g. Agent frameworks" required />
+                    </div>
+                    <div class="ss-field ss-field-wide">
+                        <label class="form-label" for="ss-keywords">Keywords</label>
+                        <input id="ss-keywords" class="form-control" maxlength="@SavedSearchQuery.MaxKeywordsLength" @bind="_draft.Keywords" @bind:event="oninput" @bind:after="RefreshPreview"
+                               placeholder="agent &quot;tool use&quot; -crypto" aria-describedby="ss-keywords-help" />
+                        <div id="ss-keywords-help" class="form-text">All words must appear. Use "quotes" for a phrase and -word to leave stories out.</div>
+                    </div>
+                    <div class="ss-field">
+                        <label class="form-label" for="ss-tags">Tags <span class="text-muted fw-normal">(any of, comma separated)</span></label>
+                        <input id="ss-tags" class="form-control" list="ss-tag-options" @bind="_draft.Tags" @bind:event="oninput" @bind:after="RefreshPreview" placeholder="Agents, MCP" />
+                        <datalist id="ss-tag-options">
+                            @foreach (var t in _topTags)
+                            {
+                                <option value="@t"></option>
+                            }
+                        </datalist>
+                    </div>
+                    <div class="ss-field">
+                        <label class="form-label" for="ss-source">Sources <span class="text-muted fw-normal">(any of)</span></label>
+                        <div class="ss-source-add">
+                            <input id="ss-source" class="form-control" list="ss-source-options" @bind="_sourceInput" @bind:event="oninput" placeholder="Start typing a source" @onkeydown="SourceKey" />
+                            <button type="button" class="btn btn-outline-secondary" @onclick="AddSource" disabled="@string.IsNullOrWhiteSpace(_sourceInput)">Add</button>
+                        </div>
+                        <datalist id="ss-source-options">
+                            @foreach (var s in _sourceNames)
+                            {
+                                <option value="@s"></option>
+                            }
+                        </datalist>
+                        @if (_draftSources.Count > 0)
+                        {
+                            <ul class="ss-chips" aria-label="Chosen sources">
+                                @foreach (var s in _draftSources)
+                                {
+                                    <li class="ss-chip">@s <button type="button" class="ss-chip-x" @onclick="() => RemoveSource(s)" aria-label="@($"Remove {s}")">×</button></li>
+                                }
+                            </ul>
+                        }
+                    </div>
+                </div>
+
+                <fieldset class="ss-switches">
+                    <legend class="visually-hidden">Alerts</legend>
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" role="switch" id="ss-alert" @bind="_draft.AlertEnabled" />
+                        <label class="form-check-label" for="ss-alert">Alert me in AiPulse when new stories match</label>
+                    </div>
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" role="switch" id="ss-webhook" @bind="_draft.WebhookEnabled" disabled="@(!_hasWebhook || !_draft.AlertEnabled)" aria-describedby="ss-webhook-help" />
+                        <label class="form-check-label" for="ss-webhook">Also send alerts to my webhook</label>
+                        <div id="ss-webhook-help" class="form-text">@(_hasWebhook ? "Uses the webhook from your Settings." : "Add a webhook in Settings to use this.")</div>
+                    </div>
+                </fieldset>
+
+                <p class="ss-preview" role="status" aria-live="polite">
+                    @if (_previewQuery is null || !_previewQuery.HasPositiveCriterion)
+                    {
+                        <span class="text-muted">Add a keyword, tag or source to see how many stories match.</span>
+                    }
+                    else
+                    {
+                        <strong>@_previewCount.ToString("N0")</strong> <span>matching @(_previewCount == 1 ? "story" : "stories") in the last 30 days.</span>
+                    }
+                </p>
+
+                <div class="ss-actions">
+                    <button type="button" class="btn btn-primary" disabled="@_busy" @onclick="Save">@(_draft.Id == 0 ? "Save search" : "Save changes")</button>
+                    <button type="button" class="btn btn-outline-secondary" @onclick="Cancel">Cancel</button>
+                </div>
+            </div>
+        </section>
+    }
+
+    @if (_rules.Count == 0 && !_editing)
+    {
+        <div class="ss-empty card">
+            <div class="card-body">
+                <h2 class="h5">No saved searches yet</h2>
+                <p class="text-muted mb-2">Save a query like <code>agent "tool use"</code> or the tag <code>MCP</code>, and AiPulse counts the matches and can tell you when a new one arrives.</p>
+                <button type="button" class="btn btn-primary btn-sm" @onclick="StartNew">Create your first one</button>
+            </div>
+        </div>
+    }
+
+    <ul class="ss-list list-unstyled" aria-label="Your saved searches">
+        @foreach (var rule in _rules)
+        {
+            var stats = Stats(rule);
+            <li class="ss-rule card" id="@($"rule-{rule.Id}")">
+                <div class="card-body">
+                    <div class="ss-rule-head">
+                        <h2 class="ss-rule-name h6">@rule.Name</h2>
+                        <div class="form-check form-switch ss-rule-switch">
+                            <input class="form-check-input" type="checkbox" role="switch" id="@($"ss-alert-{rule.Id}")" checked="@rule.AlertEnabled"
+                                   @onchange="e => ToggleAlert(rule, e)" />
+                            <label class="form-check-label" for="@($"ss-alert-{rule.Id}")">Alerts</label>
+                        </div>
+                    </div>
+                    <p class="ss-rule-query">@stats.Query.Describe()</p>
+                    <dl class="ss-stats">
+                        <div><dt>Last 7 days</dt><dd>@stats.Week.ToString("N0")</dd></div>
+                        <div><dt>Last 30 days</dt><dd>@stats.Month.ToString("N0")</dd></div>
+                        <div><dt>All history</dt><dd>@stats.All.ToString("N0")</dd></div>
+                    </dl>
+                    @if (stats.Latest.Count > 0)
+                    {
+                        <ul class="ss-matches" aria-label="@($"Latest matches for {rule.Name}")">
+                            @foreach (var m in stats.Latest)
+                            {
+                                <li>
+                                    <a href="@($"read?url={Uri.EscapeDataString(m.Link)}")">@m.Title</a>
+                                    <span class="text-muted small">@m.SourceName · @m.Published.ToLocalTime().ToString("MMM d")</span>
+                                </li>
+                            }
+                        </ul>
+                    }
+                    <div class="ss-rule-actions">
+                        @if (rule.LastAlertUtc is { } last)
+                        {
+                            <span class="text-muted small me-auto">Last alert @last.ToLocalTime().ToString("MMM d, HH:mm")</span>
+                        }
+                        else
+                        {
+                            <span class="me-auto"></span>
+                        }
+                        @if (_confirmDelete == rule.Id)
+                        {
+                            <span class="small" role="alert">Delete “@rule.Name”?</span>
+                            <button type="button" class="btn btn-sm btn-danger" @onclick="() => Delete(rule)">Delete</button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary" @onclick="() => _confirmDelete = null">Keep</button>
+                        }
+                        else
+                        {
+                            <button type="button" class="btn btn-sm btn-outline-secondary" @onclick="() => Edit(rule)" aria-label="@($"Edit {rule.Name}")">Edit</button>
+                            <button type="button" class="btn btn-sm btn-outline-danger" @onclick="() => _confirmDelete = rule.Id" aria-label="@($"Delete {rule.Name}")"><Icon Name="trash" Size="13" /> Delete</button>
+                        }
+                    </div>
+                </div>
+            </li>
+        }
+    </ul>
+
+    @if (_recentAlerts.Count > 0)
+    {
+        <section class="ss-recent" aria-labelledby="ss-recent-title">
+            <h2 id="ss-recent-title" class="h5 section-title">Recent alerts</h2>
+            <ul class="list-unstyled ss-recent-list">
+                @foreach (var hit in _recentAlerts)
+                {
+                    <li>
+                        <a href="@($"read?url={Uri.EscapeDataString(hit.Link)}")">@hit.Title</a>
+                        <span class="text-muted small">@(RuleName(hit.RuleId)) · @hit.SourceName · @hit.CreatedUtc.ToLocalTime().ToString("MMM d, HH:mm")</span>
+                    </li>
+                }
+            </ul>
+        </section>
+    }
+}
+
+@code {
+    private sealed record RuleStats(SavedSearchQuery Query, int Week, int Month, int All, List<AiPulse.Models.FeedItem> Latest);
+
+    private int? _userId;
+    private List<SavedSearchRule> _rules = new();
+    private List<SavedSearchHit> _recentAlerts = new();
+    private readonly Dictionary<int, RuleStats> _stats = new();
+    private bool _editing;
+    private bool _busy;
+    private string? _error;
+    private int? _confirmDelete;
+    private SavedSearchRule _draft = new();
+    private List<string> _draftSources = new();
+    private string _sourceInput = "";
+    private SavedSearchQuery? _previewQuery;
+    private int _previewCount;
+    private List<string> _sourceNames = new();
+    private List<string> _topTags = new();
+    private bool _hasWebhook;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _userId = ProductivityUser.IdOf((await Auth.GetAuthenticationStateAsync()).User);
+        if (_userId is null) return;
+        _sourceNames = Kb.Sources.Where(s => s.Enabled).Select(s => s.Name).OrderBy(n => n, StringComparer.OrdinalIgnoreCase).ToList();
+        _topTags = PublicFeeds.Topics(History.Items, DateTimeOffset.UtcNow.AddDays(-30), take: 40).Select(t => t.Tag).ToList();
+        _hasWebhook = !string.IsNullOrWhiteSpace(Reading.WebhookUrl);
+        await Reload();
+    }
+
+    private async Task Reload()
+    {
+        _rules = await Searches.ListAsync(_userId!.Value);
+        _recentAlerts = await Searches.RecentAlertsAsync(_userId.Value, 15);
+        _stats.Clear();
+    }
+
+    private RuleStats Stats(SavedSearchRule rule)
+    {
+        if (_stats.TryGetValue(rule.Id, out var s)) return s;
+        var q = SavedSearchQuery.From(rule);
+        var now = DateTimeOffset.UtcNow;
+        var matches = History.Items.Where(q.Matches).ToList(); // already newest first
+        s = new RuleStats(q, matches.Count(i => i.Published >= now.AddDays(-7)), matches.Count(i => i.Published >= now.AddDays(-30)), matches.Count, matches.Take(3).ToList());
+        _stats[rule.Id] = s;
+        return s;
+    }
+
+    private string RuleName(int id) => _rules.FirstOrDefault(r => r.Id == id)?.Name ?? "Deleted search";
+
+    private void StartNew()
+    {
+        _draft = new SavedSearchRule { AlertEnabled = true };
+        _draftSources = new();
+        _error = null;
+        _editing = true;
+        RefreshPreview();
+    }
+
+    private void Edit(SavedSearchRule rule)
+    {
+        _draft = new SavedSearchRule
+        {
+            Id = rule.Id, Name = rule.Name, Keywords = rule.Keywords, Tags = rule.Tags,
+            AlertEnabled = rule.AlertEnabled, WebhookEnabled = rule.WebhookEnabled
+        };
+        _draftSources = SavedSearchQuery.SplitList(rule.Sources, '\n').ToList();
+        _error = null;
+        _editing = true;
+        RefreshPreview();
+    }
+
+    private void Cancel()
+    {
+        _editing = false;
+        _error = null;
+    }
+
+    private void SourceKey(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter") AddSource();
+    }
+
+    private void AddSource()
+    {
+        var name = _sourceInput.Trim();
+        if (name.Length == 0) return;
+        var canonical = _sourceNames.FirstOrDefault(n => string.Equals(n, name, StringComparison.OrdinalIgnoreCase)) ?? name;
+        if (!_draftSources.Contains(canonical, StringComparer.OrdinalIgnoreCase)) _draftSources.Add(canonical);
+        _sourceInput = "";
+        RefreshPreview();
+    }
+
+    private void RemoveSource(string s)
+    {
+        _draftSources.Remove(s);
+        RefreshPreview();
+    }
+
+    private void RefreshPreview()
+    {
+        _previewQuery = SavedSearchQuery.Parse(_draft.Keywords, _draft.Tags, string.Join('\n', _draftSources));
+        _previewCount = _previewQuery.HasPositiveCriterion ? _previewQuery.Count(History.Items, DateTimeOffset.UtcNow.AddDays(-30)) : 0;
+    }
+
+    private async Task Save()
+    {
+        if (_busy || _userId is null) return;
+        _busy = true;
+        try
+        {
+            if (!_draft.AlertEnabled) _draft.WebhookEnabled = false;
+            _draft.Sources = string.Join('\n', _draftSources);
+            var isNew = _draft.Id == 0;
+            var (rule, error) = await Searches.SaveAsync(_userId.Value, _draft, History.Items);
+            if (error is not null) { _error = error; return; }
+            _editing = false;
+            await Reload();
+            Toasts.Show(isNew ? $"Saved “{rule!.Name}”." : $"Updated “{rule!.Name}”.");
+        }
+        finally { _busy = false; }
+    }
+
+    private async Task ToggleAlert(SavedSearchRule rule, ChangeEventArgs e)
+    {
+        var on = e.Value is true;
+        await Searches.SetAlertAsync(_userId!.Value, rule.Id, on, History.Items);
+        await Reload();
+        Toasts.Show(on ? $"Alerts on for “{rule.Name}”. You'll hear about new matches from now on." : $"Alerts off for “{rule.Name}”.");
+    }
+
+    private async Task Delete(SavedSearchRule rule)
+    {
+        _confirmDelete = null;
+        await Searches.DeleteAsync(_userId!.Value, rule.Id);
+        await Reload();
+        Toasts.Show($"Deleted “{rule.Name}”.");
+    }
+}
