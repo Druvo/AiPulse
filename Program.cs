@@ -9,15 +9,21 @@ using AspNet.Security.OAuth.GitHub;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.Google;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
+
+// JSON REST API for the Android/iOS app (Controllers/Api/*) - separate from the server-rendered Razor
+// pages above, which the app can't use (no SignalR circuit on a phone).
+builder.Services.AddControllers();
 
 // HttpClient used for feed fetching. A real User-Agent stops some hosts (Reddit etc.) from blocking us.
 builder.Services.AddHttpClient("feeds", c =>
@@ -88,6 +94,7 @@ builder.Services.AddSingleton<FaviconService>();
 builder.Services.AddSingleton<FollowService>();
 builder.Services.AddSingleton<CommentService>();
 builder.Services.AddSingleton<ProfileService>();
+builder.Services.AddSingleton<MobileReadingStore>();
 builder.Services.AddHttpContextAccessor();
 
 // "Ask AiPulse": grounded Q&A over the knowledge base and news, with pluggable language-model providers.
@@ -117,6 +124,11 @@ else
 
 // --- Authentication (cookie based, single configured user) ---
 builder.Services.Configure<AuthOptions>(builder.Configuration.GetSection("Auth"));
+
+// Bearer tokens for the Android/iOS app - it has no browser to hold AiPulse's cookie, so it logs in once
+// (Controllers/Api/AuthController) and attaches the resulting JWT as "Authorization: Bearer <token>" on
+// every later request instead.
+builder.Services.Configure<JwtOptions>(builder.Configuration.GetSection("Jwt"));
 
 // Google/GitHub sign-in: credentials are admin-configurable at runtime (Settings.razor), stored in the
 // DB rather than appsettings.json - see OAuthSettingsService for why the handlers below are always
@@ -196,6 +208,25 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
         options.CallbackPath = "/signin-github";
         options.Scope.Add("user:email"); // GitHub omits email from the base profile unless requested
         options.Events.OnTicketReceived = ctx => HandleExternalTicketReceivedAsync(ctx, OAuthProviders.GitHub);
+    })
+    .AddJwtBearer(JwtBearerDefaults.AuthenticationScheme, options =>
+    {
+        // Registered as an additional scheme (the default stays Cookie, for the Razor pages above) - API
+        // controllers opt into it explicitly via [Authorize(AuthenticationSchemes = "Bearer")], so a
+        // missing/expired mobile token never gets redirected to /login like a browser session would.
+        var jwt = builder.Configuration.GetSection("Jwt").Get<JwtOptions>() ?? new JwtOptions();
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuer = true,
+            ValidIssuer = jwt.Issuer,
+            ValidateAudience = true,
+            ValidAudience = jwt.Issuer,
+            ValidateIssuerSigningKey = true,
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(
+                string.IsNullOrWhiteSpace(jwt.Secret) ? new string('0', 32) : jwt.Secret)),
+            ValidateLifetime = true,
+            ClockSkew = TimeSpan.FromMinutes(2)
+        };
     });
 builder.Services.AddAuthorization();
 
@@ -475,6 +506,8 @@ app.MapMethods("/fever/", new[] { "GET", "POST" }, async (HttpRequest request, F
     var response = await fever.BuildResponseAsync(userKey, request.Query, form);
     return Results.Json(response);
 });
+
+app.MapControllers();
 
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
