@@ -26,14 +26,14 @@ public readonly record struct ApiRateLimitDecision(bool Allowed, int Limit, int 
 /// <see cref="FixedWindowRateLimiter"/> from System.Threading.RateLimiting (the same limiter ASP.NET Core's RateLimiter
 /// middleware uses for its fixed-window policies). The middleware itself is not used because it cannot report how many
 /// permits remain or when the window resets, which the X-RateLimit-* headers need. Here each partition's limiter runs with
-/// AutoReplenishment off and is replenished by this class when its window has elapsed, so the window start is known exactly.
+/// AutoReplenishment off and is replaced by a fresh one when this class sees its window has elapsed, so the window start is known exactly.
 /// Idle partitions are swept periodically so a scan from many addresses cannot grow memory without bound.
 /// </summary>
 public sealed class ApiRateLimiter : IDisposable
 {
     private sealed class Partition
     {
-        public required FixedWindowRateLimiter Limiter { get; init; }
+        public required FixedWindowRateLimiter Limiter { get; set; }
         public required ApiRateLimitPolicy Policy { get; init; }
         public long WindowStart;
         public bool Removed;
@@ -71,13 +71,7 @@ public sealed class ApiRateLimiter : IDisposable
         {
             Policy = policy,
             WindowStart = now,
-            Limiter = new FixedWindowRateLimiter(new FixedWindowRateLimiterOptions
-            {
-                PermitLimit = policy.PermitLimit,
-                Window = policy.Window,
-                QueueLimit = 0,
-                AutoReplenishment = false
-            })
+            Limiter = NewLimiter(policy)
         });
 
         lock (partition)
@@ -86,7 +80,10 @@ public sealed class ApiRateLimiter : IDisposable
             if (partition.Removed) return null;
             if (_time.GetElapsedTime(partition.WindowStart, now) >= policy.Window)
             {
-                partition.Limiter.TryReplenish();
+                // A fresh limiter rather than TryReplenish(): the built-in one times its window on the real Stopwatch, which
+                // would disagree with the injected clock. Swapping keeps this class the only judge of when a window ends.
+                partition.Limiter.Dispose();
+                partition.Limiter = NewLimiter(policy);
                 partition.WindowStart = now;
             }
 
@@ -97,6 +94,14 @@ public sealed class ApiRateLimiter : IDisposable
             return new ApiRateLimitDecision(lease.IsAcquired, policy.PermitLimit, Math.Max(0, remaining), resetAfter, policy.Name);
         }
     }
+
+    private static FixedWindowRateLimiter NewLimiter(ApiRateLimitPolicy policy) => new(new FixedWindowRateLimiterOptions
+    {
+        PermitLimit = policy.PermitLimit,
+        Window = policy.Window,
+        QueueLimit = 0,
+        AutoReplenishment = false
+    });
 
     private void MaybeSweep(long now)
     {
