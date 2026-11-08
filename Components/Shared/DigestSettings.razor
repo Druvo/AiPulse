@@ -1,0 +1,73 @@
+@* Weekly email digest opt-in, for the Settings page. Sends "This week in AI" at most once a week to the account's email address;
+   when SMTP is not configured the email is only written to the server log, and this says so. *@
+@using AiPulse.Services.Productivity
+@inject ProductivitySettingsService Prefs
+@inject UserService Users
+@inject IEmailSender Email
+@inject AuthenticationStateProvider Auth
+@inject ToastService Toasts
+
+<section class="ds card" aria-labelledby="ds-title">
+    <div class="card-body">
+        <h2 id="ds-title" class="h5 mb-1"><Icon Name="calendar" Size="18" /> Weekly email digest</h2>
+        <p class="text-muted small mb-3">A short “This week in AI” email: the most-covered stories, the busiest topics and new releases. At most once a week, one click to unsubscribe.</p>
+
+        @if (_userId is null)
+        {
+            <p class="mb-0">Sign in to choose email settings.</p>
+        }
+        else if (_loaded)
+        {
+            <div class="form-check form-switch">
+                <input class="form-check-input" type="checkbox" role="switch" id="ds-optin" checked="@_optIn" @onchange="Toggle"
+                       disabled="@(string.IsNullOrWhiteSpace(_email) && !_optIn)" aria-describedby="ds-status" />
+                <label class="form-check-label" for="ds-optin">Send me the weekly digest</label>
+            </div>
+            <p id="ds-status" class="ds-status small mb-0">
+                @if (string.IsNullOrWhiteSpace(_email))
+                {
+                    <span>Your account has no email address yet, so there is nowhere to send it.</span>
+                }
+                else
+                {
+                    <span>Goes to <strong>@_email</strong>.</span>
+                    @if (_lastSent is { } last)
+                    {
+                        <span> Last sent @last.ToLocalTime().ToString("MMM d").</span>
+                    }
+                    @if (!Email.Enabled)
+                    {
+                        <span class="ds-warn"> Email delivery is not set up on this server, so digests are only written to the server log.</span>
+                    }
+                }
+                <a href="this-week" class="ms-1">Preview this week's</a>
+            </p>
+        }
+    </div>
+</section>
+
+@code {
+    private int? _userId;
+    private bool _loaded;
+    private bool _optIn;
+    private string? _email;
+    private DateTime? _lastSent;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _userId = ProductivityUser.IdOf((await Auth.GetAuthenticationStateAsync()).User);
+        if (_userId is null) return;
+        var s = await Prefs.GetAsync(_userId.Value);
+        _optIn = s.DigestOptIn;
+        _lastSent = s.DigestLastSentUtc;
+        _email = (await Users.GetByIdAsync(_userId.Value))?.Email;
+        _loaded = true;
+    }
+
+    private async Task Toggle(ChangeEventArgs e)
+    {
+        _optIn = e.Value is true;
+        await Prefs.SetDigestAsync(_userId!.Value, _optIn);
+        Toasts.Show(_optIn ? "Weekly digest on. The next one goes out within the hour, then weekly." : "Weekly digest off.");
+    }
+}

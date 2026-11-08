@@ -1,0 +1,4 @@
+.ds { margin-bottom: var(--ap-space-md); }
+.ds-status { margin-top: var(--ap-space-2xs); color: var(--ap-text-secondary); }
+.ds-status strong { color: var(--ap-text); }
+.ds-warn { color: var(--ap-warning-soft-text); }

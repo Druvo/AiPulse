@@ -113,41 +113,41 @@ public class OnboardingTests
     [Fact]
     public void Steps_are_detected_from_signals()
     {
-        var steps = OnboardingChecklist.Steps(new OnboardingSignals(2, 0, 1, false), None);
-        Assert.True(steps.Single(s => s.Key == OnboardingChecklist.Topics).Done);
-        Assert.False(steps.Single(s => s.Key == OnboardingChecklist.Sources).Done);
-        Assert.True(steps.Single(s => s.Key == OnboardingChecklist.SavedSearch).Done);
-        Assert.Equal((2, 5), OnboardingChecklist.Progress(steps));
+        var steps = OnboardingSteps.Steps(new OnboardingSignals(2, 0, 1, false), None);
+        Assert.True(steps.Single(s => s.Key == OnboardingSteps.Topics).Done);
+        Assert.False(steps.Single(s => s.Key == OnboardingSteps.Sources).Done);
+        Assert.True(steps.Single(s => s.Key == OnboardingSteps.SavedSearch).Done);
+        Assert.Equal((2, 5), OnboardingSteps.Progress(steps));
     }
 
     [Fact]
     public void Install_and_two_factor_can_be_ticked_by_hand_but_detected_steps_cannot()
     {
-        var manual = OnboardingChecklist.ParseManual("install,2fa,topics,bogus");
+        var manual = OnboardingSteps.ParseManual("install,2fa,topics,bogus");
         Assert.Equal(new[] { "2fa", "install" }, manual.OrderBy(x => x));
-        var steps = OnboardingChecklist.Steps(new OnboardingSignals(0, 0, 0, false), manual);
-        Assert.True(steps.Single(s => s.Key == OnboardingChecklist.Install).Done);
-        Assert.True(steps.Single(s => s.Key == OnboardingChecklist.TwoFactor).Done);
-        Assert.False(steps.Single(s => s.Key == OnboardingChecklist.Topics).Done);
+        var steps = OnboardingSteps.Steps(new OnboardingSignals(0, 0, 0, false), manual);
+        Assert.True(steps.Single(s => s.Key == OnboardingSteps.Install).Done);
+        Assert.True(steps.Single(s => s.Key == OnboardingSteps.TwoFactor).Done);
+        Assert.False(steps.Single(s => s.Key == OnboardingSteps.Topics).Done);
     }
 
     [Fact]
     public void Installed_app_is_detected_without_a_manual_tick()
     {
-        var steps = OnboardingChecklist.Steps(new OnboardingSignals(0, 0, 0, true), None);
-        Assert.True(steps.Single(s => s.Key == OnboardingChecklist.Install).Done);
+        var steps = OnboardingSteps.Steps(new OnboardingSignals(0, 0, 0, true), None);
+        Assert.True(steps.Single(s => s.Key == OnboardingSteps.Install).Done);
     }
 
     [Fact]
     public void Toggle_adds_and_removes_and_ignores_unknown_keys()
     {
-        var s = OnboardingChecklist.Toggle("", "install", true);
+        var s = OnboardingSteps.Toggle("", "install", true);
         Assert.Equal("install", s);
-        s = OnboardingChecklist.Toggle(s, "2fa", true);
+        s = OnboardingSteps.Toggle(s, "2fa", true);
         Assert.Equal("2fa,install", s);
-        s = OnboardingChecklist.Toggle(s, "install", false);
+        s = OnboardingSteps.Toggle(s, "install", false);
         Assert.Equal("2fa", s);
-        Assert.Equal("2fa", OnboardingChecklist.Toggle(s, "topics", true));
+        Assert.Equal("2fa", OnboardingSteps.Toggle(s, "topics", true));
     }
 
     [Fact]
@@ -156,7 +156,7 @@ public class OnboardingTests
         using var db = new TestProductivityDb();
         var svc = new ProductivitySettingsService(db.Db);
         Assert.False((await svc.GetAsync(1)).OnboardingDismissed);
-        await svc.UpdateAsync(1, s => { s.OnboardingDismissed = true; s.OnboardingManualSteps = OnboardingChecklist.Toggle(s.OnboardingManualSteps, "install", true); });
+        await svc.UpdateAsync(1, s => { s.OnboardingDismissed = true; s.OnboardingManualSteps = OnboardingSteps.Toggle(s.OnboardingManualSteps, "install", true); });
         var again = new ProductivitySettingsService(db.Db);
         Assert.True((await again.GetAsync(1)).OnboardingDismissed);
         Assert.Equal("install", (await again.GetAsync(1)).OnboardingManualSteps);

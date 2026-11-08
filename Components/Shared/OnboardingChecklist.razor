@@ -1,0 +1,147 @@
+@* First-run checklist for the dashboard: pick topics, follow sources, save a search, install the app, protect the account. Detects what
+   it can (follows, saved searches, standalone display mode), lets the rest be ticked by hand, persists per user, and can be dismissed.
+   Renders nothing for signed-out visitors or once dismissed. *@
+@using AiPulse.Services.Productivity
+@implements IAsyncDisposable
+@inject ProductivitySettingsService Prefs
+@inject FollowService Follows
+@inject SavedSearchService Searches
+@inject ReadingStateService Reading
+@inject AuthenticationStateProvider Auth
+@inject IJSRuntime JS
+
+@if (_visible)
+{
+    var (done, total) = OnboardingSteps.Progress(_steps);
+    <section class="ob card" aria-labelledby="ob-title">
+        <div class="card-body">
+            <div class="ob-head">
+                <div>
+                    <h2 id="ob-title" class="h5 mb-1"><Icon Name="sparkle" Size="18" /> @(done == total ? "You're all set" : "Get set up")</h2>
+                    <p class="ob-progress-text small mb-0">@done of @total done</p>
+                </div>
+                <button type="button" class="btn btn-sm btn-outline-secondary" @onclick="Dismiss">@(done == total ? "Close" : "Dismiss")</button>
+            </div>
+            <div class="ob-bar" role="progressbar" aria-valuemin="0" aria-valuemax="@total" aria-valuenow="@done" aria-label="Setup progress">
+                <span style="width: @((done * 100 / Math.Max(1, total)).ToString())%"></span>
+            </div>
+            <ol class="ob-steps">
+                @foreach (var step in _steps)
+                {
+                    <li class="ob-step @(step.Done ? "done" : "")">
+                        <span class="ob-check" aria-hidden="true">
+                            @if (step.Done) { <Icon Name="check" Size="14" /> } else { <Icon Name="@step.Icon" Size="14" /> }
+                        </span>
+                        <span class="ob-text">
+                            <span class="ob-title">@step.Title<span class="visually-hidden">@(step.Done ? " (done)" : " (to do)")</span></span>
+                            <span class="ob-desc">@step.Description</span>
+                        </span>
+                        <span class="ob-actions">
+                            @if (step.Key == OnboardingSteps.Install && !step.Done && _canInstall)
+                            {
+                                <button type="button" class="btn btn-sm btn-primary" @onclick="Install">Install</button>
+                            }
+                            else if (!step.Done)
+                            {
+                                <a class="btn btn-sm btn-outline-secondary" href="@step.Href">@step.ActionLabel</a>
+                            }
+                            @if (step.CanTickManually && !(step.Key == OnboardingSteps.Install && _installed))
+                            {
+                                <span class="form-check ob-manual">
+                                    <input class="form-check-input" type="checkbox" id="@($"ob-{step.Key}")" checked="@_manual.Contains(step.Key)" @onchange="e => Tick(step.Key, e)" />
+                                    <label class="form-check-label small" for="@($"ob-{step.Key}")">Done</label>
+                                </span>
+                            }
+                        </span>
+                    </li>
+                }
+            </ol>
+        </div>
+    </section>
+}
+
+@code {
+    private int? _userId;
+    private bool _visible;
+    private bool _installed;
+    private bool _canInstall;
+    private HashSet<string> _manual = new();
+    private string _manualStored = "";
+    private OnboardingSignals _signals = new(0, 0, 0, false);
+    private IReadOnlyList<OnboardingStep> _steps = Array.Empty<OnboardingStep>();
+    private IJSObjectReference? _module;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _userId = ProductivityUser.IdOf((await Auth.GetAuthenticationStateAsync()).User);
+        if (_userId is null) return;
+        var prefs = await Prefs.GetAsync(_userId.Value);
+        if (prefs.OnboardingDismissed) return;
+        _manualStored = prefs.OnboardingManualSteps;
+        _manual = OnboardingSteps.ParseManual(_manualStored);
+        var tags = await Follows.GetFollowedTagsAsync(_userId.Value);
+        var sources = await Follows.GetFollowedSourcesAsync(_userId.Value);
+        var searches = await Searches.CountAsync(_userId.Value) + Reading.SavedSearches.Count;
+        _signals = new OnboardingSignals(tags.Count, sources.Count, searches, false);
+        Recompute();
+        _visible = true;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender || !_visible) return;
+        try
+        {
+            _module = await JS.InvokeAsync<IJSObjectReference>("import", "./js/productivity.js");
+            _installed = await _module.InvokeAsync<bool>("isStandalone");
+            _canInstall = await _module.InvokeAsync<bool>("canPromptInstall");
+            _signals = _signals with { AppInstalled = _installed };
+            Recompute();
+            StateHasChanged();
+        }
+        catch (JSDisconnectedException) { }
+        catch (JSException) { }
+    }
+
+    private void Recompute() => _steps = OnboardingSteps.Steps(_signals, _manual);
+
+    private async Task Tick(string key, ChangeEventArgs e)
+    {
+        var done = e.Value is true;
+        _manualStored = OnboardingSteps.Toggle(_manualStored, key, done);
+        _manual = OnboardingSteps.ParseManual(_manualStored);
+        var stored = _manualStored;
+        await Prefs.UpdateAsync(_userId!.Value, s => s.OnboardingManualSteps = stored);
+        Recompute();
+    }
+
+    private async Task Install()
+    {
+        if (_module is null) return;
+        try
+        {
+            if (await _module.InvokeAsync<bool>("promptInstall"))
+            {
+                _installed = true;
+                _signals = _signals with { AppInstalled = true };
+                Recompute();
+            }
+            _canInstall = await _module.InvokeAsync<bool>("canPromptInstall");
+        }
+        catch (JSDisconnectedException) { }
+    }
+
+    private async Task Dismiss()
+    {
+        _visible = false;
+        await Prefs.UpdateAsync(_userId!.Value, s => s.OnboardingDismissed = true);
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_module is not null)
+        {
+            try { await _module.DisposeAsync(); } catch (JSDisconnectedException) { }
+        }
+    }
+}

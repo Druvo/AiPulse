@@ -6,7 +6,7 @@ public sealed record OnboardingSignals(int FollowedTags, int FollowedSources, in
 public sealed record OnboardingStep(string Key, string Title, string Description, string Href, string ActionLabel, string Icon, bool Done, bool CanTickManually);
 
 /// <summary>The first-run checklist: which steps exist, which are done (detected or ticked by hand), and overall progress.</summary>
-public static class OnboardingChecklist
+public static class OnboardingSteps
 {
     public const string Topics = "topics";
     public const string Sources = "sources";
