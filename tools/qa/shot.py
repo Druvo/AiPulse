@@ -56,7 +56,11 @@ def login_cookies(base, user, password):
 
 
 async def run(a):
-    port = 9300 + os.getpid() % 500
+    # A free port chosen by the OS: a pid-derived one can land in a Windows-reserved range or collide with a leftover browser.
+    import socket
+    with socket.socket() as sock:
+        sock.bind(("127.0.0.1", 0))
+        port = sock.getsockname()[1]
     prof = tempfile.mkdtemp(prefix="qa-edge-")
     proc = subprocess.Popen([EDGE, "--headless=new", "--disable-gpu", f"--remote-debugging-port={port}", f"--user-data-dir={prof}",
                              "--no-first-run", "--hide-scrollbars", "about:blank"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)

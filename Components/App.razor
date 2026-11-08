@@ -249,15 +249,6 @@
             Blazor.addEventListener('enhancedload', done);
         })();
     </script>
-    <script>
-        // Ctrl/Cmd+K opens the global search - just forward to its trigger button, no JS interop needed.
-        document.addEventListener('keydown', function (e) {
-            if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
-                var btn = document.getElementById('global-search-trigger');
-                if (btn) { e.preventDefault(); btn.click(); }
-            }
-        });
-    </script>
     <script src="js/notify.js"></script>
     <script src="js/playground.js"></script>
     <script src="js/keyboard.js"></script>

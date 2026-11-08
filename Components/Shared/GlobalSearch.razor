@@ -1,4 +1,4 @@
-@* Global search (Ctrl+K, see App.razor) across recent headlines, topics, the Glossary, Tools and the Learning Hub. Results are grouped,
+﻿@* Global search (button in the top bar; Ctrl+K opens the command palette instead) across recent headlines, topics, the Glossary, Tools and the Learning Hub. Results are grouped,
    ranked (exact > prefix > word start > anywhere > description) with matches highlighted, and fully keyboard driven: arrows move,
    Enter opens, Esc closes. Styles in GlobalSearch.razor.css. *@
 @rendermode InteractiveServer
@@ -8,10 +8,9 @@
 @inject NavigationManager Nav
 @inject IJSRuntime JS
 
-<button id="global-search-trigger" class="search-trigger gs-trigger" type="button" @onclick="Open" title="Search (Ctrl+K)" aria-haspopup="dialog">
+<button id="global-search-trigger" class="search-trigger gs-trigger" type="button" @onclick="Open" title="Search" aria-haspopup="dialog">
     <Icon Name="search" Size="15" />
     <span class="gs-trigger-label">Search…</span>
-    <kbd class="gs-kbd">Ctrl K</kbd>
 </button>
 
 @if (_open)

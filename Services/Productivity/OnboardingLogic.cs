@@ -27,8 +27,8 @@ public static class OnboardingSteps
                 "/saved", "Create a saved search", "search", s.SavedSearches > 0, false),
             new OnboardingStep(Install, "Install the app", "Add AiPulse to your home screen or dock for one-tap access.",
                 "/help", "How to install", "download", s.AppInstalled || Manual(Install), true),
-            new OnboardingStep(TwoFactor, "Protect your account", "Two-factor sign-in is coming; until then use a strong, unique password.",
-                "/settings#security", "Account security", "key", Manual(TwoFactor), true),
+            new OnboardingStep(TwoFactor, "Protect your account", "Turn on two-step sign-in and keep a strong, unique password.",
+                "/account/security", "Account security", "key", Manual(TwoFactor), true),
         };
     }
 
