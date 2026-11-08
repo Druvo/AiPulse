@@ -1,0 +1,184 @@
+@page "/developers"
+@using AiPulse.Services.Api
+@inject NavigationManager Nav
+@inject IConfiguration Config
+
+@* Static server-rendered on purpose (no @rendermode): a reference page that must be light, linkable section by section, and
+   readable by crawlers. Everything about the endpoints is generated from ApiCatalog, the same list that builds the routes and
+   /api/v1/openapi.json, so this page cannot describe an endpoint that does not exist or miss one that does. *@
+
+<PageTitle>AiPulse · Developers</PageTitle>
+<HeadContent>
+    <meta name="description" content="AiPulse's free read-only JSON API: AI news, topics, releases, sources, glossary and tools. Endpoints, authentication, rate limits and examples." />
+</HeadContent>
+
+<div class="page-header">
+    <h1><Icon Name="code" Size="22" /> Developers</h1>
+    <p class="lead">Everything on AiPulse's public pages is also available as JSON. No key is needed for public data; a personal token unlocks your own bookmarks and unread items.</p>
+</div>
+
+<nav class="dev-toc" aria-label="On this page">
+    <a href="developers#quick-start">Quick start</a>
+    <a href="developers#authentication">Authentication</a>
+    <a href="developers#rate-limits">Rate limits</a>
+    <a href="developers#responses">Responses</a>
+    <a href="developers#errors">Errors</a>
+    <a href="developers#endpoints">Endpoints</a>
+    <a href="developers#examples">Examples</a>
+    <a href="developers#feeds">Feeds and OpenAPI</a>
+</nav>
+
+<section class="dev-section" id="quick-start" aria-labelledby="quick-start-h">
+    <h2 id="quick-start-h" class="h4 section-title">Quick start</h2>
+    <p>Base URL:</p>
+    <div class="code-block-wrap">
+        <button type="button" class="copy-code-btn" onclick="copyCodeBlock(this)" aria-label="Copy base URL">Copy</button>
+        <pre class="dev-code" tabindex="0"><code>@ApiBase</code></pre>
+    </div>
+    <p>Ask for the five newest headlines about agents from the last week:</p>
+    <div class="code-block-wrap">
+        <button type="button" class="copy-code-btn" onclick="copyCodeBlock(this)" aria-label="Copy command">Copy</button>
+        <pre class="dev-code" tabindex="0"><code>curl "@(ApiBase)/news?tag=agents&amp;since=7d&amp;pageSize=5"</code></pre>
+    </div>
+    <p class="text-muted small mb-0">Or simply open <a href="@ApiBase/news?pageSize=5" target="_blank" rel="noopener">@(ApiPath)/news?pageSize=5</a> in your browser. The API is read-only and versioned: fields may be added within v1, never renamed or removed.</p>
+</section>
+
+<section class="dev-section" id="authentication" aria-labelledby="authentication-h">
+    <h2 id="authentication-h" class="h4 section-title">Authentication</h2>
+    <p>Public endpoints (news, topics, releases, sources, glossary, tools, search, stats, status) need nothing. They return exactly what AiPulse's public pages show.</p>
+    <p>Endpoints under <code>/me</code> return your own data and need a <strong>personal API token</strong>:</p>
+    <ol class="dev-steps">
+        <li>Sign in and open <a href="settings#api-tokens">Settings → API tokens</a>.</li>
+        <li>Name the token (e.g. "reading-list script"), pick an expiry, and create it.</li>
+        <li>Copy it straight away: it starts with <code>aip_</code> and is shown only once. AiPulse keeps only a SHA-256 hash of it.</li>
+        <li>Send it on each request: <code>Authorization: Bearer aip_…</code></li>
+    </ol>
+    <p class="mb-0">Tokens are read-only (scope <code>read</code>), can expire, and can be revoked at any time from the same screen; Settings also shows when each was last used. A token stops working if its account is disabled. Never put a token in client-side code that other people can see.</p>
+</section>
+
+<section class="dev-section" id="rate-limits" aria-labelledby="rate-limits-h">
+    <h2 id="rate-limits-h" class="h4 section-title">Rate limits</h2>
+    <ul class="dev-facts">
+        <li><strong>Without a token:</strong> @_options.AnonymousPermitLimit requests per @WindowText, per IP address (per /64 network for IPv6).</li>
+        <li><strong>With a token:</strong> @_options.TokenPermitLimit requests per @WindowText, per token.</li>
+    </ul>
+    <p>Every response says where you stand:</p>
+    <dl class="dev-defs">
+        <dt><code>X-RateLimit-Limit</code></dt><dd>Requests allowed in the current window.</dd>
+        <dt><code>X-RateLimit-Remaining</code></dt><dd>Requests left in it.</dd>
+        <dt><code>X-RateLimit-Reset</code></dt><dd>Seconds until it resets.</dd>
+    </dl>
+    <p class="mb-0">Over the limit you get <code>429 Too Many Requests</code> with a <code>Retry-After</code> header (seconds). Back off for that long. Conditional requests (below) still count, but are cheap and keep your client fast.</p>
+</section>
+
+<section class="dev-section" id="responses" aria-labelledby="responses-h">
+    <h2 id="responses-h" class="h4 section-title">Responses</h2>
+    <p>Every successful response has the same envelope: <code>data</code> (an object or a list), <code>meta</code> and <code>links</code>. Lists that page carry totals and ready-made links, also sent as an RFC 8288 <code>Link</code> header:</p>
+    <div class="code-block-wrap">
+        <button type="button" class="copy-code-btn" onclick="copyCodeBlock(this)" aria-label="Copy example">Copy</button>
+        <pre class="dev-code" tabindex="0"><code>@EnvelopeExample</code></pre>
+    </div>
+    <ul class="dev-facts mb-0">
+        <li><strong>Paging:</strong> <code>page</code> (from 1) and <code>pageSize</code> (default @ApiQuery.DefaultPageSize, at most @ApiQuery.MaxPageSize). Follow <code>links.next</code> until it is <code>null</code>.</li>
+        <li><strong>Dates</strong> are ISO 8601 in UTC. Filters such as <code>since</code> also take relative spans: <code>90m</code>, <code>24h</code>, <code>7d</code>, <code>2w</code>.</li>
+        <li><strong>Caching:</strong> responses carry an <code>ETag</code> and <code>Cache-Control</code>. Send the ETag back as <code>If-None-Match</code> and you get an empty <code>304 Not Modified</code> when nothing changed.</li>
+        <li><strong>Compression:</strong> send <code>Accept-Encoding: gzip</code> (or <code>br</code>) for compressed bodies.</li>
+        <li><strong>CORS:</strong> public endpoints can be called from any web page (<code>Access-Control-Allow-Origin: *</code>). <code>/me</code> endpoints are meant for scripts and servers, not browsers.</li>
+        <li><strong>Field names</strong> are camelCase and every documented field is always present, <code>null</code> when unknown.</li>
+    </ul>
+</section>
+
+<section class="dev-section" id="errors" aria-labelledby="errors-h">
+    <h2 id="errors-h" class="h4 section-title">Errors</h2>
+    <p>Errors use RFC 7807 <code>application/problem+json</code>. The <code>type</code> links to the matching entry below; bad parameters are listed under <code>errors</code>.</p>
+    <div class="code-block-wrap">
+        <button type="button" class="copy-code-btn" onclick="copyCodeBlock(this)" aria-label="Copy example">Copy</button>
+        <pre class="dev-code" tabindex="0"><code>@ProblemExample</code></pre>
+    </div>
+    <dl class="dev-defs dev-errors mb-0">
+        @foreach (var err in ErrorCodes)
+        {
+            <dt id="error-@err.Code"><span class="dev-status">@err.Status</span> <code>@err.Code</code></dt>
+            <dd>@err.Text</dd>
+        }
+    </dl>
+</section>
+
+<section class="dev-section" id="endpoints" aria-labelledby="endpoints-h">
+    <h2 id="endpoints-h" class="h4 section-title">Endpoints</h2>
+    <p>All are <code>GET</code> (<code>HEAD</code> works too). Paths are relative to <code>@ApiPath</code>.</p>
+    @foreach (var group in ApiCatalog.Endpoints.GroupBy(e => e.Tag))
+    {
+        <h3 class="h6 dev-group">@group.Key</h3>
+        @foreach (var e in group)
+        {
+            <article class="dev-endpoint" id="op-@e.OperationId" aria-labelledby="op-@(e.OperationId)-h">
+                <header class="dev-endpoint__head">
+                    <span class="dev-method">GET</span>
+                    <h4 id="op-@(e.OperationId)-h" class="dev-endpoint__path">@(e.Path == "/" ? "/" : e.Path)</h4>
+                    @if (e.RequiresToken)
+                    {
+                        <span class="dev-badge dev-badge--token"><Icon Name="key" Size="12" /> token</span>
+                    }
+                    else
+                    {
+                        <span class="dev-badge">public</span>
+                    }
+                </header>
+                <p class="dev-endpoint__summary"><strong>@e.Summary.</strong> @e.Description</p>
+                @if (e.Parameters.Count > 0)
+                {
+                    <dl class="dev-params">
+                        @foreach (var p in e.Parameters)
+                        {
+                            <dt><code>@p.Name</code> <span class="dev-param-meta">@ParamMeta(p)</span></dt>
+                            <dd>@p.Description</dd>
+                        }
+                    </dl>
+                }
+                <p class="dev-endpoint__try mb-0">
+                    <span class="text-muted">Example:</span>
+                    @if (!e.RequiresToken && !e.Example.Contains('{'))
+                    {
+                        <a href="@(Origin + e.Example)" target="_blank" rel="noopener"><code>@e.Example</code></a>
+                    }
+                    else
+                    {
+                        <code>@e.Example</code>
+                    }
+                </p>
+            </article>
+        }
+    }
+</section>
+
+<section class="dev-section" id="examples" aria-labelledby="examples-h">
+    <h2 id="examples-h" class="h4 section-title">Examples</h2>
+
+    <h3 class="h6 dev-group">curl</h3>
+    <div class="code-block-wrap">
+        <button type="button" class="copy-code-btn" onclick="copyCodeBlock(this)" aria-label="Copy curl example">Copy</button>
+        <pre class="dev-code" tabindex="0"><code>@CurlExample</code></pre>
+    </div>
+
+    <h3 class="h6 dev-group">JavaScript (browser or Node 18+)</h3>
+    <div class="code-block-wrap">
+        <button type="button" class="copy-code-btn" onclick="copyCodeBlock(this)" aria-label="Copy JavaScript example">Copy</button>
+        <pre class="dev-code" tabindex="0"><code>@JsExample</code></pre>
+    </div>
+
+    <h3 class="h6 dev-group">Python (standard library only)</h3>
+    <div class="code-block-wrap">
+        <button type="button" class="copy-code-btn" onclick="copyCodeBlock(this)" aria-label="Copy Python example">Copy</button>
+        <pre class="dev-code" tabindex="0"><code>@PythonExample</code></pre>
+    </div>
+</section>
+
+<section class="dev-section" id="feeds" aria-labelledby="feeds-h">
+    <h2 id="feeds-h" class="h4 section-title">Feeds and OpenAPI</h2>
+    <ul class="dev-facts mb-0">
+        <li><a href="@(ApiBase)/openapi.json">OpenAPI 3 document</a>: import it into Postman, Insomnia or a client generator.</li>
+        <li><a href="feed.xml">Atom feed</a> of the latest headlines, for any feed reader. One topic only: <code>/feed.xml?tag=agents</code>.</li>
+        <li>Want to see the sources first? <a href="coverage">Everything AiPulse follows</a>.</li>
+    </ul>
+</section>

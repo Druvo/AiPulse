@@ -1,0 +1,46 @@
+/* Settings > API tokens. Token colours only, so both themes keep AA contrast. */
+.api-tokens { scroll-margin-top: 4.5rem; }
+
+.api-tokens__new {
+    padding: .85rem 1rem;
+    margin-bottom: 1rem;
+    border: 1px solid var(--ap-border);
+    border-left: 4px solid var(--ap-success);
+    border-radius: var(--ap-radius-sm, 8px);
+    background: var(--ap-success-soft);
+    color: var(--ap-success-soft-text);
+}
+.api-tokens__new code { color: inherit; overflow-wrap: anywhere; }
+.api-tokens__value { font-family: var(--ap-font-mono); font-size: .8rem; min-width: 0; }
+
+.api-tokens__form {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    gap: .5rem;
+    margin-bottom: .5rem;
+}
+.api-tokens__field { flex: 1 1 12rem; min-width: 0; }
+.api-tokens__field--narrow { flex: 0 1 9rem; }
+.api-tokens__field--action { flex: 0 0 auto; }
+.api-tokens__field .form-label { margin-bottom: .2rem; color: var(--ap-text-secondary); }
+.api-tokens__error { color: var(--ap-danger-soft-text); background: var(--ap-danger-soft); padding: .35rem .6rem; border-radius: 6px; }
+
+.api-tokens__list { margin-top: .75rem; }
+.api-tokens__item {
+    padding: .65rem .8rem;
+    margin-bottom: .5rem;
+    border: 1px solid var(--ap-border);
+    border-radius: var(--ap-radius-sm, 8px);
+    background: var(--ap-surface);
+}
+.api-tokens__item--inactive { background: var(--ap-surface-2); }
+.api-tokens__row { display: flex; align-items: center; justify-content: space-between; gap: .5rem; }
+.api-tokens__name { font-weight: 600; overflow-wrap: anywhere; color: var(--ap-text); }
+.api-tokens__state { flex: 0 0 auto; padding: 0 .5rem; border-radius: 999px; font-size: .75rem; font-weight: 600; }
+.api-tokens__state--active { background: var(--ap-success-soft); color: var(--ap-success-soft-text); }
+.api-tokens__state--expired { background: var(--ap-warning-soft); color: var(--ap-warning-soft-text); }
+.api-tokens__state--revoked { background: var(--ap-danger-soft); color: var(--ap-danger-soft-text); }
+.api-tokens__meta { display: flex; flex-wrap: wrap; gap: .15rem .9rem; margin-top: .25rem; color: var(--ap-text-secondary); }
+.api-tokens__meta code { color: var(--ap-text); }
+.api-tokens__actions { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; margin-top: .5rem; }

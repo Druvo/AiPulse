@@ -1,0 +1,185 @@
+@using AiPulse.Services.Api
+@using Microsoft.EntityFrameworkCore
+@inject IDbContextFactory<AiPulseDbContext> DbFactory
+@inject IJSRuntime JS
+
+@* Personal API tokens for /api/v1/me. Meant to be embedded in Settings.razor (interactive); renders nothing useful for an
+   anonymous visitor. The token's plaintext exists only in this component's memory between "Create" and "Done". *@
+
+<section class="api-tokens" id="api-tokens" aria-labelledby="api-tokens-h">
+    <h4 id="api-tokens-h" class="section-title"><Icon Name="key" /> API tokens</h4>
+    <p class="text-muted">Personal, read-only tokens for the <a href="developers">AiPulse API</a>: scripts can read your bookmarks and unread items with one. Public data needs no token.</p>
+
+    @if (_userId is null)
+    {
+        <p class="text-muted mb-0">Sign in to manage API tokens.</p>
+    }
+    else
+    {
+        @if (_created is not null)
+        {
+            <div class="api-tokens__new" role="status" aria-live="polite">
+                <p class="mb-2"><strong>Copy your new token now.</strong> For your security it will not be shown again.</p>
+                <div class="input-group mb-2">
+                    <input id="api-token-value" class="form-control api-tokens__value" readonly value="@_created.Token"
+                           aria-label="New API token" onfocus="this.select()" />
+                    <button type="button" class="btn btn-primary" @onclick="CopyAsync"><Icon Name="copy" Size="14" /> @(_copied ? "Copied" : "Copy")</button>
+                </div>
+                <p class="small mb-2">Use it as <code>Authorization: Bearer @(_created.Info.Prefix)…</code></p>
+                <button type="button" class="btn btn-sm btn-outline-secondary" @onclick="DismissCreated">Done, I've saved it</button>
+            </div>
+        }
+
+        <form class="api-tokens__form" @onsubmit="CreateAsync" @onsubmit:preventDefault>
+            <div class="api-tokens__field">
+                <label class="form-label small" for="api-token-name">Name</label>
+                <input id="api-token-name" class="form-control" maxlength="@ApiTokenService.MaxNameLength" placeholder="e.g. reading-list script"
+                       @bind="_name" @bind:event="oninput" autocomplete="off" />
+            </div>
+            <div class="api-tokens__field api-tokens__field--narrow">
+                <label class="form-label small" for="api-token-expiry">Expires</label>
+                <select id="api-token-expiry" class="form-select" @bind="_expiryDays">
+                    <option value="7">In 7 days</option>
+                    <option value="30">In 30 days</option>
+                    <option value="90">In 90 days</option>
+                    <option value="365">In 1 year</option>
+                    <option value="0">Never</option>
+                </select>
+            </div>
+            <div class="api-tokens__field api-tokens__field--action">
+                <button type="submit" class="btn btn-primary" disabled="@_busy">Create token</button>
+            </div>
+        </form>
+        @if (_error is not null)
+        {
+            <p class="api-tokens__error small" role="alert">@_error</p>
+        }
+
+        @if (_tokens.Count == 0)
+        {
+            <p class="text-muted small mb-0">No tokens yet.</p>
+        }
+        else
+        {
+            <ul class="api-tokens__list list-unstyled mb-0">
+                @foreach (var t in _tokens)
+                {
+                    var now = DateTimeOffset.UtcNow;
+                    var state = t.IsRevoked ? "Revoked" : t.IsExpired(now) ? "Expired" : "Active";
+                    <li class="api-tokens__item @(state == "Active" ? "" : "api-tokens__item--inactive")">
+                        <div class="api-tokens__row">
+                            <span class="api-tokens__name">@t.Name</span>
+                            <span class="api-tokens__state api-tokens__state--@state.ToLowerInvariant()">@state</span>
+                        </div>
+                        <div class="api-tokens__meta small">
+                            <code>@(t.Prefix)…</code>
+                            <span>scope: @string.Join(", ", t.ScopeList)</span>
+                            <span>created @Date(t.CreatedAt)</span>
+                            <span>last used @(t.LastUsedAt is { } used ? Date(used) : "never")</span>
+                            <span>@(t.ExpiresAt is { } exp ? (exp <= now ? "expired " : "expires ") + Date(exp) : "never expires")</span>
+                        </div>
+                        @if (!t.IsRevoked)
+                        {
+                            <div class="api-tokens__actions">
+                                @if (_confirmRevoke == t.Id)
+                                {
+                                    <span class="small">Revoke "@t.Name"? Scripts using it stop working at once.</span>
+                                    <button type="button" class="btn btn-sm btn-danger" @onclick="() => RevokeAsync(t.Id)">Revoke</button>
+                                    <button type="button" class="btn btn-sm btn-outline-secondary" @onclick="() => _confirmRevoke = null">Cancel</button>
+                                }
+                                else
+                                {
+                                    <button type="button" class="btn btn-sm btn-outline-danger" @onclick="() => _confirmRevoke = t.Id"
+                                            aria-label="Revoke token @t.Name">Revoke</button>
+                                }
+                            </div>
+                        }
+                    </li>
+                }
+            </ul>
+        }
+    }
+</section>
+
+@code {
+    [CascadingParameter] private Task<AuthenticationState>? AuthStateTask { get; set; }
+
+    private ApiTokenService _service = default!;
+    private int? _userId;
+    private IReadOnlyList<ApiTokenInfo> _tokens = Array.Empty<ApiTokenInfo>();
+    private string _name = "";
+    private int _expiryDays = 90;
+    private string? _error;
+    private bool _busy;
+    private bool _copied;
+    private int? _confirmRevoke;
+    private ApiTokenCreated? _created;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _service = new ApiTokenService(DbFactory);
+        if (AuthStateTask is null) return;
+        var auth = await AuthStateTask;
+        if (int.TryParse(auth.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value, out var id))
+        {
+            _userId = id;
+            await ReloadAsync();
+        }
+    }
+
+    private async Task ReloadAsync()
+    {
+        if (_userId is { } id) _tokens = await _service.ListAsync(id);
+    }
+
+    private async Task CreateAsync()
+    {
+        if (_userId is not { } id || _busy) return;
+        _busy = true;
+        _error = null;
+        try
+        {
+            var (created, error) = await _service.CreateAsync(id, _name, _expiryDays > 0 ? TimeSpan.FromDays(_expiryDays) : null);
+            if (created is null) { _error = error; return; }
+            _created = created;
+            _copied = false;
+            _name = "";
+            await ReloadAsync();
+        }
+        finally
+        {
+            _busy = false;
+        }
+    }
+
+    private async Task CopyAsync()
+    {
+        if (_created is null) return;
+        try
+        {
+            await JS.InvokeVoidAsync("navigator.clipboard.writeText", _created.Token);
+            _copied = true;
+        }
+        catch (JSException)
+        {
+            _error = "Your browser blocked the clipboard. Select the token and copy it by hand.";
+        }
+    }
+
+    private void DismissCreated()
+    {
+        _created = null;
+        _copied = false;
+    }
+
+    private async Task RevokeAsync(int tokenId)
+    {
+        if (_userId is not { } id) return;
+        _confirmRevoke = null;
+        if (!await _service.RevokeAsync(id, tokenId)) _error = "That token was already revoked.";
+        if (_created?.Info.Id == tokenId) _created = null;
+        await ReloadAsync();
+    }
+
+    private static string Date(DateTimeOffset d) => d.ToLocalTime().ToString("d MMM yyyy");
+}
