@@ -1,4 +1,4 @@
-namespace AiPulse.Components.Layout;
+﻿namespace AiPulse.Components.Layout;
 
 /// <summary>One link in the signed-in app shell.</summary>
 /// <param name="Path">Relative route ("news"), no leading slash, so it resolves against &lt;base href="/"&gt; like the rest of the app.</param>
@@ -25,6 +25,9 @@ public static class ShellNav
             new ShellNavItem("news", "News Feed", "rss", TabLabel: "News"),
             new ShellNavItem("ask", "Ask AiPulse", "sparkle", TabLabel: "Ask"),
             new ShellNavItem("explore", "Explore", "trending-up"),
+            new ShellNavItem("this-week", "This Week", "calendar"),
+            new ShellNavItem("saved", "Saved Searches", "search"),
+            new ShellNavItem("collections", "Collections", "bookmark"),
             new ShellNavItem("free-apis", "Free AI APIs", "webhook"),
         }),
         new ShellNavSection("Learning", AdminOnly: false, new[]
@@ -41,6 +44,7 @@ public static class ShellNav
             new ShellNavItem("ai-settings", "AI Settings", "zap"),
             new ShellNavItem("source-health", "Source Health", "activity"),
             new ShellNavItem("users", "Users", "users"),
+            new ShellNavItem("ops", "Operations", "settings"),
         }),
     };
 
