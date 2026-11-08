@@ -1,0 +1,464 @@
+@page "/ops"
+@attribute [Authorize(Roles = "Admin")]
+@rendermode InteractiveServer
+@implements IDisposable
+@using System.Globalization
+@using AiPulse.Services.Ops
+@inject OpsStatusService Status
+@inject OpsBackupStore Backups
+@inject AuditLogQueryService Audit
+
+<PageTitle>AiPulse · Operations</PageTitle>
+
+<div class="page-header">
+    <h1><Icon Name="activity" Size="22" /> Operations</h1>
+    <p class="lead">
+        How this instance is doing right now: the process, the background feed poll, source health, AI switches, backups and the
+        audit trail. Everything here is read-only except "Create backup now".
+    </p>
+</div>
+
+<div class="ops-toolbar">
+    <button type="button" class="btn btn-sm btn-outline-secondary" @onclick="RefreshAsync">
+        <Icon Name="refresh" Size="14" /> Refresh
+    </button>
+    <a class="btn btn-sm btn-outline-secondary" href="/ops/status.json" target="_blank" rel="noopener">
+        <Icon Name="code" Size="14" /> status.json
+    </a>
+    <span class="ops-muted">Updated @Utc(_snap.GeneratedAt) · refreshes every 15 s while open</span>
+</div>
+
+@* ---------- System ---------- *@
+<section class="ops-section" aria-labelledby="ops-system">
+    <h2 id="ops-system" class="ops-h2">System</h2>
+    <dl class="ops-tiles">
+        <div class="ops-tile">
+            <dt>Uptime</dt>
+            <dd>@Duration(_snap.System.Uptime)</dd>
+            <dd class="ops-sub">since @Utc(_snap.System.StartedAt)</dd>
+        </div>
+        <div class="ops-tile">
+            <dt>Version</dt>
+            <dd>@_snap.System.Version</dd>
+            <dd class="ops-sub ops-mono">@(_snap.System.Commit ?? "commit unknown")</dd>
+        </div>
+        <div class="ops-tile">
+            <dt>Runtime</dt>
+            <dd>@_snap.System.Runtime</dd>
+            <dd class="ops-sub">@_snap.System.Environment · @_snap.System.OperatingSystem</dd>
+        </div>
+        <div class="ops-tile">
+            <dt>Memory</dt>
+            <dd>@Bytes(_snap.System.WorkingSetBytes)</dd>
+            <dd class="ops-sub">working set · @Bytes(_snap.System.ManagedHeapBytes) managed heap</dd>
+        </div>
+        <div class="ops-tile">
+            <dt>Database</dt>
+            <dd>@Bytes(_snap.System.DatabaseBytes)</dd>
+            <dd class="ops-sub">aipulse.db incl. WAL</dd>
+        </div>
+        <div class="ops-tile">
+            <dt>App_Data</dt>
+            <dd>@Bytes(_snap.System.AppDataBytes)</dd>
+            <dd class="ops-sub">@_snap.System.AppDataFiles.ToString("N0") files</dd>
+        </div>
+        <div class="ops-tile @(LowDisk ? "ops-tile--warn" : "")">
+            <dt>Free disk</dt>
+            <dd>@(_snap.System.DiskFreeBytes is { } free ? Bytes(free) : "unknown")</dd>
+            <dd class="ops-sub">@(_snap.System.DiskTotalBytes is { } total ? $"of {Bytes(total)} on the App_Data volume" : "App_Data volume")</dd>
+        </div>
+    </dl>
+</section>
+
+@* ---------- Poll ---------- *@
+<section class="ops-section" aria-labelledby="ops-poll">
+    <h2 id="ops-poll" class="ops-h2">Background poll</h2>
+    @{ var poll = _snap.Poll; var ps = poll.Status; }
+    <div class="ops-card">
+        <dl class="ops-facts">
+            <div><dt>Last poll</dt><dd>@(ps.LastCompletedAt is { } done ? $"{Ago(done)} ({Utc(done)})" : "none yet since start")</dd></div>
+            <div><dt>Duration</dt><dd>@(ps.LastDuration is { } d ? Duration(d) : "—")</dd></div>
+            <div><dt>Sources fetched</dt><dd>@ps.LastFetched of @poll.EnabledSources enabled</dd></div>
+            <div><dt>Failing last poll</dt><dd class="@(ps.LastFailed > 0 ? "ops-bad" : "")">@ps.LastFailed</dd></div>
+            <div><dt>Skipped (rotation)</dt><dd>@ps.LastSkipped</dd></div>
+            <div><dt>Items in last result</dt><dd>@ps.LastItems.ToString("N0")</dd></div>
+            <div><dt>Next scheduled poll</dt><dd>@In(poll.NextScheduledPoll) · every @Duration(poll.Interval)</dd></div>
+            <div><dt>Polls since start</dt><dd>@ps.PollsCompleted@(ps.ReportedRound is { } r ? $" (round {r})" : "")</dd></div>
+            <div><dt>History</dt><dd>@poll.HistoryItems.ToString("N0") items kept</dd></div>
+            <div><dt>Disabled sources</dt><dd>@poll.DisabledSources</dd></div>
+            @if (ps.WebSubMerges > 0)
+            {
+                <div><dt>WebSub pushes</dt><dd>@ps.WebSubMerges, last @Ago(ps.LastWebSubMergeAt!.Value)</dd></div>
+            }
+        </dl>
+        @if (ps.InProgress)
+        {
+            <p class="ops-note ops-note--info" role="status">A poll is running now: @ps.InProgressFetched source(s) done so far.</p>
+        }
+
+        @if (poll.RotatedHosts.Count > 0)
+        {
+            <h3 class="ops-h3">Rotating batches</h3>
+            <p class="ops-muted small">Rate-limit-prone hosts are fetched a few sources per poll, rotating through the rest.</p>
+            <ul class="ops-list">
+                @foreach (var host in poll.RotatedHosts)
+                {
+                    <li>
+                        <strong>@host.Host</strong>: @host.Sources sources, @host.BatchSize per poll, a full cycle every @host.PollsPerCycle polls.
+                        @if (host.NextDue.Count > 0)
+                        {
+                            <span class="ops-muted">Next up: @string.Join(", ", host.NextDue)</span>
+                        }
+                    </li>
+                }
+            </ul>
+        }
+
+        @if (ps.LastErrors.Count > 0)
+        {
+            <details class="ops-details">
+                <summary>Errors from the last poll (@ps.LastErrors.Count)</summary>
+                <ul class="ops-list ops-list--errors">
+                    @foreach (var e in ps.LastErrors.Take(30))
+                    {
+                        <li>@e</li>
+                    }
+                </ul>
+            </details>
+        }
+    </div>
+</section>
+
+@* ---------- Feed health ---------- *@
+<section class="ops-section" aria-labelledby="ops-health">
+    <h2 id="ops-health" class="ops-h2">Feed health</h2>
+    @{ var fh = _snap.FeedHealth; }
+    <div class="ops-card">
+        <div class="ops-pills" role="list">
+            <span role="listitem" class="ops-pill ops-pill--ok">@fh.Healthy healthy</span>
+            <span role="listitem" class="ops-pill ops-pill--warn">@fh.Degraded degraded</span>
+            <span role="listitem" class="ops-pill ops-pill--bad">@fh.Broken broken</span>
+            <span role="listitem" class="ops-pill">@fh.NoData no data yet</span>
+            <span role="listitem" class="ops-pill @(fh.FailingNow > 0 ? "ops-pill--bad" : "")">@fh.FailingNow failing now</span>
+        </div>
+        @if (fh.WorstOffenders.Count == 0)
+        {
+            <p class="ops-muted mb-0">No source is failing or below 90% uptime.</p>
+        }
+        else
+        {
+            <h3 class="ops-h3">Worst offenders</h3>
+            <ul class="ops-offenders">
+                @foreach (var o in fh.WorstOffenders)
+                {
+                    <li>
+                        <div class="ops-offender-head">
+                            <strong>@o.Name</strong>
+                            <span class="ops-muted">@o.Category</span>
+                            <span class="ops-pill @(o.UptimePercent is null or < 60 ? "ops-pill--bad" : o.UptimePercent < 90 ? "ops-pill--warn" : "ops-pill--ok")">
+                                @(o.UptimePercent is { } pct ? pct.ToString("0") + "% uptime" : "no data")
+                            </span>
+                            @if (o.FailStreak > 0)
+                            {
+                                <span class="ops-pill ops-pill--bad">@o.FailStreak failed in a row</span>
+                            }
+                        </div>
+                        @if (!string.IsNullOrWhiteSpace(o.LastError))
+                        {
+                            <div class="ops-error">@o.LastError</div>
+                        }
+                    </li>
+                }
+            </ul>
+        }
+        <a class="ops-link" href="/source-health">Open Source Health for every source</a>
+    </div>
+</section>
+
+@* ---------- AI ---------- *@
+<section class="ops-section" aria-labelledby="ops-ai">
+    <h2 id="ops-ai" class="ops-h2">AI features</h2>
+    @{ var ai = _snap.Ai; }
+    <div class="ops-card">
+        @if (ai.ForcedOffByConfiguration)
+        {
+            <p class="ops-note ops-note--warn">Model calls are forced off by configuration (<code>Ai:Enabled</code> is false).</p>
+        }
+        <div class="ops-pills" role="list">
+            <span role="listitem" class="ops-pill @(ai.ModelCallsAllowed ? "ops-pill--ok" : "")">Model calls: @OnOff(ai.ModelCallsAllowed)</span>
+            <span role="listitem" class="ops-pill">Master switch: @OnOff(ai.MasterSwitch)</span>
+            <span role="listitem" class="ops-pill">Ask uses model: @OnOff(ai.AskUsesModel)</span>
+            <span role="listitem" class="ops-pill">Summaries: @OnOff(ai.Summaries)</span>
+            <span role="listitem" class="ops-pill">Explanations: @OnOff(ai.Explanations)</span>
+        </div>
+        @if (ai.Providers.Count == 0)
+        {
+            <p class="ops-muted mb-0">No language-model providers are configured (<code>Llm:Providers</code>).</p>
+        }
+        else
+        {
+            <ul class="ops-list">
+                @foreach (var p in ai.Providers)
+                {
+                    <li>
+                        <strong>@p.Name</strong> <span class="ops-muted">@p.Kind · @p.Model · priority @p.Priority</span>
+                        <span class="ops-pill @(p.Enabled ? "ops-pill--ok" : "")">@(p.Enabled ? "on" : "off")</span>
+                        <span class="ops-muted">@p.Calls call(s), @p.Failures failed@(p.LastFailureAt is { } lf ? $", last failure {Ago(lf)}" : "")</span>
+                    </li>
+                }
+            </ul>
+        }
+        <a class="ops-link" href="/ai-settings">Change these in AI Settings</a>
+    </div>
+</section>
+
+@* ---------- Backups ---------- *@
+<section class="ops-section" aria-labelledby="ops-backups">
+    <h2 id="ops-backups" class="ops-h2">Backups</h2>
+    <div class="ops-card">
+        <div class="ops-toolbar">
+            <button type="button" class="btn btn-sm btn-primary" disabled="@_backingUp" @onclick="CreateBackupAsync">
+                <Icon Name="download" Size="14" /> @(_backingUp ? "Creating backup…" : "Create backup now")
+            </button>
+            <span class="ops-muted small">Saved on the server in <code class="ops-path">@Backups.Directory</code></span>
+        </div>
+        @if (_backupMessage is not null)
+        {
+            <p class="ops-note @(_backupFailed ? "ops-note--warn" : "ops-note--info")" role="status">@_backupMessage</p>
+        }
+        @if (_snap.Backups.Count == 0)
+        {
+            <p class="ops-muted">No server-side backups yet.</p>
+        }
+        else
+        {
+            <ul class="ops-backups">
+                @foreach (var b in _snap.Backups.Take(_showAllBackups ? int.MaxValue : 10))
+                {
+                    <li>
+                        <a href="@($"/ops/backups/{Uri.EscapeDataString(b.Name)}")" download class="ops-mono">@b.Name</a>
+                        <span class="ops-muted">@Bytes(b.Bytes) · @Utc(b.CreatedAt)</span>
+                    </li>
+                }
+            </ul>
+            @if (_snap.Backups.Count > 10 && !_showAllBackups)
+            {
+                <button type="button" class="btn btn-sm btn-link px-0" @onclick="() => _showAllBackups = true">Show all @_snap.Backups.Count</button>
+            }
+        }
+        <details class="ops-details">
+            <summary>How to restore a backup</summary>
+            <ol class="ops-steps">
+                <li>A backup is a zip of the whole <code>App_Data</code> folder: the SQLite database, feed history, per-user reading state,
+                    AI switches and the data-protection keys that decrypt stored OAuth secrets. Treat it like a password file.</li>
+                <li><strong>From the browser:</strong> Settings → Backup → upload the zip. Files in the zip overwrite the matching files in
+                    <code>App_Data</code>; files not in the zip are left alone. Restart the app afterwards so every service reloads its data.</li>
+                <li><strong>On the server</strong> (safest, and the only way when the app will not start):
+                    stop the service (<code>sudo systemctl stop aipulse</code>), move the current <code>App_Data</code> aside,
+                    unzip the backup into a fresh <code>App_Data</code> owned by the service user, then start the service and check <code>/health</code>.</li>
+                <li>Server-side backups are not pruned automatically; delete old ones from the folder above. See docs/OPERATIONS.md.</li>
+            </ol>
+        </details>
+    </div>
+</section>
+
+@* ---------- Audit log ---------- *@
+<section class="ops-section" aria-labelledby="ops-audit">
+    <h2 id="ops-audit" class="ops-h2">Audit log</h2>
+    <div class="ops-card">
+        <form class="ops-filters" @onsubmit="ApplyFiltersAsync" @onsubmit:preventDefault>
+            <div class="ops-field">
+                <label for="audit-action">Action</label>
+                <select id="audit-action" class="form-select form-select-sm" @bind="_action">
+                    <option value="">Any action</option>
+                    @foreach (var a in _actions)
+                    {
+                        <option value="@a">@a</option>
+                    }
+                </select>
+            </div>
+            <div class="ops-field">
+                <label for="audit-user">User</label>
+                <input id="audit-user" class="form-control form-control-sm" placeholder="Actor or target" @bind="_user" />
+            </div>
+            <div class="ops-field">
+                <label for="audit-from">From (UTC)</label>
+                <input id="audit-from" type="date" class="form-control form-control-sm" @bind="_from" />
+            </div>
+            <div class="ops-field">
+                <label for="audit-to">To (UTC)</label>
+                <input id="audit-to" type="date" class="form-control form-control-sm" @bind="_to" />
+            </div>
+            <div class="ops-field ops-field--actions">
+                <button type="submit" class="btn btn-sm btn-primary">Apply</button>
+                <button type="button" class="btn btn-sm btn-outline-secondary" @onclick="ClearFiltersAsync">Clear</button>
+                <a class="btn btn-sm btn-outline-secondary" href="@CsvHref" download>
+                    <Icon Name="download" Size="14" /> CSV
+                </a>
+            </div>
+        </form>
+
+        @if (_auditRows.Count == 0)
+        {
+            <p class="ops-muted">No audit entries match.</p>
+        }
+        else
+        {
+            <table class="ops-audit">
+                <thead>
+                    <tr><th scope="col">When (UTC)</th><th scope="col">Action</th><th scope="col">Actor</th><th scope="col">Target</th><th scope="col">Detail</th></tr>
+                </thead>
+                <tbody>
+                    @foreach (var row in _auditRows)
+                    {
+                        <tr>
+                            <td data-label="When" class="ops-mono">@row.TimestampUtc.UtcDateTime.ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture)</td>
+                            <td data-label="Action"><span class="ops-action">@row.Action</span></td>
+                            <td data-label="Actor">@(row.ActorUsername ?? "—")</td>
+                            <td data-label="Target">@(row.TargetUsername ?? "—")</td>
+                            <td data-label="Detail" class="ops-detail">@(row.Detail ?? "")</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+        <Pager TotalItems="_auditTotal" CurrentPage="_auditPage" CurrentPageChanged="GoToPageAsync"
+               PageSize="_auditPageSize" PageSizeChanged="SetPageSizeAsync" PageSizeOptions="@(new[] { 25, 50, 100 })" />
+    </div>
+</section>
+
+@code {
+    private OpsSnapshot _snap = default!;
+    private Timer? _timer;
+    private bool _backingUp;
+    private bool _backupFailed;
+    private string? _backupMessage;
+    private bool _showAllBackups;
+
+    private IReadOnlyList<string> _actions = Array.Empty<string>();
+    private IReadOnlyList<AiPulse.Models.AuditLogEntry> _auditRows = Array.Empty<AiPulse.Models.AuditLogEntry>();
+    private int _auditTotal;
+    private int _auditPage = 1;
+    private int _auditPageSize = 25;
+    private string _action = "";
+    private string _user = "";
+    private DateOnly? _from;
+    private DateOnly? _to;
+    private AuditLogFilter _filter = new();
+
+    private bool LowDisk => _snap.System is { DiskFreeBytes: { } free, DiskTotalBytes: { } total } && total > 0 && free < total / 10;
+    private string CsvHref => "/ops/audit.csv" + (_filter.ToQueryString() is { Length: > 0 } q ? "?" + q : "");
+
+    protected override async Task OnInitializedAsync()
+    {
+        _snap = Status.GetSnapshot();
+        _actions = await Audit.GetActionsAsync();
+        await LoadAuditAsync();
+    }
+
+    protected override void OnAfterRender(bool firstRender)
+    {
+        if (firstRender)
+            _timer = new Timer(_ => InvokeAsync(() => { _snap = Status.GetSnapshot(); StateHasChanged(); }), null,
+                TimeSpan.FromSeconds(15), TimeSpan.FromSeconds(15));
+    }
+
+    private async Task RefreshAsync()
+    {
+        _snap = Status.GetSnapshot();
+        _actions = await Audit.GetActionsAsync();
+        await LoadAuditAsync();
+    }
+
+    private async Task CreateBackupAsync()
+    {
+        if (_backingUp) return;
+        _backingUp = true;
+        _backupMessage = null;
+        StateHasChanged();
+        try
+        {
+            var b = await Backups.CreateAsync();
+            _backupFailed = false;
+            _backupMessage = $"Created {b.Name} ({Bytes(b.Bytes)}).";
+        }
+        catch (Exception ex)
+        {
+            _backupFailed = true;
+            _backupMessage = "Backup failed: " + ex.Message;
+        }
+        finally
+        {
+            _backingUp = false;
+            _snap = Status.GetSnapshot();
+        }
+    }
+
+    private async Task LoadAuditAsync()
+    {
+        (_auditRows, _auditTotal) = await Audit.QueryAsync(_filter, _auditPage, _auditPageSize);
+    }
+
+    private async Task ApplyFiltersAsync()
+    {
+        _filter = new AuditLogFilter(
+            string.IsNullOrWhiteSpace(_action) ? null : _action,
+            string.IsNullOrWhiteSpace(_user) ? null : _user.Trim(),
+            _from, _to);
+        _auditPage = 1;
+        await LoadAuditAsync();
+    }
+
+    private async Task ClearFiltersAsync()
+    {
+        _action = _user = "";
+        _from = _to = null;
+        await ApplyFiltersAsync();
+    }
+
+    private async Task GoToPageAsync(int page)
+    {
+        _auditPage = page;
+        await LoadAuditAsync();
+    }
+
+    private async Task SetPageSizeAsync(int size)
+    {
+        _auditPageSize = size;
+        _auditPage = 1;
+        await LoadAuditAsync();
+    }
+
+    public void Dispose() => _timer?.Dispose();
+
+    private static string OnOff(bool on) => on ? "on" : "off";
+
+    private static string Utc(DateTimeOffset t) => t.UtcDateTime.ToString("yyyy-MM-dd HH:mm 'UTC'", CultureInfo.InvariantCulture);
+
+    internal static string Bytes(long bytes)
+    {
+        string[] units = { "B", "KB", "MB", "GB", "TB" };
+        double v = bytes;
+        var u = 0;
+        while (v >= 1024 && u < units.Length - 1) { v /= 1024; u++; }
+        return u == 0 ? $"{bytes} B" : v.ToString(v >= 100 ? "0" : "0.0", CultureInfo.InvariantCulture) + " " + units[u];
+    }
+
+    internal static string Duration(TimeSpan t)
+    {
+        if (t < TimeSpan.Zero) t = TimeSpan.Zero;
+        if (t.TotalSeconds < 1) return $"{t.TotalMilliseconds:0} ms";
+        if (t.TotalMinutes < 1) return $"{t.TotalSeconds:0.#} s";
+        if (t.TotalHours < 1) return $"{(int)t.TotalMinutes} min {t.Seconds} s";
+        if (t.TotalDays < 1) return $"{(int)t.TotalHours} h {t.Minutes} min";
+        return $"{(int)t.TotalDays} d {t.Hours} h";
+    }
+
+    private static string Ago(DateTimeOffset t) => Duration(DateTimeOffset.UtcNow - t) + " ago";
+
+    private static string In(DateTimeOffset t)
+    {
+        var d = t - DateTimeOffset.UtcNow;
+        return d <= TimeSpan.Zero ? "due now" : "in " + Duration(d);
+    }
+}

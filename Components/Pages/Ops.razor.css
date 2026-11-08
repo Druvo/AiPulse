@@ -1,0 +1,199 @@
+/* Operations console. Colours come only from the --ap-* tokens in app.css, so light and dark both follow the theme. */
+
+.ops-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--ap-space-2xs, .5rem);
+    margin-bottom: var(--ap-space-sm, 1rem);
+}
+
+.ops-muted { color: var(--ap-muted); }
+.ops-mono { font-family: var(--ap-font-mono); font-size: .85em; overflow-wrap: anywhere; }
+.ops-path { overflow-wrap: anywhere; color: var(--ap-text-secondary); }
+.ops-bad { color: var(--ap-danger-soft-text); font-weight: 600; }
+
+.ops-section { margin-bottom: var(--ap-space-lg, 2rem); min-width: 0; }
+
+.ops-h2 {
+    font-family: var(--ap-font-display);
+    font-size: 1.15rem;
+    font-weight: 600;
+    color: var(--ap-text);
+    margin: 0 0 var(--ap-space-2xs, .5rem);
+}
+
+.ops-h3 {
+    font-size: .95rem;
+    font-weight: 600;
+    color: var(--ap-text);
+    margin: var(--ap-space-sm, 1rem) 0 var(--ap-space-3xs, .25rem);
+}
+
+.ops-card {
+    background: var(--ap-surface);
+    border: 1px solid var(--ap-border);
+    border-radius: var(--ap-radius-md, 12px);
+    padding: var(--ap-space-sm, 1rem);
+    box-shadow: var(--ap-shadow-sm);
+    min-width: 0;
+}
+
+/* --- System tiles --- */
+.ops-tiles {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 9.5rem), 1fr));
+    gap: var(--ap-space-2xs, .5rem);
+    margin: 0;
+}
+
+.ops-tile {
+    background: var(--ap-surface);
+    border: 1px solid var(--ap-border);
+    border-radius: var(--ap-radius-md, 12px);
+    padding: var(--ap-space-xs, .75rem) var(--ap-space-sm, 1rem);
+    min-width: 0;
+}
+
+.ops-tile--warn { border-color: var(--ap-warning); background: var(--ap-warning-soft); }
+
+.ops-tile dt {
+    font-size: .75rem;
+    font-weight: 600;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+    color: var(--ap-muted);
+}
+
+.ops-tile dd {
+    margin: .15rem 0 0;
+    font-size: 1.05rem;
+    font-weight: 600;
+    color: var(--ap-text);
+    overflow-wrap: anywhere;
+}
+
+.ops-tile .ops-sub,
+.ops-tile--warn dt { font-size: .8rem; font-weight: 400; color: var(--ap-text-secondary); }
+
+/* --- Fact list (poll) --- */
+.ops-facts {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 14rem), 1fr));
+    gap: var(--ap-space-2xs, .5rem) var(--ap-space-md, 1.5rem);
+    margin: 0;
+}
+
+.ops-facts dt { font-size: .8rem; font-weight: 500; color: var(--ap-muted); }
+.ops-facts dd { margin: 0; color: var(--ap-text); overflow-wrap: anywhere; }
+
+/* --- Pills --- */
+.ops-pills { display: flex; flex-wrap: wrap; gap: .4rem; margin-bottom: var(--ap-space-xs, .75rem); }
+
+.ops-pill {
+    display: inline-block;
+    padding: .15rem .6rem;
+    border-radius: 999px;
+    font-size: .8rem;
+    font-weight: 500;
+    background: var(--ap-surface-2);
+    color: var(--ap-text-secondary);
+    border: 1px solid var(--ap-border);
+    white-space: nowrap;
+}
+
+.ops-pill--ok { background: var(--ap-success-soft); color: var(--ap-success-soft-text); border-color: transparent; }
+.ops-pill--warn { background: var(--ap-warning-soft); color: var(--ap-warning-soft-text); border-color: transparent; }
+.ops-pill--bad { background: var(--ap-danger-soft); color: var(--ap-danger-soft-text); border-color: transparent; }
+
+/* --- Lists --- */
+.ops-list { margin: 0 0 var(--ap-space-xs, .75rem); padding-left: 1.1rem; color: var(--ap-text); }
+.ops-list li { margin-bottom: .3rem; overflow-wrap: anywhere; }
+.ops-list--errors { font-family: var(--ap-font-mono); font-size: .8rem; color: var(--ap-danger-soft-text); }
+
+.ops-offenders { list-style: none; margin: 0 0 var(--ap-space-xs, .75rem); padding: 0; }
+.ops-offenders li { padding: .5rem 0; border-top: 1px solid var(--ap-border); min-width: 0; }
+.ops-offenders li:first-child { border-top: 0; }
+.ops-offender-head { display: flex; flex-wrap: wrap; align-items: center; gap: .4rem; color: var(--ap-text); }
+.ops-error {
+    margin-top: .25rem;
+    font-family: var(--ap-font-mono);
+    font-size: .78rem;
+    color: var(--ap-danger-soft-text);
+    overflow-wrap: anywhere;
+}
+
+.ops-backups { list-style: none; padding: 0; margin: 0 0 var(--ap-space-xs, .75rem); }
+.ops-backups li {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: .25rem .75rem;
+    padding: .4rem 0;
+    border-top: 1px solid var(--ap-border);
+    min-width: 0;
+}
+.ops-backups li:first-child { border-top: 0; }
+.ops-backups a { color: var(--ap-link); }
+
+.ops-link { color: var(--ap-link); font-size: .9rem; }
+
+.ops-note {
+    padding: .5rem .75rem;
+    border-radius: var(--ap-radius-sm, 8px);
+    margin: var(--ap-space-xs, .75rem) 0;
+    font-size: .9rem;
+}
+.ops-note--info { background: var(--ap-accent-soft); color: var(--ap-accent-soft-text); }
+.ops-note--warn { background: var(--ap-warning-soft); color: var(--ap-warning-soft-text); }
+
+.ops-details { margin-top: var(--ap-space-xs, .75rem); color: var(--ap-text); }
+.ops-details summary { cursor: pointer; color: var(--ap-link); font-weight: 500; }
+.ops-steps { margin: .5rem 0 0; padding-left: 1.2rem; color: var(--ap-text-secondary); }
+.ops-steps li { margin-bottom: .4rem; overflow-wrap: anywhere; }
+.ops-steps strong, .ops-steps code { color: var(--ap-text); }
+
+/* --- Audit log --- */
+.ops-filters {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 11rem), 1fr));
+    gap: var(--ap-space-2xs, .5rem);
+    align-items: end;
+    margin-bottom: var(--ap-space-sm, 1rem);
+}
+
+.ops-field { display: flex; flex-direction: column; gap: .2rem; min-width: 0; }
+.ops-field label { font-size: .8rem; font-weight: 500; color: var(--ap-text-secondary); }
+.ops-field--actions { flex-direction: row; flex-wrap: wrap; gap: .4rem; }
+
+.ops-audit { width: 100%; border-collapse: collapse; font-size: .875rem; color: var(--ap-text); }
+.ops-audit th {
+    text-align: left;
+    font-size: .75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+    color: var(--ap-muted);
+    padding: .4rem .5rem;
+    border-bottom: 1px solid var(--ap-border-strong);
+}
+.ops-audit td { padding: .45rem .5rem; border-bottom: 1px solid var(--ap-border); vertical-align: top; overflow-wrap: anywhere; }
+.ops-action {
+    font-family: var(--ap-font-mono);
+    font-size: .8rem;
+    background: var(--ap-surface-2);
+    color: var(--ap-text);
+    padding: .05rem .4rem;
+    border-radius: 6px;
+}
+.ops-detail { color: var(--ap-text-secondary); }
+
+/* Narrow screens: each audit row becomes a small labelled card instead of a table that would scroll sideways. */
+@media (max-width: 720px) {
+    .ops-audit thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+    .ops-audit, .ops-audit tbody, .ops-audit tr, .ops-audit td { display: block; width: 100%; }
+    .ops-audit tr { border: 1px solid var(--ap-border); border-radius: var(--ap-radius-sm, 8px); padding: .35rem .6rem; margin-bottom: .5rem; }
+    .ops-audit td { border: 0; padding: .15rem 0; display: grid; grid-template-columns: 4.5rem minmax(0, 1fr); gap: .5rem; }
+    .ops-audit td::before { content: attr(data-label); font-size: .75rem; font-weight: 600; color: var(--ap-muted); }
+    .ops-card { padding: var(--ap-space-xs, .75rem); }
+}

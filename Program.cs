@@ -89,6 +89,7 @@ builder.Services.AddSingleton<FollowService>();
 builder.Services.AddSingleton<CommentService>();
 builder.Services.AddSingleton<ProfileService>();
 builder.Services.AddHttpContextAccessor();
+builder.Services.AddOpsConsole();
 
 // "Ask AiPulse": grounded Q&A over the knowledge base and news, with pluggable language-model providers.
 builder.Services.AddAiAssistant(builder.Configuration);
@@ -277,6 +278,7 @@ app.UseAuthorization();
 
 // Unauthenticated on purpose - a reverse proxy or uptime monitor hits this without a session.
 app.MapHealthChecks("/health");
+app.MapOpsEndpoints();
 
 // Sign out and return to the login page.
 app.MapPost("/auth/logout", async (HttpContext http) =>
@@ -371,7 +373,7 @@ app.MapGet("/backup/download", (BackupService backup) =>
 {
     var bytes = backup.CreateBackupZip();
     return Results.File(bytes, "application/zip", $"aipulse-backup-{DateTime.Now:yyyy-MM-dd}.zip");
-}).RequireAuthorization();
+}).RequireAuthorization(policy => policy.RequireRole("Admin"));
 
 app.MapPost("/backup/restore", async (HttpRequest request, BackupService backup) =>
 {
