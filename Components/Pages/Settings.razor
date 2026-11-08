@@ -2,6 +2,7 @@
 @attribute [Authorize]
 @inject SiteStatsService Stats
 @rendermode InteractiveServer
+@implements IAsyncDisposable
 @inject ReadingStateService Reading
 @inject ObsidianExportService Export
 @inject WebhookService Webhooks
@@ -18,421 +19,642 @@
 
 <div class="page-header">
     <h1><Icon Name="settings" Size="22" /> Settings</h1>
-    <p class="lead">Your personal preferences — watchlist, filters, notifications, and export. New to AiPulse? See the <a href="help">Help page</a> first.</p>
+    <p class="lead">Your profile, feed filters, appearance, notifications and integrations. New to AiPulse? See the <a href="help">Help page</a> first.</p>
 </div>
-<DigestSettings />
 
-<div class="mb-4"><ApiTokensSettings /></div>
-<div class="row g-4">
-    <div class="col-lg-6">
-        <h4 class="section-title"><Icon Name="star" /> Keyword watchlist</h4>
-        <p class="text-muted">Topics you care about. Matching feed items get a star badge and trigger a desktop notification.</p>
+@*
+    LAYOUT NOTE for anyone adding settings: each <section class="settings-section" id="..."> below matches an entry in
+    Services/PageUi.cs SettingsNav.Sections (the desktop rail and the mobile select are built from that list). Put new
+    settings inside the section they belong to, at the marked "ANCHOR" comment, as a <div class="set-card"> block.
+    A brand-new section needs a SettingsNav entry too (a test checks every entry has a matching id on this page).
+*@
 
-        <div class="input-group mb-3">
-            <input class="form-control" placeholder="e.g. MCP, Blazor, RAG" @bind="_newKeyword" @bind:event="oninput"
-                   @onkeydown="@(e => { if (e.Key == "Enter") AddKeyword(); })" />
-            <button class="btn btn-primary" @onclick="AddKeyword">Add</button>
-        </div>
+<div class="settings-layout">
+    <nav class="settings-nav" aria-label="Settings sections">
+        <ul>
+            @foreach (var s in SettingsNav.For(_isAdmin))
+            {
+                <li>
+                    <a href="@($"settings#{s.Id}")" data-section="@s.Id" class="snav-link" @onclick="() => GoTo(s.Id)" @onclick:preventDefault="true">
+                        <Icon Name="@s.Icon" Size="17" /> <span>@s.Label</span>
+                    </a>
+                </li>
+            }
+        </ul>
+    </nav>
 
-        @if (Reading.Watchlist.Count == 0)
-        {
-            <p class="text-muted">No keywords yet.</p>
-        }
-        else
-        {
-            <div class="d-flex flex-wrap gap-2">
-                @foreach (var k in Reading.Watchlist)
-                {
-                    <span class="badge bg-warning p-2">
-                        @k
-                        <button class="btn-close btn-close-sm ms-1" style="font-size:.6rem;"
-                                @onclick="() => Remove(k)" aria-label="remove"></button>
-                    </span>
-                }
-            </div>
-        }
-
-        <hr class="my-4" />
-
-        <h4 class="section-title"><Icon Name="star" /> Followed tags</h4>
-        <p class="text-muted">Powers the "Following" filter on the News page — items matching any of these show up there, along with items from sources you've starred directly on a card.</p>
-
-        <div class="input-group mb-3">
-            <input class="form-control" placeholder="e.g. LLM, Agents" @bind="_newFollowedTag" @bind:event="oninput"
-                   @onkeydown="@(e => { if (e.Key == "Enter") { _ = AddFollowedTagAsync(); } })" />
-            <button class="btn btn-primary" @onclick="AddFollowedTagAsync">Add</button>
-        </div>
-
-        @if (_followedTags.Count == 0)
-        {
-            <p class="text-muted">Not following any tags yet.</p>
-        }
-        else
-        {
-            <div class="d-flex flex-wrap gap-2">
-                @foreach (var t in _followedTags)
-                {
-                    <span class="badge bg-warning p-2">
-                        @t
-                        <button class="btn-close btn-close-sm ms-1" style="font-size:.6rem;"
-                                @onclick="() => RemoveFollowedTagAsync(t)" aria-label="remove"></button>
-                    </span>
-                }
-            </div>
-        }
-
-        <hr class="my-4" />
-
-        <h4 class="section-title"><Icon Name="star" /> Exclude filters</h4>
-        <p class="text-muted">The opposite of the watchlist — matching items are hidden from the News feed entirely. Use plain text, or check "regex" for a regular expression.</p>
-
-        <div class="input-group mb-2">
-            <input class="form-control" placeholder="e.g. crypto, or a regex like ^Sponsored:" @bind="_newFilterPattern" @bind:event="oninput"
-                   @onkeydown="@(e => { if (e.Key == "Enter") AddExcludeFilter(); })" />
-            <div class="input-group-text">
-                <input class="form-check-input mt-0 me-1" type="checkbox" @bind="_newFilterIsRegex" id="newFilterRegex" />
-                <label class="form-check-label" for="newFilterRegex">regex</label>
-            </div>
-            <button class="btn btn-primary" @onclick="AddExcludeFilter">Add</button>
-        </div>
-
-        @if (Reading.ExcludeFilters.Count == 0)
-        {
-            <p class="text-muted">No exclude filters yet.</p>
-        }
-        else
-        {
-            <div class="d-flex flex-column gap-1">
-                @foreach (var f in Reading.ExcludeFilters)
-                {
-                    <div class="d-flex align-items-center gap-2">
-                        <code class="small">@f.Pattern</code>
-                        @if (f.IsRegex)
-                        {
-                            <span class="badge bg-secondary">regex</span>
-                        }
-                        <button class="btn btn-sm btn-link p-0 text-danger" @onclick="() => RemoveExcludeFilter(f.Id)">remove</button>
-                    </div>
-                }
-            </div>
-        }
-
-        <hr class="my-4" />
-
-        <h4 class="section-title"><Icon Name="eye-off" /> Muted sources</h4>
-        <p class="text-muted">
-            Sources are shared/admin-managed across everyone, but you can hide specific ones from just your
-            own News Feed - click the eye icon next to a source name on any feed item to mute it.
-        </p>
-        @if (Reading.MutedSources.Count == 0)
-        {
-            <p class="text-muted">No muted sources yet.</p>
-        }
-        else
-        {
-            <div class="d-flex flex-wrap gap-2">
-                @foreach (var source in Reading.MutedSources.OrderBy(s => s))
-                {
-                    <div class="tag-chip small d-flex align-items-center gap-1">
-                        @source
-                        <button class="btn btn-sm btn-link p-0" title="Unmute" @onclick="() => Reading.ToggleMutedSource(source)">✕</button>
-                    </div>
-                }
-            </div>
-        }
-
-        <hr class="my-4" />
-
-        <h4 class="section-title"><Icon Name="sparkle" /> Appearance</h4>
-        <p class="text-muted">An accent color on top of the light/dark toggle (top-left), plus optional custom CSS for full control. Remembered on this browser.</p>
-
-        <div class="d-flex gap-2 mb-3">
-            <button class="accent-swatch" style="background:linear-gradient(135deg, oklch(54% .23 285), oklch(66% .15 220))" title="Default (indigo)" @onclick='() => SetAccent("")'></button>
-            <button class="accent-swatch" style="background:oklch(52% .13 200)" title="Cyan" @onclick='() => SetAccent("cyan")'></button>
-            <button class="accent-swatch" style="background:oklch(56% .19 300)" title="Violet" @onclick='() => SetAccent("violet")'></button>
-            <button class="accent-swatch" style="background:oklch(55% .2 20)" title="Rose" @onclick='() => SetAccent("rose")'></button>
-            <button class="accent-swatch" style="background:oklch(62% .15 75)" title="Amber" @onclick='() => SetAccent("amber")'></button>
-            <button class="accent-swatch" style="background:oklch(55% .14 155)" title="Emerald" @onclick='() => SetAccent("emerald")'></button>
-        </div>
-
-        <h6 class="mb-2">Logo</h6>
-        <p class="text-muted x-small mb-2">Shown in the sidebar and on the sign-in page. Remembered on this browser.</p>
-        <div class="d-flex gap-2 mb-3">
-            <button class="logo-swatch" title="Logo V1" @onclick='() => SetLogo("v1")'><img src="/img/logo-v1.png" alt="Logo V1" /></button>
-            <button class="logo-swatch" title="Logo V2" @onclick='() => SetLogo("v2")'><img src="/img/logo-v2.png" alt="Logo V2" /></button>
-        </div>
-
-        <details>
-            <summary class="small text-muted mb-2" style="cursor:pointer">Advanced: custom CSS</summary>
-            <textarea class="form-control form-control-sm font-monospace mt-2" rows="6" placeholder="e.g. .stat-num { font-size: 2.5rem; }" @bind="_customCss"></textarea>
-            <button class="btn btn-sm btn-outline-primary mt-2" @onclick="SaveCustomCss">Apply</button>
-        </details>
+    <div class="settings-jump">
+        <label for="settings-jump" class="set-label">Jump to section</label>
+        <select id="settings-jump" class="form-select" @onchange="e => GoTo((string?)e.Value)">
+            @foreach (var s in SettingsNav.For(_isAdmin))
+            {
+                <option value="@s.Id">@s.Label</option>
+            }
+        </select>
     </div>
 
-    <div class="col-lg-6">
-        <h4 class="section-title"><Icon Name="user" /> Account</h4>
-        <p class="text-muted">Signed in as <strong>@_username</strong>.</p>
-        <div class="mb-2">
-            <input type="password" class="form-control mb-2" placeholder="Current password" @bind="_currentPassword" />
-            <input type="password" class="form-control mb-2" placeholder="New password" @bind="_newPassword" />
-            <input type="password" class="form-control" placeholder="Confirm new password" @bind="_confirmPassword" />
-        </div>
-        <button class="btn btn-primary" @onclick="ChangePassword">Change password</button>
-        @if (_passwordChangeMessage is not null)
-        {
-            <div class="alert alert-warning py-2 mt-2 small mb-0">@_passwordChangeMessage</div>
-        }
+    <div class="settings-content">
 
-        <hr class="my-4" />
+        @* ============================== PROFILE ============================== *@
+        <section class="settings-section" id="profile" aria-labelledby="profile-h">
+            <header class="section-head">
+                <h2 id="profile-h"><Icon Name="user" Size="20" /> Profile</h2>
+                <p>How you appear to others on AiPulse.</p>
+            </header>
 
-        <h4 class="section-title"><Icon Name="user" /> Public profile</h4>
-        <p class="text-muted">
-            Shown on your public profile page at <a href="@($"u/{_username}")" target="_blank">/u/@_username</a> —
-            visible to anyone, signed in or not.
-        </p>
-        <div class="mb-2">
-            <input class="form-control mb-2" placeholder="Display name (optional - defaults to your username)" @bind="_profileDisplayName" />
-            <input class="form-control" placeholder="Website (optional)" @bind="_profileWebsiteUrl" />
-        </div>
-        <div class="mb-2">
-            <input class="form-control" placeholder="Avatar image URL (optional)" @bind="_profileAvatarUrl" />
-        </div>
-        <div class="mb-2">
-            <textarea class="form-control" rows="3" placeholder="Bio (optional)" @bind="_profileBio"></textarea>
-        </div>
-        <button class="btn btn-primary" @onclick="SaveProfileAsync">Save profile</button>
-
-        <hr class="my-4" />
-
-        <h4 class="section-title"><Icon Name="bell" /> Desktop notifications</h4>
-        <p class="text-muted">Get notified about new tool/model releases and watchlist hits while a tab is open.</p>
-        <p>Browser permission: <strong>@_permission</strong></p>
-        @if (_permission == "denied")
-        {
-            <div class="alert alert-warning py-2 small">
-                Notifications are <strong>blocked</strong> for this site. Once blocked, no website can re-prompt you —
-                you have to allow it manually: click the padlock/site-info icon next to the address bar →
-                <strong>Notifications</strong> → <strong>Allow</strong>, then reload this page.
+            <div class="set-card">
+                <div class="profile-id">
+                    <span class="avatar" aria-hidden="true">
+                        @if (!string.IsNullOrWhiteSpace(_profileAvatarUrl))
+                        {
+                            <img src="@_profileAvatarUrl" alt="" />
+                        }
+                        else
+                        {
+                            @AdminTable.Initial(_username)
+                        }
+                    </span>
+                    <div class="min-w-0">
+                        <p class="profile-name">@(string.IsNullOrWhiteSpace(_profileDisplayName) ? _username : _profileDisplayName)</p>
+                        <p class="set-help mb-0">Signed in as <strong>@_username</strong> · public page <a href="@($"u/{_username}")" target="_blank" rel="noopener">/u/@_username</a></p>
+                    </div>
+                </div>
+                <p class="set-help">Everything below is visible to anyone, signed in or not.</p>
+                <div class="form-grid">
+                    <div>
+                        <label class="set-label" for="pf-name">Display name</label>
+                        <input id="pf-name" class="form-control" placeholder="Defaults to your username" @bind="_profileDisplayName" />
+                    </div>
+                    <div>
+                        <label class="set-label" for="pf-site">Website</label>
+                        <input id="pf-site" class="form-control" type="url" inputmode="url" placeholder="https://…" @bind="_profileWebsiteUrl" />
+                    </div>
+                    <div class="span-2">
+                        <label class="set-label" for="pf-avatar">Avatar image URL</label>
+                        <input id="pf-avatar" class="form-control" type="url" inputmode="url" placeholder="https://… (optional)" @bind="_profileAvatarUrl" />
+                    </div>
+                    <div class="span-2">
+                        <label class="set-label" for="pf-bio">Bio</label>
+                        <textarea id="pf-bio" class="form-control" rows="3" placeholder="A line or two about you (optional)" @bind="_profileBio"></textarea>
+                    </div>
+                </div>
+                <div class="set-actions">
+                    <button class="btn btn-primary" @onclick="SaveProfileAsync">Save profile</button>
+                </div>
             </div>
-        }
-        <button class="btn btn-outline-primary me-2" @onclick="RequestPermission">Enable notifications</button>
-        <button class="btn btn-outline-secondary" @onclick="TestNotification">Send test</button>
-        <p class="text-muted small mt-2">
-            Background alerts (releases/watchlist) only fire for items published <em>after</em> the app's first poll on startup,
-            and re-check every <code>Notifications:PollMinutes</code> (currently every <strong>@Stats.Current.PollMinutes</strong> min, set in <code>appsettings</code>) —
-            so nothing shows in the first few minutes after a restart even when everything's working correctly.
-        </p>
+            @* ANCHOR: profile-extra - add further profile settings here *@
+        </section>
 
-        <hr class="my-4" />
+        @* ============================== FEED & FILTERS ============================== *@
+        <section class="settings-section" id="feed" aria-labelledby="feed-h">
+            <header class="section-head">
+                <h2 id="feed-h"><Icon Name="rss" Size="20" /> Feed &amp; filters</h2>
+                <p>Decide what stands out, what you follow and what never shows up in your News Feed.</p>
+            </header>
 
-        <h4 class="section-title"><Icon Name="webhook" /> Outbound webhook</h4>
-        <p class="text-muted">
-            Desktop notifications only fire while a tab is open. A webhook reaches you anywhere — paste a
-            <a href="https://api.slack.com/messaging/webhooks" target="_blank" rel="noopener">Slack</a> or
-            <a href="https://support.discord.com/hc/en-us/articles/228383668" target="_blank" rel="noopener">Discord</a>
-            incoming-webhook URL and it's auto-detected; any other URL gets a generic JSON POST.
-        </p>
-        <div class="input-group mb-2">
-            <input class="form-control" placeholder="https://hooks.slack.com/services/…" @bind="_webhookUrl" />
-            <button class="btn btn-primary" @onclick="SaveWebhook">Save</button>
-        </div>
-        <button class="btn btn-outline-secondary" @onclick="TestWebhook" disabled="@string.IsNullOrWhiteSpace(_webhookUrl)">Send test</button>
-
-        <h6 class="mt-4 mb-2">Per-keyword webhooks</h6>
-        <p class="text-muted small">
-            Route specific topics to a different webhook than the catch-all above - e.g. "MCP" alerts to one
-            Slack channel, everything else left to the catch-all. An alert matches if its title, details, or
-            source contains any of the keywords.
-        </p>
-        @foreach (var route in Reading.WebhookRoutes)
-        {
-            <div class="d-flex align-items-center gap-2 mb-1 small">
-                <span class="text-truncate" style="max-width:320px;" title="@route.Url">@route.Url</span>
-                <span class="d-flex flex-wrap gap-1">
-                    @foreach (var k in route.Keywords)
-                    {
-                        <span class="tag-chip small">@k</span>
-                    }
-                </span>
-                <button class="btn btn-sm btn-outline-danger ms-auto" @onclick="() => RemoveWebhookRoute(route.Id)">Remove</button>
-            </div>
-        }
-        <div class="input-group input-group-sm mt-2" style="max-width:600px">
-            <input class="form-control" placeholder="Webhook URL" @bind="_newRouteUrl" />
-            <input class="form-control" placeholder="Keywords, comma-separated (e.g. MCP, agent)" @bind="_newRouteKeywords" />
-            <button class="btn btn-primary" @onclick="AddWebhookRoute" disabled="@(string.IsNullOrWhiteSpace(_newRouteUrl) || string.IsNullOrWhiteSpace(_newRouteKeywords))">Add</button>
-        </div>
-
-        <hr class="my-4" />
-
-        <h4 class="section-title"><Icon Name="rss" /> Mobile apps (Fever API)</h4>
-        <p class="text-muted">
-            Read AiPulse from an RSS app that supports the <strong>Fever API</strong> (Reeder, ReadKit, Fiery Feeds, and others).
-            Set a separate password here — it's not your login password, just for this.
-        </p>
-        <div class="input-group mb-2">
-            <input type="password" class="form-control" placeholder="Fever API password" @bind="_feverPassword" />
-            <button class="btn btn-primary" @onclick="SaveFeverPassword">Save</button>
-        </div>
-        @if (_feverSaved)
-        {
-            <div class="alert alert-success py-2 small mb-2">
-                Saved. In your RSS app, use server <code>@_feverEndpointUrl</code>, username <code>@_username</code>, and the password you just set.
-            </div>
-        }
-        @if (Reading.FeverApiKey is not null)
-        {
-            <p class="text-muted small mb-0">Fever API access is currently <strong class="text-success">enabled</strong> for this account.</p>
-        }
-
-        <hr class="my-4" />
-
-        <h4 class="section-title"><Icon Name="grid" /> Dashboard widgets</h4>
-        <p class="text-muted">
-            Embed your own content on the Dashboard — a status page, a personal RSS reader, a Grafana panel, anything.
-            <strong>Iframe</strong> takes a URL. <strong>HTML</strong> renders raw markup directly, unsanitized — only use it
-            with content you trust, since it runs as your own logged-in session (the same trust model as the custom CSS above).
-        </p>
-        <div class="row g-2 mb-2">
-            <div class="col-md-3">
-                <input class="form-control" placeholder="Title" @bind="_newWidgetTitle" />
-            </div>
-            <div class="col-md-2">
-                <select class="form-select" @bind="_newWidgetType">
-                    <option value="Iframe">Iframe</option>
-                    <option value="Html">HTML</option>
-                </select>
-            </div>
-            <div class="col-md-5">
-                <input class="form-control" placeholder="@(_newWidgetType == "Iframe" ? "https://…" : "<div>…</div>")" @bind="_newWidgetContent" />
-            </div>
-            <div class="col-md-2">
-                <button class="btn btn-primary w-100" @onclick="AddWidget">Add</button>
-            </div>
-        </div>
-
-        @if (Reading.DashboardWidgets.Count == 0)
-        {
-            <p class="text-muted">No widgets yet.</p>
-        }
-        else
-        {
-            <div class="d-flex flex-column gap-1">
-                @foreach (var w in Reading.DashboardWidgets)
+            <div class="set-card">
+                <h3 class="set-title"><Icon Name="star" Size="16" /> Keyword watchlist</h3>
+                <p class="set-help">Matching feed items get a star badge and can trigger a desktop notification.</p>
+                <div class="input-group add-row">
+                    <label class="visually-hidden" for="wl-add">Add a watchlist keyword</label>
+                    <input id="wl-add" class="form-control" placeholder="e.g. MCP, Blazor, RAG" @bind="_newKeyword" @bind:event="oninput"
+                           @onkeydown="@(e => { if (e.Key == "Enter") AddKeyword(); })" />
+                    <button class="btn btn-primary" @onclick="AddKeyword" disabled="@string.IsNullOrWhiteSpace(_newKeyword)">Add</button>
+                </div>
+                @if (Reading.Watchlist.Count == 0)
                 {
-                    <div class="d-flex align-items-center gap-2">
-                        <span class="badge bg-secondary">@w.Type</span>
-                        <span class="small fw-bold">@w.Title</span>
-                        <code class="small text-truncate" style="max-width:260px">@w.Content</code>
-                        <button class="btn btn-sm btn-link p-0 text-danger ms-auto" @onclick="() => RemoveWidget(w.Id)">remove</button>
+                    <p class="set-empty">No keywords yet.</p>
+                }
+                else
+                {
+                    <ul class="chip-list" aria-label="Watchlist keywords">
+                        @foreach (var k in Reading.Watchlist)
+                        {
+                            <li class="rm-chip">
+                                <span>@k</span>
+                                <button type="button" class="rm-btn" aria-label="@($"Remove {k} from the watchlist")" @onclick="() => Remove(k)">✕</button>
+                            </li>
+                        }
+                    </ul>
+                }
+            </div>
+
+            <div class="set-card">
+                <h3 class="set-title"><Icon Name="bookmark" Size="16" /> Followed tags</h3>
+                <p class="set-help">Powers the "Following" filter on the News page, together with sources you star on a card.</p>
+                <div class="input-group add-row">
+                    <label class="visually-hidden" for="ft-add">Follow a tag</label>
+                    <input id="ft-add" class="form-control" placeholder="e.g. LLM, Agents" @bind="_newFollowedTag" @bind:event="oninput"
+                           @onkeydown="@(e => { if (e.Key == "Enter") { _ = AddFollowedTagAsync(); } })" />
+                    <button class="btn btn-primary" @onclick="AddFollowedTagAsync" disabled="@string.IsNullOrWhiteSpace(_newFollowedTag)">Add</button>
+                </div>
+                @if (_followedTags.Count == 0)
+                {
+                    <p class="set-empty">Not following any tags yet.</p>
+                }
+                else
+                {
+                    <ul class="chip-list" aria-label="Followed tags">
+                        @foreach (var t in _followedTags)
+                        {
+                            <li class="rm-chip">
+                                <span>@t</span>
+                                <button type="button" class="rm-btn" aria-label="@($"Unfollow {t}")" @onclick="() => RemoveFollowedTagAsync(t)">✕</button>
+                            </li>
+                        }
+                    </ul>
+                }
+            </div>
+
+            <div class="set-card">
+                <h3 class="set-title"><Icon Name="eye-off" Size="16" /> Exclude filters</h3>
+                <p class="set-help">The opposite of the watchlist: matching items are hidden from the News Feed entirely. Plain text, or tick "regex".</p>
+                <div class="input-group add-row">
+                    <label class="visually-hidden" for="ex-add">Exclude pattern</label>
+                    <input id="ex-add" class="form-control" placeholder="e.g. crypto, or ^Sponsored:" @bind="_newFilterPattern" @bind:event="oninput"
+                           @onkeydown="@(e => { if (e.Key == "Enter") AddExcludeFilter(); })" />
+                    <div class="input-group-text">
+                        <input class="form-check-input mt-0 me-1" type="checkbox" @bind="_newFilterIsRegex" id="newFilterRegex" />
+                        <label class="form-check-label" for="newFilterRegex">regex</label>
+                    </div>
+                    <button class="btn btn-primary" @onclick="AddExcludeFilter" disabled="@string.IsNullOrWhiteSpace(_newFilterPattern)">Add</button>
+                </div>
+                @if (Reading.ExcludeFilters.Count == 0)
+                {
+                    <p class="set-empty">No exclude filters yet.</p>
+                }
+                else
+                {
+                    <ul class="row-list">
+                        @foreach (var f in Reading.ExcludeFilters)
+                        {
+                            <li>
+                                <code class="row-main">@f.Pattern</code>
+                                @if (f.IsRegex) { <span class="mini-chip">regex</span> }
+                                <button type="button" class="row-rm" aria-label="@($"Remove exclude filter {f.Pattern}")" @onclick="() => RemoveExcludeFilter(f.Id)"><Icon Name="trash" Size="15" /></button>
+                            </li>
+                        }
+                    </ul>
+                }
+            </div>
+
+            <div class="set-card">
+                <h3 class="set-title"><Icon Name="eye-off" Size="16" /> Muted sources</h3>
+                <p class="set-help">Hide a source from just your own News Feed: use the eye icon next to a source name on any feed item.</p>
+                @if (Reading.MutedSources.Count == 0)
+                {
+                    <p class="set-empty">No muted sources yet.</p>
+                }
+                else
+                {
+                    <ul class="chip-list" aria-label="Muted sources">
+                        @foreach (var source in Reading.MutedSources.OrderBy(s => s))
+                        {
+                            <li class="rm-chip">
+                                <span>@source</span>
+                                <button type="button" class="rm-btn" aria-label="@($"Unmute {source}")" @onclick="() => Reading.ToggleMutedSource(source)">✕</button>
+                            </li>
+                        }
+                    </ul>
+                }
+            </div>
+            @* ANCHOR: feed-extra - add further feed/filter settings here *@
+        </section>
+
+        @* ============================== APPEARANCE ============================== *@
+        <section class="settings-section" id="appearance" aria-labelledby="appearance-h">
+            <header class="section-head">
+                <h2 id="appearance-h"><Icon Name="sparkle" Size="20" /> Appearance</h2>
+                <p>Theme, accent color, logo and dashboard widgets. Theme, accent and logo are remembered on this browser.</p>
+            </header>
+
+            <div class="set-card">
+                <h3 class="set-title">Theme</h3>
+                <div class="seg" role="group" aria-label="Theme">
+                    <button type="button" class="seg-btn @(_theme == "light" ? "active" : "")" aria-pressed="@(_theme == "light" ? "true" : "false")" @onclick='() => SetTheme("light")'><Icon Name="sun" Size="15" /> Light</button>
+                    <button type="button" class="seg-btn @(_theme == "dark" ? "active" : "")" aria-pressed="@(_theme == "dark" ? "true" : "false")" @onclick='() => SetTheme("dark")'><Icon Name="moon" Size="15" /> Dark</button>
+                </div>
+
+                <h3 class="set-title mt-4" id="accent-h">Accent color</h3>
+                <div class="swatches" role="group" aria-labelledby="accent-h">
+                    @foreach (var (key, label, bg) in _accents)
+                    {
+                        <button type="button" class="swatch @(_accent == key ? "active" : "")" style="background:@bg" aria-pressed="@(_accent == key ? "true" : "false")"
+                                aria-label="@($"{label} accent")" title="@label" @onclick="() => SetAccent(key)">
+                            @if (_accent == key) { <Icon Name="check" Size="16" /> }
+                        </button>
+                    }
+                </div>
+
+                <h3 class="set-title mt-4" id="logo-h">Logo</h3>
+                <p class="set-help">Shown in the sidebar and on the sign-in page.</p>
+                <div class="logos" role="group" aria-labelledby="logo-h">
+                    <button type="button" class="logo-opt @(_logo == "v1" ? "active" : "")" aria-pressed="@(_logo == "v1" ? "true" : "false")" @onclick='() => SetLogo("v1")'><img src="/img/logo-v1.png" alt="Logo V1" /></button>
+                    <button type="button" class="logo-opt @(_logo == "v2" ? "active" : "")" aria-pressed="@(_logo == "v2" ? "true" : "false")" @onclick='() => SetLogo("v2")'><img src="/img/logo-v2.png" alt="Logo V2" /></button>
+                </div>
+
+                <details class="set-details mt-3">
+                    <summary>Advanced: custom CSS</summary>
+                    <label class="visually-hidden" for="custom-css">Custom CSS</label>
+                    <textarea id="custom-css" class="form-control font-monospace mt-2" rows="6" placeholder="e.g. .stat-num { font-size: 2.5rem; }" @bind="_customCss"></textarea>
+                    <button class="btn btn-outline-primary mt-2" @onclick="SaveCustomCss">Apply</button>
+                </details>
+            </div>
+
+            <div class="set-card">
+                <h3 class="set-title"><Icon Name="grid" Size="16" /> Dashboard widgets</h3>
+                <p class="set-help">
+                    Embed your own content on the Dashboard. <strong>Iframe</strong> takes a URL. <strong>HTML</strong> renders raw markup unsanitized,
+                    so only use content you trust (it runs as your signed-in session, like custom CSS).
+                </p>
+                <div class="widget-form">
+                    <div>
+                        <label class="set-label" for="w-title">Title</label>
+                        <input id="w-title" class="form-control" placeholder="e.g. Status page" @bind="_newWidgetTitle" />
+                    </div>
+                    <div>
+                        <label class="set-label" for="w-type">Type</label>
+                        <select id="w-type" class="form-select" @bind="_newWidgetType">
+                            <option value="Iframe">Iframe</option>
+                            <option value="Html">HTML</option>
+                        </select>
+                    </div>
+                    <div class="w-content">
+                        <label class="set-label" for="w-content">@(_newWidgetType == "Iframe" ? "URL" : "HTML")</label>
+                        <input id="w-content" class="form-control" placeholder="@(_newWidgetType == "Iframe" ? "https://…" : "<div>…</div>")" @bind="_newWidgetContent" />
+                    </div>
+                    <div class="w-add">
+                        <button class="btn btn-primary w-100" @onclick="AddWidget">Add widget</button>
+                    </div>
+                </div>
+                @if (Reading.DashboardWidgets.Count == 0)
+                {
+                    <p class="set-empty">No widgets yet.</p>
+                }
+                else
+                {
+                    <ul class="row-list">
+                        @foreach (var w in Reading.DashboardWidgets)
+                        {
+                            <li>
+                                <span class="mini-chip">@w.Type</span>
+                                <span class="row-strong">@w.Title</span>
+                                <code class="row-main row-trunc" title="@w.Content">@w.Content</code>
+                                <button type="button" class="row-rm" aria-label="@($"Remove widget {w.Title}")" @onclick="() => ConfirmRemoveWidget(w.Id, w.Title)"><Icon Name="trash" Size="15" /></button>
+                            </li>
+                        }
+                    </ul>
+                }
+            </div>
+            @* ANCHOR: appearance-extra - add further appearance settings here *@
+        </section>
+
+        @* ============================== NOTIFICATIONS ============================== *@
+        <section class="settings-section" id="notifications" aria-labelledby="notifications-h">
+            <header class="section-head">
+                <h2 id="notifications-h"><Icon Name="bell" Size="20" /> Notifications</h2>
+                <p>Desktop alerts while a tab is open, and webhooks that reach you anywhere.</p>
+            </header>
+
+            <DigestSettings />
+
+            <div class="set-card">
+                <h3 class="set-title"><Icon Name="bell" Size="16" /> Desktop notifications</h3>
+                <p class="set-help">New tool/model releases and watchlist hits, while an AiPulse tab is open.</p>
+                <p class="perm-line">Browser permission:
+                    <span class="status-chip @(_permission switch { "granted" => "chip-ok", "denied" => "chip-bad", _ => "chip-muted" })">@_permission</span>
+                </p>
+                @if (_permission == "denied")
+                {
+                    <div class="alert alert-warning py-2 small" role="alert">
+                        Notifications are <strong>blocked</strong> for this site, and no website can re-prompt you. Click the padlock/site-info icon next to the
+                        address bar → <strong>Notifications</strong> → <strong>Allow</strong>, then reload this page.
+                    </div>
+                }
+                <div class="set-actions">
+                    <button class="btn btn-outline-primary" @onclick="RequestPermission" disabled="@(_permission == "granted")">Enable notifications</button>
+                    <button class="btn btn-outline-secondary" @onclick="TestNotification">Send test</button>
+                </div>
+                <p class="set-help mt-2 mb-0">
+                    Alerts only fire for items published <em>after</em> the app's first poll on startup, and re-check every
+                    <strong>@Stats.Current.PollMinutes</strong> min (<code>Notifications:PollMinutes</code>), so a quiet first few minutes after a restart is normal.
+                </p>
+            </div>
+
+            <div class="set-card">
+                <h3 class="set-title"><Icon Name="webhook" Size="16" /> Outbound webhook</h3>
+                <p class="set-help">
+                    Paste a <a href="https://api.slack.com/messaging/webhooks" target="_blank" rel="noopener">Slack</a> or
+                    <a href="https://support.discord.com/hc/en-us/articles/228383668" target="_blank" rel="noopener">Discord</a>
+                    incoming-webhook URL and it's auto-detected; any other URL gets a generic JSON POST.
+                </p>
+                <div class="input-group add-row">
+                    <label class="visually-hidden" for="wh-url">Webhook URL</label>
+                    <input id="wh-url" class="form-control" type="url" inputmode="url" placeholder="https://hooks.slack.com/services/…" @bind="_webhookUrl" />
+                    <button class="btn btn-primary" @onclick="SaveWebhook">Save</button>
+                </div>
+                <button class="btn btn-outline-secondary" @onclick="TestWebhook" disabled="@string.IsNullOrWhiteSpace(_webhookUrl)">Send test</button>
+
+                <h4 class="set-subtitle">Per-keyword webhooks</h4>
+                <p class="set-help">
+                    Route specific topics to a different webhook than the catch-all above, e.g. "MCP" alerts to one Slack channel.
+                    An alert matches if its title, details, or source contains any of the keywords.
+                </p>
+                @if (Reading.WebhookRoutes.Count > 0)
+                {
+                    <ul class="row-list">
+                        @foreach (var route in Reading.WebhookRoutes)
+                        {
+                            <li class="route">
+                                <span class="row-main row-trunc" title="@route.Url">@route.Url</span>
+                                <span class="route-keys">
+                                    @foreach (var k in route.Keywords)
+                                    {
+                                        <span class="mini-chip">@k</span>
+                                    }
+                                </span>
+                                <button type="button" class="row-rm" aria-label="Remove this keyword webhook" @onclick="() => ConfirmRemoveRoute(route.Id)"><Icon Name="trash" Size="15" /></button>
+                            </li>
+                        }
+                    </ul>
+                }
+                <div class="route-form">
+                    <div>
+                        <label class="set-label" for="rt-url">Webhook URL</label>
+                        <input id="rt-url" class="form-control" type="url" inputmode="url" placeholder="https://…" @bind="_newRouteUrl" @bind:event="oninput" />
+                    </div>
+                    <div>
+                        <label class="set-label" for="rt-keys">Keywords</label>
+                        <input id="rt-keys" class="form-control" placeholder="Comma-separated, e.g. MCP, agent" @bind="_newRouteKeywords" @bind:event="oninput" />
+                    </div>
+                    <div class="route-add">
+                        <button class="btn btn-primary w-100" @onclick="AddWebhookRoute" disabled="@(string.IsNullOrWhiteSpace(_newRouteUrl) || string.IsNullOrWhiteSpace(_newRouteKeywords))">Add route</button>
+                    </div>
+                </div>
+            </div>
+            @* ANCHOR: notifications-extra - add further notification settings here *@
+        </section>
+
+        @* ============================== INTEGRATIONS ============================== *@
+        <section class="settings-section" id="integrations" aria-labelledby="integrations-h">
+            <header class="section-head">
+                <h2 id="integrations-h"><Icon Name="webhook" Size="20" /> Integrations</h2>
+                <p>Read AiPulse from other apps and export what you save.</p>
+            </header>
+
+            <ApiTokensSettings />
+
+            <div class="set-card">
+                <h3 class="set-title"><Icon Name="rss" Size="16" /> Mobile apps (Fever API)</h3>
+                <p class="set-help">
+                    For RSS apps that support the <strong>Fever API</strong> (Reeder, ReadKit, Fiery Feeds and others).
+                    This password is separate from your login password.
+                    @if (Reading.FeverApiKey is not null)
+                    {
+                        <span class="status-chip chip-ok ms-1">enabled</span>
+                    }
+                </p>
+                <div class="input-group add-row">
+                    <label class="visually-hidden" for="fever-pw">Fever API password</label>
+                    <input id="fever-pw" type="password" class="form-control" placeholder="Fever API password" autocomplete="new-password" @bind="_feverPassword" @bind:event="oninput" />
+                    <button class="btn btn-primary" @onclick="SaveFeverPassword" disabled="@string.IsNullOrWhiteSpace(_feverPassword)">Save</button>
+                </div>
+                @if (_feverSaved)
+                {
+                    <div class="alert alert-success py-2 small mb-0" role="status">
+                        Saved. In your RSS app use server <code>@_feverEndpointUrl</code>, username <code>@_username</code> and the password you just set.
                     </div>
                 }
             </div>
-        }
 
-        <hr class="my-4" />
+            <div class="set-card">
+                <h3 class="set-title"><Icon Name="download" Size="16" /> Export to Obsidian</h3>
+                <p class="set-help">Folder to write <code>AiPulse Reading List.md</code> into. Point this at your Obsidian vault to export there.</p>
+                <div class="input-group add-row">
+                    <label class="visually-hidden" for="export-path">Export folder</label>
+                    <input id="export-path" class="form-control" placeholder="@Export.TargetDir" @bind="_exportPath" />
+                    <button class="btn btn-primary" @onclick="SavePath">Save</button>
+                </div>
+                <button class="btn btn-outline-success" @onclick="ExportNow"><Icon Name="download" Size="15" /> Export reading list now</button>
+            </div>
+            @* ANCHOR: integrations-extra - add further integrations here *@
+        </section>
 
-        <h4 class="section-title"><Icon Name="download" /> Export to Obsidian</h4>
-        <p class="text-muted">Folder to write <code>AiPulse Reading List.md</code> into. Point this at your Obsidian vault to export there instead.</p>
-        <div class="input-group mb-2">
-            <input class="form-control" placeholder="@Export.TargetDir" @bind="_exportPath" />
-            <button class="btn btn-primary" @onclick="SavePath">Save</button>
-        </div>
-        <button class="btn btn-success" @onclick="ExportNow">Export reading list now</button>
+        @* ============================== SECURITY ============================== *@
+        <section class="settings-section" id="security" aria-labelledby="security-h">
+            <header class="section-head">
+                <h2 id="security-h"><Icon Name="key" Size="20" /> Security</h2>
+                <p>Your password and sign-in safety.</p>
+            </header>
 
+            <div class="set-card">
+                <h3 class="set-title"><Icon Name="key" Size="16" /> Change password</h3>
+                <div class="form-grid">
+                    <div class="span-2">
+                        <label class="set-label" for="pw-current">Current password</label>
+                        <input id="pw-current" type="password" class="form-control" autocomplete="current-password" @bind="_currentPassword" />
+                    </div>
+                    <div>
+                        <label class="set-label" for="pw-new">New password</label>
+                        <input id="pw-new" type="password" class="form-control" autocomplete="new-password" @bind="_newPassword" />
+                    </div>
+                    <div>
+                        <label class="set-label" for="pw-confirm">Confirm new password</label>
+                        <input id="pw-confirm" type="password" class="form-control" autocomplete="new-password" @bind="_confirmPassword" />
+                    </div>
+                </div>
+                @if (_passwordChangeMessage is not null)
+                {
+                    <div class="alert alert-warning py-2 small mt-2 mb-0" role="alert">@_passwordChangeMessage</div>
+                }
+                <div class="set-actions">
+                    <button class="btn btn-primary" @onclick="ChangePassword">Change password</button>
+                </div>
+            </div>
+
+            @* ANCHOR: security-extra - two-factor sign-in, active sessions, API tokens and similar security settings go here *@
+            <SecuritySettings />
+        </section>
+
+        @* ============================== ADMIN ============================== *@
         <AuthorizeView Roles="Admin">
             <Authorized>
-                <hr class="my-4" />
+                <section class="settings-section" id="admin" aria-labelledby="admin-h">
+                    <header class="section-head">
+                        <h2 id="admin-h"><Icon Name="database" Size="20" /> Admin <span class="status-chip chip-muted">Admins only</span></h2>
+                        <p>Site-wide sign-in options and backups. These affect every account.</p>
+                    </header>
 
-                <h4 class="section-title"><Icon Name="key" /> OAuth sign-in</h4>
-                <p class="text-muted">
-                    Let people sign in with an existing Google or GitHub account instead of a password. Off by
-                    default - fill in a provider's Client ID/Secret from its developer console and check Enabled
-                    to turn it on. Takes effect immediately, no restart needed.
-                </p>
-                @foreach (var p in _oauthForms)
-                {
-                    <div class="row g-2 align-items-center mb-2">
-                        <div class="col-md-2 fw-bold">@p.Provider</div>
-                        <div class="col-md-2 form-check">
-                            <input type="checkbox" class="form-check-input" id="@($"oauth-{p.Provider}-enabled")" @bind="p.Enabled" />
-                            <label class="form-check-label" for="@($"oauth-{p.Provider}-enabled")">Enabled</label>
+                    <div class="set-card">
+                        <h3 class="set-title"><Icon Name="key" Size="16" /> OAuth sign-in</h3>
+                        <p class="set-help">
+                            Let people sign in with Google or GitHub instead of a password. Off by default: fill in the provider's Client ID and secret
+                            from its developer console and tick Enabled. Takes effect immediately.
+                        </p>
+                        @foreach (var p in _oauthForms)
+                        {
+                            <div class="oauth-row">
+                                <div class="oauth-name">@p.Provider</div>
+                                <div class="form-check form-switch oauth-enabled">
+                                    <input type="checkbox" class="form-check-input" role="switch" id="@($"oauth-{p.Provider}-enabled")" @bind="p.Enabled" />
+                                    <label class="form-check-label" for="@($"oauth-{p.Provider}-enabled")">Enabled</label>
+                                </div>
+                                <div>
+                                    <label class="visually-hidden" for="@($"oauth-{p.Provider}-id")">@p.Provider client ID</label>
+                                    <input id="@($"oauth-{p.Provider}-id")" class="form-control" placeholder="Client ID" autocomplete="off" @bind="p.ClientId" />
+                                </div>
+                                <div>
+                                    <label class="visually-hidden" for="@($"oauth-{p.Provider}-secret")">@p.Provider client secret</label>
+                                    <input id="@($"oauth-{p.Provider}-secret")" type="password" class="form-control" placeholder="Client secret" autocomplete="off" @bind="p.ClientSecret" />
+                                </div>
+                                <button class="btn btn-outline-primary" @onclick="() => SaveOAuthProvider(p)">Save</button>
+                            </div>
+                        }
+                        <p class="set-help mt-2 mb-0">
+                            Callback URL to register with the provider: <code>https://your-domain/signin-google</code> (Google)
+                            or <code>https://your-domain/signin-github</code> (GitHub).
+                        </p>
+                    </div>
+
+                    <div class="set-card">
+                        <h3 class="set-title"><Icon Name="user" Size="16" /> Sign in with Clerk</h3>
+                        <p class="set-help">
+                            <a href="https://clerk.com" target="_blank" rel="noopener">Clerk</a> handles sign-up, email verification and sign-in (email codes, passkeys,
+                            social logins). It runs <em>alongside</em> the normal username/password login, which keeps working, so switching it off never locks anyone out.
+                            Paste your app's <strong>Publishable key</strong> (not a secret). No Clerk secret key is needed or stored.
+                        </p>
+                        <div class="clerk-row">
+                            <div class="form-check form-switch">
+                                <input type="checkbox" class="form-check-input" role="switch" id="clerk-enabled" @bind="_clerkEnabled" />
+                                <label class="form-check-label" for="clerk-enabled">Enabled</label>
+                            </div>
+                            <div class="clerk-key">
+                                <label class="visually-hidden" for="clerk-key">Clerk publishable key</label>
+                                <input id="clerk-key" class="form-control" placeholder="pk_test_… or pk_live_…" @bind="_clerkKey" autocomplete="off" spellcheck="false" />
+                            </div>
+                            <button class="btn btn-outline-primary" @onclick="SaveClerk">Save</button>
                         </div>
-                        <div class="col-md-3"><input class="form-control" placeholder="Client ID" @bind="p.ClientId" /></div>
-                        <div class="col-md-3"><input type="password" class="form-control" placeholder="Client secret" @bind="p.ClientSecret" /></div>
-                        <div class="col-md-2"><button class="btn btn-outline-primary w-100" @onclick="() => SaveOAuthProvider(p)">Save</button></div>
+                        @if (!string.IsNullOrWhiteSpace(_clerkKey))
+                        {
+                            @if (ClerkKey.TryGetFrontendHost(_clerkKey, out var clerkHost))
+                            {
+                                <p class="set-help mt-2 mb-1">Frontend API: <code>@clerkHost</code></p>
+                            }
+                            else
+                            {
+                                <p class="set-error mt-2 mb-1" role="alert">That does not look like a Clerk publishable key.</p>
+                            }
+                        }
+                        <details class="set-details mt-2">
+                            <summary>Setup steps</summary>
+                            <ol class="mt-2 small">
+                                <li>In the Clerk dashboard create an application and copy its Publishable key here.</li>
+                                <li>
+                                    Under <em>Sessions &rarr; Customize session token</em> add these claims so AiPulse can link an existing account by <em>verified</em> email:
+                                    <pre class="mb-0"><code>{ "email": "{{user.primary_email_address}}", "email_verified": "{{user.email_verified}}", "name": "{{user.full_name}}" }</code></pre>
+                                    Without them people still sign in, but get a new account instead of being matched to an existing one.
+                                </li>
+                                <li>Add this site's address (<code>@Nav.BaseUri.TrimEnd('/')</code>) to the application's allowed origins / domains. For a live production site Clerk needs its DNS records for the domain.</li>
+                                <li>Tick <em>Enabled</em> and Save. A "with an email account" section appears on the sign-in page. New accounts follow the same approval setting as every other sign-up.</li>
+                            </ol>
+                        </details>
                     </div>
-                }
-                <p class="text-muted small mb-3">
-                    Redirect/callback URL to register with the provider: <code>https://your-domain/signin-google</code> (Google)
-                    or <code>https://your-domain/signin-github</code> (GitHub).
-                </p>
 
-                <h4 class="section-title"><Icon Name="user" /> Sign in with Clerk</h4>
-                <p class="text-muted">
-                    <a href="https://clerk.com" target="_blank" rel="noopener">Clerk</a> handles sign-up, email verification and sign-in (email codes, passkeys,
-                    social logins) so people do not need a separate AiPulse password. It runs <em>alongside</em> the normal username/password login, which keeps
-                    working either way. Switch it off here at any time; nobody is locked out. Paste your app's <strong>Publishable key</strong> (it is not a secret).
-                    No Clerk secret key is needed or stored.
-                </p>
-                <div class="row g-2 align-items-center mb-2">
-                    <div class="col-md-2 form-check ms-2">
-                        <input type="checkbox" class="form-check-input" id="clerk-enabled" @bind="_clerkEnabled" />
-                        <label class="form-check-label" for="clerk-enabled">Enabled</label>
+                    <div class="set-card set-card-danger">
+                        <h3 class="set-title"><Icon Name="database" Size="16" /> Backup &amp; restore</h3>
+                        <p class="set-help">
+                            Sources, every user's bookmarks/watchlists, Playground chat history and feed history all live in <code>App_Data/</code>.
+                            Back it up before upgrading or moving to a new machine.
+                        </p>
+                        <a href="/backup/download" class="btn btn-outline-primary mb-3"><Icon Name="download" Size="15" /> Download backup (.zip)</a>
+
+                        <form method="post" action="/backup/restore" enctype="multipart/form-data"
+                              onsubmit="return confirm('This overwrites ALL current sources, bookmarks, chat history and feed history with the contents of this backup. This cannot be undone. Continue?');">
+                            <label class="set-label" for="restore-file">Restore from a backup file</label>
+                            <div class="input-group restore-backup-group">
+                                <input id="restore-file" type="file" name="file" accept=".zip" class="form-control" required />
+                                <button type="submit" class="btn btn-warning">Restore</button>
+                            </div>
+                            <p class="set-help mt-1 mb-0">Replaces all current data. Restart AiPulse after restoring so every page picks up the restored data.</p>
+                        </form>
+                        @if (RestoredParam == "true")
+                        {
+                            <div class="alert alert-success mt-2 py-2 small mb-0" role="status">Backup restored. Please restart AiPulse now.</div>
+                        }
                     </div>
-                    <div class="col-md-7"><input class="form-control" placeholder="pk_test_… or pk_live_…" @bind="_clerkKey" autocomplete="off" spellcheck="false" /></div>
-                    <div class="col-md-2"><button class="btn btn-outline-primary w-100" @onclick="SaveClerk">Save</button></div>
-                </div>
-                @if (!string.IsNullOrWhiteSpace(_clerkKey))
-                {
-                    @if (ClerkKey.TryGetFrontendHost(_clerkKey, out var clerkHost))
-                    {
-                        <p class="small text-muted mb-1">Frontend API: <code>@clerkHost</code></p>
-                    }
-                    else
-                    {
-                        <p class="small text-danger mb-1">That does not look like a Clerk publishable key.</p>
-                    }
-                }
-                <details class="small text-muted mb-3">
-                    <summary>Setup steps</summary>
-                    <ol class="mt-2">
-                        <li>In the Clerk dashboard create an application and copy its Publishable key here.</li>
-                        <li>
-                            Under <em>Sessions &rarr; Customize session token</em> add these claims so AiPulse can link an existing account by <em>verified</em> email:
-                            <pre class="mb-0"><code>{ "email": "{{user.primary_email_address}}", "email_verified": "{{user.email_verified}}", "name": "{{user.full_name}}" }</code></pre>
-                            Without them people still sign in, but get a new account instead of being matched to an existing one.
-                        </li>
-                        <li>Add this site's address (<code>@Nav.BaseUri.TrimEnd('/')</code>) to the application's allowed origins / domains. For a live production site Clerk needs its DNS records for the domain.</li>
-                        <li>Tick <em>Enabled</em> and Save. A "with an email account" section appears on the sign-in page. New accounts follow the same approval setting as every other sign-up.</li>
-                    </ol>
-                </details>
-
-                <h4 class="section-title"><Icon Name="database" /> Backup &amp; restore</h4>
-                <p class="text-muted">
-                    Sources, all users' bookmarks/watchlists, Playground chat history, and feed history all live in <code>App_Data/</code>.
-                    Back it up before upgrading or migrating to a new machine. Admin-only since this covers every user's data.
-                </p>
-                <a href="/backup/download" class="btn btn-outline-primary mb-3"><Icon Name="download" Size="14" /> Download backup (.zip)</a>
-
-                <form method="post" action="/backup/restore" enctype="multipart/form-data"
-                      onsubmit="return confirm('This overwrites ALL current sources, bookmarks, chat history and feed history with the contents of this backup. Continue?');">
-                    <div class="input-group restore-backup-group">
-                        <input type="file" name="file" accept=".zip" class="form-control" required />
-                        <button type="submit" class="btn btn-warning">Restore from backup</button>
-                    </div>
-                    <p class="text-muted small mt-1">Restart AiPulse after restoring so every page picks up the restored data.</p>
-                </form>
-                @if (RestoredParam == "true")
-                {
-                    <div class="alert alert-success mt-2 py-2 small">Backup restored. Please restart AiPulse now.</div>
-                }
+                    @* ANCHOR: admin-extra - add further admin-only settings here *@
+                </section>
             </Authorized>
         </AuthorizeView>
     </div>
 </div>
 
 @code {
+    [SupplyParameterFromQuery(Name = "section")]
+    public string? SectionParam { get; set; }
+
+    private bool _isAdmin;
+    private string _theme = "light";
+    private string _accent = "";
+    private string _logo = "v1";
+    private IJSObjectReference? _ui;
+
+    private static readonly (string Key, string Label, string Background)[] _accents =
+    {
+        ("", "Indigo (default)", "linear-gradient(135deg, oklch(54% .23 285), oklch(66% .15 220))"),
+        ("cyan", "Cyan", "oklch(52% .13 200)"),
+        ("violet", "Violet", "oklch(56% .19 300)"),
+        ("rose", "Rose", "oklch(55% .2 20)"),
+        ("amber", "Amber", "oklch(62% .15 75)"),
+        ("emerald", "Emerald", "oklch(55% .14 155)"),
+    };
+
+    private sealed record AppearanceState(string Theme, string Accent, string Logo, string CustomCss);
+
+    /// <summary>Section rail / mobile select: scroll the section into view and move focus to it.</summary>
+    private async Task GoTo(string? id)
+    {
+        var target = SettingsNav.Resolve(id, _isAdmin);
+        try
+        {
+            _ui ??= await JS.InvokeAsync<IJSObjectReference>("import", "./js/page-ui.js");
+            await _ui.InvokeAsync<bool>("scrollToId", target, true);
+        }
+        catch (JSDisconnectedException) { }
+        catch (JSException) { }
+    }
+
+    private async Task SetTheme(string theme)
+    {
+        if (theme == _theme) return;
+        try { await JS.InvokeVoidAsync("toggleTheme"); _theme = theme; } catch (JSException) { } catch (JSDisconnectedException) { }
+    }
+
+    private async Task ConfirmRemoveWidget(Guid id, string title)
+    {
+        if (await ConfirmAsync($"Remove the \"{title}\" widget from your Dashboard?")) RemoveWidget(id);
+    }
+
+    private async Task ConfirmRemoveRoute(Guid id)
+    {
+        if (await ConfirmAsync("Remove this keyword webhook? Alerts for its keywords will go to the catch-all webhook instead.")) RemoveWebhookRoute(id);
+    }
+
+    private async Task<bool> ConfirmAsync(string message)
+    {
+        try { return await JS.InvokeAsync<bool>("confirm", message); }
+        catch (JSException) { return false; }
+        catch (JSDisconnectedException) { return false; }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_ui is not null)
+        {
+            try { await _ui.DisposeAsync(); } catch (JSDisconnectedException) { }
+        }
+    }
+
     [SupplyParameterFromQuery(Name = "restored")]
     public string? RestoredParam { get; set; }
 
@@ -488,7 +710,8 @@
             _profileBio = profile.Bio;
         }
 
-        if (state.User.IsInRole("Admin"))
+        _isAdmin = state.User.IsInRole("Admin");
+        if (_isAdmin)
         {
             var rows = await OAuthSettings.GetAllAsync();
             var clerk = rows.FirstOrDefault(r => r.Provider == ClerkAuthService.Provider);
@@ -552,9 +775,14 @@
         Reading.SetFeverApiPassword(_username, _feverPassword);
         _feverPassword = "";
         _feverSaved = true;
+        Toasts.Show("Fever API password saved.");
     }
 
-    private void SaveWebhook() => Reading.SetWebhookUrl(_webhookUrl);
+    private void SaveWebhook()
+    {
+        Reading.SetWebhookUrl(_webhookUrl);
+        Toasts.Show(string.IsNullOrWhiteSpace(_webhookUrl) ? "Webhook removed." : "Webhook saved.");
+    }
 
     private async Task TestWebhook()
     {
@@ -578,28 +806,36 @@
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (!firstRender) return;
-        try { _permission = await JS.InvokeAsync<string>("aipulseNotify.permission"); StateHasChanged(); } catch { }
+        try { _permission = await JS.InvokeAsync<string>("aipulseNotify.permission"); } catch { }
         try
         {
-            _customCss = await JS.InvokeAsync<string>("eval", "localStorage.getItem('aipulse-custom-css') || ''");
-            StateHasChanged();
+            _ui ??= await JS.InvokeAsync<IJSObjectReference>("import", "./js/page-ui.js");
+            var a = await _ui.InvokeAsync<AppearanceState>("appearance");
+            _theme = a.Theme;
+            _accent = a.Accent;
+            _logo = a.Logo;
+            _customCss = a.CustomCss;
+            await _ui.InvokeVoidAsync("spy", ".settings-nav", "#settings-jump", ".settings-section");
+            if (!string.IsNullOrWhiteSpace(SectionParam))
+                await _ui.InvokeAsync<bool>("scrollToId", SettingsNav.Resolve(SectionParam, _isAdmin), false);
         }
         catch { }
+        StateHasChanged();
     }
 
     private async Task SetAccent(string name)
     {
-        try { await JS.InvokeVoidAsync("setAccent", name); } catch { }
+        try { await JS.InvokeVoidAsync("setAccent", name); _accent = name; } catch { }
     }
 
     private async Task SetLogo(string version)
     {
-        try { await JS.InvokeVoidAsync("setLogo", version); } catch { }
+        try { await JS.InvokeVoidAsync("setLogo", version); _logo = version; } catch { }
     }
 
     private async Task SaveCustomCss()
     {
-        try { await JS.InvokeVoidAsync("setCustomCss", _customCss); } catch { }
+        try { await JS.InvokeVoidAsync("setCustomCss", _customCss); Toasts.Show("Custom CSS applied."); } catch { }
     }
 
     private void AddKeyword()

@@ -8,69 +8,71 @@
 @inject OpmlService Opml
 @inject FeedDiscoveryService Discovery
 @inject IJSRuntime JS
+@inject IWebHostEnvironment Env
 
 <PageTitle>AiPulse · Sources</PageTitle>
 
 <div class="page-header">
     <h1><Icon Name="database" Size="22" /> Sources</h1>
-    <p class="lead">
-        Where your updates come from. Add, edit, or disable feeds right here — changes apply immediately, no restart needed.
-    </p>
+    <p class="lead">Where your updates come from. Add, edit or disable feeds here; changes apply immediately, no restart needed.</p>
 </div>
 
 @{
     var totalFailing = TotalFailingCount();
+    var enabledCount = Kb.SourceRecords.Count(s => s.Enabled);
 }
-@if (totalFailing > 0)
-{
-    <div class="alert alert-warning py-2 small">
-        <strong>@totalFailing source(s)</strong> failing to fetch right now — look for the "failing" badge on each category below, or switch to <strong>Flat list</strong> and sort by name to find them directly.
-    </div>
-}
+
+<div class="kpis">
+    <div class="kpi"><span class="kpi-num">@Kb.SourceRecords.Count</span><span class="kpi-label">Sources</span></div>
+    <div class="kpi"><span class="kpi-num">@enabledCount</span><span class="kpi-label">Enabled</span></div>
+    <div class="kpi"><span class="kpi-num">@(Kb.SourceRecords.Count - enabledCount)</span><span class="kpi-label">Disabled</span></div>
+    <button type="button" class="kpi kpi-btn @(totalFailing > 0 ? "kpi-bad" : "")" @onclick='() => SetStatus(totalFailing > 0 ? "failing" : "")' aria-label="@($"{totalFailing} failing sources, show them")">
+        <span class="kpi-num">@totalFailing</span><span class="kpi-label">Failing now</span>
+    </button>
+</div>
 
 @if (_opmlResult is { } r)
 {
-    <div class="alert @(r.Unreachable > 0 ? "alert-warning" : "alert-success") py-2 small">
+    <div class="alert @(r.Unreachable > 0 ? "alert-warning" : "alert-success") py-2 small" role="status">
         OPML import: added @r.Added new source(s)@(r.Skipped > 0 ? $", skipped {r.Skipped} already-present" : "").
         @if (r.Unreachable > 0)
         {
-            <text> @r.Unreachable of them didn't respond to a quick check just now — still added, but worth a look below.</text>
+            <text> @r.Unreachable of them didn't respond to a quick check just now; still added, but worth a look below.</text>
         }
     </div>
 }
 else if (OpmlAdded is not null)
 {
-    <div class="alert @(OpmlUnreachable is > 0 ? "alert-warning" : "alert-success") py-2 small">
+    <div class="alert @(OpmlUnreachable is > 0 ? "alert-warning" : "alert-success") py-2 small" role="status">
         OPML import: added @OpmlAdded new source(s)@(OpmlSkipped is > 0 ? $", skipped {OpmlSkipped} already-present" : "").
         @if (OpmlUnreachable is > 0)
         {
-            <text> @OpmlUnreachable of them didn't respond to a quick check just now — still added, but worth a look below.</text>
+            <text> @OpmlUnreachable of them didn't respond to a quick check just now; still added, but worth a look below.</text>
         }
     </div>
 }
+@if (_bulkMessage is not null)
+{
+    <div class="alert alert-success py-2 small" role="status">@_bulkMessage</div>
+}
 
-<div class="d-flex flex-wrap gap-2 align-items-center mb-3">
-    <button class="btn btn-primary" @onclick="ToggleAddForm">
-        <Icon Name="@(_showAddForm ? "check" : "database")" Size="15" /> @(_showAddForm ? "Close" : "Add source")
+<div class="actions-bar">
+    <button class="btn btn-primary" @onclick="ToggleAddForm" aria-expanded="@(_showAddForm ? "true" : "false")">
+        <Icon Name="@(_showAddForm ? "check" : "database")" Size="15" /> @(_showAddForm ? "Close form" : "Add source")
     </button>
-    <a class="btn btn-outline-secondary" href="/opml/export">
-        <Icon Name="download" Size="15" /> Export OPML
-    </a>
-    <div class="d-flex gap-2 align-items-center">
-        <InputFile OnChange="HandleOpmlFileSelected" accept=".opml,.xml" class="form-control form-control-sm" style="max-width:220px" disabled="@_opmlImporting" />
-        @if (!_opmlImporting)
-        {
-            <Icon Name="database" Size="15" />
-        }
-    </div>
+    <a class="btn btn-outline-secondary" href="/opml/export"><Icon Name="download" Size="15" /> Export OPML</a>
+    <label class="btn btn-outline-secondary file-btn @(_opmlImporting ? "disabled" : "")" for="opml-file">
+        <Icon Name="arrow-up" Size="15" /> Import OPML
+    </label>
+    <InputFile id="opml-file" OnChange="HandleOpmlFileSelected" accept=".opml,.xml" class="visually-hidden" disabled="@_opmlImporting" />
     @if (_opmlImporting)
     {
-        <div class="d-flex align-items-center gap-2">
-            <div class="progress" style="width:160px;height:8px;">
+        <div class="import-progress" role="status">
+            <div class="progress" style="width:160px;height:8px;" aria-hidden="true">
                 <div class="progress-bar" style="width:@(_opmlProgress?.PercentComplete ?? 0)%"></div>
             </div>
-            <span class="text-muted x-small">
-                Checking @(_opmlProgress?.Done ?? 0)/@(_opmlProgress?.Total ?? 0)@(string.IsNullOrWhiteSpace(_opmlProgress?.CurrentName) ? "" : $" — {_opmlProgress!.CurrentName}")
+            <span class="x-small text-muted">
+                Checking @(_opmlProgress?.Done ?? 0)/@(_opmlProgress?.Total ?? 0)@(string.IsNullOrWhiteSpace(_opmlProgress?.CurrentName) ? "" : $" · {_opmlProgress!.CurrentName}")
             </span>
         </div>
     }
@@ -78,345 +80,413 @@ else if (OpmlAdded is not null)
 
 @if (_showAddForm)
 {
-    <div class="card mb-3">
-        <div class="card-body">
-            <EditForm Model="_form" OnValidSubmit="AddSource">
-                <div class="row g-2">
-                    <div class="col-md-4"><input class="form-control" placeholder="Name" @bind="_form.Name" /></div>
-                    <div class="col-md-8">
-                        <div class="input-group">
-                            <input class="form-control" placeholder="Feed URL (RSS/Atom) - or just paste the site's homepage" @bind="_form.Url" />
-                            <button type="button" class="btn btn-outline-secondary" disabled="@(_discovering || string.IsNullOrWhiteSpace(_form.Url))" @onclick="DiscoverFeed">
-                                @if (_discovering) { <span class="spinner"></span> } else { <Icon Name="search" Size="14" /> }
-                                Find feed
-                            </button>
-                        </div>
-                        @if (_discoveryMessage is not null)
-                        {
-                            <div class="x-small @(_discoveryFound ? "text-success" : "text-danger") mt-1">@_discoveryMessage</div>
-                        }
-                    </div>
-                    <div class="col-md-3">
-                        <select class="form-select" @bind="_form.Category">
-                            @foreach (var c in _categories) { <option value="@c">@c</option> }
-                        </select>
-                    </div>
-                    <div class="col-md-3">
-                        <select class="form-select" @bind="_form.ContentType">
-                            @foreach (var c in _contentTypes) { <option value="@c">@c</option> }
-                        </select>
-                    </div>
-                    <div class="col-md-3">
-                        <select class="form-select" @bind="_form.Level">
-                            @foreach (var l in _levels) { <option value="@l">@l</option> }
-                        </select>
-                    </div>
-                    <div class="col-md-3"><input class="form-control" placeholder="Tags (comma-separated)" @bind="_form.TagsCsv" /></div>
-                    <div class="col-md-9"><input class="form-control" placeholder="Note (what it gives you)" @bind="_form.Note" /></div>
-                    <div class="col-md-3 d-flex align-items-center">
-                        <div class="form-check">
-                            <input class="form-check-input" type="checkbox" id="newEnabled" @bind="_form.Enabled" />
-                            <label class="form-check-label" for="newEnabled">Enabled</label>
-                        </div>
-                    </div>
-                    <div class="col-md-4 d-flex align-items-center">
-                        <div class="form-check">
-                            <input class="form-check-input" type="checkbox" id="newFullText" @bind="_form.FullTextFetch" />
-                            <label class="form-check-label" for="newFullText">Fetch full article text</label>
-                        </div>
-                    </div>
-                    <div class="col-md-5 d-flex align-items-center">
-                        <div class="form-check">
-                            <input class="form-check-input" type="checkbox" id="newIsScrape" @bind="_form.IsScrape" />
-                            <label class="form-check-label" for="newIsScrape">Scrape HTML (no RSS feed)</label>
-                        </div>
-                    </div>
-                    @if (_form.IsScrape)
-                    {
-                        <div class="col-12">
-                            <div class="alert alert-light border small mb-0">
-                                <strong>Scrape selectors (XPath)</strong> — the URL above is the page to scrape, not an RSS feed.
-                                <div class="row g-2 mt-1">
-                                    <div class="col-md-6"><input class="form-control form-control-sm" placeholder="Item container XPath, e.g. //article" @bind="_form.ScrapeItemXPath" /></div>
-                                    <div class="col-md-6"><input class="form-control form-control-sm" placeholder="Link XPath (relative), e.g. .//a — default .//a" @bind="_form.ScrapeLinkXPath" /></div>
-                                    <div class="col-md-6"><input class="form-control form-control-sm" placeholder="Title XPath (relative, optional — defaults to link text)" @bind="_form.ScrapeTitleXPath" /></div>
-                                    <div class="col-md-6"><input class="form-control form-control-sm" placeholder="Date XPath (relative, optional)" @bind="_form.ScrapeDateXPath" /></div>
-                                </div>
-                            </div>
-                        </div>
-                    }
-                </div>
-                @if (_error is not null)
-                {
-                    <div class="alert alert-danger mt-2 py-2 small mb-0">@_error</div>
-                }
-                <button type="submit" class="btn btn-success mt-3">Save source</button>
-            </EditForm>
-        </div>
-    </div>
+    <section class="form-card" aria-labelledby="add-title">
+        <h2 id="add-title" class="form-title">Add a source</h2>
+        <EditForm Model="_form" OnValidSubmit="AddSource">
+            @SourceFormFields("new", true)
+            <div class="form-actions">
+                <button type="submit" class="btn btn-success">Save source</button>
+                <button type="button" class="btn btn-outline-secondary" @onclick="ToggleAddForm">Cancel</button>
+            </div>
+        </EditForm>
+    </section>
 }
 
-@if (_editingId is not null)
+<div class="filters">
+    <div class="f-search">
+        <label class="visually-hidden" for="src-search">Search sources</label>
+        <input id="src-search" type="search" class="form-control" placeholder="Search name, category, tag, note…" autocomplete="off"
+               value="@_search" @oninput="e => { _search = (string)e.Value!; _page = 1; }" />
+    </div>
+    <div>
+        <label class="visually-hidden" for="src-cat">Category</label>
+        <select id="src-cat" class="form-select" value="@_categoryFilter" @onchange="e => SetCategory((string?)e.Value)">
+            <option value="">All categories</option>
+            @foreach (var c in Kb.SourceRecords.Select(s => s.Category).Distinct().OrderBy(c => c))
+            {
+                <option value="@c">@c</option>
+            }
+        </select>
+    </div>
+    <div>
+        <label class="visually-hidden" for="src-status">Status</label>
+        <select id="src-status" class="form-select" value="@_statusFilter" @onchange="e => SetStatus((string?)e.Value)">
+            <option value="">Any status</option>
+            <option value="enabled">Enabled</option>
+            <option value="disabled">Disabled</option>
+            <option value="failing">Failing now</option>
+            <option value="nodata">No uptime data yet</option>
+        </select>
+    </div>
+    <div class="seg" role="group" aria-label="Layout">
+        <button type="button" class="seg-btn @(_grouped ? "active" : "")" aria-pressed="@(_grouped ? "true" : "false")" @onclick="() => _grouped = true"><Icon Name="database" Size="14" /> Grouped</button>
+        <button type="button" class="seg-btn @(!_grouped ? "active" : "")" aria-pressed="@(!_grouped ? "true" : "false")" @onclick="() => _grouped = false"><Icon Name="list" Size="14" /> Table</button>
+    </div>
+</div>
+
+@if (_selected.Count > 0)
 {
-    <div class="card mb-3">
-        <div class="card-body">
-            <h6 class="section-title">Edit source</h6>
-            <EditForm Model="_form" OnValidSubmit="SaveEdit">
-                <div class="row g-2">
-                    <div class="col-md-4"><input class="form-control" placeholder="Name" @bind="_form.Name" /></div>
-                    <div class="col-md-8"><input class="form-control" placeholder="Feed URL (RSS/Atom)" @bind="_form.Url" /></div>
-                    <div class="col-md-3">
-                        <select class="form-select" @bind="_form.Category">
-                            @foreach (var c in _categories) { <option value="@c">@c</option> }
-                        </select>
-                    </div>
-                    <div class="col-md-3">
-                        <select class="form-select" @bind="_form.ContentType">
-                            @foreach (var c in _contentTypes) { <option value="@c">@c</option> }
-                        </select>
-                    </div>
-                    <div class="col-md-3">
-                        <select class="form-select" @bind="_form.Level">
-                            @foreach (var l in _levels) { <option value="@l">@l</option> }
-                        </select>
-                    </div>
-                    <div class="col-md-3"><input class="form-control" placeholder="Tags (comma-separated)" @bind="_form.TagsCsv" /></div>
-                    <div class="col-md-9"><input class="form-control" placeholder="Note (what it gives you)" @bind="_form.Note" /></div>
-                    <div class="col-md-3 d-flex align-items-center">
-                        <div class="form-check">
-                            <input class="form-check-input" type="checkbox" id="editEnabled" @bind="_form.Enabled" />
-                            <label class="form-check-label" for="editEnabled">Enabled</label>
-                        </div>
-                    </div>
-                    <div class="col-md-4 d-flex align-items-center">
-                        <div class="form-check">
-                            <input class="form-check-input" type="checkbox" id="editFullText" @bind="_form.FullTextFetch" />
-                            <label class="form-check-label" for="editFullText">Fetch full article text</label>
-                        </div>
-                    </div>
-                    <div class="col-md-5 d-flex align-items-center">
-                        <div class="form-check">
-                            <input class="form-check-input" type="checkbox" id="editIsScrape" @bind="_form.IsScrape" />
-                            <label class="form-check-label" for="editIsScrape">Scrape HTML (no RSS feed)</label>
-                        </div>
-                    </div>
-                    @if (_form.IsScrape)
-                    {
-                        <div class="col-12">
-                            <div class="alert alert-light border small mb-0">
-                                <strong>Scrape selectors (XPath)</strong> — the URL above is the page to scrape, not an RSS feed.
-                                <div class="row g-2 mt-1">
-                                    <div class="col-md-6"><input class="form-control form-control-sm" placeholder="Item container XPath, e.g. //article" @bind="_form.ScrapeItemXPath" /></div>
-                                    <div class="col-md-6"><input class="form-control form-control-sm" placeholder="Link XPath (relative) — default .//a" @bind="_form.ScrapeLinkXPath" /></div>
-                                    <div class="col-md-6"><input class="form-control form-control-sm" placeholder="Title XPath (relative, optional)" @bind="_form.ScrapeTitleXPath" /></div>
-                                    <div class="col-md-6"><input class="form-control form-control-sm" placeholder="Date XPath (relative, optional)" @bind="_form.ScrapeDateXPath" /></div>
-                                </div>
-                            </div>
-                        </div>
-                    }
-                </div>
-                @if (_error is not null)
-                {
-                    <div class="alert alert-danger mt-2 py-2 small mb-0">@_error</div>
-                }
-                <div class="mt-3">
-                    <button type="submit" class="btn btn-success">Save</button>
-                    <button type="button" class="btn btn-outline-secondary" @onclick="CancelEdit">Cancel</button>
-                </div>
-            </EditForm>
-        </div>
+    <div class="bulk-bar" role="region" aria-label="Bulk actions">
+        <span class="bulk-count">@_selected.Count selected</span>
+        <button class="btn btn-sm btn-outline-success" disabled="@_bulkBusy" @onclick="() => BulkEnable(true)"><Icon Name="check" Size="14" /> Enable</button>
+        <button class="btn btn-sm btn-outline-secondary" disabled="@_bulkBusy" @onclick="() => BulkEnable(false)"><Icon Name="eye-off" Size="14" /> Disable</button>
+        <button class="btn btn-sm btn-outline-danger" disabled="@_bulkBusy" @onclick="BulkDelete"><Icon Name="trash" Size="14" /> Delete</button>
+        <button class="btn btn-sm btn-link" @onclick="() => _selected.Clear()">Clear selection</button>
     </div>
 }
 
-<div class="mb-2">
-    <input class="form-control form-control-sm" style="max-width:280px" placeholder="Search sources…"
-           value="@_search" @oninput="e => { _search = (string)e.Value!; _page = 1; }" />
-</div>
-
-<div class="d-flex justify-content-end mb-2">
-    <button class="btn btn-sm btn-outline-secondary" @onclick="() => _grouped = !_grouped">
-        <Icon Name="@(_grouped ? "list" : "database")" Size="14" /> @(_grouped ? "Flat list" : "Grouped by category")
-    </button>
-</div>
-
+@{
+    _uptime = UptimeHistory.ReadAll(Env.ContentRootPath);
+}
 @if (_grouped)
 {
-    @foreach (var group in GetGroups())
+    var groups = GetGroups();
+    @if (groups.Count == 0)
     {
-        <details class="card mb-2" @key="group.Category" open="@(group.Rows.Count <= 15)">
-            <summary class="card-body py-2 d-flex align-items-center gap-2" style="cursor:pointer;">
-                <strong>@group.Category</strong>
-                <span class="text-muted small">@group.Rows.Count source(s) - @group.Rows.Count(r => r.Source.Enabled) enabled</span>
-                @{
-                    var failing = group.Rows.Count(r => r.FailStreak > 0);
-                }
+        <div class="empty-box"><EmptyState Icon="search" Title="No sources match these filters" ActionText="Clear filters" OnAction="ClearFilters" /></div>
+    }
+    @foreach (var group in groups)
+    {
+        var failing = group.Rows.Count(x => x.FailStreak > 0);
+        <details class="group" @key="group.Category" open="@(group.Rows.Count <= 15 || !string.IsNullOrWhiteSpace(_search) || _statusFilter != "")">
+            <summary class="group-head">
+                <span class="group-name">@group.Category</span>
+                <span class="group-meta">@group.Rows.Count source@(group.Rows.Count == 1 ? "" : "s") · @group.Rows.Count(x => x.Source.Enabled) enabled</span>
                 @if (failing > 0)
                 {
-                    <span class="badge bg-warning">@failing failing</span>
+                    <span class="status-chip chip-warn">@failing failing</span>
                 }
+                <span class="group-chev" aria-hidden="true"></span>
             </summary>
-            <div class="table-responsive">
-                <table class="table table-sm align-middle mb-0">
-                    <tbody>
-                        @foreach (var row in group.Rows)
-                        {
-                            var s = row.Source;
-                            <tr>
-                                <td>
-                                    <span class="d-inline-flex align-items-center gap-2">
-                                        @if (HostOf(s.Url) is { } groupHost)
-                                        {
-                                            <img src="/favicon-proxy/@groupHost" alt="" loading="lazy" class="source-favicon" onerror="this.style.display='none'" />
-                                        }
-                                        <a href="@s.Url" target="_blank" rel="noopener">@s.Name</a>
-                                    </span>
-                                </td>
-                                <td>
-                                    @if (s.Enabled) { <span class="text-success">● enabled</span> }
-                                    else { <span class="text-muted">○ disabled</span> }
-                                    @if (row.FailStreak > 0)
-                                    {
-                                        <span class="badge bg-warning ms-1" title="@row.FailStreak consecutive failed fetch(es)">@row.FailStreak failed</span>
-                                    }
-                                </td>
-                                <td class="small">
-                                    @if (row.HealthTotal == 0)
-                                    {
-                                        <span class="text-muted">no data yet</span>
-                                    }
-                                    else
-                                    {
-                                        var pct = row.Healthy * 100 / row.HealthTotal;
-                                        <span class="@(pct >= 90 ? "text-success" : pct >= 60 ? "text-warning" : "text-danger")">@pct% (@row.Healthy/@row.HealthTotal d)</span>
-                                    }
-                                </td>
-                                <td class="text-end">
-                                    <button class="btn btn-sm btn-link p-0 me-2" title="Edit" @onclick="() => EditFromGroup(s)"><Icon Name="settings" Size="15" /></button>
-                                    <button class="btn btn-sm btn-link p-0 text-danger" title="Delete" @onclick="() => DeleteSource(s.Id)"><Icon Name="trash" Size="15" /></button>
-                                </td>
-                            </tr>
-                        }
-                    </tbody>
-                </table>
-            </div>
+            @SourceTable(group.Rows)
         </details>
     }
 }
 else
 {
     var (pageRows, totalRows) = GetPage();
+    @if (totalRows == 0)
+    {
+        <div class="empty-box"><EmptyState Icon="search" Title="No sources match these filters" ActionText="Clear filters" OnAction="ClearFilters" /></div>
+    }
+    else
+    {
+        <div class="table-card">@SourceTable(pageRows)</div>
+        <Pager TotalItems="totalRows" @bind-CurrentPage="_page" @bind-PageSize="_pageSize" />
+    }
+}
 
-    <div class="table-responsive">
-    <table class="table table-sm align-middle">
-        <thead>
-            <tr>
-                <SortableHeader Column="name" Label="Source" SortColumn="@_sortColumn" SortAscending="@_sortAscending" OnSort="ToggleSort" />
-                <SortableHeader Column="category" Label="Category" SortColumn="@_sortColumn" SortAscending="@_sortAscending" OnSort="ToggleSort" />
-                <SortableHeader Column="type" Label="Type" SortColumn="@_sortColumn" SortAscending="@_sortAscending" OnSort="ToggleSort" />
-                <SortableHeader Column="level" Label="Level" SortColumn="@_sortColumn" SortAscending="@_sortAscending" OnSort="ToggleSort" />
-                <th>Tags</th>
-                <SortableHeader Column="status" Label="Status" SortColumn="@_sortColumn" SortAscending="@_sortAscending" OnSort="ToggleSort" />
-                <SortableHeader Column="uptime" Label="Uptime (30d)" SortColumn="@_sortColumn" SortAscending="@_sortAscending" OnSort="ToggleSort" />
-                <th>Push</th>
-                <th>What it gives you</th>
-                <th></th>
-            </tr>
-        </thead>
-        <tbody>
-            @foreach (var row in pageRows)
-            {
-                var s = row.Source;
-                <tr class="@(_editingId == s.Id ? "table-active" : "")">
-                        <td>
-                            <span class="d-inline-flex align-items-center gap-2">
-                                @if (HostOf(s.Url) is { } flatHost)
+<div class="tip-box">
+    <strong>Tip:</strong> any RSS/Atom URL works. A GitHub project's releases feed is <code>https://github.com/&lt;owner&gt;/&lt;repo&gt;/releases.atom</code>;
+    a subreddit is <code>https://www.reddit.com/r/&lt;name&gt;/.rss</code>; most blogs expose <code>/feed</code> or <code>/rss.xml</code>.
+</div>
+
+@code {
+    private string _categoryFilter = "";
+    private string _statusFilter = "";
+    private readonly HashSet<int> _selected = new();
+    private bool _bulkBusy;
+    private string? _bulkMessage;
+    private IReadOnlyDictionary<string, Dictionary<string, bool>> _uptime = new Dictionary<string, Dictionary<string, bool>>();
+
+    private void SetStatus(string? status)
+    {
+        _statusFilter = status ?? "";
+        _page = 1;
+    }
+
+    private void SetCategory(string? category)
+    {
+        _categoryFilter = category ?? "";
+        _page = 1;
+    }
+
+    private void ClearFilters()
+    {
+        _search = "";
+        _categoryFilter = "";
+        _statusFilter = "";
+        _page = 1;
+    }
+
+    private void ToggleSelect(int id, bool on)
+    {
+        if (on) _selected.Add(id); else _selected.Remove(id);
+    }
+
+    private void ToggleSelectAll(IEnumerable<SourceRow> rows, bool on)
+    {
+        foreach (var r in rows)
+        {
+            if (on) _selected.Add(r.Source.Id); else _selected.Remove(r.Source.Id);
+        }
+    }
+
+    private async Task BulkEnable(bool enabled)
+    {
+        _bulkBusy = true;
+        try
+        {
+            var targets = Kb.SourceRecords.Where(s => _selected.Contains(s.Id) && s.Enabled != enabled).ToList();
+            foreach (var s in targets)
+                await Kb.UpdateSourceAsync(AdminTable.WithEnabled(s, enabled));
+            _bulkMessage = $"{(enabled ? "Enabled" : "Disabled")} {targets.Count} source{(targets.Count == 1 ? "" : "s")}.";
+            _selected.Clear();
+        }
+        finally
+        {
+            _bulkBusy = false;
+        }
+    }
+
+    private async Task BulkDelete()
+    {
+        var targets = Kb.SourceRecords.Where(s => _selected.Contains(s.Id)).ToList();
+        if (targets.Count == 0) return;
+        var names = string.Join(", ", targets.Take(5).Select(s => s.Name)) + (targets.Count > 5 ? $" and {targets.Count - 5} more" : "");
+        if (!await JS.InvokeAsync<bool>("confirm", $"Delete {targets.Count} source{(targets.Count == 1 ? "" : "s")} ({names})? This can't be undone.")) return;
+        _bulkBusy = true;
+        try
+        {
+            foreach (var s in targets)
+                await Kb.DeleteSourceAsync(s.Id);
+            _bulkMessage = $"Deleted {targets.Count} source{(targets.Count == 1 ? "" : "s")}.";
+            _selected.Clear();
+        }
+        finally
+        {
+            _bulkBusy = false;
+        }
+    }
+
+    private IReadOnlyList<UptimeDay> StripFor(string name) =>
+        UptimeHistory.Strip(_uptime.TryGetValue(name, out var days) ? days : null, DateOnly.FromDateTime(DateTime.Now), 30);
+
+    private RenderFragment SourceTable(IReadOnlyList<SourceRow> rows)
+    {
+        var allSelected = rows.Count > 0 && rows.All(r => _selected.Contains(r.Source.Id));
+        return @<table class="src-table">
+            <thead>
+                <tr>
+                    <th scope="col" class="c-check">
+                        <input type="checkbox" class="row-check" aria-label="Select all shown sources" checked="@allSelected" @onchange="e => ToggleSelectAll(rows, (bool)e.Value!)" />
+                    </th>
+                    @if (_grouped)
+                    {
+                        <th scope="col">Source</th>
+                        <th scope="col">Type</th>
+                        <th scope="col">Status</th>
+                        <th scope="col">Uptime (30d)</th>
+                    }
+                    else
+                    {
+                        <th scope="col" aria-sort="@AriaSort("name")">@SortBtn("name", "Source")</th>
+                        <th scope="col" aria-sort="@AriaSort("category")">@SortBtn("category", "Type")</th>
+                        <th scope="col" aria-sort="@AriaSort("status")">@SortBtn("status", "Status")</th>
+                        <th scope="col" aria-sort="@AriaSort("uptime")">@SortBtn("uptime", "Uptime (30d)")</th>
+                    }
+                    <th scope="col">Push</th>
+                    <th scope="col" class="c-actions"><span class="visually-hidden">Actions</span></th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var row in rows)
+                {
+                    var s = row.Source;
+                    var strip = StripFor(s.Name);
+                    var pct = UptimeHistory.UptimePercent(strip);
+                    var tone = UptimeHistory.Tone(pct);
+                    <tr class="@(_editingId == s.Id ? "is-editing" : "") @(_selected.Contains(s.Id) ? "is-selected" : "")" @key="s.Id">
+                        <td class="c-check">
+                            <input type="checkbox" class="row-check" aria-label="@($"Select {s.Name}")" checked="@_selected.Contains(s.Id)" @onchange="e => ToggleSelect(s.Id, (bool)e.Value!)" />
+                        </td>
+                        <td class="c-source">
+                            <div class="src-name">
+                                @if (HostOf(s.Url) is { } host)
                                 {
-                                    <img src="/favicon-proxy/@flatHost" alt="" loading="lazy" class="source-favicon" onerror="this.style.display='none'" />
+                                    <img src="/favicon-proxy/@host" alt="" loading="lazy" class="source-favicon" onerror="this.style.display='none'" />
                                 }
                                 <a href="@s.Url" target="_blank" rel="noopener">@s.Name</a>
-                            </span>
-                        </td>
-                        <td><span class="badge bg-secondary">@s.Category</span></td>
-                        <td><span class="badge ctype-@s.ContentType.ToLower()">@s.ContentType</span></td>
-                        <td><span class="badge level-@s.Level.ToLower()">@s.Level</span></td>
-                        <td>
-                            @foreach (var t in s.Tags)
+                            </div>
+                            @if (!string.IsNullOrWhiteSpace(s.Note))
                             {
-                                <span class="tag-chip small">@t</span>
+                                <p class="src-note">@s.Note</p>
+                            }
+                            @if (s.Tags.Length > 0)
+                            {
+                                <div class="src-tags">
+                                    @foreach (var t in s.Tags.Take(4)) { <span class="mini-chip">@t</span> }
+                                    @if (s.Tags.Length > 4) { <span class="mini-chip">+@(s.Tags.Length - 4)</span> }
+                                </div>
                             }
                         </td>
-                        <td>
-                            @if (s.Enabled)
-                            {
-                                <span class="text-success">● enabled</span>
-                            }
-                            else
-                            {
-                                <span class="text-muted">○ disabled</span>
-                            }
-                            @if (row.FailStreak > 0)
-                            {
-                                <span class="badge bg-warning ms-1" title="@row.FailStreak consecutive failed fetch(es)">@row.FailStreak failed</span>
-                            }
+                        <td data-label="Type">
+                            <div class="chips">
+                                <span class="mini-chip">@s.Category</span>
+                                <span class="badge ctype-@s.ContentType.ToLower()">@s.ContentType</span>
+                                <span class="badge level-@s.Level.ToLower()">@s.Level</span>
+                            </div>
                         </td>
-                        <td class="small">
-                            @if (row.HealthTotal == 0)
-                            {
-                                <span class="text-muted">no data yet</span>
-                            }
-                            else
-                            {
-                                var pct = row.Healthy * 100 / row.HealthTotal;
-                                <span class="@(pct >= 90 ? "text-success" : pct >= 60 ? "text-warning" : "text-danger")" title="@row.Healthy of @row.HealthTotal recorded days healthy">@pct% (@row.Healthy/@row.HealthTotal d)</span>
-                            }
+                        <td data-label="Status">
+                            <div class="chips">
+                                @if (s.Enabled) { <span class="status-chip chip-ok"><span class="dot" aria-hidden="true"></span>Enabled</span> }
+                                else { <span class="status-chip chip-muted"><span class="dot" aria-hidden="true"></span>Disabled</span> }
+                                @if (row.FailStreak > 0)
+                                {
+                                    <span class="status-chip chip-bad" title="@row.FailStreak consecutive failed fetch(es)">@row.FailStreak failed</span>
+                                }
+                                @if (s.IsScrape) { <span class="mini-chip" title="Scraped HTML page, no RSS feed">scrape</span> }
+                                @if (s.FullTextFetch) { <span class="mini-chip" title="Fetches the full article text">full text</span> }
+                            </div>
                         </td>
-                        <td class="small">
+                        <td data-label="Uptime (30d)">
+                            <div class="uptime">
+                                <span class="spark" role="img" aria-label="@(pct is null ? "No uptime data yet" : $"{pct}% of recorded days healthy over the last 30 days")">
+                                    @foreach (var d in strip)
+                                    {
+                                        <span class="spark-day d-@d.ToString().ToLowerInvariant()"></span>
+                                    }
+                                </span>
+                                <span class="uptime-pct tone-@tone">@(pct is null ? "no data" : $"{pct}%")</span>
+                            </div>
+                        </td>
+                        <td data-label="Push">
                             @if (!WebSub.Enabled)
                             {
-                                <span class="text-muted" title="Set WebSub:PublicBaseUrl in appsettings.json to enable">off</span>
+                                <span class="muted-text" title="Set WebSub:PublicBaseUrl in appsettings.json to enable">off</span>
                             }
                             else if (_webSubStatus.TryGetValue(s.Id, out var sub))
                             {
                                 @if (sub.Status == "Verified")
                                 {
-                                    <span class="text-success" title="@(sub.LeaseExpiresAt is { } exp ? $"Renews before {exp.ToLocalTime():g}" : "")">● live</span>
+                                    <span class="status-chip chip-ok" title="@(sub.LeaseExpiresAt is { } exp ? $"Renews before {exp.ToLocalTime():g}" : "")">live</span>
                                 }
                                 else if (sub.Status == "Pending")
                                 {
-                                    <span class="text-warning">○ pending</span>
+                                    <span class="status-chip chip-warn">pending</span>
                                 }
                                 else
                                 {
-                                    <span class="text-muted">○ unavailable</span>
+                                    <span class="muted-text">unavailable</span>
                                 }
                             }
                             else
                             {
-                                <span class="text-muted">—</span>
+                                <span class="muted-text">-</span>
                             }
                         </td>
-                        <td class="small text-muted">@s.Note</td>
-                        <td class="text-nowrap">
-                            <button class="btn btn-sm btn-link p-0 me-2" title="Edit" @onclick="() => StartEdit(s)"><Icon Name="settings" Size="15" /></button>
-                            <button class="btn btn-sm btn-link p-0 text-danger" title="Delete" @onclick="() => DeleteSource(s.Id)"><Icon Name="trash" Size="15" /></button>
+                        <td class="c-actions">
+                            <button class="icon-btn" title="Edit" aria-label="@($"Edit {s.Name}")" @onclick="() => StartEdit(s)"><Icon Name="settings" Size="16" /></button>
+                            <button class="icon-btn danger" title="Delete" aria-label="@($"Delete {s.Name}")" @onclick="() => DeleteSource(s.Id)"><Icon Name="trash" Size="16" /></button>
                         </td>
                     </tr>
+                    @if (_editingId == s.Id)
+                    {
+                        <tr class="edit-row">
+                            <td colspan="7">
+                                <EditForm Model="_form" OnValidSubmit="SaveEdit">
+                                    <p class="form-title">Edit @s.Name</p>
+                                    @SourceFormFields("edit", false)
+                                    <div class="form-actions">
+                                        <button type="submit" class="btn btn-success">Save</button>
+                                        <button type="button" class="btn btn-outline-secondary" @onclick="CancelEdit">Cancel</button>
+                                    </div>
+                                </EditForm>
+                            </td>
+                        </tr>
+                    }
+                }
+            </tbody>
+        </table>;
+    }
+
+    private string AriaSort(string column) => _sortColumn != column ? "none" : _sortAscending ? "ascending" : "descending";
+
+    private RenderFragment SortBtn(string column, string label) => @<button type="button" class="sort-btn @(_sortColumn == column ? "active" : "")" @onclick="() => ToggleSort(column)">
+        @label <span aria-hidden="true">@(_sortColumn != column ? "↕" : _sortAscending ? "↑" : "↓")</span>
+    </button>;
+
+    private RenderFragment SourceFormFields(string p, bool isNew) => @<div class="form-grid">
+        <div class="fg-name">
+            <label class="f-label" for="@($"{p}-name")">Name</label>
+            <input id="@($"{p}-name")" class="form-control" @bind="_form.Name" />
+        </div>
+        <div class="fg-url">
+            <label class="f-label" for="@($"{p}-url")">Feed URL (RSS/Atom)@(isNew ? " or the site's homepage" : "")</label>
+            <div class="input-group">
+                <input id="@($"{p}-url")" class="form-control" type="url" inputmode="url" placeholder="https://…" @bind="_form.Url" @bind:event="oninput" />
+                @if (isNew)
+                {
+                    <button type="button" class="btn btn-outline-secondary" disabled="@(_discovering || string.IsNullOrWhiteSpace(_form.Url))" @onclick="DiscoverFeed">
+                        @if (_discovering) { <span class="spinner"></span> } else { <Icon Name="search" Size="14" /> }
+                        Find feed
+                    </button>
+                }
+            </div>
+            @if (isNew && _discoveryMessage is not null)
+            {
+                <div class="f-hint @(_discoveryFound ? "ok" : "bad")" role="status">@_discoveryMessage</div>
             }
-        </tbody>
-    </table>
-</div>
+        </div>
+        <div>
+            <label class="f-label" for="@($"{p}-cat")">Category</label>
+            <select id="@($"{p}-cat")" class="form-select" @bind="_form.Category">
+                @foreach (var c in _categories) { <option value="@c">@c</option> }
+            </select>
+        </div>
+        <div>
+            <label class="f-label" for="@($"{p}-type")">Content type</label>
+            <select id="@($"{p}-type")" class="form-select" @bind="_form.ContentType">
+                @foreach (var c in _contentTypes) { <option value="@c">@c</option> }
+            </select>
+        </div>
+        <div>
+            <label class="f-label" for="@($"{p}-level")">Level</label>
+            <select id="@($"{p}-level")" class="form-select" @bind="_form.Level">
+                @foreach (var l in _levels) { <option value="@l">@l</option> }
+            </select>
+        </div>
+        <div>
+            <label class="f-label" for="@($"{p}-tags")">Tags</label>
+            <input id="@($"{p}-tags")" class="form-control" placeholder="Comma-separated" @bind="_form.TagsCsv" />
+        </div>
+        <div class="fg-full">
+            <label class="f-label" for="@($"{p}-note")">Note</label>
+            <input id="@($"{p}-note")" class="form-control" placeholder="What it gives you" @bind="_form.Note" />
+        </div>
+        <div class="fg-full checks">
+            <div class="form-check form-switch">
+                <input class="form-check-input" type="checkbox" role="switch" id="@($"{p}-enabled")" @bind="_form.Enabled" />
+                <label class="form-check-label" for="@($"{p}-enabled")">Enabled</label>
+            </div>
+            <div class="form-check form-switch">
+                <input class="form-check-input" type="checkbox" role="switch" id="@($"{p}-full")" @bind="_form.FullTextFetch" />
+                <label class="form-check-label" for="@($"{p}-full")">Fetch full article text</label>
+            </div>
+            <div class="form-check form-switch">
+                <input class="form-check-input" type="checkbox" role="switch" id="@($"{p}-scrape")" @bind="_form.IsScrape" />
+                <label class="form-check-label" for="@($"{p}-scrape")">Scrape HTML (no RSS feed)</label>
+            </div>
+        </div>
+        @if (_form.IsScrape)
+        {
+            <fieldset class="fg-full scrape">
+                <legend>Scrape selectors (XPath)</legend>
+                <p class="f-hint">The URL above is the page to scrape, not an RSS feed.</p>
+                <div class="form-grid inner">
+                    <div><label class="f-label" for="@($"{p}-x-item")">Item container</label><input id="@($"{p}-x-item")" class="form-control" placeholder="e.g. //article" @bind="_form.ScrapeItemXPath" /></div>
+                    <div><label class="f-label" for="@($"{p}-x-link")">Link (relative)</label><input id="@($"{p}-x-link")" class="form-control" placeholder="default .//a" @bind="_form.ScrapeLinkXPath" /></div>
+                    <div><label class="f-label" for="@($"{p}-x-title")">Title (optional)</label><input id="@($"{p}-x-title")" class="form-control" placeholder="defaults to link text" @bind="_form.ScrapeTitleXPath" /></div>
+                    <div><label class="f-label" for="@($"{p}-x-date")">Date (optional)</label><input id="@($"{p}-x-date")" class="form-control" @bind="_form.ScrapeDateXPath" /></div>
+                </div>
+            </fieldset>
+        }
+        @if (_error is not null)
+        {
+            <div class="alert alert-danger py-2 small mb-0 fg-full" role="alert">@_error</div>
+        }
+    </div>;
 
-<Pager TotalItems="totalRows" @bind-CurrentPage="_page" @bind-PageSize="_pageSize" />
-}
-
-<div class="alert alert-light border small">
-    <strong>Tip:</strong> any RSS/Atom URL works. Handy ones:
-    a GitHub project's releases feed is <code>https://github.com/&lt;owner&gt;/&lt;repo&gt;/releases.atom</code>;
-    a subreddit is <code>https://www.reddit.com/r/&lt;name&gt;/.rss</code>;
-    most blogs expose <code>/feed</code> or <code>/rss.xml</code>.
-</div>
-
-@code {
     [SupplyParameterFromQuery(Name = "opmlAdded")] private int? OpmlAdded { get; set; }
     [SupplyParameterFromQuery(Name = "opmlSkipped")] private int? OpmlSkipped { get; set; }
     [SupplyParameterFromQuery(Name = "opmlUnreachable")] private int? OpmlUnreachable { get; set; }
@@ -507,6 +577,18 @@ else
                 (r.Source.Note ?? "").Contains(needle, StringComparison.OrdinalIgnoreCase));
         }
 
+        if (!string.IsNullOrEmpty(_categoryFilter))
+            q = q.Where(r => r.Source.Category == _categoryFilter);
+
+        q = _statusFilter switch
+        {
+            "enabled" => q.Where(r => r.Source.Enabled),
+            "disabled" => q.Where(r => !r.Source.Enabled),
+            "failing" => q.Where(r => r.FailStreak > 0),
+            "nodata" => q.Where(r => r.HealthTotal == 0),
+            _ => q
+        };
+
         return q;
     }
 
@@ -528,12 +610,7 @@ else
             .Select(g => (g.Key, g.OrderBy(r => r.Source.Name).ToList()))
             .ToList();
 
-    /// <summary>The grouped view has no inline edit form of its own - switch to the flat table (which does) with this row already in edit mode.</summary>
-    private void EditFromGroup(SourceRecord s)
-    {
-        _grouped = false;
-        StartEdit(s);
-    }
+
 
     private (List<SourceRow> Rows, int Total) GetPage()
     {
@@ -570,13 +647,16 @@ else
     {
         _showAddForm = !_showAddForm;
         _editingId = null;
+        _error = null;
+        _discoveryMessage = null;
         if (_showAddForm) _form = new SourceForm { Enabled = true, Category = "News", ContentType = "News", Level = "Intermediate" };
     }
 
     private void StartEdit(SourceRecord s)
     {
         _showAddForm = false;
-        _editingId = s.Id;
+        _error = null;
+        _editingId = _editingId == s.Id ? null : s.Id;
         _form = new SourceForm
         {
             Name = s.Name,
@@ -695,9 +775,14 @@ else
 
     private async Task DeleteSource(int id)
     {
-        var confirmed = await JS.InvokeAsync<bool>("confirm", "Remove this source? This can't be undone.");
+        var name = Kb.SourceRecords.FirstOrDefault(s => s.Id == id)?.Name ?? "this source";
+        var confirmed = await JS.InvokeAsync<bool>("confirm", $"Delete \"{name}\"? This can't be undone.");
         if (confirmed)
+        {
             await Kb.DeleteSourceAsync(id);
+            _selected.Remove(id);
+            if (_editingId == id) _editingId = null;
+        }
     }
 
     private sealed class SourceForm

@@ -1,185 +1,352 @@
 @page "/glossary"
 @rendermode InteractiveServer
+@implements IAsyncDisposable
 @inject KnowledgeBaseService Kb
 @inject ISummarizer Ai
 @inject FeedAggregatorService Feeds
 @inject NavigationManager Nav
+@inject IJSRuntime JS
 
 <PageTitle>AiPulse · Glossary</PageTitle>
 
 <div class="page-header">
     <h1><Icon Name="book" Size="22" /> Glossary</h1>
-    <p class="lead">Every buzzword your coworkers throw around — decoded for a developer, with when to actually use it.</p>
+    <p class="lead">Every buzzword your coworkers throw around, decoded for a developer, with when to actually use it.</p>
 </div>
+
+<AuthorizeView Roles="Admin,Curator" Context="adminPanel">
+    <Authorized>
+        @if (_pendingCandidates.Count > 0)
+        {
+            <details class="gloss-panel mb-3 review-panel" open="@(_approvingCandidateId is not null)">
+                <summary class="gloss-panel-title review-summary"><Icon Name="search" Size="16" /> Candidate terms awaiting review <span class="count-pill">@_pendingCandidates.Count</span><span class="review-hint">Show</span></summary>
+                <ul class="review-list">
+                    @foreach (var c in _pendingCandidates)
+                    {
+                        <li class="review-item">
+                            @if (_approvingCandidateId == c.Id)
+                            {
+                                <EditForm Model="_form" OnValidSubmit="ConfirmApprove">
+                                    <div class="row g-2 mb-2">
+                                        <div class="col-md-6">
+                                            <label class="form-label small" for="gc-term">Term</label>
+                                            <InputText id="gc-term" class="form-control" @bind-Value="_form.Term" />
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="form-label small" for="gc-cat">Category</label>
+                                            <InputSelect id="gc-cat" class="form-select" @bind-Value="_form.Category">
+                                                @foreach (var cat in _categories.Where(c => c != "All"))
+                                                {
+                                                    <option value="@cat">@cat</option>
+                                                }
+                                            </InputSelect>
+                                        </div>
+                                    </div>
+                                    <label class="form-label small" for="gc-short">Short definition (required)</label>
+                                    <InputText id="gc-short" class="form-control mb-2" @bind-Value="_form.ShortDef" />
+                                    <label class="form-label small" for="gc-details">Details (optional)</label>
+                                    <InputTextArea id="gc-details" class="form-control mb-2" @bind-Value="_form.Details" />
+                                    <label class="form-label small" for="gc-when">When to use (optional)</label>
+                                    <InputText id="gc-when" class="form-control mb-2" @bind-Value="_form.WhenToUse" />
+                                    <label class="form-label small" for="gc-url">Learn more URL (optional)</label>
+                                    <InputText id="gc-url" class="form-control mb-2" @bind-Value="_form.LearnMoreUrl" />
+                                    @if (_error is not null)
+                                    {
+                                        <div class="alert alert-danger py-2 small mb-2" role="alert">@_error</div>
+                                    }
+                                    <div class="d-flex flex-wrap gap-2">
+                                        <button type="submit" class="btn btn-success">Add to glossary</button>
+                                        <button type="button" class="btn btn-outline-secondary" @onclick="() => _approvingCandidateId = null">Cancel</button>
+                                    </div>
+                                </EditForm>
+                            }
+                            else
+                            {
+                                <div class="review-text"><strong>@c.Name</strong> <span class="text-muted">· @c.RawNote</span></div>
+                                <div class="review-actions">
+                                    <button class="btn btn-sm btn-outline-primary" @onclick="() => StartApprove(c)">Review</button>
+                                    <button class="btn btn-sm btn-outline-secondary" @onclick="() => Dismiss(c.Id)">Dismiss</button>
+                                </div>
+                            }
+                        </li>
+                    }
+                </ul>
+            </details>
+        }
+    </Authorized>
+</AuthorizeView>
 
 @{
     var emerging = EmergingTerms();
 }
 @if (emerging.Count > 0)
 {
-    <div class="card mb-3">
-        <div class="card-body">
-            <h6 class="section-title mb-2"><Icon Name="sparkle" Size="16" /> Trending in the news, not yet defined here</h6>
-            <p class="text-muted small mb-2">Terms showing up often in your News feed that aren't in the glossary yet — queued below for an admin to review, or jump to News to see the coverage yourself.</p>
-            <div class="d-flex flex-wrap gap-1">
-                @foreach (var (term, count) in emerging)
-                {
-                    <a class="badge bg-warning text-dark text-decoration-none" href="@($"news?tag={Uri.EscapeDataString(term)}")">@term (@count)</a>
-                }
-            </div>
+    <section class="gloss-panel gloss-emerging mb-3" aria-labelledby="gloss-emerging-title">
+        <h2 id="gloss-emerging-title" class="gloss-panel-title"><Icon Name="trending-up" Size="16" /> Trending in the news, not defined here yet</h2>
+        <div class="chip-row">
+            @foreach (var (term, count) in emerging)
+            {
+                <a class="emerging-chip" href="@($"news?tag={Uri.EscapeDataString(term)}")">@term <span class="chip-count">@count</span></a>
+            }
         </div>
-    </div>
+    </section>
 }
-
-<AuthorizeView Roles="Admin,Curator" Context="adminPanel">
-    <Authorized>
-        @if (_pendingCandidates.Count > 0)
-        {
-            <div class="card mb-3">
-                <div class="card-body">
-                    <strong class="d-block mb-2"><Icon Name="search" Size="16" /> Candidate terms awaiting review (@_pendingCandidates.Count)</strong>
-                    <div class="d-flex flex-column gap-2">
-                        @foreach (var c in _pendingCandidates)
-                        {
-                            @if (_approvingCandidateId == c.Id)
-                            {
-                                <div class="border rounded p-2">
-                                    <EditForm Model="_form" OnValidSubmit="ConfirmApprove">
-                                        <div class="row g-2 mb-2">
-                                            <div class="col-md-6"><InputText class="form-control form-control-sm" @bind-Value="_form.Term" placeholder="Term" /></div>
-                                            <div class="col-md-6">
-                                                <InputSelect class="form-select form-select-sm" @bind-Value="_form.Category">
-                                                    @foreach (var cat in _categories.Where(c => c != "All"))
-                                                    {
-                                                        <option value="@cat">@cat</option>
-                                                    }
-                                                </InputSelect>
-                                            </div>
-                                        </div>
-                                        <InputText class="form-control form-control-sm mb-2" @bind-Value="_form.ShortDef" placeholder="Short definition (required)" />
-                                        <InputTextArea class="form-control form-control-sm mb-2" @bind-Value="_form.Details" placeholder="Details (optional)" />
-                                        <InputText class="form-control form-control-sm mb-2" @bind-Value="_form.WhenToUse" placeholder="When to use (optional)" />
-                                        <InputText class="form-control form-control-sm mb-2" @bind-Value="_form.LearnMoreUrl" placeholder="Learn more URL (optional)" />
-                                        @if (_error is not null)
-                                        {
-                                            <div class="alert alert-danger py-1 px-2 small mb-2">@_error</div>
-                                        }
-                                        <button type="submit" class="btn btn-sm btn-success">Add to glossary</button>
-                                        <button type="button" class="btn btn-sm btn-outline-secondary" @onclick="() => _approvingCandidateId = null">Cancel</button>
-                                    </EditForm>
-                                </div>
-                            }
-                            else
-                            {
-                                <div class="d-flex align-items-center justify-content-between gap-2 border rounded p-2">
-                                    <div class="small">
-                                        <strong>@c.Name</strong>
-                                        <span class="text-muted"> — @c.RawNote</span>
-                                    </div>
-                                    <div class="text-nowrap">
-                                        <button class="btn btn-sm btn-outline-success" @onclick="() => StartApprove(c)">Review</button>
-                                        <button class="btn btn-sm btn-outline-secondary" @onclick="() => Dismiss(c.Id)">Dismiss</button>
-                                    </div>
-                                </div>
-                            }
-                        }
-                    </div>
-                </div>
-            </div>
-        }
-    </Authorized>
-</AuthorizeView>
-
-<input class="form-control mb-2" placeholder="Search a term (e.g. RAG, MCP, loops, headroom, caveman)…"
-       @bind="_search" @bind:event="oninput" />
-
-<div class="btn-group mb-3 flex-wrap" role="group">
-    @foreach (var cat in _categories)
-    {
-        <button class="btn btn-sm @(_filter == cat ? "btn-dark" : "btn-outline-dark")"
-                @onclick="() => SetCategory(cat)">@cat</button>
-    }
-</div>
 
 @{
     var matches = Kb.Glossary
         .Where(t => _filter == "All" || t.Category == _filter)
-        .Where(t => string.IsNullOrWhiteSpace(_search)
-            || t.Term.Contains(_search, StringComparison.OrdinalIgnoreCase)
-            || t.Aliases.Any(a => a.Contains(_search, StringComparison.OrdinalIgnoreCase))
-            || t.ShortDef.Contains(_search, StringComparison.OrdinalIgnoreCase))
-        .OrderBy(t => t.Term)
+        .Where(t => GlossaryIndex.Matches(t, _search))
+        .OrderBy(t => t.Term, StringComparer.OrdinalIgnoreCase)
         .ToList();
+    var groups = matches.GroupBy(t => GlossaryIndex.LetterOf(t.Term)).OrderBy(g => g.Key == '#' ? ' ' : g.Key).ToList();
+    var lettersWithTerms = groups.Select(g => g.Key).ToHashSet();
+    var known = Kb.Glossary.ToDictionary(t => t.Term, StringComparer.OrdinalIgnoreCase);
 }
 
-<p class="text-muted small">@matches.Count of @Kb.Glossary.Count terms</p>
-
-@foreach (var term in matches)
-{
-    <div class="card mb-2">
-        <div class="card-body">
-            <div class="d-flex justify-content-between align-items-start gap-2">
-                <h5 class="card-title mb-1">@term.Term</h5>
-                <span class="badge bg-info">@term.Category</span>
-            </div>
-            @if (term.Aliases.Length > 0)
-            {
-                <p class="small text-muted mb-2">also: @string.Join(", ", term.Aliases)</p>
-            }
-            <p class="mb-2"><strong>@term.ShortDef</strong></p>
-            @if (!string.IsNullOrWhiteSpace(term.Details))
-            {
-                <p class="mb-2">@term.Details</p>
-            }
-            @if (!string.IsNullOrWhiteSpace(term.WhenToUse))
-            {
-                <p class="mb-2"><span class="text-success">When to use:</span> @term.WhenToUse</p>
-            }
-            @if (term.Related.Length > 0)
-            {
-                <p class="small mb-1">Related: @string.Join(" · ", term.Related)</p>
-            }
-            @{
-                var mentions = RecentMentions(term.Term);
-            }
-            @if (mentions.Count > 0)
-            {
-                <div class="mt-2 mb-2">
-                    <p class="x-small text-muted text-uppercase mb-1">Recent mentions</p>
-                    @foreach (var m in mentions)
-                    {
-                        <div class="small">
-                            <a href="@m.Link" target="_blank" rel="noopener" class="text-decoration-none">@m.Title</a>
-                            <span class="text-muted"> · @m.SourceName</span>
-                        </div>
-                    }
-                    <a href="@($"news?tag={Uri.EscapeDataString(term.Term)}")" class="small">See all in News →</a>
-                </div>
-            }
-            <div class="d-flex gap-3 align-items-center">
-                @if (!string.IsNullOrWhiteSpace(term.LearnMoreUrl))
-                {
-                    <a href="@term.LearnMoreUrl" target="_blank" rel="noopener" class="small">Learn more ↗</a>
-                }
-                @if (Ai.ExplanationsEnabled)
-                {
-                    <button class="btn btn-sm btn-outline-primary" @onclick="() => Explain(term.Term)">Explain with AI</button>
-                }
-            </div>
-            @if (_explanations.TryGetValue(term.Term, out var ex))
-            {
-                <div class="alert alert-light border mt-2 mb-0 small">@ex</div>
-            }
-        </div>
+<div class="gloss-controls">
+    <div class="gloss-search">
+        <label for="gloss-search" class="visually-hidden">Search the glossary</label>
+        <span class="gloss-search-icon" aria-hidden="true"><Icon Name="search" Size="18" /></span>
+        <input id="gloss-search" type="search" class="form-control" placeholder="Search a term, alias or definition (e.g. RAG, headroom, caveman)"
+               autocomplete="off" spellcheck="false" aria-describedby="gloss-count"
+               @bind="_search" @bind:event="oninput" />
+        @if (!string.IsNullOrEmpty(_search))
+        {
+            <button type="button" class="gloss-clear" aria-label="Clear search" @onclick="ClearSearch">✕</button>
+        }
+        else
+        {
+            <kbd class="gloss-kbd" aria-hidden="true" title="Press / to search">/</kbd>
+        }
     </div>
-}
+    <div class="gloss-cats" role="group" aria-label="Filter by category">
+        @foreach (var cat in _categories)
+        {
+            var n = cat == "All" ? Kb.Glossary.Count : Kb.Glossary.Count(t => t.Category == cat);
+            <button type="button" class="cat-btn @(_filter == cat ? "active" : "")" aria-pressed="@(_filter == cat ? "true" : "false")" @onclick="() => SetCategory(cat)">
+                @cat <span class="cat-count">@n</span>
+            </button>
+        }
+    </div>
+    <p class="gloss-count" id="gloss-count" role="status">
+        @if (matches.Count == Kb.Glossary.Count)
+        {
+            <span>@Kb.Glossary.Count terms</span>
+        }
+        else
+        {
+            <span>@matches.Count of @Kb.Glossary.Count terms</span>
+        }
+    </p>
+</div>
+
+<nav class="az-rail" aria-label="Jump to letter">
+    <ol>
+        @foreach (var letter in GlossaryIndex.Alphabet)
+        {
+            var id = LetterId(letter);
+            <li>
+                @if (lettersWithTerms.Contains(letter))
+                {
+                    <a href="@($"glossary#{id}")" class="az-link" aria-label="@(letter == '#' ? "Numbers and symbols" : $"Letter {letter}")"
+                       @onclick="() => JumpToLetter(letter)" @onclick:preventDefault="true">@letter</a>
+                }
+                else
+                {
+                    <span class="az-link az-empty" aria-hidden="true">@letter</span>
+                }
+            </li>
+        }
+    </ol>
+</nav>
 
 @if (matches.Count == 0)
 {
-    <p>No term matches "<strong>@_search</strong>". Add it to <code>Data/glossary.json</code> and it'll show up here.</p>
+    <div class="gloss-empty">
+        <EmptyState Icon="search" Title="@($"No term matches \"{_search}\"{(_filter == "All" ? "" : $" in {_filter}")}")"
+                    Body="Try a shorter word, an alias, or another category. Missing a term? Add it to Data/glossary.json and it shows up here."
+                    ActionText="Clear search and filters" OnAction="ClearAll" />
+    </div>
+}
+
+@foreach (var group in groups)
+{
+    <section class="gloss-group" id="@LetterId(group.Key)" aria-labelledby="@($"{LetterId(group.Key)}-h")">
+        <h2 class="gloss-letter" id="@($"{LetterId(group.Key)}-h")">@group.Key</h2>
+        <div class="term-grid">
+            @foreach (var term in group)
+            {
+                var slug = GlossaryIndex.Slug(term.Term);
+                var mentions = RecentMentions(term.Term);
+                <article class="term-card" id="@slug" tabindex="-1" @key="term.Term">
+                    <header class="term-head">
+                        <h3 class="term-name"><a href="@($"glossary#{slug}")" class="term-anchor" @onclick="() => JumpToTerm(term.Term)" @onclick:preventDefault="true">@term.Term</a></h3>
+                        <span class="cat-chip cat-@term.Category.ToLowerInvariant()">@term.Category</span>
+                    </header>
+                    @if (term.Aliases.Length > 0)
+                    {
+                        <p class="term-aliases">Also: @string.Join(", ", term.Aliases)</p>
+                    }
+                    <p class="term-def">@term.ShortDef</p>
+                    @if (!string.IsNullOrWhiteSpace(term.Details))
+                    {
+                        <p class="term-details">@term.Details</p>
+                    }
+                    @if (!string.IsNullOrWhiteSpace(term.WhenToUse))
+                    {
+                        <div class="term-when"><span class="term-when-label">When to use</span> @term.WhenToUse</div>
+                    }
+                    @if (term.Related.Length > 0)
+                    {
+                        <div class="term-related">
+                            <span class="term-sub">Related</span>
+                            @foreach (var rel in term.Related)
+                            {
+                                @if (known.ContainsKey(rel))
+                                {
+                                    <a class="rel-chip" href="@($"glossary#{GlossaryIndex.Slug(rel)}")" @onclick="() => JumpToTerm(rel)" @onclick:preventDefault="true">@rel</a>
+                                }
+                                else
+                                {
+                                    <span class="rel-chip rel-plain">@rel</span>
+                                }
+                            }
+                        </div>
+                    }
+                    @if (mentions.Count > 0)
+                    {
+                        <div class="term-mentions">
+                            <span class="term-sub">Recent mentions</span>
+                            <ul>
+                                @foreach (var m in mentions)
+                                {
+                                    <li><a href="@m.Link" target="_blank" rel="noopener">@m.Title</a> <span class="text-muted">· @m.SourceName</span></li>
+                                }
+                            </ul>
+                            <a href="@($"news?tag={Uri.EscapeDataString(term.Term)}")" class="small">See all in News →</a>
+                        </div>
+                    }
+                    <footer class="term-actions">
+                        <button type="button" class="act-btn" @onclick="() => CopyDefinition(term)" aria-label="@($"Copy definition of {term.Term}")">
+                            <Icon Name="@(_copied == "def:" + term.Term ? "check" : "copy")" Size="15" /> <span>@(_copied == "def:" + term.Term ? "Copied" : "Copy definition")</span>
+                        </button>
+                        <button type="button" class="act-btn" @onclick="() => CopyLink(term)" aria-label="@($"Copy link to {term.Term}")">
+                            <Icon Name="@(_copied == "link:" + term.Term ? "check" : "share")" Size="15" /> <span>@(_copied == "link:" + term.Term ? "Link copied" : "Copy link")</span>
+                        </button>
+                        @if (!string.IsNullOrWhiteSpace(term.LearnMoreUrl))
+                        {
+                            <a href="@term.LearnMoreUrl" target="_blank" rel="noopener" class="act-btn">
+                                <Icon Name="external-link" Size="15" /> <span>Learn more</span>
+                            </a>
+                        }
+                        @if (Ai.ExplanationsEnabled)
+                        {
+                            <button type="button" class="act-btn act-ai" disabled="@_explaining.Contains(term.Term)" @onclick="() => Explain(term.Term)">
+                                @if (_explaining.Contains(term.Term)) { <span class="spinner" aria-hidden="true"></span> } else { <Icon Name="sparkle" Size="15" /> }
+                                <span>Explain with AI</span>
+                            </button>
+                        }
+                        <span class="visually-hidden" role="status">@(_copied?.EndsWith(":" + term.Term) == true ? "Copied to clipboard" : "")</span>
+                    </footer>
+                    @if (_explanations.TryGetValue(term.Term, out var ex))
+                    {
+                        <div class="term-ai" role="status"><span class="term-sub">AI explanation</span>@ex</div>
+                    }
+                </article>
+            }
+        </div>
+    </section>
 }
 
 @code {
+    private string? _copied;
+    private readonly HashSet<string> _explaining = new(StringComparer.OrdinalIgnoreCase);
+    private IJSObjectReference? _ui;
+
+    private static string LetterId(char letter) => letter == '#' ? "letter-num" : $"letter-{char.ToLowerInvariant(letter)}";
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender) return;
+        try
+        {
+            _ui = await JS.InvokeAsync<IJSObjectReference>("import", "./js/page-ui.js");
+            await _ui.InvokeVoidAsync("slashFocus", "gloss-search");
+        }
+        catch (JSDisconnectedException) { }
+        catch (JSException) { }
+    }
+
+    private void ClearSearch() => _search = "";
+
+    private void ClearAll()
+    {
+        _search = "";
+        SetCategory("All");
+    }
+
+    private async Task ScrollTo(string id, bool flash)
+    {
+        if (_ui is null) return;
+        try
+        {
+            await _ui.InvokeAsync<bool>("scrollToId", id, true);
+            if (flash) await _ui.InvokeVoidAsync("flash", id);
+        }
+        catch (JSDisconnectedException) { }
+        catch (JSException) { }
+    }
+
+    private Task JumpToLetter(char letter) => ScrollTo(LetterId(letter), false);
+
+    /// <summary>Related-term chips and term anchors: clear anything that would hide the target, then scroll to it and highlight it.</summary>
+    private async Task JumpToTerm(string term)
+    {
+        var target = Kb.Glossary.FirstOrDefault(t => t.Term.Equals(term, StringComparison.OrdinalIgnoreCase));
+        if (target is null) return;
+        if ((_filter != "All" && target.Category != _filter) || !GlossaryIndex.Matches(target, _search))
+        {
+            _search = "";
+            _filter = "All";
+            StateHasChanged();
+            await Task.Yield();
+        }
+        await ScrollTo(GlossaryIndex.Slug(target.Term), true);
+    }
+
+    private Task CopyDefinition(GlossaryTerm t) => CopyAsync("def:" + t.Term, GlossaryIndex.CopyText(t));
+
+    private Task CopyLink(GlossaryTerm t) => CopyAsync("link:" + t.Term, $"{Nav.BaseUri}glossary#{GlossaryIndex.Slug(t.Term)}");
+
+    private async Task CopyAsync(string key, string text)
+    {
+        var ok = false;
+        try
+        {
+            _ui ??= await JS.InvokeAsync<IJSObjectReference>("import", "./js/page-ui.js");
+            ok = await _ui.InvokeAsync<bool>("copy", text);
+        }
+        catch (JSDisconnectedException) { return; }
+        catch (JSException) { }
+        if (!ok) return;
+        _copied = key;
+        StateHasChanged();
+        await Task.Delay(1800);
+        if (_copied == key)
+        {
+            _copied = null;
+            StateHasChanged();
+        }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_ui is not null)
+        {
+            try { await _ui.DisposeAsync(); } catch (JSDisconnectedException) { }
+        }
+    }
+
     [SupplyParameterFromQuery(Name = "q")]
     public string? QueryParam { get; set; }
 
@@ -311,7 +478,15 @@
 
     private async Task Explain(string term)
     {
-        var text = await Ai.ExplainTermAsync(term);
-        _explanations[term] = text ?? "Couldn't generate an explanation right now. Try again in a moment.";
+        if (!_explaining.Add(term)) return;
+        try
+        {
+            var text = await Ai.ExplainTermAsync(term);
+            _explanations[term] = text ?? "Couldn't generate an explanation right now. Try again in a moment.";
+        }
+        finally
+        {
+            _explaining.Remove(term);
+        }
     }
 }
