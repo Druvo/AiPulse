@@ -3,7 +3,6 @@ using System.Security.Cryptography;
 using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using System.Text.Unicode;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Primitives;
 using Microsoft.Net.Http.Headers;
@@ -50,7 +49,8 @@ public static class ApiHttp
     {
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
         DictionaryKeyPolicy = null,
-        Encoder = JavaScriptEncoder.Create(UnicodeRanges.All),
+        // Relaxed: bodies are served as application/json, never inlined into HTML, so quotes and non-ASCII need no escaping.
+        Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
         DefaultIgnoreCondition = JsonIgnoreCondition.Never,
         WriteIndented = false
     };

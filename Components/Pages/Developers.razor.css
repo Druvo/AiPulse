@@ -128,6 +128,7 @@
 .dev-params dd { margin: 0; color: var(--ap-text-secondary); font-size: .875rem; }
 .dev-param-meta { color: var(--ap-muted); font-size: .8rem; }
 .dev-endpoint__try { font-size: .875rem; overflow-wrap: anywhere; }
+.dev-endpoint__try > .text-muted { margin-right: .35rem; }
 
 @media (max-width: 420px) {
     .dev-endpoint { padding: .75rem; }
