@@ -180,4 +180,10 @@ public sealed class Alert
     public string? Details { get; init; }
     /// <summary>How many new items this alert represents - &gt;1 for a throttled/grouped Release alert covering several new items from the same source in one poll.</summary>
     public int Count { get; init; } = 1;
+    /// <summary>
+    /// Username this alert is for (e.g. a personal saved-search hit), or null for the shared alerts everyone sees (releases, watchlist,
+    /// trends). Targeted alerts never appear in <c>NotificationService.Recent</c> or its <c>OnChange</c> event, so a component that does
+    /// not know about audiences can never show one user's alert to another; see <c>NotificationService.RecentFor</c>.
+    /// </summary>
+    public string? Audience { get; init; }
 }

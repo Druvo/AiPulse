@@ -1,0 +1,43 @@
+@page "/digest/unsubscribe"
+@using AiPulse.Services.Productivity
+@inject WeeklyDigestSender Digest
+
+@* Reached from the weekly email. Static SSR; the GET only shows a button (so link scanners and prefetchers cannot unsubscribe anyone),
+   the POST (antiforgery-protected Blazor form) applies the signed token. No sign-in needed: the token itself proves who it is for. *@
+
+<PageTitle>Unsubscribe · AiPulse</PageTitle>
+<HeadContent><meta name="robots" content="noindex, nofollow" /></HeadContent>
+
+<div class="du">
+    <h1 class="h3">Weekly digest</h1>
+    @if (_done is true)
+    {
+        <p role="status">You're unsubscribed. You won't get the weekly email any more. You can switch it back on in Settings at any time.</p>
+        <p><a href="this-week">Read this week's round-up on the site</a></p>
+    }
+    else if (_done is false || string.IsNullOrWhiteSpace(Token))
+    {
+        <p role="alert">This unsubscribe link is not valid any more (it may be from an older email). Sign in and switch the digest off in Settings instead.</p>
+        <p><a href="login">Sign in</a></p>
+    }
+    else
+    {
+        <p>Stop getting “This week in AI” by email?</p>
+        <form method="post" @formname="digest-unsubscribe" @onsubmit="Unsubscribe">
+            <AntiforgeryToken />
+            <input type="hidden" name="Token" value="@Token" />
+            <button type="submit" class="btn btn-primary">Unsubscribe</button>
+        </form>
+    }
+</div>
+
+@code {
+    [SupplyParameterFromQuery(Name = "token")] public string? QueryToken { get; set; }
+    [SupplyParameterFromForm(FormName = "digest-unsubscribe")] public string? Token { get; set; }
+
+    private bool? _done;
+
+    protected override void OnParametersSet() => Token ??= QueryToken;
+
+    private async Task Unsubscribe() => _done = await Digest.UnsubscribeAsync(Token);
+}

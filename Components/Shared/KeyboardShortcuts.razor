@@ -1,0 +1,140 @@
+@* Keyboard shortcuts overlay ("?"). Lists the global keys (palette, g-then-letter navigation for the pages this visitor can open) and the
+   News Feed's own keys. A modal dialog: focus moves into it, Esc or the close button returns focus where it was. Place once per page. *@
+@rendermode InteractiveServer
+@using System.Security.Claims
+@using AiPulse.Services.Productivity
+@implements IAsyncDisposable
+@inject IJSRuntime JS
+@inject AuthenticationStateProvider Auth
+
+@if (_open)
+{
+    <div class="ks-backdrop" @onclick="Close"></div>
+    <div class="ks-dialog" role="dialog" aria-modal="true" aria-labelledby="ks-title" @onkeydown="OnKeyDown">
+        <div class="ks-head">
+            <h2 id="ks-title" class="ks-title">Keyboard shortcuts</h2>
+            <button type="button" class="ks-close" @ref="_closeButton" @onclick="Close" aria-label="Close keyboard shortcuts">
+                <span aria-hidden="true">×</span>
+            </button>
+        </div>
+        <div class="ks-body">
+            <section class="ks-section" aria-labelledby="ks-global">
+                <h3 id="ks-global" class="ks-section-title">Anywhere</h3>
+                <dl class="ks-list">
+                    <div class="ks-row"><dt><kbd>Ctrl</kbd> <kbd>K</kbd> <span class="ks-or">or</span> <kbd>/</kbd></dt><dd>Open the command palette</dd></div>
+                    <div class="ks-row"><dt><kbd>?</kbd></dt><dd>Show this list</dd></div>
+                    <div class="ks-row"><dt><kbd>Esc</kbd></dt><dd>Close a dialog</dd></div>
+                </dl>
+            </section>
+            <section class="ks-section" aria-labelledby="ks-go">
+                <h3 id="ks-go" class="ks-section-title">Go to (press <kbd>g</kbd>, then)</h3>
+                <dl class="ks-list">
+                    @foreach (var c in _go)
+                    {
+                        <div class="ks-row"><dt><kbd>g</kbd> <kbd>@c.GoKey</kbd></dt><dd>@c.Title</dd></div>
+                    }
+                </dl>
+            </section>
+            <section class="ks-section" aria-labelledby="ks-news">
+                <h3 id="ks-news" class="ks-section-title">On the News Feed</h3>
+                <dl class="ks-list">
+                    <div class="ks-row"><dt><kbd>j</kbd> / <kbd>k</kbd></dt><dd>Next / previous story</dd></div>
+                    <div class="ks-row"><dt><kbd>o</kbd> <span class="ks-or">or</span> <kbd>Enter</kbd></dt><dd>Open the story</dd></div>
+                    <div class="ks-row"><dt><kbd>m</kbd></dt><dd>Mark read / unread</dd></div>
+                    <div class="ks-row"><dt><kbd>b</kbd></dt><dd>Bookmark</dd></div>
+                    <div class="ks-row"><dt><kbd>r</kbd></dt><dd>Refresh</dd></div>
+                </dl>
+            </section>
+        </div>
+    </div>
+}
+
+@code {
+    private IJSObjectReference? _module;
+    private DotNetObjectReference<KeyboardShortcuts>? _self;
+    private readonly string _token = Guid.NewGuid().ToString("N");
+    private ElementReference _closeButton;
+    private bool _open;
+    private bool _focusPending;
+    private List<PaletteCommand> _go = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        var user = (await Auth.GetAuthenticationStateAsync()).User;
+        var signedIn = user.Identity?.IsAuthenticated == true;
+        _go = CommandCatalog.For(signedIn, user.FindAll(ClaimTypes.Role).Select(c => c.Value))
+            .Where(c => c.Kind == PaletteKind.Page && c.GoKey is not null)
+            .GroupBy(c => c.GoKey).Select(g => g.First())
+            .ToList();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        try
+        {
+            if (firstRender)
+            {
+                _module = await JS.InvokeAsync<IJSObjectReference>("import", "./js/productivity.js");
+                _self = DotNetObjectReference.Create(this);
+                await _module.InvokeVoidAsync("registerShortcuts", _self, _token);
+            }
+            if (_focusPending && _module is not null)
+            {
+                _focusPending = false;
+                await _module.InvokeVoidAsync("focus", _closeButton);
+            }
+        }
+        catch (JSDisconnectedException) { }
+        catch (InvalidOperationException) { }
+    }
+
+    [JSInvokable]
+    public async Task Open()
+    {
+        if (_open) return;
+        if (_module is not null)
+        {
+            try { await _module.InvokeVoidAsync("rememberFocus"); } catch (JSDisconnectedException) { }
+        }
+        _open = true;
+        _focusPending = true;
+        StateHasChanged();
+    }
+
+    [JSInvokable]
+    public async Task Toggle()
+    {
+        if (_open) await Close();
+        else await Open();
+    }
+
+    private async Task Close()
+    {
+        if (!_open) return;
+        _open = false;
+        StateHasChanged();
+        if (_module is not null)
+        {
+            try { await _module.InvokeVoidAsync("restoreFocus"); } catch (JSDisconnectedException) { }
+        }
+    }
+
+    private async Task OnKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key is "Escape" or "?") await Close();
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_module is not null)
+        {
+            try
+            {
+                await _module.InvokeVoidAsync("unregisterShortcuts", _token);
+                await _module.DisposeAsync();
+            }
+            catch (JSDisconnectedException) { }
+        }
+        _self?.Dispose();
+    }
+}

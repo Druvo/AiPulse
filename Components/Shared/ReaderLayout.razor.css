@@ -1,0 +1,5 @@
+.reader-shell {
+    min-height: 100vh;
+    background: var(--ap-bg);
+    color: var(--ap-text);
+}

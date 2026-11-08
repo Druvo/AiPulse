@@ -1,0 +1,330 @@
+@* Bookmark collections: group the signed-in user's bookmarks into named collections, add tags and a private note to each, copy or move
+   between collections, and export a collection as Markdown. Bookmarks themselves still live in ReadingStateService; this component only
+   adds structure around them, so it can be embedded anywhere bookmarks are listed (Reading Stats, a Bookmarks page) or used on /collections. *@
+@using AiPulse.Models
+@using AiPulse.Services.Productivity
+@implements IAsyncDisposable
+@inject BookmarkCollectionService Collections
+@inject ReadingStateService Reading
+@inject AuthenticationStateProvider Auth
+@inject ToastService Toasts
+@inject IJSRuntime JS
+
+@if (_userId is null)
+{
+    <p class="text-muted">Sign in to organise your bookmarks.</p>
+}
+else
+{
+    <div class="bc">
+        <nav class="bc-tabs" aria-label="Collections">
+            <button type="button" class="bc-tab @(_view == AllView ? "active" : "")" aria-pressed="@(_view == AllView)" @onclick="() => Select(AllView)">
+                All bookmarks <span class="bc-tab-count">@_bookmarks.Count</span>
+            </button>
+            <button type="button" class="bc-tab @(_view == UnfiledView ? "active" : "")" aria-pressed="@(_view == UnfiledView)" @onclick="() => Select(UnfiledView)">
+                Unfiled <span class="bc-tab-count">@UnfiledCount</span>
+            </button>
+            @foreach (var c in _collections)
+            {
+                <button type="button" class="bc-tab @(_view == c.Id ? "active" : "")" aria-pressed="@(_view == c.Id)" @onclick="() => Select(c.Id)">
+                    @c.Name <span class="bc-tab-count">@CountIn(c.Id)</span>
+                </button>
+            }
+        </nav>
+
+        <div class="bc-bar">
+            <div class="bc-new">
+                <label class="visually-hidden" for="bc-new-name">New collection name</label>
+                <input id="bc-new-name" class="form-control form-control-sm" placeholder="New collection…" maxlength="@BookmarkCollectionLogic.MaxCollectionName"
+                       @bind="_newName" @bind:event="oninput" @onkeydown="NewKey" />
+                <button type="button" class="btn btn-sm btn-primary" @onclick="Create" disabled="@string.IsNullOrWhiteSpace(_newName)">Create</button>
+            </div>
+            <div class="bc-filter">
+                <label class="visually-hidden" for="bc-filter">Filter bookmarks</label>
+                <input id="bc-filter" type="search" class="form-control form-control-sm" placeholder="Filter by title, source, note or #tag" @bind="_filter" @bind:event="oninput" />
+            </div>
+        </div>
+
+        @if (Current is { } col)
+        {
+            <div class="bc-collection-head">
+                @if (_renaming)
+                {
+                    <label class="visually-hidden" for="bc-rename">Collection name</label>
+                    <input id="bc-rename" class="form-control form-control-sm bc-rename" @bind="_renameValue" @bind:event="oninput" maxlength="@BookmarkCollectionLogic.MaxCollectionName" />
+                    <button type="button" class="btn btn-sm btn-primary" @onclick="Rename">Save</button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary" @onclick="() => _renaming = false">Cancel</button>
+                }
+                else
+                {
+                    <h2 class="h5 mb-0 bc-collection-name">@col.Name</h2>
+                    <button type="button" class="btn btn-sm btn-outline-secondary" @onclick="ExportMarkdown"><Icon Name="download" Size="13" /> Export Markdown</button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary" @onclick="StartRename">Rename</button>
+                    @if (_confirmDelete)
+                    {
+                        <span class="small" role="alert">Delete the collection? Bookmarks stay.</span>
+                        <button type="button" class="btn btn-sm btn-danger" @onclick="DeleteCollection">Delete</button>
+                        <button type="button" class="btn btn-sm btn-outline-secondary" @onclick="() => _confirmDelete = false">Keep</button>
+                    }
+                    else
+                    {
+                        <button type="button" class="btn btn-sm btn-outline-danger" @onclick="() => _confirmDelete = true">Delete</button>
+                    }
+                }
+            </div>
+        }
+        else if (_view == AllView && _bookmarks.Count > 0)
+        {
+            <div class="bc-collection-head">
+                <h2 class="h5 mb-0 bc-collection-name">All bookmarks</h2>
+                <button type="button" class="btn btn-sm btn-outline-secondary" @onclick="ExportMarkdown"><Icon Name="download" Size="13" /> Export Markdown</button>
+            </div>
+        }
+
+        @{ var visible = Visible().ToList(); }
+        @if (_bookmarks.Count == 0)
+        {
+            <div class="bc-empty">No bookmarks yet. Use the bookmark button on any story in the <a href="news">News Feed</a>, then group them here.</div>
+        }
+        else if (visible.Count == 0)
+        {
+            <div class="bc-empty">@(string.IsNullOrWhiteSpace(_filter) ? "Nothing in this collection yet. Use “Add to” on any bookmark." : $"No bookmarks match “{_filter}”.")</div>
+        }
+        else
+        {
+            <ul class="bc-list list-unstyled" aria-label="Bookmarks">
+                @foreach (var b in visible)
+                {
+                    var note = _notes.GetValueOrDefault(b.Link);
+                    var tags = BookmarkCollectionLogic.NormaliseTags(note?.Tags);
+                    var inCols = _collections.Where(c => _membership.TryGetValue(c.Id, out var set) && set.Contains(b.Link)).ToList();
+                    <li class="bc-item">
+                        <div class="bc-item-main">
+                            <a class="bc-item-title" href="@b.Link" target="_blank" rel="noopener noreferrer">@b.Title</a>
+                            <div class="bc-item-meta">
+                                @if (!string.IsNullOrWhiteSpace(b.SourceName)) { <span>@b.SourceName</span> }
+                                <span>Saved @b.SavedAt.ToLocalTime().ToString("MMM d, yyyy")</span>
+                                <a href="@($"read?url={Uri.EscapeDataString(b.Link)}")">Reading view</a>
+                            </div>
+                            @if (tags.Count > 0 || inCols.Count > 0)
+                            {
+                                <ul class="bc-tags" aria-label="Tags and collections">
+                                    @foreach (var t in tags)
+                                    {
+                                        <li><button type="button" class="bc-tag" @onclick="() => FilterTag(t)" aria-label="@($"Show bookmarks tagged {t}")">#@t</button></li>
+                                    }
+                                    @foreach (var c in inCols)
+                                    {
+                                        <li><span class="bc-col-pill"><Icon Name="bookmark" Size="11" /> @c.Name</span></li>
+                                    }
+                                </ul>
+                            }
+                            @if (!string.IsNullOrWhiteSpace(note?.Note) && _editing != b.Link)
+                            {
+                                <p class="bc-note"><span class="visually-hidden">Your note: </span>@note.Note</p>
+                            }
+                        </div>
+
+                        @if (_editing == b.Link)
+                        {
+                            <div class="bc-editor">
+                                <label class="form-label small" for="bc-tags-edit">Tags (comma separated)</label>
+                                <input id="bc-tags-edit" class="form-control form-control-sm" @bind="_editTags" @bind:event="oninput" />
+                                <label class="form-label small mt-2" for="bc-note-edit">Private note</label>
+                                <textarea id="bc-note-edit" class="form-control form-control-sm" rows="3" maxlength="@BookmarkCollectionLogic.MaxNoteLength" @bind="_editNote" @bind:event="oninput"></textarea>
+                                <div class="bc-editor-actions">
+                                    <button type="button" class="btn btn-sm btn-primary" @onclick="() => SaveNote(b.Link)">Save</button>
+                                    <button type="button" class="btn btn-sm btn-outline-secondary" @onclick="() => _editing = null">Cancel</button>
+                                </div>
+                            </div>
+                        }
+
+                        <div class="bc-item-actions">
+                            <button type="button" class="btn btn-sm btn-outline-secondary" @onclick="() => StartEdit(b.Link)" aria-label="@($"Tags and note for {b.Title}")">Tags &amp; note</button>
+                            @if (_collections.Count > 0)
+                            {
+                                <label class="visually-hidden" for="@("bc-target-" + SavedSearchQuery.LinkHash(b.Link)[..12])">Collection for @b.Title</label>
+                                <select id="@("bc-target-" + SavedSearchQuery.LinkHash(b.Link)[..12])" class="form-select form-select-sm bc-target" @onchange="e => _target[b.Link] = int.TryParse(e.Value?.ToString(), out var v) ? v : 0">
+                                    <option value="0">Collection…</option>
+                                    @foreach (var c in _collections.Where(c => c.Id != _view))
+                                    {
+                                        <option value="@c.Id" selected="@(_target.GetValueOrDefault(b.Link) == c.Id)">@c.Name</option>
+                                    }
+                                </select>
+                                <button type="button" class="btn btn-sm btn-outline-secondary" @onclick="() => CopyTo(b)" disabled="@(_target.GetValueOrDefault(b.Link) == 0)">Add to</button>
+                                @if (Current is not null)
+                                {
+                                    <button type="button" class="btn btn-sm btn-outline-secondary" @onclick="() => MoveTo(b)" disabled="@(_target.GetValueOrDefault(b.Link) == 0)">Move to</button>
+                                    <button type="button" class="btn btn-sm btn-outline-danger" @onclick="() => RemoveFromCurrent(b)">Remove from @Current.Name</button>
+                                }
+                            }
+                        </div>
+                    </li>
+                }
+            </ul>
+        }
+    </div>
+}
+
+@code {
+    private const int AllView = -1;
+    private const int UnfiledView = -2;
+
+    private int? _userId;
+    private List<BookmarkItem> _bookmarks = new();
+    private List<BookmarkCollection> _collections = new();
+    private Dictionary<int, HashSet<string>> _membership = new();
+    private Dictionary<string, BookmarkAnnotation> _notes = new();
+    private readonly Dictionary<string, int> _target = new();
+    private int _view = AllView;
+    private string _newName = "";
+    private string _filter = "";
+    private string? _editing;
+    private string _editTags = "";
+    private string _editNote = "";
+    private bool _renaming;
+    private string _renameValue = "";
+    private bool _confirmDelete;
+    private IJSObjectReference? _module;
+
+    private BookmarkCollection? Current => _collections.FirstOrDefault(c => c.Id == _view);
+
+    private int UnfiledCount => _bookmarks.Count(b => !_membership.Values.Any(s => s.Contains(b.Link)));
+
+    private int CountIn(int id) => _membership.TryGetValue(id, out var s) ? _bookmarks.Count(b => s.Contains(b.Link)) : 0;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _userId = ProductivityUser.IdOf((await Auth.GetAuthenticationStateAsync()).User);
+        if (_userId is null) return;
+        await Reload();
+    }
+
+    private async Task Reload()
+    {
+        _bookmarks = Reading.Bookmarks.ToList();
+        _collections = await Collections.ListAsync(_userId!.Value);
+        _membership = await Collections.MembershipAsync(_userId.Value);
+        _notes = await Collections.AnnotationsAsync(_userId.Value);
+        if (_view >= 0 && Current is null) _view = AllView;
+    }
+
+    private IEnumerable<BookmarkItem> Visible()
+    {
+        IEnumerable<BookmarkItem> items = _bookmarks;
+        if (_view == UnfiledView) items = items.Where(b => !_membership.Values.Any(s => s.Contains(b.Link)));
+        else if (_view >= 0) items = items.Where(b => _membership.TryGetValue(_view, out var s) && s.Contains(b.Link));
+        return items.Where(b => BookmarkCollectionLogic.MatchesFilter(b, _notes.GetValueOrDefault(b.Link), _filter));
+    }
+
+    private void Select(int view)
+    {
+        _view = view;
+        _renaming = false;
+        _confirmDelete = false;
+        _target.Clear();
+    }
+
+    private async Task NewKey(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter") await Create();
+    }
+
+    private async Task Create()
+    {
+        var (c, error) = await Collections.CreateAsync(_userId!.Value, _newName);
+        if (error is not null) { Toasts.Show(error); return; }
+        _newName = "";
+        await Reload();
+        _view = c!.Id;
+        Toasts.Show($"Created “{c.Name}”.");
+    }
+
+    private void FilterTag(string tag) => _filter = "#" + tag;
+
+    private void StartRename()
+    {
+        _renameValue = Current?.Name ?? "";
+        _renaming = true;
+    }
+
+    private async Task Rename()
+    {
+        var error = await Collections.RenameAsync(_userId!.Value, _view, _renameValue);
+        if (error is not null) { Toasts.Show(error); return; }
+        _renaming = false;
+        await Reload();
+    }
+
+    private async Task DeleteCollection()
+    {
+        var name = Current?.Name;
+        await Collections.DeleteAsync(_userId!.Value, _view);
+        _confirmDelete = false;
+        _view = AllView;
+        await Reload();
+        Toasts.Show($"Deleted “{name}”. Its bookmarks are still in All bookmarks.");
+    }
+
+    private void StartEdit(string link)
+    {
+        var n = _notes.GetValueOrDefault(link);
+        _editTags = n?.Tags ?? "";
+        _editNote = n?.Note ?? "";
+        _editing = link;
+    }
+
+    private async Task SaveNote(string link)
+    {
+        await Collections.SetAnnotationAsync(_userId!.Value, link, _editTags, _editNote);
+        _editing = null;
+        _notes = await Collections.AnnotationsAsync(_userId.Value);
+    }
+
+    private async Task CopyTo(BookmarkItem b)
+    {
+        var target = _target.GetValueOrDefault(b.Link);
+        if (target == 0) return;
+        await Collections.AddAsync(_userId!.Value, target, b.Link);
+        _target.Remove(b.Link);
+        _membership = await Collections.MembershipAsync(_userId.Value);
+        Toasts.Show($"Added to {_collections.FirstOrDefault(c => c.Id == target)?.Name}.");
+    }
+
+    private async Task MoveTo(BookmarkItem b)
+    {
+        var target = _target.GetValueOrDefault(b.Link);
+        if (target == 0 || Current is null) return;
+        await Collections.MoveAsync(_userId!.Value, Current.Id, target, b.Link);
+        _target.Remove(b.Link);
+        _membership = await Collections.MembershipAsync(_userId.Value);
+        Toasts.Show($"Moved to {_collections.FirstOrDefault(c => c.Id == target)?.Name}.");
+    }
+
+    private async Task RemoveFromCurrent(BookmarkItem b)
+    {
+        if (Current is null) return;
+        await Collections.RemoveAsync(_userId!.Value, Current.Id, b.Link);
+        _membership = await Collections.MembershipAsync(_userId.Value);
+    }
+
+    private async Task ExportMarkdown()
+    {
+        var name = Current?.Name ?? "All bookmarks";
+        var md = BookmarkCollectionLogic.ExportMarkdown(name, Visible(), _notes, DateTimeOffset.Now);
+        try
+        {
+            _module ??= await JS.InvokeAsync<IJSObjectReference>("import", "./js/productivity.js");
+            await _module.InvokeVoidAsync("downloadText", BookmarkCollectionLogic.FileName(name), md, "text/markdown;charset=utf-8");
+        }
+        catch (JSDisconnectedException) { }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_module is not null)
+        {
+            try { await _module.DisposeAsync(); } catch (JSDisconnectedException) { }
+        }
+    }
+}

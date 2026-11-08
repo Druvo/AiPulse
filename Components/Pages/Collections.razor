@@ -1,0 +1,12 @@
+@page "/collections"
+@attribute [Authorize]
+@rendermode InteractiveServer
+
+<PageTitle>AiPulse · Bookmark collections</PageTitle>
+
+<div class="page-header">
+    <h1><Icon Name="bookmark" Size="22" /> Bookmark collections</h1>
+    <p class="lead">Group what you saved into collections, tag it, keep a private note, and export any collection as Markdown.</p>
+</div>
+
+<BookmarkCollections />

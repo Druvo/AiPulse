@@ -1,0 +1,8 @@
+.du {
+    max-width: 36rem;
+    margin: var(--ap-space-xl) auto;
+    padding: var(--ap-space-md);
+    border: 1px solid var(--ap-border);
+    border-radius: var(--ap-radius-lg);
+    background: var(--ap-surface);
+}

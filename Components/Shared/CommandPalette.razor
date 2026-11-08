@@ -1,0 +1,363 @@
+@* Command palette: Ctrl/Cmd+K or "/" (see wwwroot/js/productivity.js). Fuzzy-navigates to any page this visitor may open, runs actions,
+   searches news/glossary/tools inline and remembers recent picks. ARIA combobox + listbox, fully keyboard operable, full-width sheet on
+   phones. Renders an optional trigger button (ShowTrigger) so touch users can open it too. Place one per page (e.g. in the top bar). *@
+@rendermode InteractiveServer
+@using System.Security.Claims
+@using AiPulse.Services.Productivity
+@implements IAsyncDisposable
+@inject IJSRuntime JS
+@inject NavigationManager Nav
+@inject AuthenticationStateProvider Auth
+@inject FeedHistoryService History
+@inject FeedAggregatorService Feeds
+@inject KnowledgeBaseService Kb
+@inject ReadingStateService Reading
+@inject ToastService Toasts
+
+@if (ShowTrigger)
+{
+    <button type="button" class="cp-trigger" @onclick="Open" aria-haspopup="dialog" aria-keyshortcuts="Control+K Meta+K /" title="Command palette (Ctrl+K)">
+        <Icon Name="search" Size="15" />
+        <span class="cp-trigger-label">Jump to…</span>
+        <kbd class="cp-kbd">Ctrl K</kbd>
+    </button>
+}
+
+@if (_open)
+{
+    var flat = _results;
+    <div class="cp-backdrop" @onclick="Close"></div>
+    <div class="cp-dialog" role="dialog" aria-modal="true" aria-label="Command palette">
+        <div class="cp-input-row">
+            <Icon Name="search" Size="18" />
+            <input @ref="_input" class="cp-input" type="text" role="combobox" aria-expanded="true" aria-controls="cp-listbox"
+                   aria-autocomplete="list" aria-activedescendant="@(flat.Count > 0 ? OptionId(_active) : null)" aria-label="Search pages, actions, news, glossary and tools"
+                   placeholder="Search pages, actions, news… (> for commands only)" autocomplete="off" spellcheck="false"
+                   value="@_query" @oninput="OnInput" @onkeydown="OnKeyDown" />
+            <button type="button" class="cp-close" @onclick="Close" aria-label="Close command palette"><kbd class="cp-kbd">Esc</kbd></button>
+        </div>
+        <div class="visually-hidden" role="status" aria-live="polite">@StatusText(flat.Count)</div>
+        @if (flat.Count == 0)
+        {
+            <p class="cp-empty">No matches for “@_query”. Try fewer letters, or <button type="button" class="cp-link" @onclick="SearchNews">search the News Feed</button>.</p>
+        }
+        else
+        {
+            <ul id="cp-listbox" class="cp-list" role="listbox" aria-label="Results">
+                @{ var index = 0; }
+                @foreach (var group in flat.GroupBy(r => r.Group))
+                {
+                    var groupId = "cp-group-" + group.Key.Replace(' ', '-').ToLowerInvariant();
+                    <li role="presentation" class="cp-group" id="@groupId">@group.Key</li>
+                    @foreach (var r in group)
+                    {
+                        var i = index++;
+                        <li id="@OptionId(i)" role="option" aria-selected="@(i == _active ? "true" : "false")" aria-describedby="@groupId"
+                            class="cp-option @(i == _active ? "active" : "")" @onclick="() => Choose(r)" @onmousemove="() => Hover(i)">
+                            <span class="cp-option-icon" aria-hidden="true"><Icon Name="@r.Icon" Size="16" /></span>
+                            <span class="cp-option-text">
+                                <span class="cp-option-title">@r.Title</span>
+                                @if (!string.IsNullOrWhiteSpace(r.Subtitle))
+                                {
+                                    <span class="cp-option-sub">@r.Subtitle</span>
+                                }
+                            </span>
+                            @if (r.Hint is not null)
+                            {
+                                <span class="cp-option-hint" aria-hidden="true">@r.Hint</span>
+                            }
+                        </li>
+                    }
+                }
+            </ul>
+        }
+        <div class="cp-footer" aria-hidden="true">
+            <span><kbd class="cp-kbd">↑</kbd><kbd class="cp-kbd">↓</kbd> move</span>
+            <span><kbd class="cp-kbd">Enter</kbd> open</span>
+            <span><kbd class="cp-kbd">Esc</kbd> close</span>
+            <span class="cp-footer-end"><kbd class="cp-kbd">?</kbd> all shortcuts</span>
+        </div>
+    </div>
+}
+
+@code {
+    /// <summary>Show the "Jump to…" button. Turn off when another control opens the palette (window.aipulsePalette.open()).</summary>
+    [Parameter] public bool ShowTrigger { get; set; } = true;
+
+    private sealed record Result(string Group, string Title, string? Subtitle, string Icon, string? Href, string? ActionId, bool External = false, string? Hint = null);
+    private sealed record RecentItem(string Title, string Href, string Group, bool External);
+
+    private IJSObjectReference? _module;
+    private DotNetObjectReference<CommandPalette>? _self;
+    private ElementReference _input;
+    private bool _open;
+    private bool _focusPending;
+    private string _query = "";
+    private int _active;
+    private List<Result> _results = new();
+    private List<RecentItem> _recent = new();
+    private IReadOnlyList<PaletteCommand> _commands = CommandCatalog.For(false);
+    private bool _signedIn;
+    private string? _scrollTo;
+    private readonly string _token = Guid.NewGuid().ToString("N");
+
+    protected override async Task OnInitializedAsync()
+    {
+        var user = (await Auth.GetAuthenticationStateAsync()).User;
+        _signedIn = user.Identity?.IsAuthenticated == true;
+        var roles = user.FindAll(ClaimTypes.Role).Select(c => c.Value).ToList();
+        _commands = CommandCatalog.For(_signedIn, roles);
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            try
+            {
+                _module = await JS.InvokeAsync<IJSObjectReference>("import", "./js/productivity.js");
+                _self = DotNetObjectReference.Create(this);
+                var user = (await Auth.GetAuthenticationStateAsync()).User;
+                var go = CommandCatalog.GoShortcuts(_signedIn, user.FindAll(ClaimTypes.Role).Select(c => c.Value))
+                    .ToDictionary(kv => kv.Key.ToString(), kv => kv.Value);
+                await _module.InvokeVoidAsync("registerPalette", _self, go, _token);
+            }
+            catch (JSDisconnectedException) { }
+            catch (InvalidOperationException) { /* prerender */ }
+        }
+        if (_module is null) return;
+        try
+        {
+            if (_focusPending)
+            {
+                _focusPending = false;
+                await _module.InvokeVoidAsync("bindCombobox", _input);
+                await _module.InvokeVoidAsync("focus", _input);
+            }
+            if (_scrollTo is not null)
+            {
+                var id = _scrollTo;
+                _scrollTo = null;
+                await _module.InvokeVoidAsync("scrollOptionIntoView", id);
+            }
+        }
+        catch (JSDisconnectedException) { }
+    }
+
+    [JSInvokable]
+    public async Task Open()
+    {
+        if (_open) { _focusPending = true; StateHasChanged(); return; }
+        _query = "";
+        _active = 0;
+        if (_module is not null)
+        {
+            try
+            {
+                await _module.InvokeVoidAsync("rememberFocus");
+                await _module.InvokeVoidAsync("setScrollLock", true);
+                _recent = (await _module.InvokeAsync<List<RecentItem>>("getRecent")) ?? new();
+            }
+            catch (JSDisconnectedException) { }
+            catch (JSException) { _recent = new(); }
+        }
+        _open = true;
+        _focusPending = true;
+        Recompute();
+        StateHasChanged();
+    }
+
+    [JSInvokable]
+    public async Task Toggle()
+    {
+        if (_open) await Close();
+        else await Open();
+    }
+
+    private async Task Close()
+    {
+        if (!_open) return;
+        _open = false;
+        StateHasChanged();
+        if (_module is null) return;
+        try
+        {
+            await _module.InvokeVoidAsync("setScrollLock", false);
+            await _module.InvokeVoidAsync("restoreFocus");
+        }
+        catch (JSDisconnectedException) { }
+    }
+
+    private void OnInput(ChangeEventArgs e)
+    {
+        _query = e.Value?.ToString() ?? "";
+        _active = 0;
+        Recompute();
+    }
+
+    private void Hover(int i)
+    {
+        if (_active != i) _active = i;
+    }
+
+    private async Task OnKeyDown(KeyboardEventArgs e)
+    {
+        var count = _results.Count;
+        switch (e.Key)
+        {
+            case "Escape":
+                await Close();
+                return;
+            case "ArrowDown":
+                if (count > 0) { _active = (_active + 1) % count; _scrollTo = OptionId(_active); }
+                return;
+            case "ArrowUp":
+                if (count > 0) { _active = (_active - 1 + count) % count; _scrollTo = OptionId(_active); }
+                return;
+            case "PageDown":
+                if (count > 0) { _active = Math.Min(count - 1, _active + 5); _scrollTo = OptionId(_active); }
+                return;
+            case "PageUp":
+                if (count > 0) { _active = Math.Max(0, _active - 5); _scrollTo = OptionId(_active); }
+                return;
+            case "Enter":
+                if (count > 0) await Choose(_results[Math.Clamp(_active, 0, count - 1)]);
+                return;
+            case "Tab":
+                // Keep focus inside the dialog: Tab cycles the results like the arrows do.
+                if (count > 0) { _active = e.ShiftKey ? (_active - 1 + count) % count : (_active + 1) % count; _scrollTo = OptionId(_active); }
+                return;
+        }
+    }
+
+    private void Recompute()
+    {
+        var q = _query.Trim();
+        var commandsOnly = q.StartsWith('>');
+        if (commandsOnly) q = q[1..].Trim();
+        var results = new List<Result>();
+
+        if (q.Length == 0 && !commandsOnly)
+        {
+            results.AddRange(_recent.Take(5).Select(r => new Result("Recent", r.Title, r.Group, "list", r.Href, null, r.External)));
+        }
+
+        var commands = CommandCatalog.Search(_commands, q, take: q.Length == 0 ? 40 : 10);
+        results.AddRange(commands.Where(c => c.Kind == PaletteKind.Page).Take(q.Length == 0 ? 8 : 6)
+            .Select(c => new Result("Pages", c.Title, c.Href, c.Icon, c.Href, null, Hint: c.GoKey is { } k ? $"g {k}" : null)));
+        results.AddRange(commands.Where(c => c.Kind == PaletteKind.Action).Take(6)
+            .Select(c => new Result("Actions", c.Title, null, c.Icon, null, c.Id, Hint: c.Id == CommandCatalog.ShowShortcuts ? "?" : null)));
+
+        if (q.Length >= 2 && !commandsOnly)
+        {
+            results.AddRange(History.Items
+                .Where(i => i.Title.Contains(q, StringComparison.OrdinalIgnoreCase))
+                .Take(5)
+                .Select(i => new Result("News", i.Title, $"{i.SourceName} · {i.Published.ToLocalTime():MMM d}", "rss",
+                    _signedIn ? "/read?url=" + Uri.EscapeDataString(i.Link) : i.Link, null, External: !_signedIn)));
+
+            results.AddRange(Kb.Glossary
+                .Select(t => (t, Score: Best(FuzzyMatcher.Score(q, t.Term), t.Aliases.Select(a => FuzzyMatcher.Score(q, a)).Max())))
+                .Where(x => x.Score is > 0)
+                .OrderByDescending(x => x.Score).Take(4)
+                .Select(x => new Result("Glossary", x.t.Term, x.t.ShortDef, "book", "/glossary?q=" + Uri.EscapeDataString(x.t.Term), null)));
+
+            results.AddRange(Kb.Tools
+                .Select(t => (t, Score: FuzzyMatcher.Score(q, t.Name)))
+                .Where(x => x.Score is > 0)
+                .OrderByDescending(x => x.Score).Take(4)
+                .Select(x => new Result("Tools", x.t.Name, x.t.OneLiner, "tool", "/tools", null)));
+        }
+
+        _results = results;
+        if (_active >= _results.Count) _active = Math.Max(0, _results.Count - 1);
+    }
+
+    private static int? Best(int? a, int? b) => a is null ? b : b is null ? a : Math.Max(a.Value, b.Value);
+
+    private async Task Choose(Result r)
+    {
+        await Close();
+        if (r.ActionId is not null)
+        {
+            await RunAction(r.ActionId);
+            return;
+        }
+        if (r.Href is null || _module is null) return;
+        try
+        {
+            if (r.Group != "Recent")
+                await _module.InvokeVoidAsync("pushRecent", new RecentItem(r.Title, r.Href, r.Group, r.External));
+            if (r.External) await _module.InvokeVoidAsync("openExternal", r.Href);
+            else Nav.NavigateTo(r.Href);
+        }
+        catch (JSDisconnectedException) { }
+    }
+
+    private void SearchNews()
+    {
+        _ = Close();
+        Nav.NavigateTo("/news");
+    }
+
+    private async Task RunAction(string id)
+    {
+        if (_module is null) return;
+        try
+        {
+            switch (id)
+            {
+                case CommandCatalog.ToggleTheme:
+                    await _module.InvokeVoidAsync("toggleTheme");
+                    break;
+                case CommandCatalog.ShowShortcuts:
+                    await _module.InvokeVoidAsync("showShortcuts");
+                    break;
+                case CommandCatalog.SignOut:
+                    await _module.InvokeVoidAsync("signOut");
+                    break;
+                case CommandCatalog.MarkAllRead when _signedIn:
+                    MarkAllRead();
+                    break;
+                case CommandCatalog.RefreshFeed when _signedIn:
+                    Toasts.Show("Refreshing the news feed in the background…");
+                    _ = Task.Run(async () =>
+                    {
+                        try { await Feeds.GetAsync(force: true); } catch { /* the watcher keeps polling either way */ }
+                    });
+                    break;
+            }
+        }
+        catch (JSDisconnectedException) { }
+    }
+
+    /// <summary>Same set the sidebar's unread badge counts: the latest poll minus releases, muted sources and exclude filters.</summary>
+    private void MarkAllRead()
+    {
+        IEnumerable<AiPulse.Models.FeedItem> items = Feeds.PeekCache()?.Items ?? (IEnumerable<AiPulse.Models.FeedItem>)History.Items;
+        items = items.Where(i => i.ContentType != "Release");
+        if (Reading.ExcludeFilters.Count > 0) items = items.Where(i => !Reading.IsExcluded(i.Title + " " + i.Summary));
+        if (Reading.MutedSources.Count > 0) items = items.Where(i => !Reading.IsSourceMuted(i.SourceName));
+        var marked = Reading.EnsureReadBulk(items.ToList());
+        Toasts.Show(marked == 0 ? "Nothing unread. You're all caught up." : $"Marked {marked:N0} item{(marked == 1 ? "" : "s")} as read.");
+    }
+
+    private static string OptionId(int i) => "cp-opt-" + i;
+
+    private static string StatusText(int n) => n == 0 ? "No results" : n == 1 ? "1 result" : $"{n} results";
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_module is not null)
+        {
+            try
+            {
+                if (_open) await _module.InvokeVoidAsync("setScrollLock", false);
+                await _module.InvokeVoidAsync("unregisterPalette", _token);
+                await _module.DisposeAsync();
+            }
+            catch (JSDisconnectedException) { }
+        }
+        _self?.Dispose();
+    }
+}
