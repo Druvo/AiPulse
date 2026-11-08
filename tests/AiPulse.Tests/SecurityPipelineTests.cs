@@ -77,6 +77,7 @@ internal sealed class SecurityHost : IDisposable
                     });
                     e.MapGet("/whoami", (HttpContext http) => http.User.Identity?.IsAuthenticated == true
                         ? $"{http.User.Identity.Name}|{http.User.FindFirst(TwoFactorLoginFlow.MfaClaimType)?.Value}" : "anonymous");
+                    e.MapGet("/af-token", (HttpContext http, Microsoft.AspNetCore.Antiforgery.IAntiforgery af) => af.GetAndStoreTokens(http).RequestToken!);
                     e.MapGet("/page", () => Results.Content("<!doctype html><title>t</title>", "text/html; charset=utf-8"));
                     e.MapGet("/data", () => Results.Json(new { ok = true }));
                 });
@@ -320,6 +321,43 @@ public class TwoFactorSignInTests
     [InlineData("/a\r\nSet-Cookie: x", null)]
     [InlineData("", null)]
     public void Local_urls_are_the_only_ones_kept(string input, string? expected) => Assert.Equal(expected, LocalUrl.Sanitize(input));
+}
+
+public class SignOutEverywhereTests
+{
+    [Fact]
+    public async Task Signing_out_everywhere_needs_a_session_and_a_valid_antiforgery_token()
+    {
+        using var host = new SecurityHost();
+        var alice = await host.Rig.UserAsync();
+
+        var anonymous = await host.PostAsync("/account/sign-out-everywhere", new());
+        Assert.Equal(HttpStatusCode.Redirect, anonymous.StatusCode);
+        Assert.Equal("/login", anonymous.Headers.Location!.ToString());
+
+        await host.LoginAsync("alice", "alice-pass-1");
+        var forged = await host.PostAsync("/account/sign-out-everywhere", new() { ["__RequestVerificationToken"] = "forged" });
+        Assert.Equal(HttpStatusCode.BadRequest, forged.StatusCode);
+        Assert.Equal("alice|", await host.WhoAmIAsync());
+        Assert.Equal(alice.SecurityStamp, (await host.Rig.Users.GetByIdAsync(alice.Id))!.SecurityStamp);
+    }
+
+    [Fact]
+    public async Task With_a_valid_token_every_session_is_revoked_and_this_cookie_cleared()
+    {
+        using var host = new SecurityHost();
+        var alice = await host.Rig.UserAsync();
+        await host.LoginAsync("alice", "alice-pass-1");
+        var token = await (await host.SendAsync(HttpMethod.Get, "/af-token")).Content.ReadAsStringAsync();
+
+        var response = await host.PostAsync("/account/sign-out-everywhere", new() { ["__RequestVerificationToken"] = token });
+
+        Assert.Equal(HttpStatusCode.Redirect, response.StatusCode);
+        Assert.Equal("/login", response.Headers.Location!.ToString());
+        Assert.False(host.HasCookie("AiPulse.Auth"));
+        Assert.NotEqual(alice.SecurityStamp, (await host.Rig.Users.GetByIdAsync(alice.Id))!.SecurityStamp);
+        Assert.Contains("Session.SignOutEverywhere", await host.Rig.AuditActionsAsync());
+    }
 }
 
 public class SecurityHeaderTests

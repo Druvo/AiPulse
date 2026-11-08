@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using AiPulse.Models;
+using Microsoft.AspNetCore.Antiforgery;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.DataProtection;
@@ -223,5 +224,48 @@ public static class LocalUrl
             return Sanitize(absolute.PathAndQuery);
         }
         return Sanitize(location);
+    }
+}
+
+/// <summary>
+/// POST /account/sign-out-everywhere (the form on the page of the same name). Handled here rather than by the page because
+/// Program.cs runs UseAntiforgery before UseAuthentication, so the framework would validate a signed-in user's token against an
+/// anonymous request and always answer 400. This authenticates first, then checks the antiforgery token itself, so a hostile
+/// page still cannot sign people out with a hidden form.
+/// </summary>
+public sealed class SignOutEverywhereMiddleware
+{
+    public const string Path = "/account/sign-out-everywhere";
+    private readonly RequestDelegate _next;
+
+    public SignOutEverywhereMiddleware(RequestDelegate next) => _next = next;
+
+    public async Task InvokeAsync(HttpContext context, TwoFactorService security)
+    {
+        if (!HttpMethods.IsPost(context.Request.Method) || !context.Request.Path.Equals(Path, StringComparison.OrdinalIgnoreCase))
+        {
+            await _next(context);
+            return;
+        }
+
+        var auth = await context.AuthenticateAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+        if (!auth.Succeeded || !int.TryParse(auth.Principal?.FindFirst(ClaimTypes.NameIdentifier)?.Value, out var userId))
+        {
+            context.Response.Redirect("/login");
+            return;
+        }
+
+        context.User = auth.Principal!;
+        var antiforgery = context.RequestServices.GetService<IAntiforgery>();
+        if (antiforgery is null || !await antiforgery.IsRequestValidAsync(context))
+        {
+            context.Response.StatusCode = StatusCodes.Status400BadRequest;
+            await context.Response.WriteAsync("This form expired. Go back, reload the page and try again.");
+            return;
+        }
+
+        await security.RevokeAllSessionsAsync(userId);
+        await context.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+        context.Response.Redirect("/login");
     }
 }

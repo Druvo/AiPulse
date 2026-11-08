@@ -36,13 +36,13 @@
                 {
                     <label class="form-label" for="tf-code">Recovery code</label>
                     <InputText id="tf-code" class="form-control tf-code-input" @bind-Value="Input.Code" autocomplete="off" autocapitalize="none" spellcheck="false" maxlength="32" aria-describedby="tf-help" />
-                    <div id="tf-help" class="form-text">One of the codes you saved when you turned on two-step verification, like <span class="font-monospace">abcde-23456</span>. Each code works once.</div>
+                    <div id="tf-help" class="small text-muted mt-1">One of the codes you saved when you turned on two-step verification, like <span class="font-monospace">abcde-23456</span>. Each code works once.</div>
                 }
                 else
                 {
                     <label class="form-label" for="tf-code">Authentication code</label>
                     <InputText id="tf-code" class="form-control tf-code-input" @bind-Value="Input.Code" autocomplete="one-time-code" inputmode="numeric" maxlength="12" aria-describedby="tf-help" />
-                    <div id="tf-help" class="form-text">Open your authenticator app and enter the 6-digit code it shows for AiPulse.</div>
+                    <div id="tf-help" class="small text-muted mt-1">Open your authenticator app and enter the 6-digit code it shows for AiPulse.</div>
                 }
             </div>
             <button type="submit" class="btn btn-primary w-100">Verify and sign in</button>

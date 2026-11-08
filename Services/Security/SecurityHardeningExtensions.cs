@@ -20,6 +20,7 @@ public static class SecurityHardeningExtensions
         if (configuration is not null) options.Bind(configuration.GetSection("Security"));
 
         services.AddDataProtection(); // idempotent; Program.cs sets the "AiPulse" application name and persists the key ring
+        services.AddAntiforgery(); // idempotent; the sign-out-everywhere form validates its token itself
         services.TryAddSingleton<TwoFactorService>();
         services.TryAddSingleton<TwoFactorLoginFlow>();
         services.TryAddSingleton<CspViolationLog>();
@@ -63,6 +64,7 @@ public static class SecurityHardeningExtensions
             app.UseMiddleware<SecurityHeadersMiddleware>();
             app.UseRateLimiter();
             app.UseMiddleware<CspReportMiddleware>();
+            app.UseMiddleware<SignOutEverywhereMiddleware>();
             next(app);
         };
     }

@@ -1,13 +1,8 @@
 @page "/account/sign-out-everywhere"
 @attribute [Authorize]
-@using AiPulse.Services.Security
-@using Microsoft.AspNetCore.Authentication
-@using Microsoft.AspNetCore.Authentication.Cookies
-@inject TwoFactorService Security
-@inject NavigationManager Nav
 
-@* Static server rendering (no @rendermode) so the POST can clear this browser's cookie on the real HTTP response. The form
-   carries Blazor's antiforgery token, so another site cannot sign people out with a hidden form. *@
+@* Static server rendering. The POST is handled by SignOutEverywhereMiddleware (Services/Security/TwoFactorSignIn.cs), which
+   checks the antiforgery token rendered here, rotates the security stamp and clears this browser's cookie. *@
 
 <PageTitle>AiPulse · Sign out everywhere</PageTitle>
 
@@ -18,7 +13,7 @@
 
 <div class="security-panel">
     <p>Anyone signed in as you will be asked to sign in again within about a minute. You will go straight back to the sign-in page.</p>
-    <form method="post" @formname="sign-out-everywhere" @onsubmit="Revoke">
+    <form method="post" action="/account/sign-out-everywhere">
         <AntiforgeryToken />
         <div class="d-flex flex-wrap gap-2">
             <button type="submit" class="btn btn-danger">Sign out all sessions</button>
@@ -26,17 +21,3 @@
         </div>
     </form>
 </div>
-
-@code {
-    [CascadingParameter] private HttpContext HttpContext { get; set; } = default!;
-    [CascadingParameter] private Task<AuthenticationState> AuthState { get; set; } = default!;
-
-    private async Task Revoke()
-    {
-        var state = await AuthState;
-        if (int.TryParse(state.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value, out var userId))
-            await Security.RevokeAllSessionsAsync(userId);
-        await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
-        Nav.NavigateTo("/login");
-    }
-}
