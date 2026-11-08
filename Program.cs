@@ -371,7 +371,7 @@ app.MapGet("/backup/download", (BackupService backup) =>
 {
     var bytes = backup.CreateBackupZip();
     return Results.File(bytes, "application/zip", $"aipulse-backup-{DateTime.Now:yyyy-MM-dd}.zip");
-}).RequireAuthorization();
+}).RequireAuthorization(policy => policy.RequireRole("Admin"));
 
 app.MapPost("/backup/restore", async (HttpRequest request, BackupService backup) =>
 {
