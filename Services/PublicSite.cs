@@ -39,7 +39,7 @@ public static class PublicSite
     /// </summary>
     public static readonly IReadOnlyList<string> UnlistedPublicRoutes = new[]
     {
-        "/forgot-password", "/reset-password", "/login/clerk", "/access-denied", "/u/{Username}", "/Error",
+        "/forgot-password", "/reset-password", "/login/clerk", "/login/2fa", "/access-denied", "/u/{Username}", "/Error",
         // Reached from /topics; the sitemap lists the busiest ones individually (see Sitemap's extraPaths).
         "/topics/{Tag}"
     };
