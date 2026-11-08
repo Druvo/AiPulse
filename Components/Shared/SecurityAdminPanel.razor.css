@@ -1,0 +1,13 @@
+.sec-admin {
+    max-width: 48rem;
+}
+
+.sec-csp-list {
+    padding-left: 1.1rem;
+    font-size: .875rem;
+    overflow-wrap: anywhere;
+}
+
+.sec-csp-list li {
+    margin-bottom: .35rem;
+}

@@ -1,0 +1,16 @@
+@page "/account/security"
+@attribute [Authorize]
+@rendermode InteractiveServer
+
+<PageTitle>AiPulse · Account security</PageTitle>
+
+<div class="page-header">
+    <h1><Icon Name="key" Size="22" /> Account security</h1>
+    <p class="lead">Two-step verification, recovery codes and your signed-in sessions. Your password is changed on the <a href="/settings">Settings</a> page.</p>
+</div>
+
+<SecuritySettings />
+
+<div class="mt-5">
+    <SecurityAdminPanel />
+</div>
