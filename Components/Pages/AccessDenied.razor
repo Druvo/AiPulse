@@ -2,8 +2,15 @@
 
 <PageTitle>AiPulse · Access denied</PageTitle>
 
-<div class="p-4">
-    <h3>Access denied</h3>
-    <p class="text-muted">You don't have permission to view that page.</p>
-    <a href="/dashboard" class="btn btn-primary">Back to Dashboard</a>
+<div class="status-screen">
+    <div class="status-screen__card">
+        <div class="empty-state__icon" aria-hidden="true"><Icon Name="lock" Size="28" /></div>
+        <div class="status-screen__code">403 · Access denied</div>
+        <h1>This page is for admins</h1>
+        <p>Your account doesn't have permission to open that page. If you think it should, ask an administrator to change your role.</p>
+        <div class="status-screen__actions">
+            <a href="/dashboard" class="btn btn-primary"><Icon Name="home" Size="17" /> Back to Dashboard</a>
+            <a href="/help" class="btn btn-outline-secondary"><Icon Name="help-circle" Size="17" /> Help</a>
+        </div>
+    </div>
 </div>

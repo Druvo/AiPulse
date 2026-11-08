@@ -1,6 +1,51 @@
 @inherits LayoutComponentBase
+@inject SiteStatsService StatsService
 
-<main class="login-shell">
-    <ThemeToggle CssClass="theme-switch--floating" />
-    @Body
+@* Sign in, register, password recovery: a split screen on desktop (brand panel with live numbers on the left, the form on the right)
+   and a single clean card on phones, where the brand panel is dropped and a slim top bar keeps the logo and the theme switch. *@
+<main class="auth-shell login-shell">
+    <aside class="auth-aside" aria-label="About AiPulse">
+        <div class="aurora" aria-hidden="true"><span></span><span></span><span></span></div>
+        <a class="auth-aside__brand" href="/">
+            <img src="/img/logo-v1.png" alt="" class="app-logo" width="36" height="36" />
+            <span>AiPulse</span>
+        </a>
+        <div class="auth-aside__pitch">
+            <p class="auth-eyebrow"><Icon Name="shield" Size="15" /> Self-hosted · open source · no API keys</p>
+            <p class="auth-aside__title">Read the AI world in <em>one calm feed.</em></p>
+            <p class="auth-aside__lead">News, research and tools from the places AI moves, deduplicated into a single dashboard, with a glossary and a learning path beside it.</p>
+            <ul class="auth-points">
+                <li><Icon Name="rss" Size="18" /><span><strong>@_stats.ActiveSources.ToString("N0")</strong> sources, one deduplicated feed</span></li>
+                @if (_stats.ItemsLast24Hours > 0)
+                {
+                    <li><Icon Name="zap" Size="18" /><span><strong>@_stats.ItemsLast24Hours.ToString("N0")</strong> new headlines in the last 24 hours</span></li>
+                }
+                <li><Icon Name="book" Size="18" /><span><strong>@_stats.GlossaryTerms</strong>-term glossary in plain language</span></li>
+                <li><Icon Name="graduation-cap" Size="18" /><span><strong>@_stats.LearningModules</strong>-module learning path, tokens to agents</span></li>
+            </ul>
+        </div>
+        <p class="auth-aside__foot">
+            Made with <span class="heart" aria-label="love">♥</span> by <a href="https://github.com/Druvo" target="_blank" rel="noopener">Druvo</a>
+            · <a href="https://github.com/Druvo/AiPulse" target="_blank" rel="noopener">Star on GitHub</a>
+        </p>
+    </aside>
+
+    <section class="auth-main">
+        <div class="auth-topbar">
+            <a class="auth-brand-mobile" href="/">
+                <img src="/img/logo-v1.png" alt="" class="app-logo" width="30" height="30" />
+                <span>AiPulse</span>
+            </a>
+            <div class="auth-topbar__right">
+                <ThemeToggle />
+            </div>
+        </div>
+        @Body
+    </section>
 </main>
+
+@code {
+    private SiteStats _stats = new(0, 0, 0, 0, null, null, 15);
+
+    protected override void OnInitialized() => _stats = StatsService.Current;
+}

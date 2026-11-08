@@ -8,15 +8,18 @@
 
 <div class="login-shell-inner">
     <div class="login-card text-center">
-        <h1 class="login-brand-mark">AiPulse</h1>
+        <div class="auth-icon mx-auto" aria-hidden="true"><Icon Name="lock" Size="22" /></div>
         @if (_clerk is { } clerk)
         {
+            <h1 class="auth-title">Signing you in…</h1>
+            <p class="auth-sub mb-0">This only takes a moment.</p>
             <div id="clerk-finish" class="mt-3" data-host="@clerk.Host" data-key="@clerk.PublishableKey" data-return-url="@(ReturnUrl ?? "/dashboard")" data-remember="@(Remember ?? "true")"></div>
         }
         else
         {
-            <p class="text-muted mt-3">Sign-in with Clerk is not turned on here.</p>
-            <a href="/login">Back to sign in</a>
+            <h1 class="auth-title">Clerk sign-in is off</h1>
+            <p class="auth-sub">Sign-in with Clerk is not turned on here.</p>
+            <a class="btn btn-primary w-100" href="/login">Back to sign in</a>
         }
     </div>
 </div>

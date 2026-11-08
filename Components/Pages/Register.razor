@@ -14,53 +14,57 @@
 
 <div class="login-shell-inner">
 <div class="login-card">
-    <div class="login-logo-wrap">
-        <img src="/img/logo-v1.png" alt="AiPulse" class="app-logo login-logo" />
-    </div>
-    <h1 class="login-brand-mark">AiPulse</h1>
-    <p class="text-muted text-center mb-4">Create an account</p>
-
     @if (_registered)
     {
-        <div class="alert alert-success">
+        <div class="auth-icon" aria-hidden="true"><Icon Name="check-circle" Size="22" /></div>
+        <h1 class="auth-title">@(Users.RequireApproval ? "Almost there" : "You're in")</h1>
+        <div class="alert alert-success" role="status">
             @(Users.RequireApproval
                 ? "Account created. An admin needs to approve it before you can sign in."
                 : "Account created - you can sign in now.")
         </div>
-        <a class="btn btn-primary w-100" href="/login">@(Users.RequireApproval ? "Back to sign in" : "Sign in")</a>
+        <a class="btn btn-primary w-100" href="/login">@(Users.RequireApproval ? "Back to sign in" : "Sign in") <Icon Name="arrow-right" Size="17" /></a>
     }
     else
     {
-        <EditForm Model="_form" OnValidSubmit="Submit">
+        <div class="auth-icon" aria-hidden="true"><Icon Name="sparkle" Size="22" /></div>
+        <h1 class="auth-title">Create your account</h1>
+        <p class="auth-sub">Free, self-hosted, and yours. Takes about a minute.</p>
+
+        <EditForm Model="_form" OnValidSubmit="Submit" class="auth-form">
             @if (_error is not null)
             {
-                <div class="alert alert-danger py-2">@_error</div>
+                <div class="alert alert-danger py-2" role="alert">@_error</div>
             }
-            <div class="mb-3">
-                <label class="form-label">Username</label>
-                <input class="form-control" @bind="_form.Username" autocomplete="username" />
+            <div class="auth-field">
+                <label class="form-label" for="reg-username">Username</label>
+                <input id="reg-username" class="form-control" @bind="_form.Username" autocomplete="username" autocapitalize="none" spellcheck="false" minlength="3" required />
             </div>
-            <div class="mb-3">
-                <label class="form-label">Email <span class="text-muted small">(for password reset)</span></label>
-                <input type="email" class="form-control" @bind="_form.Email" autocomplete="email" />
+            <div class="auth-field">
+                <label class="form-label" for="reg-email">Email <span class="text-muted small fw-normal">(for password reset)</span></label>
+                <input id="reg-email" type="email" class="form-control" @bind="_form.Email" autocomplete="email" />
             </div>
-            <div class="mb-3">
-                <label class="form-label">Password</label>
-                <input type="password" class="form-control" @bind="_form.Password" autocomplete="new-password" />
+            <div class="auth-field">
+                <label class="form-label" for="reg-password">Password</label>
+                <div class="password-field">
+                    <input id="reg-password" type="password" class="form-control" @bind="_form.Password" @bind:event="oninput" autocomplete="new-password" aria-describedby="reg-strength" required />
+                    <button type="button" class="password-reveal" data-reveal="reg-password" aria-pressed="false" aria-label="Show password">
+                        <Icon Name="eye" Size="18" CssClass="eye-on" /><Icon Name="eye-off" Size="18" CssClass="eye-off" />
+                    </button>
+                </div>
+                <PasswordMeter Password="@_form.Password" Id="reg-strength" />
             </div>
-            <div class="mb-3">
-                <label class="form-label">Confirm password</label>
-                <input type="password" class="form-control" @bind="_form.ConfirmPassword" autocomplete="new-password" />
+            <div class="auth-field">
+                <label class="form-label" for="reg-confirm">Confirm password</label>
+                <input id="reg-confirm" type="password" class="form-control" @bind="_form.ConfirmPassword" autocomplete="new-password" required />
             </div>
-            <button type="submit" class="btn btn-primary w-100">Create account</button>
+            <button type="submit" class="btn btn-primary mt-2">Create account <Icon Name="arrow-right" Size="17" /></button>
         </EditForm>
 
-        <p class="text-center text-muted small mt-3 mb-0">
-            Already have an account? <a href="/login">Sign in</a>
-        </p>
+        <p class="auth-alt">Already have an account? <a href="/login">Sign in</a></p>
     }
 </div>
-<p class="login-signature">Made with <span class="text-danger">♥</span> by <a href="https://github.com/Druvo" target="_blank" rel="noopener">Druvo</a></p>
+<p class="login-signature"><a href="/">Back to the home page</a></p>
 </div>
 
 @code {

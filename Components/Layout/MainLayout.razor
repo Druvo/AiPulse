@@ -38,60 +38,147 @@
     }
 }
 
+<a class="skip-link" href="#main-content">Skip to content</a>
+
 @* An anonymous visitor on a public page (News/Explore/Glossary/Tools/a profile) should see a public
    site, not the internal dashboard shell - the full sidebar links to Dashboard/Learning Hub/Reading
    Stats/etc. that would just redirect them to /login, which reads as "broken internal tool", not
-   "public site". Signed-in visitors still get the full dashboard sidebar as before. *@
+   "public site". Signed-in visitors still get the full dashboard shell. *@
 <AuthorizeView>
     <Authorized>
-        <div class="page">
-            <div class="sidebar">
+        <div class="app-shell page">
+            <aside class="app-sidebar sidebar" id="app-sidebar" aria-label="Sidebar">
                 <NavMenu />
+            </aside>
+            <div class="app-scrim" data-shell="close-drawer" aria-hidden="true"></div>
+
+            <div class="app-main">
+                <header class="app-topbar top-row">
+                    <button type="button" class="icon-btn topbar-menu-btn" data-shell="open-drawer" aria-label="Open menu" aria-controls="app-sidebar" aria-expanded="false">
+                        <Icon Name="menu" Size="20" />
+                    </button>
+                    <button type="button" class="icon-btn topbar-collapse-btn" data-shell="toggle-sidebar" aria-label="Collapse sidebar" aria-controls="app-sidebar" title="Collapse sidebar">
+                        <Icon Name="panel-left" Size="19" />
+                    </button>
+                    <a class="topbar-brand" href="dashboard" aria-label="AiPulse dashboard">
+                        <img src="/img/logo-v1.png" alt="" class="app-logo brand-logo" width="30" height="30" />
+                        <span>AiPulse</span>
+                    </a>
+                    <div class="topbar-search">
+                        <GlobalSearch />
+                    </div>
+                    <div class="topbar-actions">
+                        <CommandPalette />
+                        <NotificationBell />
+                        <a class="icon-btn topbar-help" href="help" title="Help" aria-label="Help"><Icon Name="help-circle" Size="19" /></a>
+                        <details class="user-menu">
+                            <summary class="user-menu__trigger" aria-label="Account menu">
+                                <span class="avatar" aria-hidden="true">@ShellNav.Initials(context.User.Identity?.Name)</span>
+                                <span class="user-menu__name">@context.User.Identity?.Name</span>
+                                <Icon Name="chevron-down" Size="15" CssClass="user-menu__chev" />
+                            </summary>
+                            <div class="user-menu__panel">
+                                <div class="user-menu__head">
+                                    <span class="avatar avatar-lg" aria-hidden="true">@ShellNav.Initials(context.User.Identity?.Name)</span>
+                                    <div class="min-w-0">
+                                        <strong class="d-block text-truncate">@context.User.Identity?.Name</strong>
+                                        <span class="user-menu__role">@(context.User.IsInRole("Admin") ? "Administrator" : "Member")</span>
+                                    </div>
+                                </div>
+                                <a class="user-menu__item" href="@($"u/{context.User.Identity?.Name}")"><Icon Name="user" Size="17" /> My profile</a>
+                                <a class="user-menu__item" href="settings"><Icon Name="settings" Size="17" /> Settings</a>
+                                <a class="user-menu__item" href="bookmarks"><Icon Name="bookmark" Size="17" /> Reading list</a>
+                                <a class="user-menu__item" href="help"><Icon Name="help-circle" Size="17" /> Help</a>
+                                <button type="button" class="user-menu__item" onclick="toggleTheme()">
+                                    <Icon Name="moon" Size="17" CssClass="icon-light" /><Icon Name="sun" Size="17" CssClass="icon-dark" />
+                                    <span class="label-light">Dark theme</span><span class="label-dark">Light theme</span>
+                                </button>
+                                <a class="user-menu__item" href="https://github.com/Druvo/AiPulse" target="_blank" rel="noopener"><Icon Name="github" Size="17" /> About AiPulse</a>
+                                <div class="user-menu__sep" role="separator"></div>
+                                <form method="post" action="/auth/logout" class="m-0">
+                                    <button type="submit" class="user-menu__item user-menu__item--danger"><Icon Name="logout" Size="17" /> Sign out</button>
+                                </form>
+                            </div>
+                        </details>
+                    </div>
+                </header>
+
+                <main id="main-content" class="app-content content" tabindex="-1">
+                    @Body
+                </main>
             </div>
 
-            <main>
-                <div class="top-row px-4 gap-4">
-                    <CommandPalette />
-                    <GlobalSearch />
-                    <NotificationBell />
-                    <a href="help"><Icon Name="help-circle" Size="16" /> Help</a>
-                    <a href="settings"><Icon Name="settings" Size="16" /> Settings</a>
-                    <a href="https://github.com/Druvo/AiPulse" target="_blank"><Icon Name="external-link" Size="16" /> About</a>
-                </div>
-
-                <article class="content px-4">
-                    @Body
-                </article>
-            </main>
+            <nav class="app-tabbar" aria-label="Quick navigation">
+                @foreach (var tab in ShellNav.Tabs)
+                {
+                    <NavLink class="app-tab" href="@tab.Path" Match="@(tab.ExactMatch ? NavLinkMatch.All : NavLinkMatch.Prefix)">
+                        <Icon Name="@tab.Icon" Size="21" />
+                        <span>@tab.TabLabel</span>
+                    </NavLink>
+                }
+                <button type="button" class="app-tab" data-shell="open-drawer" aria-controls="app-sidebar" aria-expanded="false">
+                    <Icon Name="menu" Size="21" />
+                    <span>Menu</span>
+                </button>
+            </nav>
         </div>
     </Authorized>
     <NotAuthorized>
-        <div class="page">
-            <main class="w-100">
-                <div class="top-row px-4 justify-content-between">
-                    <a class="navbar-brand d-flex align-items-center gap-2" href="/">
-                        <img src="/img/logo-v1.png" alt="AiPulse" class="app-logo brand-logo" />
+        <div class="public-shell page">
+            <header class="public-topbar top-row">
+                <a class="public-brand navbar-brand" href="/" aria-label="AiPulse home">
+                    <img src="/img/logo-v1.png" alt="" class="app-logo brand-logo" width="30" height="30" />
+                    <span>AiPulse</span>
+                </a>
+                <nav class="public-nav" aria-label="Public">
+                    @foreach (var item in PublicSite.Menu)
+                    {
+                        <NavLink class="public-nav__link" href="@item.Path.TrimStart('/')">@item.Label</NavLink>
+                    }
+                </nav>
+                <div class="public-actions">
+                    <CommandPalette />
+                    <ThemeToggle />
+                    <a class="btn btn-ghost public-actions__signin" href="login">Sign in</a>
+                    <a class="btn btn-primary public-actions__cta" href="register">Get started</a>
+                    <details class="public-menu">
+                        <summary class="icon-btn" aria-label="Open menu"><Icon Name="menu" Size="20" /></summary>
+                        <div class="public-menu__panel">
+                            @foreach (var item in PublicSite.Menu)
+                            {
+                                <NavLink class="public-menu__link" href="@item.Path.TrimStart('/')">@item.Label</NavLink>
+                            }
+                            <a class="public-menu__link" href="https://github.com/Druvo/AiPulse" target="_blank" rel="noopener">GitHub <Icon Name="external-link" Size="14" /></a>
+                            <div class="public-menu__ctas">
+                                <a class="btn btn-outline-secondary" href="login">Sign in</a>
+                                <a class="btn btn-primary" href="register">Get started</a>
+                            </div>
+                        </div>
+                    </details>
+                </div>
+            </header>
+
+            <main id="main-content" class="public-content content" tabindex="-1">
+                @Body
+            </main>
+
+            <footer class="public-footer">
+                <div class="public-footer__inner">
+                    <a class="public-brand" href="/">
+                        <img src="/img/logo-v1.png" alt="" class="app-logo brand-logo" width="26" height="26" />
                         <span>AiPulse</span>
                     </a>
-                    <nav class="d-flex flex-wrap align-items-center gap-3">
-                        @foreach (var item in PublicSite.Menu)
-                        {
-                            <a href="@item.Path">@item.Label</a>
-                        }
+                    <nav class="public-footer__links" aria-label="Footer">
+                        <a href="coverage">Sources we follow</a>
+                        <a href="feed.xml">Atom feed</a>
+                        <a href="this-week">This week in AI</a>
+                        <a href="developers">Developers &amp; API</a>
                         <a href="https://github.com/Druvo/AiPulse" target="_blank" rel="noopener">GitHub</a>
+                        <a href="https://github.com/Druvo/AiPulse/blob/main/LICENSE" target="_blank" rel="noopener">MIT licence</a>
                     </nav>
-                    <div class="d-flex align-items-center gap-2">
-                        <CommandPalette />
-                        <ThemeToggle />
-                        <a class="btn btn-sm btn-outline-dark" href="login">Sign in</a>
-                        <a class="btn btn-sm btn-dark" href="register">Get started</a>
-                    </div>
+                    <p class="public-footer__sig">Made with <span class="heart" aria-label="love">♥</span> by <a href="https://github.com/Druvo" target="_blank" rel="noopener">Druvo</a></p>
                 </div>
-
-                <article class="content px-4">
-                    @Body
-                </article>
-            </main>
+            </footer>
         </div>
     </NotAuthorized>
 </AuthorizeView>
@@ -103,8 +190,9 @@
 <KeyboardShortcuts />
 <ToastHost />
 
-<div id="blazor-error-ui">
-    An unhandled error has occurred.
+<div id="blazor-error-ui" role="alert">
+    <Icon Name="alert-triangle" Size="18" />
+    <span>An unhandled error has occurred.</span>
     <a href="" class="reload">Reload</a>
-    <a class="dismiss">🗙</a>
+    <a class="dismiss" role="button" aria-label="Dismiss">✕</a>
 </div>
