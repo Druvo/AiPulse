@@ -1,8 +1,8 @@
 @page "/ask"
 @attribute [Authorize]
 @rendermode InteractiveServer
+@implements IAsyncDisposable
 @using System.Security.Claims
-@using System.Text.RegularExpressions
 @using AiPulse.Services.Ai.Agent
 @using AiPulse.Services.Ai.Llm
 @using AiPulse.Services.Ai.Rag
@@ -13,153 +13,226 @@
 @inject AiPulse.Services.Ai.IAiGate Gate
 @inject KnowledgeCorpus Corpus
 @inject IOptions<AiPulse.Services.Ai.AiOptions> AiOptions
+@inject IJSRuntime JS
 
 <PageTitle>AiPulse · Ask</PageTitle>
 
-<div class="page-header">
-    <h1><Icon Name="sparkle" Size="22" /> Ask AiPulse</h1>
-    <p class="lead">
-        Answers come only from AiPulse's own glossary, tools, learning guides and recent news. Every sentence shows the source
-        behind it, and anything that can't be checked against a source is left out.
-    </p>
-</div>
-
-<form class="ask-form mb-2" @onsubmit="() => AskAsync(_question)" @onsubmit:preventDefault>
-    <div class="input-group">
-        <input class="form-control" type="text" maxlength="@AiOptions.Value.MaxQuestionLength" autocomplete="off"
-               placeholder="e.g. How does prompt caching cut cost?" aria-label="Your question"
-               @bind="_question" @bind:event="onchange" disabled="@_busy" />
-        <button class="btn btn-primary" type="submit" disabled="@(_busy || string.IsNullOrWhiteSpace(_question))">
-            @if (_busy) { <span class="spinner"></span> } else { <Icon Name="search" Size="15" /> }
-            Ask
-        </button>
+<div class="ask-page">
+    <div class="page-header ask-header">
+        <h1><Icon Name="sparkle" Size="22" /> Ask AiPulse</h1>
+        <p class="lead">
+            Answers come only from AiPulse's own glossary, tools, learning guides and recent news. Every sentence cites the source
+            behind it, and anything that can't be checked against a source is left out.
+        </p>
     </div>
-</form>
 
-<div class="ask-examples mb-3">
-    <span class="text-muted small me-1">Try:</span>
-    @foreach (var example in _examples)
-    {
-        <button type="button" class="btn btn-sm btn-outline-secondary" disabled="@_busy" @onclick="() => AskAsync(example)">@example</button>
-    }
-</div>
+    <div class="ask-thread" aria-live="polite" aria-relevant="additions">
+        @if (_turns.Count == 0)
+        {
+            <section class="ask-welcome" aria-labelledby="ask-welcome-title">
+                <span class="welcome-mark" aria-hidden="true"><Icon Name="sparkle" Size="26" /></span>
+                <h2 id="ask-welcome-title" class="welcome-title">What do you want to know?</h2>
+                <p class="welcome-text">Ask about AI concepts, tools, costs or recent news. Tap a suggestion to start.</p>
+                <div class="suggestions">
+                    @foreach (var example in _examples)
+                    {
+                        <button type="button" class="suggestion" disabled="@Busy" @onclick="() => AskAsync(example)">
+                            <Icon Name="message" Size="15" /> <span>@example</span>
+                        </button>
+                    }
+                </div>
+            </section>
+        }
 
-@if (_busy)
-{
-    <p class="text-muted"><span class="spinner"></span> Looking through the sources…</p>
-}
-else if (_error is not null)
-{
-    <div class="alert alert-warning d-flex flex-wrap justify-content-between align-items-center gap-2" role="alert">
-        <span>@_error</span>
-        <button class="btn btn-sm btn-outline-dark" @onclick="() => AskAsync(_question)">Try again</button>
-    </div>
-}
-else if (_result is { } r)
-{
-    <div class="card ask-result mb-3">
-        <div class="card-body">
-            <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
-                @switch (r.Status)
-                {
-                    case AskStatus.Answered:
-                        <span class="badge bg-success">Every sentence matched to a source</span>
-                        <span class="badge bg-secondary" title="@ModeHint(r)">@ModeLabel(r)</span>
-                        break;
-                    case AskStatus.Refused:
-                        <span class="badge bg-danger">Refused</span>
-                        break;
-                    case AskStatus.RateLimited:
-                        <span class="badge bg-warning text-dark">Slow down</span>
-                        break;
-                    case AskStatus.NotFound:
-                        <span class="badge bg-secondary">Not in the sources</span>
-                        break;
-                }
-                <span class="text-muted small ms-auto">@r.Elapsed.TotalSeconds.ToString("0.0")s</span>
+        @for (var ti = 0; ti < _turns.Count; ti++)
+        {
+            var turnIndex = ti;
+            var turn = _turns[turnIndex];
+            var tid = $"turn-{turnIndex}";
+            <div class="turn" id="@tid" @key="turn">
+                <div class="msg msg-user">
+                    <div class="bubble bubble-user"><span class="visually-hidden">You asked: </span>@turn.Question</div>
+                </div>
+                <div class="msg msg-bot">
+                    <span class="bot-avatar" aria-hidden="true"><Icon Name="sparkle" Size="16" /></span>
+                    <div class="bubble bubble-bot">
+                        @if (turn.Pending)
+                        {
+                            <div class="typing" role="status">
+                                <span class="dots" aria-hidden="true"><span></span><span></span><span></span></span>
+                                Looking through the sources…
+                            </div>
+                        }
+                        else if (turn.Error is not null)
+                        {
+                            <div class="state state-error" role="alert">
+                                <p class="state-title"><Icon Name="help-circle" Size="16" /> Something went wrong</p>
+                                <p class="state-text">@turn.Error</p>
+                                <button type="button" class="btn btn-sm btn-outline-secondary" disabled="@Busy" @onclick="() => Retry(turn)"><Icon Name="refresh" Size="14" /> Try again</button>
+                            </div>
+                        }
+                        else if (turn.Result is { } r)
+                        {
+                            @switch (r.Status)
+                            {
+                                case AskStatus.NotFound:
+                                    <div class="state state-notfound">
+                                        <p class="state-title"><Icon Name="search" Size="16" /> Not in AiPulse's sources</p>
+                                        <p class="state-text">
+                                            Nothing in the glossary, tools, learning guides or recent news backs up an answer to this, so AiPulse won't guess.
+                                            Try rephrasing with a specific term, or look it up directly:
+                                        </p>
+                                        <div class="state-actions">
+                                            <a class="btn btn-sm btn-outline-secondary" href="@($"glossary?q={Uri.EscapeDataString(ShortQuery(turn.Question))}")"><Icon Name="book" Size="14" /> Search the glossary</a>
+                                            <a class="btn btn-sm btn-outline-secondary" href="news"><Icon Name="rss" Size="14" /> Browse the news</a>
+                                        </div>
+                                        @if (!string.IsNullOrWhiteSpace(r.Answer))
+                                        {
+                                            <p class="state-note">@r.Answer</p>
+                                        }
+                                    </div>
+                                    break;
+                                case AskStatus.Refused:
+                                    <div class="state state-refused">
+                                        <p class="state-title"><Icon Name="eye-off" Size="16" /> Can't help with that one</p>
+                                        <p class="state-text">@(string.IsNullOrWhiteSpace(r.Answer) ? "This question was blocked by a safety check." : r.Answer)</p>
+                                    </div>
+                                    break;
+                                case AskStatus.RateLimited:
+                                    <div class="state state-slow">
+                                        <p class="state-title"><Icon Name="activity" Size="16" /> Slow down a little</p>
+                                        <p class="state-text">@(string.IsNullOrWhiteSpace(r.Answer) ? "Too many questions in a short time. Wait a moment, then try again." : r.Answer)</p>
+                                        <button type="button" class="btn btn-sm btn-outline-secondary" disabled="@Busy" @onclick="() => Retry(turn)"><Icon Name="refresh" Size="14" /> Try again</button>
+                                    </div>
+                                    break;
+                                default:
+                                    <div class="answer-meta">
+                                        @if (r.Status == AskStatus.Answered)
+                                        {
+                                            <span class="meta-chip chip-ok"><Icon Name="check" Size="12" /> Every sentence matched to a source</span>
+                                        }
+                                        <span class="meta-chip" title="@ModeHint(r)">@ModeLabel(r)</span>
+                                        <span class="meta-time">@r.Elapsed.TotalSeconds.ToString("0.0")s</span>
+                                    </div>
+                                    <p class="answer">
+                                        @foreach (var part in AskCitations.Segments(r.Answer))
+                                        {
+                                            if (part.Cite is int n)
+                                            {
+                                                var open = turn.Open.Contains(n);
+                                                <button type="button" class="cite @(open ? "open" : "")" aria-expanded="@(open ? "true" : "false")"
+                                                        aria-controls="@($"{tid}-src-{n}")" aria-label="@($"Source {n}: {SourceTitle(r, n)}")" title="@SourceTitle(r, n)"
+                                                        @onclick="() => ToggleSource(turn, n)">@n</button>
+                                            }
+                                            else
+                                            {
+                                                @part.Text
+                                            }
+                                        }
+                                    </p>
+                                    @if (r.Notice is not null)
+                                    {
+                                        <p class="answer-notice"><Icon Name="help-circle" Size="14" /> @r.Notice</p>
+                                    }
+                                    break;
+                            }
+
+                            @if (r.Sources.Count > 0 && r.Status is AskStatus.Answered or AskStatus.SmallTalk)
+                            {
+                                <div class="sources">
+                                    <p class="sources-label">Sources <span>(tap to expand)</span></p>
+                                    <div class="source-chips">
+                                        @foreach (var s in r.Sources)
+                                        {
+                                            var open = turn.Open.Contains(s.Number);
+                                            <button type="button" class="source-chip @(open ? "open" : "")" aria-expanded="@(open ? "true" : "false")"
+                                                    aria-controls="@($"{tid}-src-{s.Number}")" @onclick="() => ToggleSource(turn, s.Number)">
+                                                <span class="sc-num">@s.Number</span>
+                                                <span class="sc-kind">@s.Kind</span>
+                                                <span class="sc-title">@s.Title</span>
+                                            </button>
+                                        }
+                                    </div>
+                                    @foreach (var s in r.Sources.Where(s => turn.Open.Contains(s.Number)))
+                                    {
+                                        <div class="source-card" id="@($"{tid}-src-{s.Number}")">
+                                            <div class="source-card-head">
+                                                <span class="sc-num">@s.Number</span>
+                                                <span class="sc-kind">@s.Kind</span>
+                                                @if (s.Published is { } published)
+                                                {
+                                                    <span class="sc-date">@published.ToLocalTime().ToString("d MMM yyyy")</span>
+                                                }
+                                                <button type="button" class="sc-close" aria-label="@($"Collapse source {s.Number}")" @onclick="() => ToggleSource(turn, s.Number)">✕</button>
+                                            </div>
+                                            <p class="source-card-title">
+                                                @if (!string.IsNullOrEmpty(s.Url) && s.Url.StartsWith('/'))
+                                                {
+                                                    <a href="@s.Url.TrimStart('/')">@s.Title</a>
+                                                }
+                                                else if (!string.IsNullOrEmpty(s.Url))
+                                                {
+                                                    <a href="@s.Url" target="_blank" rel="noopener noreferrer">@s.Title <Icon Name="external-link" Size="12" /></a>
+                                                }
+                                                else
+                                                {
+                                                    @s.Title
+                                                }
+                                            </p>
+                                            <p class="source-card-snippet">@s.Snippet</p>
+                                        </div>
+                                    }
+                                </div>
+                            }
+
+                            @if (r.Trace.Count > 0)
+                            {
+                                <details class="trace">
+                                    <summary>How this answer was made</summary>
+                                    <ol>
+                                        @foreach (var step in r.Trace)
+                                        {
+                                            <li><strong>@step.Step</strong>: @step.Detail</li>
+                                        }
+                                    </ol>
+                                </details>
+                            }
+
+                            @if (r.Status == AskStatus.NotFound && turnIndex == _turns.Count - 1)
+                            {
+                                <div class="suggestions suggestions-inline">
+                                    @foreach (var example in _examples.Where(e => e != turn.Question).Take(3))
+                                    {
+                                        <button type="button" class="suggestion" disabled="@Busy" @onclick="() => AskAsync(example)"><span>@example</span></button>
+                                    }
+                                </div>
+                            }
+                        }
+                    </div>
+                </div>
             </div>
-
-            <p class="ask-answer mb-2">
-                @foreach (var part in Segments(r.Answer))
-                {
-                    if (part.Cite is int n)
-                    {
-                        <a class="cite" href="@($"#src-{n}")" title="@SourceTitle(r, n)">@n</a>
-                    }
-                    else
-                    {
-                        @part.Text
-                    }
-                }
-            </p>
-
-            @if (r.Notice is not null)
-            {
-                <div class="alert alert-warning small py-2 mb-2">@r.Notice</div>
-            }
-
-            @if (r.Sources.Count > 0)
-            {
-                <h2 class="h6 mt-3">Sources</h2>
-                <ol class="ask-sources">
-                    @foreach (var s in r.Sources)
-                    {
-                        <li id="@($"src-{s.Number}")">
-                            <span class="badge bg-light text-dark border me-1">@s.Kind</span>
-                            @if (!string.IsNullOrEmpty(s.Url) && s.Url.StartsWith('/'))
-                            {
-                                <a href="@s.Url">@s.Title</a>
-                            }
-                            else if (!string.IsNullOrEmpty(s.Url))
-                            {
-                                <a href="@s.Url" target="_blank" rel="noopener noreferrer">@s.Title</a>
-                            }
-                            else
-                            {
-                                @s.Title
-                            }
-                            @if (s.Published is { } published)
-                            {
-                                <span class="text-muted small"> · @published.ToLocalTime().ToString("d MMM yyyy")</span>
-                            }
-                            <div class="text-muted small ask-snippet">@s.Snippet</div>
-                        </li>
-                    }
-                </ol>
-            }
-
-            <details class="mt-3 small">
-                <summary class="text-muted">How this answer was made</summary>
-                <ul class="mt-2 mb-0">
-                    @foreach (var step in r.Trace)
-                    {
-                        <li><strong>@step.Step</strong>: @step.Detail</li>
-                    }
-                </ul>
-            </details>
-        </div>
+        }
     </div>
-}
 
-<p class="text-muted small">
-    @if (!Gate.AskMayUseModel)
-    {
-        <span>AI model calls for Ask are switched off (an admin can turn them on under AI Settings), so answers are quoted straight from the sources.</span>
-    }
-    else if (Llm.Providers.Count == 0 && Llm.AllProviders.Count > 0)
-    {
-        <span>Every language-model provider is switched off, so answers are quoted straight from the sources.</span>
-    }
-    else if (Llm.Providers.Count == 0)
-    {
-        <span>No language model is configured, so answers are quoted straight from the sources.</span>
-    }
-    else
-    {
-        <span>Language model: @string.Join(", then ", Llm.Providers.Select(p => $"{p.Name} ({p.Model})")).</span>
-    }
-    <span> Searching @Corpus.Stats.Documents.ToString("N0") passages.</span>
-</p>
+    <form class="ask-composer" @onsubmit="() => AskAsync(_question)" @onsubmit:preventDefault>
+        <div class="composer-row">
+            <label for="ask-input" class="visually-hidden">Your question</label>
+            <input id="ask-input" class="composer-input" type="text" maxlength="@AiOptions.Value.MaxQuestionLength" autocomplete="off"
+                   placeholder="Ask a question, e.g. How does prompt caching cut cost?"
+                   @bind="_question" @bind:event="oninput" disabled="@Busy" />
+            <button class="composer-send" type="submit" disabled="@(Busy || string.IsNullOrWhiteSpace(_question))" aria-label="Ask">
+                @if (Busy) { <span class="spinner" aria-hidden="true"></span> } else { <Icon Name="arrow-up" Size="18" /> }
+            </button>
+        </div>
+        <div class="composer-foot">
+            <span class="composer-model">@ModelLine() Searching @Corpus.Stats.Documents.ToString("N0") passages.</span>
+            @if (_turns.Count > 0)
+            {
+                <button type="button" class="composer-clear" disabled="@Busy" @onclick="Clear"><Icon Name="trash" Size="13" /> Clear conversation</button>
+            }
+        </div>
+    </form>
+</div>
 
 @code {
     private static readonly string[] _examples =
@@ -172,36 +245,86 @@ else if (_result is { } r)
 
     [CascadingParameter] private Task<AuthenticationState>? AuthState { get; set; }
 
+    private sealed class Turn
+    {
+        public required string Question { get; init; }
+        public AskResult? Result { get; set; }
+        public string? Error { get; set; }
+        public bool Pending { get; set; }
+        public HashSet<int> Open { get; } = new();
+    }
+
+    private readonly List<Turn> _turns = new();
     private string _question = "";
-    private AskResult? _result;
-    private bool _busy;
-    private string? _error;
+    private IJSObjectReference? _ui;
+
+    private bool Busy => _turns.Any(t => t.Pending);
 
     private async Task AskAsync(string question)
     {
-        if (_busy || string.IsNullOrWhiteSpace(question)) return;
+        if (Busy || string.IsNullOrWhiteSpace(question)) return;
+        var turn = new Turn { Question = question.Trim(), Pending = true };
+        _turns.Add(turn);
+        _question = "";
+        await RunAsync(turn);
+    }
 
-        _question = question;
-        _busy = true;
-        _result = null;
+    private async Task Retry(Turn turn)
+    {
+        if (Busy) return;
+        turn.Error = null;
+        turn.Result = null;
+        turn.Open.Clear();
+        turn.Pending = true;
+        await RunAsync(turn);
+    }
+
+    private async Task RunAsync(Turn turn)
+    {
         StateHasChanged();
-
-        _error = null;
+        await ScrollToTurnAsync(turn);
         try
         {
             var caller = await CallerKeyAsync();
-            _result = await Agent.AskAsync(question, caller);
+            turn.Result = await Agent.AskAsync(turn.Question, caller);
         }
         catch (Exception ex)
         {
             // An exception escaping a click handler ends the whole connection, so a failure here must become a message instead.
             Log.LogWarning(ex, "Ask failed");
-            _error = "Something went wrong while answering. Please try again.";
+            turn.Error = "Something went wrong while answering. Please try again.";
         }
         finally
         {
-            _busy = false;
+            turn.Pending = false;
         }
+        StateHasChanged();
+        await ScrollToTurnAsync(turn);
+    }
+
+    private async Task ScrollToTurnAsync(Turn turn)
+    {
+        var index = _turns.IndexOf(turn);
+        if (index < 0) return;
+        try
+        {
+            _ui ??= await JS.InvokeAsync<IJSObjectReference>("import", "./js/page-ui.js");
+            await _ui.InvokeAsync<bool>("scrollToId", $"turn-{index}", false);
+        }
+        catch (JSDisconnectedException) { }
+        catch (JSException) { }
+        catch (InvalidOperationException) { } // prerendering: no JS yet
+    }
+
+    private void ToggleSource(Turn turn, int number)
+    {
+        if (!turn.Open.Add(number)) turn.Open.Remove(number);
+    }
+
+    private void Clear()
+    {
+        if (Busy) return;
+        _turns.Clear();
     }
 
     private async Task<string> CallerKeyAsync()
@@ -209,6 +332,23 @@ else if (_result is { } r)
         if (AuthState is null) return "anonymous";
         var user = (await AuthState).User;
         return user.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? user.Identity?.Name ?? "anonymous";
+    }
+
+    private string ModelLine()
+    {
+        if (!Gate.AskMayUseModel) return "AI model calls for Ask are off (an admin can turn them on under AI Settings), so answers are quoted from the sources.";
+        if (Llm.Providers.Count == 0 && Llm.AllProviders.Count > 0) return "Every language-model provider is switched off, so answers are quoted from the sources.";
+        if (Llm.Providers.Count == 0) return "No language model is configured, so answers are quoted from the sources.";
+        return $"Language model: {string.Join(", then ", Llm.Providers.Select(p => $"{p.Name} ({p.Model})"))}.";
+    }
+
+    /// <summary>The glossary search box matches a term, alias or definition, so hand it the question minus question words.</summary>
+    private static string ShortQuery(string question)
+    {
+        var words = question.Trim().TrimEnd('?', '.', '!').Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        var stop = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "what", "is", "are", "how", "do", "does", "i", "the", "a", "an", "why", "which", "who", "can", "to", "of", "for", "stand" };
+        var kept = words.Where(w => !stop.Contains(w)).ToList();
+        return kept.Count == 0 ? question : string.Join(' ', kept.Take(3));
     }
 
     private static string ModeLabel(AskResult r) => r.Mode == "model" ? $"Written by {r.Model}" : "Quoted from the sources";
@@ -219,17 +359,11 @@ else if (_result is { } r)
 
     private static string SourceTitle(AskResult r, int number) => r.Sources.FirstOrDefault(s => s.Number == number)?.Title ?? "";
 
-    private static readonly Regex CitePattern = new(@"\[(\d+)\]", RegexOptions.Compiled);
-
-    private static IEnumerable<(string? Text, int? Cite)> Segments(string answer)
+    public async ValueTask DisposeAsync()
     {
-        var last = 0;
-        foreach (Match m in CitePattern.Matches(answer))
+        if (_ui is not null)
         {
-            if (m.Index > last) yield return (answer[last..m.Index], null);
-            yield return (null, int.Parse(m.Groups[1].Value));
-            last = m.Index + m.Length;
+            try { await _ui.DisposeAsync(); } catch (JSDisconnectedException) { }
         }
-        if (last < answer.Length) yield return (answer[last..], null);
     }
 }

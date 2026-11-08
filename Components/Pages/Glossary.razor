@@ -18,8 +18,8 @@
     <Authorized>
         @if (_pendingCandidates.Count > 0)
         {
-            <section class="gloss-panel mb-3" aria-labelledby="gloss-review-title">
-                <h2 id="gloss-review-title" class="gloss-panel-title"><Icon Name="search" Size="16" /> Candidate terms awaiting review <span class="count-pill">@_pendingCandidates.Count</span></h2>
+            <details class="gloss-panel mb-3 review-panel" open="@(_approvingCandidateId is not null)">
+                <summary class="gloss-panel-title review-summary"><Icon Name="search" Size="16" /> Candidate terms awaiting review <span class="count-pill">@_pendingCandidates.Count</span><span class="review-hint">Show</span></summary>
                 <ul class="review-list">
                     @foreach (var c in _pendingCandidates)
                     {
@@ -64,14 +64,14 @@
                             {
                                 <div class="review-text"><strong>@c.Name</strong> <span class="text-muted">· @c.RawNote</span></div>
                                 <div class="review-actions">
-                                    <button class="btn btn-sm btn-outline-success" @onclick="() => StartApprove(c)">Review</button>
+                                    <button class="btn btn-sm btn-outline-primary" @onclick="() => StartApprove(c)">Review</button>
                                     <button class="btn btn-sm btn-outline-secondary" @onclick="() => Dismiss(c.Id)">Dismiss</button>
                                 </div>
                             }
                         </li>
                     }
                 </ul>
-            </section>
+            </details>
         }
     </Authorized>
 </AuthorizeView>

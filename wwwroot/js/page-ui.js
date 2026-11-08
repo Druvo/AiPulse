@@ -75,6 +75,17 @@ export function flash(id) {
     setTimeout(() => el.classList.remove('is-flash'), 1600);
 }
 
+/** Current appearance choices (theme on <html>, accent + logo from this browser's storage) for the Settings page. */
+export function appearance() {
+    const read = k => { try { return localStorage.getItem(k); } catch (e) { return null; } };
+    return {
+        theme: document.documentElement.getAttribute('data-theme') || 'light',
+        accent: read('aipulse-accent') || '',
+        logo: read('aipulse-logo') || 'v1',
+        customCss: read('aipulse-custom-css') || ''
+    };
+}
+
 /** Focuses an input by id (e.g. the "/" shortcut on the glossary search). */
 export function focusId(id) {
     const el = document.getElementById(id);
