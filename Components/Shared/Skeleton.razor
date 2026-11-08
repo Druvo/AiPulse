@@ -1,0 +1,78 @@
+@* Loading placeholder in the shape of what is coming. Announced once to screen readers ("Loading..."), the shapes themselves are hidden.
+   <Skeleton />                          three text lines
+   <Skeleton Variant="card" Count="3" />  a grid of three card placeholders (thumbnail, title, two lines)
+   <Skeleton Variant="list" Count="5" />  five avatar + two-line rows (feeds, notifications, tables)
+   <Skeleton Variant="stat" Count="4" />  a row of stat-card placeholders
+   <Skeleton Variant="block" Height="12rem" />  one block (a chart, an embed)
+   Shimmer is turned off under prefers-reduced-motion (see app.css). *@
+
+<div class="@WrapperClass @CssClass" role="status" aria-live="polite" aria-busy="true">
+    <span class="visually-hidden">@Label</span>
+    @switch (Variant)
+    {
+        case "card":
+            for (var i = 0; i < Math.Max(1, Count); i++)
+            {
+                <div class="skeleton-card" aria-hidden="true">
+                    <span class="skeleton skeleton-thumb mb-3"></span>
+                    <span class="skeleton skeleton-title"></span>
+                    <span class="skeleton skeleton-text w-80"></span>
+                    <span class="skeleton skeleton-text w-60"></span>
+                </div>
+            }
+            break;
+        case "list":
+            for (var i = 0; i < Math.Max(1, Count); i++)
+            {
+                <div class="skeleton-row" aria-hidden="true">
+                    <span class="skeleton skeleton-circle"></span>
+                    <div class="flex-grow-1">
+                        <span class="skeleton skeleton-text" style="width:@(Widths[i % Widths.Length])"></span>
+                        <span class="skeleton skeleton-text w-40"></span>
+                    </div>
+                </div>
+            }
+            break;
+        case "stat":
+            for (var i = 0; i < Math.Max(1, Count); i++)
+            {
+                <div class="skeleton-card text-center" aria-hidden="true">
+                    <span class="skeleton mx-auto" style="width:3.5rem;height:2rem;border-radius:8px"></span>
+                    <span class="skeleton skeleton-text mx-auto w-60 mt-3"></span>
+                </div>
+            }
+            break;
+        case "block":
+            <span class="skeleton skeleton-block" style="height:@Height" aria-hidden="true"></span>
+            break;
+        default:
+            for (var i = 0; i < Math.Max(1, Lines); i++)
+            {
+                <span class="skeleton skeleton-text" style="width:@(i == Lines - 1 && Lines > 1 ? "60%" : Widths[i % Widths.Length])" aria-hidden="true"></span>
+            }
+            break;
+    }
+</div>
+
+@code {
+    private static readonly string[] Widths = { "92%", "78%", "85%", "70%", "88%" };
+
+    /// <summary>"text" (default), "card", "list", "stat" or "block".</summary>
+    [Parameter] public string Variant { get; set; } = "text";
+    /// <summary>How many cards/rows/stats to show.</summary>
+    [Parameter] public int Count { get; set; } = 3;
+    /// <summary>Line count for the text variant.</summary>
+    [Parameter] public int Lines { get; set; } = 3;
+    /// <summary>Height of the block variant (any CSS length).</summary>
+    [Parameter] public string Height { get; set; } = "8rem";
+    [Parameter] public string Label { get; set; } = "Loading…";
+    [Parameter] public string? CssClass { get; set; }
+
+    private string WrapperClass => Variant switch
+    {
+        "card" => "skeleton-grid",
+        "stat" => "skeleton-grid skeleton-grid--stat",
+        "list" => "skeleton-stack",
+        _ => ""
+    };
+}

@@ -4,24 +4,30 @@
 @inject IJSRuntime JS
 
 <div class="notif-wrap">
-    <button class="notif-bell-btn" @onclick="Toggle" title="Notifications">
+    <button type="button" class="notif-bell-btn" @onclick="Toggle" title="Notifications" aria-label="@(_unread > 0 ? $"Notifications, {_unread} unread" : "Notifications")" aria-expanded="@(_open ? "true" : "false")" aria-haspopup="true">
         <Icon Name="bell" Size="20" />
         @if (_unread > 0)
         {
-            <span class="notif-badge">@_unread</span>
+            <span class="notif-badge" aria-hidden="true">@(_unread > 99 ? "99+" : _unread.ToString())</span>
         }
     </button>
 
     @if (_open)
     {
-        <div class="notif-panel">
+        <div class="notif-panel" role="dialog" aria-label="Alerts" @onkeydown="OnKey">
             <div class="notif-head">
                 <strong>Alerts</strong>
-                <button class="btn btn-sm btn-link p-0" @onclick="MarkRead">Mark all read</button>
+                <div class="d-flex align-items-center gap-1">
+                    <button type="button" class="btn btn-sm btn-link p-0" @onclick="MarkRead">Mark all read</button>
+                    <button type="button" class="icon-btn" style="width:2rem;height:2rem" aria-label="Close alerts" @onclick="() => _open = false"><Icon Name="x" Size="15" /></button>
+                </div>
             </div>
             @if (Notify.Recent.Count == 0)
             {
-                <div class="notif-empty">No alerts yet. Big releases and watchlist hits show up here.</div>
+                <div class="notif-empty">
+                    <div class="empty-state__icon mx-auto" aria-hidden="true"><Icon Name="bell" Size="22" /></div>
+                    No alerts yet. Big releases and watchlist hits show up here.
+                </div>
             }
             else
             {
@@ -84,6 +90,11 @@
     }
 
     private void Toggle() => _open = !_open;
+
+    private void OnKey(KeyboardEventArgs e)
+    {
+        if (e.Key == "Escape") _open = false;
+    }
 
     private void MarkRead()
     {

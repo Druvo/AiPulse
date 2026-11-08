@@ -3,150 +3,72 @@
 @inject FeedAggregatorService Feeds
 @inject ReadingStateService Reading
 
-<div class="top-row ps-3 navbar navbar-dark">
-    <div class="container-fluid">
-        <a class="navbar-brand d-flex align-items-center gap-2" href="dashboard">
-            <img src="/img/logo-v1.png" alt="AiPulse" class="app-logo brand-logo" />
-            <span>AiPulse</span>
-        </a>
-    </div>
-</div>
+@* The signed-in sidebar. One component, three presentations (all CSS, driven by attributes the early script in App.razor sets on <html>):
+   - wide screens: a full sidebar with grouped sections;
+   - wide screens, collapsed (data-sidebar="collapsed"): an icon rail, labels become tooltips but stay in the accessibility tree;
+   - phones (< 768px): a slide-over drawer opened from the top bar or the bottom tab bar's "Menu" button (data-drawer="open").
+   The links themselves come from ShellNav so the sidebar, drawer and bottom tab bar can never drift apart. *@
 
-<input type="checkbox" title="Navigation menu" class="navbar-toggler" />
-
-<div class="nav-scrollable" onclick="document.querySelector('.navbar-toggler').click()">
-    <nav class="flex-column">
-        <div class="nav-section-label px-3">Overview</div>
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="dashboard" Match="NavLinkMatch.All">
-                <Icon Name="home" />
-                <span>Dashboard</span>
-            </NavLink>
-        </div>
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="news">
-                <Icon Name="rss" />
-                <span>News Feed</span>
-                @if (_unreadCount is > 0)
-                {
-                    <span class="badge bg-secondary ms-auto" title="@_unreadCount unread">@(_unreadCount > 99 ? "99+" : _unreadCount)</span>
-                }
-            </NavLink>
-        </div>
-        <AuthorizeView>
-            <Authorized>
-                <div class="nav-item px-3">
-                    <NavLink class="nav-link" href="ask">
-                        <Icon Name="sparkle" />
-                        <span>Ask AiPulse</span>
-                    </NavLink>
-                </div>
-            </Authorized>
-        </AuthorizeView>
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="explore">
-                <Icon Name="trending-up" />
-                <span>Explore</span>
-            </NavLink>
-        </div>
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="free-apis">
-                <Icon Name="webhook" />
-                <span>Free AI APIs</span>
-            </NavLink>
-        </div>
-
-        <div class="nav-section-label px-3">Learning</div>
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="learn">
-                <Icon Name="graduation-cap" />
-                <span>Learning Hub</span>
-            </NavLink>
-        </div>
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="reading-stats">
-                <Icon Name="activity" />
-                <span>Reading Stats</span>
-            </NavLink>
-        </div>
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="glossary">
-                <Icon Name="book" />
-                <span>Glossary</span>
-            </NavLink>
-        </div>
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="tools">
-                <Icon Name="tool" />
-                <span>Tools &amp; Tips</span>
-            </NavLink>
-        </div>
-        <AuthorizeView Roles="Admin">
-            <Authorized>
-                <div class="nav-section-label px-3">Admin</div>
-                <div class="nav-item px-3">
-                    <NavLink class="nav-link" href="playground">
-                        <Icon Name="message" />
-                        <span>Playground</span>
-                    </NavLink>
-                </div>
-                <div class="nav-item px-3">
-                    <NavLink class="nav-link" href="sources">
-                        <Icon Name="database" />
-                        <span>Sources</span>
-                    </NavLink>
-                </div>
-                <div class="nav-item px-3">
-                    <NavLink class="nav-link" href="ai-settings">
-                        <Icon Name="zap" />
-                        <span>AI Settings</span>
-                    </NavLink>
-                </div>
-                <div class="nav-item px-3">
-                    <NavLink class="nav-link" href="source-health">
-                        <Icon Name="activity" />
-                        <span>Source Health</span>
-                    </NavLink>
-                </div>
-                <div class="nav-item px-3">
-                    <NavLink class="nav-link" href="users">
-                        <Icon Name="user" />
-                        <span>Users</span>
-                    </NavLink>
-                </div>
-            </Authorized>
-        </AuthorizeView>
-    </nav>
-</div>
-
-<div class="nav-footer px-3">
-    <button class="theme-toggle" type="button" onclick="toggleTheme()" title="Toggle light/dark">
-        <Icon Name="sun" Size="16" CssClass="icon-light" />
-        <Icon Name="moon" Size="16" CssClass="icon-dark" />
-        <span>Theme</span>
+<div class="sidebar-head">
+    <a class="sidebar-brand navbar-brand" href="dashboard" aria-label="AiPulse dashboard">
+        <img src="/img/logo-v1.png" alt="" class="app-logo brand-logo" width="34" height="34" />
+        <span class="sidebar-label">AiPulse</span>
+    </a>
+    <button type="button" class="sidebar-close icon-btn" data-shell="close-drawer" aria-label="Close menu">
+        <Icon Name="x" Size="20" />
     </button>
-    <AuthorizeView>
-        <Authorized>
-            <div class="nav-user">
-                <Icon Name="user" Size="14" />
-                <span>Signed in as <strong>@context.User.Identity?.Name</strong></span>
+</div>
+
+<AuthorizeView>
+    <nav class="sidebar-nav nav-scrollable" aria-label="Main">
+        @foreach (var section in ShellNav.VisibleTo(context.User.IsInRole("Admin")))
+        {
+            <div class="nav-section" role="group" aria-labelledby="@($"nav-sec-{section.Title.ToLowerInvariant()}")">
+                <div class="nav-section-label" id="@($"nav-sec-{section.Title.ToLowerInvariant()}")"><span class="sidebar-label">@section.Title</span></div>
+                @foreach (var item in section.Items)
+                {
+                    <div class="nav-item">
+                        <NavLink class="nav-link" href="@item.Path" Match="@(item.ExactMatch ? NavLinkMatch.All : NavLinkMatch.Prefix)" data-label="@item.Label">
+                            <Icon Name="@item.Icon" Size="19" />
+                            <span class="sidebar-label">@item.Label</span>
+                            @if (item.Path == "news" && _unreadCount is > 0)
+                            {
+                                <span class="nav-count" title="@_unreadCount unread">@(_unreadCount > 99 ? "99+" : _unreadCount)<span class="visually-hidden"> unread</span></span>
+                            }
+                        </NavLink>
+                    </div>
+                }
             </div>
-            <a class="nav-user-profile-link d-block px-1 pb-1 small" href="@($"u/{context.User.Identity?.Name}")">
-                <Icon Name="external-link" Size="12" /> View my profile
-            </a>
-            <form method="post" action="/auth/logout">
-                <button type="submit" class="logout-btn">
-                    <Icon Name="logout" Size="16" />
-                    <span>Sign out</span>
+        }
+    </nav>
+
+    <div class="nav-footer">
+        <a class="nav-user" href="@($"u/{context.User.Identity?.Name}")" data-label="View my profile">
+            <span class="avatar" aria-hidden="true">@ShellNav.Initials(context.User.Identity?.Name)</span>
+            <span class="nav-user__text sidebar-label">
+                <strong>@context.User.Identity?.Name</strong>
+                <small>@(context.User.IsInRole("Admin") ? "Admin" : "Member") · View profile</small>
+            </span>
+        </a>
+        <div class="nav-footer__row">
+            <button class="theme-toggle" type="button" onclick="toggleTheme()" title="Switch between light and dark theme" aria-label="Switch between light and dark theme">
+                <Icon Name="moon" Size="17" CssClass="icon-light" />
+                <Icon Name="sun" Size="17" CssClass="icon-dark" />
+                <span class="sidebar-label">Theme</span>
+            </button>
+            <form method="post" action="/auth/logout" class="m-0">
+                <button type="submit" class="logout-btn" title="Sign out" aria-label="Sign out">
+                    <Icon Name="logout" Size="17" />
+                    <span class="sidebar-label">Sign out</span>
                 </button>
             </form>
-        </Authorized>
-    </AuthorizeView>
-    <p class="nav-signature">
-        Made with <span class="text-danger">♥</span> by
-        <a href="https://github.com/Druvo" target="_blank" rel="noopener">Druvo</a>
-    </p>
-</div>
+        </div>
+        <p class="nav-signature sidebar-label">
+            Made with <span class="heart" aria-label="love">♥</span> by
+            <a href="https://github.com/Druvo" target="_blank" rel="noopener">Druvo</a>
+        </p>
+    </div>
+</AuthorizeView>
 
 @code {
     private int? _unreadCount;

@@ -33,12 +33,108 @@
             document.documentElement.setAttribute('data-theme', t);
             var bar = document.querySelector('meta[name="theme-color"]');
             if (bar) bar.setAttribute('content', t === 'dark' ? '#0f0c1a' : '#faf9ff');
-            var accent = localStorage.getItem('aipulse-accent');
+            var accent = null;
+            try { accent = localStorage.getItem('aipulse-accent'); } catch (e) { }
             if (accent) document.documentElement.setAttribute('data-accent', accent);
             else document.documentElement.removeAttribute('data-accent');
-            applyCustomCss();
-            applyLogo();
+            applyShell();
+            try { applyCustomCss(); } catch (e) { }
+            try { applyLogo(); } catch (e) { }
         }
+        // Signed-in sidebar: expanded or collapsed to an icon rail. A saved choice wins; otherwise mid-size screens start as a rail so the
+        // content keeps its room. Set on <html> before first paint (no layout jump) and re-applied after every enhanced navigation.
+        function applyShell() {
+            var s = null;
+            try { s = localStorage.getItem('aipulse-sidebar'); } catch (e) { }
+            if (!s) s = window.innerWidth < 1100 ? 'collapsed' : 'expanded';
+            document.documentElement.setAttribute('data-sidebar', s);
+            document.documentElement.removeAttribute('data-drawer');
+            syncShellLabels();
+        }
+        function toggleSidebar() {
+            var next = document.documentElement.getAttribute('data-sidebar') === 'collapsed' ? 'expanded' : 'collapsed';
+            document.documentElement.setAttribute('data-sidebar', next);
+            try { localStorage.setItem('aipulse-sidebar', next); } catch (e) { }
+            syncShellLabels();
+        }
+        function syncShellLabels() {
+            var collapsed = document.documentElement.getAttribute('data-sidebar') === 'collapsed';
+            document.querySelectorAll('[data-shell="toggle-sidebar"]').forEach(function (b) {
+                var t = collapsed ? 'Expand sidebar' : 'Collapse sidebar';
+                b.setAttribute('aria-label', t); b.setAttribute('title', t);
+                b.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+            });
+        }
+        // Phone slide-over menu: open/close, Escape, focus moves into the drawer and back to the button that opened it.
+        var drawerOpener = null;
+        function setDrawer(open, opener) {
+            var root = document.documentElement;
+            if (open) { drawerOpener = opener || document.activeElement; root.setAttribute('data-drawer', 'open'); }
+            else root.removeAttribute('data-drawer');
+            document.querySelectorAll('[data-shell="open-drawer"]').forEach(function (b) { b.setAttribute('aria-expanded', open ? 'true' : 'false'); });
+            if (open) {
+                var close = document.querySelector('.app-sidebar .sidebar-close');
+                if (close) setTimeout(function () { close.focus(); }, 30);
+            } else if (drawerOpener && drawerOpener.focus) {
+                try { drawerOpener.focus(); } catch (e) { }
+                drawerOpener = null;
+            }
+        }
+        document.addEventListener('click', function (e) {
+            var t = e.target.closest ? e.target.closest('[data-shell]') : null;
+            if (t) {
+                var a = t.getAttribute('data-shell');
+                if (a === 'open-drawer') { e.preventDefault(); setDrawer(true, t); }
+                else if (a === 'close-drawer') { e.preventDefault(); setDrawer(false); }
+                else if (a === 'toggle-sidebar') { e.preventDefault(); toggleSidebar(); }
+            } else if (document.documentElement.getAttribute('data-drawer') === 'open' && e.target.closest && e.target.closest('.app-sidebar a[href]')) {
+                document.documentElement.removeAttribute('data-drawer');
+            }
+            // Dropdowns built on <details> (account menu, public menu): a click anywhere else closes them.
+            document.querySelectorAll('details.user-menu[open], details.public-menu[open], details.landing-menu[open]').forEach(function (d) {
+                if (!d.contains(e.target) || (e.target.closest && e.target.closest('a[href]'))) d.removeAttribute('open');
+            });
+            // Show/hide password buttons on the sign-in screens.
+            var eye = e.target.closest ? e.target.closest('[data-reveal]') : null;
+            if (eye) {
+                var input = document.getElementById(eye.getAttribute('data-reveal'));
+                if (input) {
+                    var show = input.type === 'password';
+                    input.type = show ? 'text' : 'password';
+                    eye.setAttribute('aria-pressed', show ? 'true' : 'false');
+                    eye.setAttribute('aria-label', show ? 'Hide password' : 'Show password');
+                }
+            }
+        });
+        document.addEventListener('keydown', function (e) {
+            if (e.key !== 'Escape') return;
+            if (document.documentElement.getAttribute('data-drawer') === 'open') setDrawer(false);
+            document.querySelectorAll('details.user-menu[open], details.public-menu[open], details.landing-menu[open]').forEach(function (d) {
+                d.removeAttribute('open');
+                var s = d.querySelector('summary'); if (s) s.focus();
+            });
+        });
+        // Collapsed icon rail: show each link's label as a tooltip. Positioned in JS (fixed) so the sidebar's scroll area cannot clip it;
+        // the label text itself stays in the link for screen readers, so the tooltip is purely visual.
+        var shellTip = null;
+        function showShellTip(e) {
+            if (document.documentElement.getAttribute('data-sidebar') !== 'collapsed' || window.innerWidth < 768) return;
+            var el = e.target.closest ? e.target.closest('.app-sidebar [data-label]') : null;
+            if (!el) return;
+            if (!shellTip || !shellTip.isConnected) { shellTip = document.createElement('div'); shellTip.className = 'shell-tip'; shellTip.setAttribute('aria-hidden', 'true'); document.body.appendChild(shellTip); }
+            var r = el.getBoundingClientRect();
+            shellTip.textContent = el.getAttribute('data-label');
+            shellTip.style.left = (r.right + 10) + 'px';
+            shellTip.style.top = (r.top + r.height / 2) + 'px';
+            shellTip.classList.add('show');
+        }
+        function hideShellTip() { if (shellTip) shellTip.classList.remove('show'); }
+        document.addEventListener('mouseover', showShellTip);
+        document.addEventListener('focusin', showShellTip);
+        document.addEventListener('mouseout', hideShellTip);
+        document.addEventListener('focusout', hideShellTip);
+        document.addEventListener('scroll', hideShellTip, true);
+        document.addEventListener('DOMContentLoaded', syncShellLabels);
         applyTheme();
         function applyLogo() {
             var logo = localStorage.getItem('aipulse-logo') || 'v1';
@@ -63,6 +159,13 @@
             var onSystemChange = function () { if (!savedTheme()) applyTheme(); };
             if (watcher.addEventListener) watcher.addEventListener('change', onSystemChange);
             else if (watcher.addListener) watcher.addListener(onSystemChange);
+        }
+        if (window.matchMedia) {
+            // Leaving the phone layout with the drawer open must not leave the page scroll-locked behind an invisible scrim.
+            var wide = window.matchMedia('(min-width: 768px)');
+            var onWide = function () { if (wide.matches) document.documentElement.removeAttribute('data-drawer'); };
+            if (wide.addEventListener) wide.addEventListener('change', onWide);
+            else if (wide.addListener) wide.addListener(onWide);
         }
         function setAccent(name) {
             if (name) { document.documentElement.setAttribute('data-accent', name); localStorage.setItem('aipulse-accent', name); }

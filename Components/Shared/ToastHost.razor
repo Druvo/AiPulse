@@ -1,18 +1,21 @@
-@* Single toast stack for the whole app - see ToastService for how pages push a message here. *@
+@* Single toast stack for the whole app - see ToastService for how pages push a message here. Announced politely to screen readers;
+   the thin bar along the bottom shows how long the toast stays (hidden under prefers-reduced-motion). *@
 @rendermode InteractiveServer
 @implements IDisposable
 @inject ToastService Toasts
 
-<div class="toast-stack">
+<div class="toast-stack" role="status" aria-live="polite">
     @foreach (var t in _active)
     {
-        <div class="toast-item" @key="t.Id">
-            <span>@t.Text</span>
+        <div class="toast-item" @key="t.Id" style="--toast-ms:@(t.DurationMs)ms">
+            <span class="toast-icon" aria-hidden="true"><Icon Name="check" Size="15" /></span>
+            <span class="toast-text">@t.Text</span>
             @if (t.ActionText is not null)
             {
-                <button class="btn btn-sm btn-link p-0 toast-action" @onclick="() => RunAction(t)">@t.ActionText</button>
+                <button type="button" class="btn btn-sm btn-link p-0 toast-action" @onclick="() => RunAction(t)">@t.ActionText</button>
             }
-            <button class="btn btn-sm btn-link p-0 toast-close" title="Dismiss" @onclick="() => Remove(t.Id)"><Icon Name="check" Size="13" /></button>
+            <button type="button" class="icon-btn toast-close" title="Dismiss" aria-label="Dismiss notification" @onclick="() => Remove(t.Id)"><Icon Name="x" Size="15" /></button>
+            <span class="toast-progress" aria-hidden="true"></span>
         </div>
     }
 </div>

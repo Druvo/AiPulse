@@ -20,74 +20,71 @@
 
 <div class="login-shell-inner">
 <div class="login-card">
-    <div class="login-logo-wrap">
-        <img src="/img/logo-v1.png" alt="AiPulse" class="app-logo login-logo" />
-    </div>
-    <h1 class="login-brand-mark">AiPulse</h1>
-    <p class="text-muted text-center mb-4">Your AI reading &amp; learning station</p>
+    <div class="auth-icon" aria-hidden="true"><Icon Name="lock" Size="22" /></div>
+    <h1 class="auth-title">Welcome back</h1>
+    <p class="auth-sub">Sign in to your AiPulse dashboard.</p>
 
-    <EditForm Model="Input" OnValidSubmit="SignIn" FormName="login" method="post">
+    <EditForm Model="Input" OnValidSubmit="SignIn" FormName="login" method="post" class="auth-form">
         <DataAnnotationsValidator />
         @if (_error is not null)
         {
-            <div class="alert alert-danger py-2">@_error</div>
+            <div class="alert alert-danger py-2" role="alert">@_error</div>
         }
         @if (Error == "pending")
         {
-            <div class="alert alert-warning py-2">Your account is pending admin approval.</div>
+            <div class="alert alert-warning py-2" role="alert">Your account is pending admin approval.</div>
         }
         else if (Error == "disabled")
         {
-            <div class="alert alert-danger py-2">This account has been disabled.</div>
+            <div class="alert alert-danger py-2" role="alert">This account has been disabled.</div>
         }
-        <div class="mb-3">
-            <label class="form-label">Username</label>
-            <InputText class="form-control" @bind-Value="Input.Username" autocomplete="username" />
+        <div class="auth-field">
+            <label class="form-label" for="login-username">Username</label>
+            <InputText id="login-username" class="form-control" @bind-Value="Input.Username" autocomplete="username" autocapitalize="none" spellcheck="false" required />
         </div>
-        <div class="mb-3">
-            <label class="form-label">Password</label>
-            <InputText type="password" class="form-control" @bind-Value="Input.Password" autocomplete="current-password" />
+        <div class="auth-field">
+            <div class="auth-field-head">
+                <label class="form-label" for="login-password">Password</label>
+                <a href="/forgot-password">Forgot password?</a>
+            </div>
+            <div class="password-field">
+                <InputText id="login-password" type="password" class="form-control" @bind-Value="Input.Password" autocomplete="current-password" required />
+                <button type="button" class="password-reveal" data-reveal="login-password" aria-pressed="false" aria-label="Show password">
+                    <Icon Name="eye" Size="18" CssClass="eye-on" /><Icon Name="eye-off" Size="18" CssClass="eye-off" />
+                </button>
+            </div>
         </div>
-        <div class="form-check mb-3">
+        <div class="form-check auth-check">
             <InputCheckbox class="form-check-input" id="remember" @bind-Value="Input.Remember" />
             <label class="form-check-label" for="remember">Keep me signed in</label>
         </div>
-        <button type="submit" class="btn btn-primary w-100">Sign in</button>
+        <button type="submit" class="btn btn-primary">Sign in <Icon Name="arrow-right" Size="17" /></button>
     </EditForm>
 
     @if (_googleUsable || _githubUsable)
     {
-        <div class="d-flex align-items-center gap-2 my-3">
-            <hr class="flex-grow-1" /><span class="text-muted small">or</span><hr class="flex-grow-1" />
-        </div>
-        <div class="d-flex flex-column gap-2">
+        <div class="auth-divider">or continue with</div>
+        <div class="auth-social">
             @if (_googleUsable)
             {
-                <a class="btn btn-outline-secondary w-100" href="@($"/auth/external/google?returnUrl={Uri.EscapeDataString(ReturnUrl ?? "/dashboard")}")">Sign in with Google</a>
+                <a class="btn btn-outline-secondary" href="@($"/auth/external/google?returnUrl={Uri.EscapeDataString(ReturnUrl ?? "/dashboard")}")"><Icon Name="globe" Size="17" /> Sign in with Google</a>
             }
             @if (_githubUsable)
             {
-                <a class="btn btn-outline-secondary w-100" href="@($"/auth/external/github?returnUrl={Uri.EscapeDataString(ReturnUrl ?? "/dashboard")}")">Sign in with GitHub</a>
+                <a class="btn btn-outline-secondary" href="@($"/auth/external/github?returnUrl={Uri.EscapeDataString(ReturnUrl ?? "/dashboard")}")"><Icon Name="github" Size="17" /> Sign in with GitHub</a>
             }
         </div>
     }
 
     @if (_clerk is { } clerk)
     {
-        <div class="d-flex align-items-center gap-2 my-3">
-            <hr class="flex-grow-1" /><span class="text-muted small">or with an email account</span><hr class="flex-grow-1" />
-        </div>
+        <div class="auth-divider">or with an email account</div>
         <div id="clerk-signin" data-host="@clerk.Host" data-key="@clerk.PublishableKey" data-return-url="@(ReturnUrl ?? "/dashboard")" data-remember="@(Input.Remember ? "true" : "false")"></div>
     }
 
-    <p class="text-center text-muted small mt-3 mb-0">
-        <a href="/forgot-password">Forgot password?</a>
-    </p>
-    <p class="text-center text-muted small mt-1 mb-0">
-        Don't have an account? <a href="/register">Register</a>
-    </p>
+    <p class="auth-alt">New to AiPulse? <a href="/register">Create an account</a></p>
 </div>
-<p class="login-signature">Made with <span class="text-danger">♥</span> by <a href="https://github.com/Druvo" target="_blank" rel="noopener">Druvo</a> · <a href="https://github.com/Druvo/AiPulse" target="_blank" rel="noopener">Star this repo</a></p>
+<p class="login-signature"><a href="/">Back to the home page</a> · <a href="/news">Browse the news without an account</a></p>
 </div>
 
 @code {
