@@ -25,4 +25,5 @@ public sealed class AiPulseDbContext : DbContext
     public DbSet<FollowRecord> Follows => Set<FollowRecord>();
     public DbSet<CommentRecord> Comments => Set<CommentRecord>();
     public DbSet<UserProfileRecord> UserProfiles => Set<UserProfileRecord>();
+    public DbSet<UserTwoFactor> UserTwoFactors => Set<UserTwoFactor>();
 }

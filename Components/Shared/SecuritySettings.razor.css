@@ -1,0 +1,98 @@
+.sec {
+    max-width: 40rem;
+}
+
+.sec-badge {
+    display: inline-block;
+    padding: .1rem .55rem;
+    border-radius: 999px;
+    font-size: .8rem;
+    font-weight: 600;
+    background: var(--ap-accent-soft);
+    color: var(--ap-accent-soft-text);
+    border: 1px solid var(--ap-border);
+}
+
+.sec-badge-on {
+    background: var(--ap-success-soft);
+    color: var(--ap-success-soft-text);
+}
+
+.sec-warning {
+    color: var(--ap-warning-soft-text);
+    background: var(--ap-warning-soft);
+    border-radius: var(--ap-radius-sm);
+    padding: .4rem .6rem;
+}
+
+.sec-steps {
+    padding-left: 1.25rem;
+    margin-bottom: 1rem;
+}
+
+.sec-steps > li {
+    margin-bottom: .9rem;
+}
+
+/* The QR code itself is always black on white (what phone cameras read best); this is just its frame. */
+.sec-qr {
+    margin: .6rem 0;
+    width: min(220px, 100%);
+    padding: .4rem;
+    background: #fff;
+    border: 1px solid var(--ap-border-strong);
+    border-radius: var(--ap-radius-md);
+}
+
+.sec-qr ::deep svg {
+    display: block;
+    width: 100%;
+    height: auto;
+}
+
+.sec-key {
+    display: inline-block;
+    font-family: var(--ap-font-mono);
+    font-size: .95rem;
+    letter-spacing: .04em;
+    word-break: break-all;
+    padding: .35rem .5rem;
+    border-radius: var(--ap-radius-sm);
+    background: var(--ap-accent-soft);
+    color: var(--ap-accent-soft-text);
+}
+
+.sec-code {
+    max-width: 14rem;
+    font-family: var(--ap-font-mono);
+    letter-spacing: .08em;
+}
+
+.sec-form {
+    border: 1px solid var(--ap-border);
+    border-radius: var(--ap-radius-md);
+    padding: var(--ap-space-sm);
+    background: var(--ap-surface);
+}
+
+.sec-callout {
+    border: 1px solid var(--ap-border-strong);
+    border-left: 4px solid var(--ap-accent);
+    border-radius: var(--ap-radius-md);
+    padding: var(--ap-space-sm);
+    background: var(--ap-surface);
+}
+
+.sec-codes {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(9.5rem, 1fr));
+    gap: .35rem .75rem;
+    padding-left: 1.5rem;
+    margin-bottom: .9rem;
+}
+
+.sec-codes code {
+    font-family: var(--ap-font-mono);
+    font-size: .95rem;
+    color: var(--ap-text);
+}

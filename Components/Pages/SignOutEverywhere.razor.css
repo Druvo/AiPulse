@@ -1,0 +1,8 @@
+.security-panel {
+    max-width: 40rem;
+    border: 1px solid var(--ap-border);
+    border-radius: var(--ap-radius-md);
+    padding: var(--ap-space-sm);
+    background: var(--ap-surface);
+    color: var(--ap-text);
+}

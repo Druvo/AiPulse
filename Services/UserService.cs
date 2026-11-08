@@ -24,6 +24,17 @@ public sealed class UserService
     private bool _schemaEnsured;
     private readonly SemaphoreSlim _schemaLock = new(1, 1);
 
+    // Registration and reset requests come over the Blazor circuit, not HTTP, so the HTTP rate limiter never sees them.
+    // Reset requests: per email address (silently dropped past the limit - the page says the same thing either way) plus an
+    // overall cap so one visitor cannot spray many addresses. Registration: an overall cap on new accounts.
+    private readonly Security.AttemptThrottle _resetPerEmail = new(3, TimeSpan.FromMinutes(15));
+    private readonly Security.AttemptThrottle _resetOverall = new(30, TimeSpan.FromHours(1));
+    private readonly Security.AttemptThrottle _registrations = new(20, TimeSpan.FromMinutes(10));
+
+    /// <summary>A real hash of a random password: verifying against it for unknown usernames makes "no such user" take as long
+    /// as "wrong password", so response timing does not reveal which usernames exist.</summary>
+    private static readonly string TimingDummyHash = PasswordHasher.Hash(Guid.NewGuid().ToString("N"));
+
     /// <summary>Whether self-registration (username/password or, later, OAuth) needs Admin approval before signing in.</summary>
     public bool RequireApproval => _bootstrap.RequireApproval;
 
@@ -73,7 +84,10 @@ public sealed class UserService
         await using var db = await _dbFactory.CreateDbContextAsync();
         var user = await db.Users.FirstOrDefaultAsync(u => u.Username.ToLower() == username.Trim().ToLower());
         if (user is null)
+        {
+            PasswordHasher.Verify(password, TimingDummyHash);
             return (LoginResult.InvalidCredentials, null);
+        }
 
         var now = DateTimeOffset.UtcNow;
         if (user.LockoutUntil is { } until && until > now)
@@ -129,6 +143,11 @@ public sealed class UserService
             return (false, "Password must be at least 6 characters.");
         if (ReservedUsernames.Contains(username))
             return (false, "That username is reserved.");
+        if (!_registrations.TryAcquire("all"))
+        {
+            _log.LogWarning("Registration throttled: too many new accounts in a short time.");
+            return (false, "Too many sign-ups right now. Please try again in a few minutes.");
+        }
 
         await using var db = await _dbFactory.CreateDbContextAsync();
         if (await db.Users.AnyAsync(u => u.Username.ToLower() == username.ToLower()))
@@ -202,11 +221,16 @@ public sealed class UserService
         await using var db = await _dbFactory.CreateDbContextAsync();
         var user = await db.Users.FirstOrDefaultAsync(u => u.Username.ToLower() == username.ToLower());
         if (user is null) return (false, "User not found.");
-        if (!PasswordHasher.Verify(currentPassword, user.PasswordHash))
+        if (string.IsNullOrEmpty(user.PasswordHash) || !PasswordHasher.Verify(currentPassword, user.PasswordHash))
+        {
+            await LogAuditAsync(db, "User.PasswordChangeFailed", targetUser: user, actorUser: user);
             return (false, "Current password is incorrect.");
+        }
 
         user.PasswordHash = PasswordHasher.Hash(newPassword);
+        await InvalidateResetTokensAsync(db, user.Id);
         await db.SaveChangesAsync();
+        await LogAuditAsync(db, "User.PasswordChanged", targetUser: user, actorUser: user);
         return (true, null);
     }
 
@@ -330,11 +354,20 @@ public sealed class UserService
     /// </summary>
     public async Task RequestPasswordResetAsync(string email, Func<string, string> buildResetUrl)
     {
+        var normalizedEmail = (email ?? "").Trim().ToLowerInvariant();
+        if (normalizedEmail.Length == 0) return;
+        if (!_resetPerEmail.TryAcquire(normalizedEmail) || !_resetOverall.TryAcquire("all"))
+        {
+            _log.LogWarning("Password reset request throttled.");
+            return;
+        }
+
         await using var db = await _dbFactory.CreateDbContextAsync();
         var user = await db.Users.FirstOrDefaultAsync(u => u.Email != null && u.Email.ToLower() == email.Trim().ToLower());
         if (user is null) return;
 
         var (token, url) = await CreateResetTokenAsync(db, user, buildResetUrl);
+        await LogAuditAsync(db, "User.PasswordResetRequested", targetUser: user);
         await _emailSender.SendAsync(email, "Reset your AiPulse password",
             $"Someone requested a password reset for your AiPulse account.\n\nReset it here (valid 1 hour): {url}\n\nIf this wasn't you, ignore this email.");
     }
@@ -394,9 +427,18 @@ public sealed class UserService
         user.PasswordHash = PasswordHasher.Hash(newPassword);
         user.SecurityStamp = Guid.NewGuid().ToString("N");
         reset.UsedAt = DateTimeOffset.UtcNow;
+        // Any other link issued for this account (an older email, an admin-generated link) stops working too.
+        await InvalidateResetTokensAsync(db, user.Id);
         await db.SaveChangesAsync();
         await LogAuditAsync(db, "User.PasswordResetViaToken", targetUser: user);
         return (true, null);
+    }
+
+    /// <summary>Marks every still-unused reset token for this account as used (they are single-use; this retires them early).</summary>
+    private static async Task InvalidateResetTokensAsync(AiPulseDbContext db, int userId)
+    {
+        var open = await db.PasswordResetTokens.Where(t => t.UserId == userId && t.UsedAt == null).ToListAsync();
+        foreach (var t in open) t.UsedAt = DateTimeOffset.UtcNow;
     }
 
     private static async Task LogAuditAsync(AiPulseDbContext db, string action, AppUser? targetUser = null, AppUser? actorUser = null, string? detail = null)

@@ -1,0 +1,23 @@
+@page "/account/sign-out-everywhere"
+@attribute [Authorize]
+
+@* Static server rendering. The POST is handled by SignOutEverywhereMiddleware (Services/Security/TwoFactorSignIn.cs), which
+   checks the antiforgery token rendered here, rotates the security stamp and clears this browser's cookie. *@
+
+<PageTitle>AiPulse · Sign out everywhere</PageTitle>
+
+<div class="page-header">
+    <h1>Sign out everywhere</h1>
+    <p class="lead">Ends every AiPulse session for your account - other browsers, phones, and this one. Use it if you signed in on a shared computer or think someone else has your password.</p>
+</div>
+
+<div class="security-panel">
+    <p>Anyone signed in as you will be asked to sign in again within about a minute. You will go straight back to the sign-in page.</p>
+    <form method="post" action="/account/sign-out-everywhere">
+        <AntiforgeryToken />
+        <div class="d-flex flex-wrap gap-2">
+            <button type="submit" class="btn btn-danger">Sign out all sessions</button>
+            <a class="btn btn-outline-secondary" href="/account/security">Cancel</a>
+        </div>
+    </form>
+</div>

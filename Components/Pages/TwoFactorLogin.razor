@@ -1,0 +1,109 @@
+@page "/login/2fa"
+@layout AiPulse.Components.Layout.EmptyLayout
+@using AiPulse.Services.Security
+@inject TwoFactorLoginFlow Flow
+@inject NavigationManager Nav
+
+@* Static server rendering on purpose (no @rendermode): signing in sets a cookie, which needs the real HTTP response. *@
+
+<PageTitle>AiPulse · Two-step verification</PageTitle>
+<HeadContent>
+    <meta name="robots" content="noindex" />
+</HeadContent>
+
+<div class="login-shell-inner">
+<div class="login-card">
+    <div class="login-logo-wrap">
+        <img src="/img/logo-v1.png" alt="AiPulse" class="app-logo login-logo" />
+    </div>
+    <h1 class="login-brand-mark">AiPulse</h1>
+    <p class="text-muted text-center mb-4">Two-step verification</p>
+
+    @if (_expired)
+    {
+        <div class="alert alert-warning py-2" role="alert">Your sign-in timed out. Please enter your username and password again.</div>
+        <a class="btn btn-primary w-100" href="/login">Back to sign in</a>
+    }
+    else
+    {
+        <EditForm Model="Input" FormName="two-factor" OnSubmit="Verify" method="post">
+            @if (_error is not null)
+            {
+                <div class="alert alert-danger py-2" role="alert">@_error</div>
+            }
+            <div class="mb-3">
+                @if (UseRecovery)
+                {
+                    <label class="form-label" for="tf-code">Recovery code</label>
+                    <InputText id="tf-code" class="form-control tf-code-input" @bind-Value="Input.Code" autocomplete="off" autocapitalize="none" spellcheck="false" maxlength="32" aria-describedby="tf-help" />
+                    <div id="tf-help" class="small text-muted mt-1">One of the codes you saved when you turned on two-step verification, like <span class="font-monospace">abcde-23456</span>. Each code works once.</div>
+                }
+                else
+                {
+                    <label class="form-label" for="tf-code">Authentication code</label>
+                    <InputText id="tf-code" class="form-control tf-code-input" @bind-Value="Input.Code" autocomplete="one-time-code" inputmode="numeric" maxlength="12" aria-describedby="tf-help" />
+                    <div id="tf-help" class="small text-muted mt-1">Open your authenticator app and enter the 6-digit code it shows for AiPulse.</div>
+                }
+            </div>
+            <button type="submit" class="btn btn-primary w-100">Verify and sign in</button>
+        </EditForm>
+
+        <p class="text-center small mt-3 mb-0">
+            @if (UseRecovery)
+            {
+                <a href="/login/2fa">Use your authenticator app instead</a>
+            }
+            else
+            {
+                <a href="/login/2fa?recovery=1">Lost your phone? Use a recovery code</a>
+            }
+        </p>
+        <p class="text-center text-muted small mt-1 mb-0">
+            <a href="/login">Cancel and start over</a>
+        </p>
+    }
+</div>
+</div>
+
+@code {
+    [CascadingParameter] private HttpContext HttpContext { get; set; } = default!;
+    [SupplyParameterFromForm(FormName = "two-factor")] private CodeInput Input { get; set; } = new();
+    [SupplyParameterFromQuery(Name = "recovery")] private string? Recovery { get; set; }
+
+    private bool UseRecovery => Recovery == "1";
+    private bool _expired;
+    private string? _error;
+
+    protected override void OnInitialized()
+    {
+        HttpContext.Response.Headers.CacheControl = "no-store";
+        if (!HttpMethods.IsPost(HttpContext.Request.Method) && Flow.ReadChallenge(HttpContext) is null)
+            _expired = true;
+    }
+
+    private async Task Verify()
+    {
+        var result = await Flow.CompleteAsync(HttpContext, Input.Code);
+        switch (result.Status)
+        {
+            case TwoFactorCompletionStatus.Success:
+                Nav.NavigateTo(result.RedirectTo ?? "/dashboard");
+                return;
+            case TwoFactorCompletionStatus.Expired:
+                _expired = true;
+                return;
+            case TwoFactorCompletionStatus.LockedOut:
+                _error = $"Too many wrong codes. Try again after {result.LockedUntil?.ToUniversalTime():HH:mm} UTC, or ask an admin for help.";
+                break;
+            default:
+                _error = UseRecovery ? "That recovery code is not valid or was already used." : "That code is not valid. Wait for a fresh code and try again.";
+                break;
+        }
+        Input.Code = "";
+    }
+
+    public sealed class CodeInput
+    {
+        public string? Code { get; set; }
+    }
+}

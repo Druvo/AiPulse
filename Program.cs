@@ -199,6 +199,7 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
         options.Events.OnTicketReceived = ctx => HandleExternalTicketReceivedAsync(ctx, OAuthProviders.GitHub);
     });
 builder.Services.AddAuthorization();
+builder.Services.AddSecurityHardening(builder.Configuration); // 2FA sign-in guard, security headers + report-only CSP, rate limits (Services/Security)
 
 // Shared by both providers' OnTicketReceived above: resolve/create the local AppUser (ExternalAuthService),
 // then replace the provider's own principal with AiPulse's own 4-claim shape (same one Login.razor's

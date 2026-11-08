@@ -1,0 +1,280 @@
+@using AiPulse.Services.Security
+@inject TwoFactorService TwoFactor
+@inject UserService Users
+@inject IJSRuntime JS
+
+@*
+    Self-service account security: two-step verification (TOTP) set-up, recovery codes, turning it off, and "sign out
+    everywhere". No @rendermode of its own - it runs interactively inside whichever interactive page embeds it
+    (Settings.razor, /account/security).
+*@
+
+<section class="sec" aria-labelledby="sec-2fa-title">
+    <h4 class="section-title" id="sec-2fa-title"><Icon Name="key" /> Two-step verification</h4>
+
+    @if (_loading)
+    {
+        <p class="text-muted">Loading…</p>
+    }
+    else if (!_hasPassword)
+    {
+        <p class="text-muted">You sign in with an external account (Google, GitHub or Clerk). Turn on two-step verification with that provider - AiPulse's own codes only protect username-and-password sign-in.</p>
+    }
+    else if (_recoveryCodes is not null)
+    {
+        <div class="sec-callout" role="status">
+            <p class="mb-2"><strong>Save your recovery codes.</strong> If you lose your phone, each of these lets you sign in once. They will not be shown again.</p>
+            <ol class="sec-codes" aria-label="Recovery codes">
+                @foreach (var recoveryCode in _recoveryCodes)
+                {
+                    <li><code>@recoveryCode</code></li>
+                }
+            </ol>
+            <div class="d-flex flex-wrap gap-2">
+                <button type="button" class="btn btn-sm btn-outline-secondary" @onclick="CopyCodes">@(_copied ? "Copied" : "Copy codes")</button>
+                <a class="btn btn-sm btn-outline-secondary" download="aipulse-recovery-codes.txt" href="@CodesDownloadHref">Download .txt</a>
+                <button type="button" class="btn btn-sm btn-primary" @onclick="DismissCodes">I have saved them</button>
+            </div>
+        </div>
+    }
+    else if (_status is { Enabled: true } status)
+    {
+        <p>
+            <span class="sec-badge sec-badge-on">On</span>
+            <span class="text-muted">since @status.EnabledAt?.ToLocalTime().ToString("d MMM yyyy")</span>
+        </p>
+        <p class="@(status.RecoveryCodesLeft <= 3 ? "sec-warning" : "text-muted")">
+            @status.RecoveryCodesLeft recovery @(status.RecoveryCodesLeft == 1 ? "code" : "codes") left.
+            @if (status.RecoveryCodesLeft <= 3) { <text>Make new ones soon.</text> }
+        </p>
+
+        @if (_mode == Mode.Regenerate)
+        {
+            <div class="sec-form">
+                <label class="form-label" for="sec-regen-code">Code from your authenticator app</label>
+                <input id="sec-regen-code" class="form-control sec-code" @bind="_code" autocomplete="one-time-code" inputmode="numeric" maxlength="12" />
+                <div class="d-flex flex-wrap gap-2 mt-2">
+                    <button type="button" class="btn btn-primary" @onclick="Regenerate" disabled="@_busy">Make new recovery codes</button>
+                    <button type="button" class="btn btn-outline-secondary" @onclick="Reset">Cancel</button>
+                </div>
+            </div>
+        }
+        else if (_mode == Mode.Disable)
+        {
+            <div class="sec-form">
+                <p class="small text-muted mb-2">To turn it off, confirm it is really you.</p>
+                <label class="form-label" for="sec-dis-pw">Current password</label>
+                <input id="sec-dis-pw" type="password" class="form-control mb-2" @bind="_password" autocomplete="current-password" />
+                <label class="form-label" for="sec-dis-code">Authentication code or recovery code</label>
+                <input id="sec-dis-code" class="form-control sec-code" @bind="_code" autocomplete="one-time-code" maxlength="32" />
+                <div class="d-flex flex-wrap gap-2 mt-2">
+                    <button type="button" class="btn btn-danger" @onclick="Disable" disabled="@_busy">Turn off two-step verification</button>
+                    <button type="button" class="btn btn-outline-secondary" @onclick="Reset">Cancel</button>
+                </div>
+            </div>
+        }
+        else
+        {
+            <div class="d-flex flex-wrap gap-2">
+                <button type="button" class="btn btn-outline-secondary" @onclick="() => Show(Mode.Regenerate)">New recovery codes</button>
+                <button type="button" class="btn btn-outline-danger" @onclick="() => Show(Mode.Disable)">Turn off</button>
+            </div>
+        }
+    }
+    else if (_enrollment is { } enrollment)
+    {
+        <ol class="sec-steps">
+            <li>Open an authenticator app (Google Authenticator, Microsoft Authenticator, 1Password, Bitwarden, Authy…) and add an account.</li>
+            <li>
+                Scan this QR code.
+                <div class="sec-qr">@((MarkupString)enrollment.QrSvg)</div>
+                <details class="small">
+                    <summary>Can't scan it? Enter this key instead</summary>
+                    <p class="mt-2 mb-1">Key (time-based, 6 digits):</p>
+                    <code class="sec-key" aria-label="Setup key">@enrollment.ManualKey</code>
+                </details>
+            </li>
+            <li>
+                <label class="form-label" for="sec-enrol-code">Enter the 6-digit code the app shows</label>
+                <input id="sec-enrol-code" class="form-control sec-code" @bind="_code" autocomplete="one-time-code" inputmode="numeric" maxlength="12" />
+            </li>
+        </ol>
+        <div class="d-flex flex-wrap gap-2">
+            <button type="button" class="btn btn-primary" @onclick="Confirm" disabled="@_busy">Turn on</button>
+            <button type="button" class="btn btn-outline-secondary" @onclick="CancelEnrollment">Cancel</button>
+        </div>
+    }
+    else
+    {
+        <p><span class="sec-badge">Off</span> <span class="text-muted">Add a code from your phone to every sign-in, so a stolen password alone is not enough.</span></p>
+        <button type="button" class="btn btn-primary" @onclick="Begin" disabled="@_busy">Set up two-step verification</button>
+    }
+
+    <div aria-live="polite">
+        @if (_message is not null)
+        {
+            <div class="alert @(_messageIsError ? "alert-danger" : "alert-success") py-2 mt-3 mb-0 small">@_message</div>
+        }
+    </div>
+</section>
+
+<section class="sec mt-4" aria-labelledby="sec-sessions-title">
+    <h4 class="section-title" id="sec-sessions-title"><Icon Name="logout" /> Sessions</h4>
+    <p class="text-muted">Signed in somewhere you shouldn't be, or lost a device? End every session for your account, including this one.</p>
+    <a class="btn btn-outline-danger" href="/account/sign-out-everywhere">Sign out everywhere…</a>
+</section>
+
+@code {
+    [CascadingParameter] private Task<AuthenticationState>? AuthState { get; set; }
+
+    private enum Mode { None, Regenerate, Disable }
+
+    private int _userId;
+    private bool _loading = true;
+    private bool _hasPassword;
+    private bool _busy;
+    private TwoFactorStatus? _status;
+    private TwoFactorEnrollment? _enrollment;
+    private IReadOnlyList<string>? _recoveryCodes;
+    private Mode _mode;
+    private string _code = "";
+    private string _password = "";
+    private string? _message;
+    private bool _messageIsError;
+    private bool _copied;
+
+    private string CodesDownloadHref => "data:text/plain;charset=utf-8," + Uri.EscapeDataString(
+        "AiPulse recovery codes - each works once.\n\n" + string.Join("\n", _recoveryCodes ?? Array.Empty<string>()) + "\n");
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (AuthState is null) return;
+        var state = await AuthState;
+        if (!int.TryParse(state.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value, out _userId)) return;
+        var user = await Users.GetByIdAsync(_userId);
+        _hasPassword = !string.IsNullOrEmpty(user?.PasswordHash);
+        await RefreshAsync();
+        _loading = false;
+    }
+
+    private async Task RefreshAsync() => _status = await TwoFactor.GetStatusAsync(_userId);
+
+    private void Say(string? message, bool error = false)
+    {
+        _message = message;
+        _messageIsError = error;
+    }
+
+    private async Task Begin()
+    {
+        _busy = true;
+        try
+        {
+            _enrollment = await TwoFactor.BeginEnrollmentAsync(_userId);
+            _code = "";
+            Say(null);
+        }
+        catch (InvalidOperationException ex)
+        {
+            Say(ex.Message, error: true);
+        }
+        finally { _busy = false; }
+    }
+
+    private async Task CancelEnrollment()
+    {
+        await TwoFactor.CancelEnrollmentAsync(_userId);
+        _enrollment = null;
+        _code = "";
+        Say(null);
+    }
+
+    private async Task Confirm()
+    {
+        _busy = true;
+        try
+        {
+            var (ok, error, codes) = await TwoFactor.ConfirmEnrollmentAsync(_userId, _code);
+            _code = "";
+            if (!ok)
+            {
+                Say(error, error: true);
+                return;
+            }
+            _enrollment = null;
+            _recoveryCodes = codes;
+            await RefreshAsync();
+            Say("Two-step verification is on. You will be asked for a code the next time you sign in.");
+        }
+        finally { _busy = false; }
+    }
+
+    private async Task Regenerate()
+    {
+        _busy = true;
+        try
+        {
+            var (ok, error, codes) = await TwoFactor.RegenerateRecoveryCodesAsync(_userId, _code);
+            _code = "";
+            if (!ok)
+            {
+                Say(error, error: true);
+                return;
+            }
+            _mode = Mode.None;
+            _recoveryCodes = codes;
+            await RefreshAsync();
+            Say("New recovery codes made. The old ones no longer work.");
+        }
+        finally { _busy = false; }
+    }
+
+    private async Task Disable()
+    {
+        _busy = true;
+        try
+        {
+            var (ok, error) = await TwoFactor.DisableAsync(_userId, _password, _code);
+            _code = "";
+            _password = "";
+            if (!ok)
+            {
+                Say(error, error: true);
+                return;
+            }
+            _mode = Mode.None;
+            await RefreshAsync();
+            Say("Two-step verification is off.");
+        }
+        finally { _busy = false; }
+    }
+
+    private void Show(Mode mode)
+    {
+        _mode = mode;
+        _code = "";
+        _password = "";
+        Say(null);
+    }
+
+    private void Reset() => Show(Mode.None);
+
+    private async Task CopyCodes()
+    {
+        try
+        {
+            await JS.InvokeVoidAsync("navigator.clipboard.writeText", string.Join("\n", _recoveryCodes ?? Array.Empty<string>()));
+            _copied = true;
+        }
+        catch (JSException)
+        {
+            Say("Copying is blocked in this browser - use Download instead.", error: true);
+        }
+    }
+
+    private void DismissCodes()
+    {
+        _recoveryCodes = null;
+        _copied = false;
+    }
+}

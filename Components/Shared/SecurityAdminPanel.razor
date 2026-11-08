@@ -1,0 +1,108 @@
+@using AiPulse.Services.Security
+@inject TwoFactorService TwoFactor
+@inject CspViolationLog CspLog
+
+@*
+    Admin-only security tools: reset someone's two-step verification (they lost phone and recovery codes) and the recent
+    Content-Security-Policy reports, for deciding when the policy can be enforced. Renders nothing for non-admins, and the
+    reset itself re-checks the role server-side. Embeddable in Users.razor as well.
+*@
+
+@if (_isAdmin)
+{
+    <section class="sec-admin" aria-labelledby="sec-admin-title">
+        <h4 class="section-title" id="sec-admin-title"><Icon Name="user" /> Two-step verification (admin)</h4>
+        @if (_enrolled.Count == 0)
+        {
+            <p class="text-muted">Nobody has two-step verification turned on yet.</p>
+        }
+        else
+        {
+            <div class="table-responsive">
+                <table class="table table-sm align-middle">
+                    <thead><tr><th scope="col">User</th><th scope="col">On since</th><th scope="col">Recovery codes</th><th scope="col"><span class="visually-hidden">Actions</span></th></tr></thead>
+                    <tbody>
+                        @foreach (var u in _enrolled)
+                        {
+                            <tr>
+                                <td>@u.Username</td>
+                                <td>@u.EnabledAt?.ToLocalTime().ToString("d MMM yyyy")</td>
+                                <td>@u.RecoveryCodesLeft</td>
+                                <td class="text-end">
+                                    @if (_confirming == u.UserId)
+                                    {
+                                        <button type="button" class="btn btn-sm btn-danger" @onclick="() => Reset(u)">Confirm reset</button>
+                                        <button type="button" class="btn btn-sm btn-link" @onclick="() => _confirming = null">Cancel</button>
+                                    }
+                                    else
+                                    {
+                                        <button type="button" class="btn btn-sm btn-outline-danger" @onclick="() => _confirming = u.UserId" aria-label="@($"Reset two-step verification for {u.Username}")">Reset</button>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+            <p class="small text-muted">Reset turns two-step verification off for that person and signs them out everywhere, so they can sign in with just their password and set it up again. It is recorded in the audit log.</p>
+        }
+        <div aria-live="polite">
+            @if (_message is not null)
+            {
+                <div class="alert @(_error ? "alert-danger" : "alert-success") py-2 small">@_message</div>
+            }
+        </div>
+
+        <h4 class="section-title mt-4"><Icon Name="activity" /> Content-Security-Policy reports</h4>
+        <p class="text-muted small">The policy runs in report-only mode: browsers report what it <em>would</em> block, nothing is blocked. An empty list over normal use means it is ready to enforce (see docs/SECURITY.md). Kept in memory, newest first, cleared on restart.</p>
+        @if (_violations.Count == 0)
+        {
+            <p class="text-muted">No reports since the last restart.</p>
+        }
+        else
+        {
+            <ul class="sec-csp-list">
+                @foreach (var v in _violations.Take(25))
+                {
+                    <li><code>@v.Directive</code> blocked <code>@v.BlockedUri</code> <span class="text-muted">on @v.DocumentUri · @v.At.ToLocalTime().ToString("HH:mm")</span></li>
+                }
+            </ul>
+        }
+    </section>
+}
+
+@code {
+    [CascadingParameter] private Task<AuthenticationState>? AuthState { get; set; }
+
+    private bool _isAdmin;
+    private int _adminId;
+    private List<TwoFactorEnrolledUser> _enrolled = new();
+    private IReadOnlyList<CspViolation> _violations = Array.Empty<CspViolation>();
+    private int? _confirming;
+    private string? _message;
+    private bool _error;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (AuthState is null) return;
+        var user = (await AuthState).User;
+        _isAdmin = user.IsInRole(UserRoles.Admin) && int.TryParse(user.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value, out _adminId);
+        if (!_isAdmin) return;
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        _enrolled = await TwoFactor.ListEnrolledAsync();
+        _violations = CspLog.Recent();
+    }
+
+    private async Task Reset(TwoFactorEnrolledUser u)
+    {
+        _confirming = null;
+        var (ok, error) = await TwoFactor.AdminResetAsync(_adminId, u.UserId);
+        _error = !ok;
+        _message = ok ? $"Two-step verification reset for {u.Username}." : error;
+        await LoadAsync();
+    }
+}
