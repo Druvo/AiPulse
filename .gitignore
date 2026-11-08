@@ -7,6 +7,9 @@ out/
 # User data (bookmarks, watchlist, last-visit) — personal, not for source control
 App_Data/
 
+# Server-side backups made from /ops (default folder next to App_Data) - full copies of App_Data, so just as private
+backups/
+
 # Local/secret config (put your password hash & Obsidian path here)
 appsettings.Development.json
 appsettings.Local.json
@@ -19,6 +22,9 @@ DeployAiPulse/
 deploy.sh
 deploy.bat
 aipulse-deploy.tar.gz
+
+# Test results (dotnet test --results-directory, CI)
+TestResults/
 
 # Logs
 *.log

@@ -1,0 +1,68 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      DOTNET_NOLOGO: true
+      DOTNET_CLI_TELEMETRY_OPTOUT: true
+      DOTNET_SKIP_FIRST_TIME_EXPERIENCE: true
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: nuget-${{ runner.os }}-${{ hashFiles('**/*.csproj', 'nuget.config') }}
+          restore-keys: nuget-${{ runner.os }}-
+
+      # The test project is deliberately not in AiPulse.sln (so a root publish never ships it); restore and build both explicitly.
+      - name: Restore
+        run: |
+          dotnet restore AiPulse.csproj
+          dotnet restore tests/AiPulse.Tests/AiPulse.Tests.csproj
+
+      - name: Build
+        run: |
+          dotnet build AiPulse.csproj --configuration Release --no-restore
+          dotnet build tests/AiPulse.Tests/AiPulse.Tests.csproj --configuration Release --no-restore
+
+      # LiveGemini tests call the real Gemini API and need a key; everything else, including the end-to-end suite, runs offline.
+      - name: Test
+        run: >
+          dotnet test tests/AiPulse.Tests/AiPulse.Tests.csproj
+          --configuration Release --no-build
+          --filter "FullyQualifiedName!~LiveGemini"
+          --logger "trx;LogFileName=test-results.trx"
+          --logger "console;verbosity=normal"
+          --results-directory TestResults
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: TestResults/**/*.trx
+          if-no-files-found: warn
+
+      - name: Publish (smoke)
+        run: dotnet publish AiPulse.csproj --configuration Release --no-build --output publish
