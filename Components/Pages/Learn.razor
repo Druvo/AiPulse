@@ -1,6 +1,7 @@
 @page "/learn"
 @attribute [Authorize]
 @rendermode InteractiveServer
+@implements IAsyncDisposable
 @inject KnowledgeBaseService Kb
 @inject ReadingStateService Reading
 @inject FeedHistoryService History
@@ -9,8 +10,19 @@
 @inject GitHubTrendingService GitHub
 @inject ObsidianExportService Export
 @inject ToastService Toasts
+@inject IJSRuntime JS
 
 <PageTitle>AiPulse · Learning Hub</PageTitle>
+
+@* One shared gradient for every progress ring on the page (indigo -> cyan, from the theme tokens). *@
+<svg class="ring-defs" width="0" height="0" aria-hidden="true" focusable="false">
+    <defs>
+        <linearGradient id="learn-ring-grad" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0%" class="ring-stop-a" />
+            <stop offset="100%" class="ring-stop-b" />
+        </linearGradient>
+    </defs>
+</svg>
 
 <div class="page-header">
     <h1><Icon Name="graduation-cap" Size="22" /> Learning Hub</h1>
@@ -18,226 +30,421 @@
 </div>
 
 @{
-    var freshTutorials = History.Items
-        .Where(i => i.ContentType == "Tutorial")
-        .OrderByDescending(i => i.Published)
-        .Take(8)
-        .ToList();
-}
-@if (freshTutorials.Count > 0)
-{
-    <div class="card mb-4">
-        <div class="card-body">
-            <h6 class="section-title mb-2"><Icon Name="sparkle" Size="16" /> Fresh tutorials</h6>
-            <p class="text-muted small mb-2">Recently published, pulled live from your News sources — the roadmap below covers the fundamentals; this keeps you current on what's new.</p>
-            <div class="row g-2">
-                @foreach (var t in freshTutorials)
-                {
-                    <div class="col-md-6">
-                        <a href="@t.Link" target="_blank" rel="noopener" class="d-block small text-decoration-none border-bottom py-1">
-                            @t.Title
-                            <span class="text-muted"> · @t.SourceName</span>
-                        </a>
-                    </div>
-                }
-            </div>
-        </div>
-    </div>
+    var allModules = Kb.Learning;
+    var totalSteps = allModules.Sum(m => m.Steps.Length);
+    var doneSteps = allModules.Sum(m => Reading.CompletedStepCount(m.Title, m.Steps.Length));
+    var overallPct = ProgressRing.Percent(Reading.CompletedModuleCount, allModules.Count);
+    var upNext = allModules.FirstOrDefault(m => !Reading.IsModuleComplete(m.Title));
+    var streak = LearningStreak();
+    var time = TimeStat();
 }
 
-<div class="card mb-4">
-    <div class="card-body">
-        <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-2">
-            <h6 class="section-title mb-0"><Icon Name="sparkle" Size="16" /> Trending in the ecosystem right now</h6>
-            <div class="d-flex align-items-center gap-2">
-                <button class="btn btn-sm btn-outline-secondary py-0 px-2" disabled="@_trendingLoading" @onclick="() => LoadTrendingAsync(true)">
-                    <Icon Name="refresh" Size="13" /> Refresh
+<section class="learn-hero" aria-labelledby="learn-progress-title">
+    <div class="learn-hero-ring">
+        @Ring(overallPct, 112, 6, $"{overallPct}%", "of the roadmap", "ring-lg")
+    </div>
+    <div class="learn-hero-body">
+        <h2 id="learn-progress-title" class="learn-hero-title">
+            @if (allModules.Count > 0 && Reading.CompletedModuleCount == allModules.Count)
+            {
+                <span>Roadmap complete. Nice work.</span>
+            }
+            else if (upNext is not null && Reading.CompletedModuleCount > 0)
+            {
+                <span>Up next: @upNext.Title</span>
+            }
+            else if (upNext is not null)
+            {
+                <span>Start with @upNext.Title</span>
+            }
+            else
+            {
+                <span>Your progress</span>
+            }
+        </h2>
+        <dl class="learn-stats">
+            <div><dt>Modules</dt><dd>@Reading.CompletedModuleCount <span>/ @allModules.Count</span></dd></div>
+            <div><dt>Steps</dt><dd>@doneSteps <span>/ @totalSteps</span></dd></div>
+            <div><dt>Streak</dt><dd>@streak <span>day@(streak == 1 ? "" : "s")</span></dd></div>
+            <div><dt>Time</dt><dd>@time.Value <span>@time.Unit</span></dd></div>
+        </dl>
+        <div class="learn-hero-actions">
+            @if (upNext is not null)
+            {
+                <button type="button" class="btn btn-primary" @onclick="() => JumpTo(upNext)">
+                    <Icon Name="play" Size="15" /> @(Reading.CompletedModuleCount == 0 && doneSteps == 0 ? "Start learning" : "Continue")
                 </button>
-                @if (_trendingLastUpdated is { } lu)
-                {
-                    <span class="x-small text-muted">Updated @lu.ToLocalTime().ToString("t")</span>
-                }
-            </div>
-        </div>
-        <p class="text-muted small mb-2">The models and projects getting the most attention this week — via Hugging Face and GitHub. Good candidates for what to learn next.</p>
-
-        @if (_trendingLoading && _trendingModels.Count == 0 && _trendingRepos.Count == 0)
-        {
-            <div class="row g-2">
-                <div class="col-md-6">
-                    <div class="skeleton-line w-40"></div>
-                    <div class="skeleton-line w-80"></div>
-                    <div class="skeleton-line w-60"></div>
-                </div>
-                <div class="col-md-6">
-                    <div class="skeleton-line w-40"></div>
-                    <div class="skeleton-line w-80"></div>
-                    <div class="skeleton-line w-60"></div>
-                </div>
-            </div>
-        }
-        else if (_trendingModels.Count > 0 || _trendingRepos.Count > 0)
-        {
-            <div class="row g-2">
-                <div class="col-md-6">
-                    <p class="x-small text-muted text-uppercase mb-1">Trending models</p>
-                    @foreach (var m in _trendingModels.Take(5))
-                    {
-                        <a href="@m.Url" target="_blank" rel="noopener" class="d-block small text-decoration-none border-bottom py-1">@m.Id</a>
-                    }
-                </div>
-                <div class="col-md-6">
-                    <p class="x-small text-muted text-uppercase mb-1">Trending repos</p>
-                    @foreach (var r in _trendingRepos.Take(5))
-                    {
-                        <a href="@r.Url" target="_blank" rel="noopener" class="d-block small text-decoration-none border-bottom py-1">@r.FullName</a>
-                    }
-                </div>
-            </div>
-            <a href="explore" class="small">Explore models, benchmarks &amp; datasets →</a>
-        }
-        else
-        {
-            <EmptyState Icon="trending-up" Title="No trending data yet" Body="Couldn't reach Hugging Face or GitHub - try Refresh above." />
-        }
-    </div>
-</div>
-
-@{
-    var trendingTags = TrendingTags();
-    var uncoveredTags = UncoveredTrendingTags(trendingTags);
-}
-@if (uncoveredTags.Count > 0)
-{
-    <div class="card mb-4">
-        <div class="card-body">
-            <h6 class="section-title mb-2"><Icon Name="trending-up" Size="16" /> Emerging topics not yet in your roadmap</h6>
-            <p class="text-muted small mb-2">
-                Tags showing up a lot in your News Feed over the last 14 days that no module below covers yet -
-                this is the "what's next" radar: today's chatter, tomorrow's module. No AI involved - just
-                counting how often each tag appears across your own sources. Queued below for an admin to turn
-                into a real module.
-            </p>
-            <div class="d-flex flex-wrap gap-1">
-                @foreach (var tag in uncoveredTags)
-                {
-                    <a class="tag-chip small" href="@($"news?tag={Uri.EscapeDataString(tag)}")">@tag</a>
-                }
-            </div>
+            }
+            <button type="button" class="btn btn-outline-secondary" @onclick="ExportNotes">
+                <Icon Name="download" Size="15" /> Export notes
+            </button>
         </div>
     </div>
-}
+</section>
 
 <AuthorizeView Roles="Admin,Curator" Context="adminPanel">
     <Authorized>
         @if (_pendingCandidates.Count > 0)
         {
-            <div class="card mb-4">
-                <div class="card-body">
-                    <strong class="d-block mb-2"><Icon Name="search" Size="16" /> Candidate modules awaiting review (@_pendingCandidates.Count)</strong>
-                    <div class="d-flex flex-column gap-2">
-                        @foreach (var c in _pendingCandidates)
-                        {
+            <section class="learn-panel learn-review mb-4" aria-labelledby="learn-review-title">
+                <h2 id="learn-review-title" class="learn-panel-title"><Icon Name="search" Size="16" /> Candidate modules awaiting review <span class="count-pill">@_pendingCandidates.Count</span></h2>
+                <ul class="review-list">
+                    @foreach (var c in _pendingCandidates)
+                    {
+                        <li class="review-item">
                             @if (_approvingCandidateId == c.Id)
                             {
-                                <div class="border rounded p-2">
-                                    <EditForm Model="_form" OnValidSubmit="ConfirmApprove">
-                                        <div class="row g-2 mb-2">
-                                            <div class="col-md-6"><InputText class="form-control form-control-sm" @bind-Value="_form.Title" placeholder="Title" /></div>
-                                            <div class="col-md-6">
-                                                <InputSelect class="form-select form-select-sm" @bind-Value="_form.Level">
-                                                    <option value="Beginner">Beginner</option>
-                                                    <option value="Intermediate">Intermediate</option>
-                                                    <option value="Advanced">Advanced</option>
-                                                </InputSelect>
-                                            </div>
+                                <EditForm Model="_form" OnValidSubmit="ConfirmApprove">
+                                    <div class="row g-2 mb-2">
+                                        <div class="col-md-6">
+                                            <label class="form-label small" for="cand-title">Title</label>
+                                            <InputText id="cand-title" class="form-control" @bind-Value="_form.Title" />
                                         </div>
-                                        <InputText class="form-control form-control-sm mb-2" @bind-Value="_form.Why" placeholder="Why this matters (required)" />
-                                        <InputTextArea class="form-control form-control-sm mb-2" rows="4" @bind-Value="_form.Steps" placeholder="Steps (one per line)" />
-                                        <InputText class="form-control form-control-sm mb-2" @bind-Value="_form.RelatedTerms" placeholder="Related terms (comma-separated)" />
-                                        @if (_error is not null)
-                                        {
-                                            <div class="alert alert-danger py-1 px-2 small mb-2">@_error</div>
-                                        }
-                                        <button type="submit" class="btn btn-sm btn-success">Add module</button>
-                                        <button type="button" class="btn btn-sm btn-outline-secondary" @onclick="() => _approvingCandidateId = null">Cancel</button>
-                                    </EditForm>
-                                </div>
+                                        <div class="col-md-6">
+                                            <label class="form-label small" for="cand-level">Level</label>
+                                            <InputSelect id="cand-level" class="form-select" @bind-Value="_form.Level">
+                                                <option value="Beginner">Beginner</option>
+                                                <option value="Intermediate">Intermediate</option>
+                                                <option value="Advanced">Advanced</option>
+                                            </InputSelect>
+                                        </div>
+                                    </div>
+                                    <label class="form-label small" for="cand-why">Why this matters (required)</label>
+                                    <InputText id="cand-why" class="form-control mb-2" @bind-Value="_form.Why" />
+                                    <label class="form-label small" for="cand-steps">Steps (one per line)</label>
+                                    <InputTextArea id="cand-steps" class="form-control mb-2" rows="4" @bind-Value="_form.Steps" />
+                                    <label class="form-label small" for="cand-terms">Related terms (comma-separated)</label>
+                                    <InputText id="cand-terms" class="form-control mb-2" @bind-Value="_form.RelatedTerms" />
+                                    @if (_error is not null)
+                                    {
+                                        <div class="alert alert-danger py-2 small mb-2" role="alert">@_error</div>
+                                    }
+                                    <div class="d-flex flex-wrap gap-2">
+                                        <button type="submit" class="btn btn-success">Add module</button>
+                                        <button type="button" class="btn btn-outline-secondary" @onclick="() => _approvingCandidateId = null">Cancel</button>
+                                    </div>
+                                </EditForm>
                             }
                             else
                             {
-                                <div class="d-flex align-items-center justify-content-between gap-2 border rounded p-2">
-                                    <div class="small">
-                                        <strong>@c.Name</strong>
-                                        <span class="text-muted"> — @c.RawNote</span>
-                                    </div>
-                                    <div class="text-nowrap">
-                                        <button class="btn btn-sm btn-outline-success" @onclick="() => StartApprove(c)">Review</button>
-                                        <button class="btn btn-sm btn-outline-secondary" @onclick="() => Dismiss(c.Id)">Dismiss</button>
-                                    </div>
+                                <div class="review-text">
+                                    <strong>@c.Name</strong>
+                                    <span class="text-muted"> · @c.RawNote</span>
+                                </div>
+                                <div class="review-actions">
+                                    <button class="btn btn-sm btn-outline-success" @onclick="() => StartApprove(c)">Review</button>
+                                    <button class="btn btn-sm btn-outline-secondary" @onclick="() => Dismiss(c.Id)">Dismiss</button>
                                 </div>
                             }
-                        }
-                    </div>
-                </div>
-            </div>
+                        </li>
+                    }
+                </ul>
+            </section>
         }
     </Authorized>
 </AuthorizeView>
 
 @{
-    var strengths = TopicStrengths();
-}
-@if (strengths.Count > 0)
-{
-    <div class="card mb-4">
-        <div class="card-body">
-            <h6 class="section-title mb-2"><Icon Name="activity" Size="16" /> Topic strength</h6>
-            <p class="text-muted small mb-2">
-                Where completed modules and what you've actually been reading overlap - module completion plus
-                RelatedTerms-tagged articles read in the last 30 days. Not just "did you open the module," but
-                whether it's showing up in what you read too.
-            </p>
-            <div class="d-flex flex-column gap-1">
-                @foreach (var s in strengths)
-                {
-                    <div class="d-flex align-items-center justify-content-between gap-2 small border-bottom py-1">
-                        <span>@s.Module.Title @if (s.Complete) { <span class="text-success">✓</span> }</span>
-                        <span class="text-muted x-small">@(s.ArticlesRead > 0 ? $"{s.ArticlesRead} article(s) read recently" : "completed, not much recent reading")</span>
-                    </div>
-                }
-            </div>
-        </div>
-    </div>
+    var modules = allModules.Where(m => _level == "All" || m.Level == _level).ToList();
 }
 
-@{
-    var refreshers = Refreshers();
-}
-@if (refreshers.Count > 0)
-{
-    <div class="card mb-4 refresher-shelf">
-        <div class="card-body">
-            <h6 class="section-title mb-2"><Icon Name="activity" Size="16" /> Worth a refresher</h6>
-            <p class="text-muted small mb-2">Completed six or more weeks ago - concepts fade, and nothing else in the app ever asks you to revisit them. No pressure, just a nudge.</p>
-            <div class="row g-2">
-                @foreach (var m in refreshers)
+<div class="learn-layout">
+    <section class="learn-main" aria-labelledby="roadmap-title">
+        <div class="roadmap-toolbar">
+            <h2 id="roadmap-title" class="learn-section-title">Roadmap</h2>
+            <div class="level-filter" role="group" aria-label="Filter modules by level">
+                @foreach (var lvl in _levels)
                 {
-                    <div class="col-md-6">
-                        <div class="card h-100">
-                            <div class="card-body py-2">
-                                <div class="small fw-bold">@m.Title</div>
-                                <div class="x-small text-muted">Completed @Reading.ModuleCompletedAt[m.Title].ToString("MMM d")</div>
-                            </div>
+                    var count = lvl == "All" ? allModules.Count : allModules.Count(m => m.Level == lvl);
+                    <button type="button" class="level-btn @(_level == lvl ? "active" : "")" aria-pressed="@(_level == lvl ? "true" : "false")"
+                            @onclick="() => SetLevel(lvl)">
+                        @lvl <span class="level-count">@count</span>
+                    </button>
+                }
+            </div>
+            <div class="roadmap-expand">
+                <button type="button" class="btn btn-sm btn-link" @onclick="() => SetAllOpen(modules, true)">Expand all</button>
+                <span aria-hidden="true">·</span>
+                <button type="button" class="btn btn-sm btn-link" @onclick="() => SetAllOpen(modules, false)">Collapse all</button>
+            </div>
+        </div>
+
+        @if (modules.Count == 0)
+        {
+            <div class="learn-panel">
+                <EmptyState Icon="graduation-cap" Title="No modules at this level yet" ActionText="Show all levels" OnAction="@(() => SetLevel("All"))" />
+            </div>
+        }
+        else
+        {
+            <ol class="roadmap">
+                @foreach (var m in modules)
+                {
+                    var number = _numbers.GetValueOrDefault(m.Title);
+                    var complete = Reading.IsModuleComplete(m.Title);
+                    var done = Reading.CompletedStepCount(m.Title, m.Steps.Length);
+                    var pct = ProgressRing.Percent(done, m.Steps.Length);
+                    var isOpen = _open.Contains(m.Title);
+                    var isNext = upNext == m;
+                    var id = ModuleId(m);
+                    var state = complete ? "done" : done > 0 || isNext ? "active" : "todo";
+                    <li class="roadmap-item state-@state" @key="m.Title">
+                        <div class="roadmap-node" aria-hidden="true">
+                            @if (complete)
+                            {
+                                <span class="node-done"><Icon Name="check" Size="18" /></span>
+                            }
+                            else
+                            {
+                                @Ring(pct, 44, 4, number.ToString(), null, "ring-sm")
+                            }
                         </div>
-                    </div>
+                        <article class="module-card @(isOpen ? "open" : "")" id="@id">
+                            <h3 class="module-heading">
+                                <button type="button" class="module-toggle" aria-expanded="@(isOpen ? "true" : "false")" aria-controls="@($"{id}-body")"
+                                        @onclick="() => Toggle(m)">
+                                    <span class="module-num">Module @number</span>
+                                    <span class="module-title">@m.Title</span>
+                                    <span class="module-meta">
+                                        <span class="badge level-@m.Level.ToLower()">@m.Level</span>
+                                        @if (complete)
+                                        {
+                                            <span class="status-chip chip-ok"><Icon Name="check" Size="12" /> Complete</span>
+                                        }
+                                        else if (isNext)
+                                        {
+                                            <span class="status-chip chip-accent">Up next</span>
+                                        }
+                                        <span class="step-count">@done/@m.Steps.Length steps</span>
+                                    </span>
+                                    <span class="module-chevron" aria-hidden="true"></span>
+                                </button>
+                            </h3>
+                            <p class="module-why"><strong>Why it matters:</strong> @m.Why</p>
+                            <div class="module-bar" role="progressbar" aria-label="@($"{m.Title} progress")" aria-valuemin="0" aria-valuemax="100" aria-valuenow="@pct">
+                                <span style="width:@(pct)%"></span>
+                            </div>
+
+                            @if (isOpen)
+                            {
+                                <div class="module-body" id="@($"{id}-body")">
+                                    <ul class="step-list">
+                                        @for (var stepIdx = 0; stepIdx < m.Steps.Length; stepIdx++)
+                                        {
+                                            var idx = stepIdx;
+                                            var step = m.Steps[idx];
+                                            var stepDone = Reading.IsStepComplete(m.Title, idx);
+                                            var stepId = $"{id}-step-{idx}";
+                                            <li class="step @(stepDone ? "step-done" : "")">
+                                                <input class="step-check" type="checkbox" id="@stepId" checked="@stepDone" @onchange="() => ToggleStep(m, idx)" />
+                                                <label class="step-label" for="@stepId">@step.Text</label>
+                                                @if (!string.IsNullOrWhiteSpace(step.Url))
+                                                {
+                                                    <a href="@step.Url" target="_blank" rel="noopener" class="step-link" aria-label="@($"Open resource for step {idx + 1} (new tab)")">
+                                                        Open <Icon Name="external-link" Size="13" />
+                                                    </a>
+                                                }
+                                            </li>
+                                        }
+                                    </ul>
+
+                                    @if (m.RelatedTerms.Length > 0)
+                                    {
+                                        <div class="module-terms">
+                                            <span class="module-sub">Key terms</span>
+                                            @foreach (var t in m.RelatedTerms)
+                                            {
+                                                <a class="term-chip" href="@($"glossary?q={Uri.EscapeDataString(t)}")">@t</a>
+                                            }
+                                        </div>
+                                    }
+
+                                    <div class="module-check">
+                                        @if (complete)
+                                        {
+                                            var check = Reading.GetSelfCheck(m.Title);
+                                            <p class="module-sub mb-2" id="@($"{id}-check")">Self-check: could you explain this to someone else right now?</p>
+                                            <div class="check-choices" role="group" aria-labelledby="@($"{id}-check")">
+                                                <button type="button" class="check-btn yes @(check == true ? "active" : "")" aria-pressed="@(check == true ? "true" : "false")"
+                                                        @onclick="() => Reading.SetSelfCheck(m.Title, true)">
+                                                    <Icon Name="check" Size="15" /> Yes, I could
+                                                </button>
+                                                <button type="button" class="check-btn notyet @(check == false ? "active" : "")" aria-pressed="@(check == false ? "true" : "false")"
+                                                        @onclick="() => Reading.SetSelfCheck(m.Title, false)">
+                                                    <Icon Name="refresh" Size="15" /> Not yet
+                                                </button>
+                                            </div>
+                                            @if (check == false)
+                                            {
+                                                <p class="module-hint">Worth a second pass: re-read the steps, then try writing a two-line explanation in your notes below.</p>
+                                            }
+                                        }
+                                        else
+                                        {
+                                            <div class="d-flex flex-wrap align-items-center gap-2">
+                                                <p class="module-hint mb-0">Finish all steps to unlock the self-check.</p>
+                                                <button type="button" class="mark-btn ms-auto" @onclick="() => MarkAllComplete(m)">
+                                                    <Icon Name="check" Size="14" /> Mark all complete
+                                                </button>
+                                            </div>
+                                        }
+                                    </div>
+
+                                    <div class="module-notes">
+                                        <label class="module-sub" for="@($"{id}-notes")">Your notes</label>
+                                        <textarea id="@($"{id}-notes")" class="form-control" rows="3" placeholder="Your own takeaway, once you've worked through this…"
+                                                  value="@Reading.GetModuleNote(m.Title)" @onchange="e => SaveNote(m, (string?)e.Value)"></textarea>
+                                        <span class="note-status" role="status">@(_noteSaved == m.Title ? "Saved" : "")</span>
+                                    </div>
+                                </div>
+                            }
+                        </article>
+                    </li>
                 }
+            </ol>
+        }
+    </section>
+
+    <aside class="learn-aside" aria-label="Learning extras">
+        @{
+            var refreshers = Refreshers();
+        }
+        @if (refreshers.Count > 0)
+        {
+            <section class="learn-panel panel-warn">
+                <h2 class="learn-panel-title"><Icon Name="refresh" Size="16" /> Worth a refresher</h2>
+                <p class="learn-panel-lead">Completed six or more weeks ago. Concepts fade; no pressure, just a nudge.</p>
+                <ul class="aside-list">
+                    @foreach (var m in refreshers)
+                    {
+                        <li>
+                            <button type="button" class="aside-link" @onclick="() => JumpTo(m)">@m.Title</button>
+                            <span class="aside-meta">Completed @Reading.ModuleCompletedAt[m.Title].ToString("MMM d")</span>
+                        </li>
+                    }
+                </ul>
+            </section>
+        }
+
+        @{
+            var strengths = TopicStrengths();
+        }
+        @if (strengths.Count > 0)
+        {
+            <section class="learn-panel">
+                <h2 class="learn-panel-title"><Icon Name="activity" Size="16" /> Topic strength</h2>
+                <p class="learn-panel-lead">Completed modules, plus related articles you read in the last 30 days.</p>
+                <ul class="aside-list">
+                    @foreach (var s in strengths)
+                    {
+                        <li>
+                            <span class="aside-row">
+                                <span class="aside-name">@s.Module.Title</span>
+                                @if (s.Complete) { <span class="status-chip chip-ok" title="Module complete"><Icon Name="check" Size="12" /><span class="visually-hidden">complete</span></span> }
+                            </span>
+                            <span class="aside-meta">@(s.ArticlesRead > 0 ? $"{s.ArticlesRead} related article{(s.ArticlesRead == 1 ? "" : "s")} read" : "Completed, little recent reading")</span>
+                        </li>
+                    }
+                </ul>
+            </section>
+        }
+
+        <section class="learn-panel" aria-busy="@(_trendingLoading ? "true" : "false")">
+            <div class="d-flex align-items-start justify-content-between gap-2">
+                <h2 class="learn-panel-title"><Icon Name="trending-up" Size="16" /> Trending now</h2>
+                <button class="btn btn-sm btn-outline-secondary icon-btn" disabled="@_trendingLoading" @onclick="() => LoadTrendingAsync(true)" aria-label="Refresh trending models and repos" title="Refresh">
+                    <Icon Name="refresh" Size="15" />
+                </button>
             </div>
-        </div>
-    </div>
-}
+            <p class="learn-panel-lead">
+                What's getting attention on Hugging Face and GitHub - good candidates for what to learn next.
+                @if (_trendingLastUpdated is { } lu)
+                {
+                    <span class="d-block">Updated @lu.ToLocalTime().ToString("t")</span>
+                }
+            </p>
+            @if (_trendingLoading && _trendingModels.Count == 0 && _trendingRepos.Count == 0)
+            {
+                <div class="skeleton-line w-40"></div>
+                <div class="skeleton-line w-80"></div>
+                <div class="skeleton-line w-60"></div>
+                <div class="skeleton-line w-80"></div>
+            }
+            else if (_trendingModels.Count > 0 || _trendingRepos.Count > 0)
+            {
+                @if (_trendingModels.Count > 0)
+                {
+                    <p class="module-sub">Models</p>
+                    <ul class="aside-list compact">
+                        @foreach (var tm in _trendingModels.Take(5))
+                        {
+                            <li><a href="@tm.Url" target="_blank" rel="noopener" class="aside-ext">@tm.Id</a></li>
+                        }
+                    </ul>
+                }
+                @if (_trendingRepos.Count > 0)
+                {
+                    <p class="module-sub">Repos</p>
+                    <ul class="aside-list compact">
+                        @foreach (var r in _trendingRepos.Take(5))
+                        {
+                            <li><a href="@r.Url" target="_blank" rel="noopener" class="aside-ext">@r.FullName</a></li>
+                        }
+                    </ul>
+                }
+                <a href="explore" class="panel-more">Explore models, benchmarks &amp; datasets →</a>
+            }
+            else
+            {
+                <EmptyState Icon="trending-up" Title="No trending data yet" Body="Couldn't reach Hugging Face or GitHub. Try the refresh button." />
+            }
+        </section>
+
+        @{
+            var freshTutorials = History.Items
+                .Where(i => i.ContentType == "Tutorial")
+                .OrderByDescending(i => i.Published)
+                .Take(6)
+                .ToList();
+        }
+        @if (freshTutorials.Count > 0)
+        {
+            <section class="learn-panel">
+                <h2 class="learn-panel-title"><Icon Name="sparkle" Size="16" /> Fresh tutorials</h2>
+                <p class="learn-panel-lead">Recently published, from your News sources.</p>
+                <ul class="aside-list compact">
+                    @foreach (var t in freshTutorials)
+                    {
+                        <li>
+                            <a href="@t.Link" target="_blank" rel="noopener" class="aside-ext">@t.Title</a>
+                            <span class="aside-meta">@t.SourceName</span>
+                        </li>
+                    }
+                </ul>
+            </section>
+        }
+
+        @{
+            var uncoveredTags = UncoveredTrendingTags(TrendingTags());
+        }
+        @if (uncoveredTags.Count > 0)
+        {
+            <section class="learn-panel">
+                <h2 class="learn-panel-title"><Icon Name="search" Size="16" /> Emerging topics</h2>
+                <p class="learn-panel-lead">Busy tags in your News Feed (last 14 days) that no module covers yet. Queued for an admin to turn into modules.</p>
+                <div class="chip-wrap">
+                    @foreach (var tag in uncoveredTags)
+                    {
+                        <a class="term-chip" href="@($"news?tag={Uri.EscapeDataString(tag)}")">@tag</a>
+                    }
+                </div>
+            </section>
+        }
+    </aside>
+</div>
 
 @{
+    var trendingTags = TrendingTags();
     var courses = Kb.Courses
         .Where(c => _level == "All" || c.Level == _level)
         .OrderByDescending(c => c.Topics.Any(t => trendingTags.Contains(t)))
@@ -246,138 +453,109 @@
 }
 @if (courses.Count > 0)
 {
-    <div class="card mb-4">
-        <div class="card-body">
-            <h6 class="section-title mb-2"><Icon Name="graduation-cap" Size="16" /> Free courses &amp; certifications</h6>
-            <p class="text-muted small mb-2">Curated, genuinely free courses — each one notes honestly whether the certificate itself is free or just the course content. Filtered by the level buttons below.</p>
-            <div class="row g-2">
-                @foreach (var c in courses)
-                {
-                    var trending = c.Topics.Any(t => trendingTags.Contains(t));
-                    <div class="col-md-6">
-                        <div class="card h-100">
-                            <div class="card-body py-2">
-                                <div class="d-flex justify-content-between align-items-start gap-2">
-                                    <a href="@c.Url" target="_blank" rel="noopener" class="fw-bold small text-decoration-none">@c.Name ↗</a>
-                                    @if (trending)
-                                    {
-                                        <span class="badge bg-warning text-dark">🔥 Trending</span>
-                                    }
-                                </div>
-                                <div class="x-small text-muted mb-1">@c.Provider · <span class="badge level-@c.Level.ToLower()">@c.Level</span></div>
-                                <p class="small mb-1">@c.OneLiner</p>
-                                <div class="x-small @(c.HasFreeCertificate ? "text-success" : "text-muted")">
-                                    @(c.HasFreeCertificate ? "✓ Free certificate" : "ⓘ") @c.CertificateNote
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                }
-            </div>
-        </div>
-    </div>
-}
-
-<div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-1">
-    <p class="text-muted small mb-0">@Reading.CompletedModuleCount of @Kb.Learning.Count modules complete</p>
-    <div class="d-flex align-items-center gap-3">
-        @if (LearningStreak() > 0)
-        {
-            <span class="small">@LearningStreak() 🔥 <span class="text-muted">day learning streak</span></span>
-        }
-        @if (!string.IsNullOrEmpty(LearningTimeLabel()))
-        {
-            <span class="small text-muted">@LearningTimeLabel()</span>
-        }
-        <button class="btn btn-sm btn-link p-0" @onclick="ExportNotes">Export learning notes</button>
-    </div>
-</div>
-<div class="progress mb-3" style="height: 6px;">
-    <div class="progress-bar" style="width: @(ProgressPct())%"></div>
-</div>
-
-<div class="btn-group mb-4 flex-wrap" role="group">
-    @foreach (var lvl in _levels)
-    {
-        <button class="btn btn-sm @(_level == lvl ? "btn-dark" : "btn-outline-dark")"
-                @onclick="() => SetLevel(lvl)">@lvl</button>
-    }
-</div>
-
-@{
-    var modules = Kb.Learning.Where(m => _level == "All" || m.Level == _level).ToList();
-    var i = 0;
-}
-
-@foreach (var m in modules)
-{
-    i++;
-    var complete = Reading.IsModuleComplete(m.Title);
-    var doneSteps = Reading.CompletedStepCount(m.Title, m.Steps.Length);
-    var pct = m.Steps.Length == 0 ? 0 : 100.0 * doneSteps / m.Steps.Length;
-    <div class="card mb-3 learn-card @(complete ? "module-complete" : "")">
-        <div class="card-body">
-            <div class="d-flex justify-content-between align-items-start gap-2">
-                <h4 class="card-title mb-1"><span class="text-muted">@i.</span> @m.Title @if (complete) { <span class="text-success">✓</span> }</h4>
-                <div class="d-flex align-items-center gap-2">
-                    <span class="badge level-@m.Level.ToLower()">@m.Level</span>
-                    @if (!complete)
-                    {
-                        <button class="btn btn-sm btn-outline-success" @onclick="() => MarkAllComplete(m)">Mark all complete</button>
-                    }
-                </div>
-            </div>
-            <p class="text-muted mb-2"><strong>Why:</strong> @m.Why</p>
-            <div class="progress module-progress-mini mb-2">
-                <div class="progress-bar" style="width: @(pct.ToString("0"))%"></div>
-            </div>
-            <div class="mb-2">
-                @for (var stepIdx = 0; stepIdx < m.Steps.Length; stepIdx++)
-                {
-                    var idx = stepIdx;
-                    var step = m.Steps[idx];
-                    var done = Reading.IsStepComplete(m.Title, idx);
-                    <div class="learn-step @(done ? "step-done" : "") mb-1">
-                        <input type="checkbox" id="@($"{m.Title}-step-{idx}")" checked="@done" @onchange="() => ToggleStep(m, idx)" />
-                        <label for="@($"{m.Title}-step-{idx}")">
-                            @step.Text
-                            @if (!string.IsNullOrWhiteSpace(step.Url))
-                            {
-                                <a href="@step.Url" target="_blank" rel="noopener" class="ms-1 small" @onclick:stopPropagation="true">↗ open</a>
-                            }
-                        </label>
-                    </div>
-                }
-            </div>
-            @if (m.RelatedTerms.Length > 0)
+    <section class="learn-courses" aria-labelledby="courses-title">
+        <h2 id="courses-title" class="learn-section-title"><Icon Name="graduation-cap" Size="18" /> Free courses &amp; certifications</h2>
+        <p class="learn-panel-lead">Curated, genuinely free courses. Each notes honestly whether the certificate is free or just the content. Follows the level filter above.</p>
+        <div class="course-grid">
+            @foreach (var c in courses)
             {
-                <div class="small mb-2">
-                    <span class="text-muted">Key terms:</span>
-                    @foreach (var t in m.RelatedTerms)
-                    {
-                        <a class="badge bg-info text-decoration-none me-1" href="glossary">@t</a>
-                    }
-                </div>
+                var trending = c.Topics.Any(t => trendingTags.Contains(t));
+                <article class="course-card">
+                    <div class="course-top">
+                        <span class="badge level-@c.Level.ToLower()">@c.Level</span>
+                        @if (trending)
+                        {
+                            <span class="status-chip chip-warn"><Icon Name="trending-up" Size="12" /> Trending</span>
+                        }
+                    </div>
+                    <h3 class="course-title"><a href="@c.Url" target="_blank" rel="noopener">@c.Name <Icon Name="external-link" Size="13" /></a></h3>
+                    <p class="course-provider">@c.Provider</p>
+                    <p class="course-text">@c.OneLiner</p>
+                    <p class="course-cert @(c.HasFreeCertificate ? "free" : "")">
+                        @if (c.HasFreeCertificate) { <Icon Name="check" Size="13" /> } else { <Icon Name="help-circle" Size="13" /> }
+                        @c.CertificateNote
+                    </p>
+                </article>
             }
-            @if (complete)
-            {
-                var check = Reading.GetSelfCheck(m.Title);
-                <div class="border-top pt-2 mt-2 small">
-                    <span class="text-muted">Could you explain this to someone else right now?</span>
-                    <button class="btn btn-sm @(check == true ? "btn-success" : "btn-outline-success") py-0 px-2 ms-2" @onclick="() => Reading.SetSelfCheck(m.Title, true)">Yes</button>
-                    <button class="btn btn-sm @(check == false ? "btn-warning" : "btn-outline-warning") py-0 px-2 ms-1" @onclick="() => Reading.SetSelfCheck(m.Title, false)">Not yet</button>
-                </div>
-            }
-            <div class="mt-2">
-                <label class="x-small text-muted d-block mb-1" for="@($"{m.Title}-notes")">Your notes</label>
-                <textarea id="@($"{m.Title}-notes")" class="form-control form-control-sm" rows="2" placeholder="Your own takeaway, once you've worked through this..."
-                          value="@Reading.GetModuleNote(m.Title)" @onchange="e => Reading.SetModuleNote(m.Title, (string)e.Value!)"></textarea>
-            </div>
         </div>
-    </div>
+    </section>
 }
 
 @code {
+    private readonly HashSet<string> _open = new();
+    private Dictionary<string, int> _numbers = new();
+    private string? _noteSaved;
+    private IJSObjectReference? _ui;
+
+    private static string ModuleId(LearningModule m) => "module-" + GlossaryIndex.Slug(m.Title);
+
+    private void Toggle(LearningModule m)
+    {
+        if (!_open.Add(m.Title)) _open.Remove(m.Title);
+    }
+
+    private void SetAllOpen(IEnumerable<LearningModule> modules, bool open)
+    {
+        foreach (var m in modules)
+        {
+            if (open) _open.Add(m.Title); else _open.Remove(m.Title);
+        }
+    }
+
+    /// <summary>Opens a module (switching the level filter if it is hidden by it) and scrolls it into view.</summary>
+    private async Task JumpTo(LearningModule m)
+    {
+        if (_level != "All" && m.Level != _level) SetLevel("All");
+        _open.Add(m.Title);
+        StateHasChanged();
+        await Task.Yield();
+        try
+        {
+            _ui ??= await JS.InvokeAsync<IJSObjectReference>("import", "./js/page-ui.js");
+            await _ui.InvokeAsync<bool>("scrollToId", ModuleId(m), true);
+        }
+        catch (JSDisconnectedException) { }
+        catch (JSException) { }
+    }
+
+    private void SaveNote(LearningModule m, string? value)
+    {
+        Reading.SetModuleNote(m.Title, value ?? "");
+        _noteSaved = m.Title;
+    }
+
+    /// <summary>Learning time for the hero stat: whole minutes under an hour, otherwise hours to one decimal.</summary>
+    private (string Value, string Unit) TimeStat()
+    {
+        var minutes = Reading.LearningHistory.Sum(e => e.Minutes);
+        return minutes >= 60 ? ((minutes / 60.0).ToString("0.#"), "hr") : (minutes.ToString(), "min");
+    }
+
+    private RenderFragment Ring(int pct, int size, int stroke, string label, string? sub, string css)
+    {
+        const double r = 16;
+        var c = ProgressRing.Circumference(r);
+        return @<span class="ring @css" style="--ring-size:@(size)px" role="img" aria-label="@($"{pct}% complete")">
+            <svg viewBox="0 0 40 40" width="@size" height="@size" aria-hidden="true" focusable="false">
+                <circle class="ring-track" cx="20" cy="20" r="16" stroke-width="@stroke" />
+                <circle class="ring-value" cx="20" cy="20" r="16" stroke-width="@stroke"
+                        stroke-dasharray="@ProgressRing.Svg(c)" stroke-dashoffset="@ProgressRing.Svg(ProgressRing.DashOffset(r, pct))" />
+            </svg>
+            <span class="ring-label" aria-hidden="true">
+                <span class="ring-num">@label</span>
+                @if (sub is not null) { <span class="ring-sub">@sub</span> }
+            </span>
+        </span>;
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_ui is not null)
+        {
+            try { await _ui.DisposeAsync(); } catch (JSDisconnectedException) { }
+        }
+    }
+
     [SupplyParameterFromQuery(Name = "level")]
     public string? LevelParam { get; set; }
 
@@ -405,6 +583,10 @@
 
         // Fire-and-forget: the learning roadmap itself is static data and should render instantly - the
         // trending models/repos panel just fills in once these resolve instead of holding up the page.
+        _numbers = Kb.Learning.Select((m, i) => (m.Title, i + 1)).GroupBy(x => x.Title).ToDictionary(g => g.Key, g => g.First().Item2);
+        if (Kb.Learning.FirstOrDefault(m => !Reading.IsModuleComplete(m.Title)) is { } next)
+            _open.Add(next.Title);
+
         _ = LoadTrendingAsync(force: false);
         _ = QueueUncoveredTagCandidatesAsync();
     }
@@ -503,13 +685,6 @@
         var d = DateOnly.FromDateTime(DateTime.Now);
         while (days.Contains(d)) { streak++; d = d.AddDays(-1); }
         return streak;
-    }
-
-    private string LearningTimeLabel()
-    {
-        var minutes = Reading.LearningHistory.Sum(e => e.Minutes);
-        if (minutes == 0) return "";
-        return minutes >= 60 ? $"~{minutes / 60.0:0.#} hr in the Learning Hub" : $"~{minutes} min in the Learning Hub";
     }
 
     /// <summary>Modules completed 6+ weeks ago - the spaced-repetition nudge. Only modules with a recorded completion date qualify (a module completed under the pre-upgrade whole-module toggle gets one retroactively via the OnInitialized backfill above).</summary>
