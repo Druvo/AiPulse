@@ -3,46 +3,83 @@
 
 <PageTitle>AiPulse · Coverage</PageTitle>
 
-<div class="page-header">
-    <h1><Icon Name="database" Size="22" /> What AiPulse follows</h1>
-    <p class="lead">Every source behind the news feed, grouped by kind. Nothing is hidden: if a story shows up, it came from one of these.</p>
-</div>
-
 @{
     var sources = Kb.Sources.Where(s => s.Enabled).ToList();
     var groups = sources.GroupBy(s => s.Category).OrderByDescending(g => g.Count()).ThenBy(g => g.Key).ToList();
 }
 
+<header class="cv-hero">
+    <h1 class="cv-h1"><Icon Name="database" Size="24" /> What AiPulse follows</h1>
+    <p class="cv-lead">Every source behind the news feed, grouped by kind. Nothing is hidden: if a story shows up, it came from one of these.</p>
+    @if (sources.Count > 0)
+    {
+        <p class="cv-summary"><strong>@sources.Count.ToString("N0")</strong> sources in <strong>@groups.Count</strong> categories</p>
+    }
+</header>
+
 @if (sources.Count == 0)
 {
-    <div class="alert alert-light">No sources are switched on yet.</div>
+    <div class="cv-empty"><Icon Name="database" Size="26" /><p>No sources are switched on yet.</p></div>
 }
 else
 {
-    <p class="text-muted">@sources.Count sources in @groups.Count categories.</p>
+    <nav class="cv-jump" aria-label="Jump to a category">
+        @foreach (var group in groups)
+        {
+            <a href="@($"coverage#{Anchor(group.Key)}")">@group.Key <span>@group.Count()</span></a>
+        }
+    </nav>
+
     @foreach (var group in groups)
     {
-        <h2 class="h5 section-title mt-4">@group.Key <span class="text-muted fw-normal small">(@group.Count())</span></h2>
-        <ul class="coverage-list list-unstyled mb-0">
-            @foreach (var s in group.OrderBy(s => s.Name, StringComparer.OrdinalIgnoreCase))
-            {
-                <li class="coverage-item">
-                    <span class="coverage-item__name">@s.Name</span>
-                    <span class="badge bg-secondary">@s.ContentType</span>
-                    @if (SiteOf(s) is { } site)
-                    {
-                        <a class="coverage-item__site small" href="@site" target="_blank" rel="noopener noreferrer">@(new Uri(site).Host)</a>
-                    }
-                </li>
-            }
-        </ul>
+        <section class="cv-group" id="@Anchor(group.Key)" aria-labelledby="@($"h-{Anchor(group.Key)}")">
+            <h2 class="cv-h2" id="@($"h-{Anchor(group.Key)}")">@group.Key <span class="cv-count">@group.Count()</span></h2>
+            <ul class="cv-list">
+                @foreach (var s in group.OrderBy(s => s.Name, StringComparer.OrdinalIgnoreCase))
+                {
+                    var site = SiteOf(s);
+                    var host = Kb.SourceHostFor(s.Name);
+                    <li class="cv-item">
+                        <span class="cv-avatar" aria-hidden="true" style="--avatar-color: @AvatarColor(s.Name)">
+                            <span>@Initial(s.Name)</span>
+                            @if (host is not null)
+                            {
+                                <img src="/favicon-proxy/@host" alt="" loading="lazy" decoding="async" onerror="this.style.display='none'" />
+                            }
+                        </span>
+                        <div class="cv-text">
+                            <span class="cv-name">@s.Name</span>
+                            @if (site is not null)
+                            {
+                                <a class="cv-site" href="@site" target="_blank" rel="noopener noreferrer">@(new Uri(site).Host)</a>
+                            }
+                        </div>
+                        <span class="cv-type">@s.ContentType</span>
+                    </li>
+                }
+            </ul>
+        </section>
     }
 }
 
-<p class="text-muted small mt-4">Want to follow it all yourself? <a href="feed.xml">Subscribe to the Atom feed</a> or browse <a href="topics">Topics</a>.</p>
+<p class="cv-foot">Want to follow it all yourself? <a href="feed.xml">Subscribe to the Atom feed</a> or browse <a href="topics">Topics</a>.</p>
 
 @code {
     /// <summary>The source's own site (scheme + host), not the feed address, which is often an internal-looking path.</summary>
     private static string? SiteOf(AiPulse.Models.FeedSource s) =>
         Uri.TryCreate(s.Url, UriKind.Absolute, out var u) && (u.Scheme == Uri.UriSchemeHttp || u.Scheme == Uri.UriSchemeHttps) ? $"{u.Scheme}://{u.Host}" : null;
+
+    private static string Anchor(string category) =>
+        "cat-" + new string(category.ToLowerInvariant().Select(c => char.IsLetterOrDigit(c) ? c : '-').ToArray()).Trim('-');
+
+    private static string Initial(string name) =>
+        string.IsNullOrWhiteSpace(name) ? "?" : char.ToUpperInvariant(name.Trim()[0]).ToString();
+
+    private static string AvatarColor(string name)
+    {
+        var hash = 0;
+        foreach (var ch in name)
+            hash = (hash * 31 + ch) & 0x7fffffff;
+        return $"hsl({hash % 360}, 58%, 42%)";
+    }
 }

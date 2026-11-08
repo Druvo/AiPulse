@@ -12,321 +12,360 @@
 @inject ToastService Toasts
 @inject ISummarizer Ai
 @inject ILogger<News> Log
+@inject IHttpContextAccessor HttpContextAccessor
 
 <PageTitle>AiPulse · News Feed</PageTitle>
 
-<div class="news-layout">
-<div class="news-main">
-<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
-    <h1 class="mb-0"><Icon Name="rss" Size="22" /> News Feed</h1>
-    <div class="d-flex flex-wrap align-items-center gap-2">
-        @* Live-fetch status/Refresh/Mark-all-as-read are dashboard-y account actions, not browsing
-           filters - a public/anonymous visitor sees just the display and filter controls below. *@
-        @if (_userId is not null)
-        {
-            @if (_result is not null)
+<header class="news-head">
+    <div class="news-head-text">
+        <h1 class="news-title"><Icon Name="rss" Size="22" /> News Feed</h1>
+        <p class="news-status" aria-live="polite">
+            @if (_result is null)
             {
-                @if (_result.FetchedAt == DateTimeOffset.MinValue)
-                {
-                    <span class="text-muted small">Showing saved history @(_loading ? "— fetching live data…" : "")</span>
-                }
-                else
-                {
-                    <span class="text-muted small">Updated @_result.FetchedAt.ToLocalTime().ToString("g")</span>
-                }
+                <span>Collecting the latest from across the AI world…</span>
             }
-        }
-        <div class="btn-group view-toggle" role="group">
-            <button class="btn btn-sm @(_view == "List" ? "btn-dark" : "btn-outline-dark")" @onclick='() => SetView("List")'><Icon Name="list" Size="15" /> List</button>
-            <button class="btn btn-sm @(_view == "Grid" ? "btn-dark" : "btn-outline-dark")" @onclick='() => SetView("Grid")'><Icon Name="grid" Size="15" /> Grid</button>
-        </div>
+            else if (_result.FetchedAt == DateTimeOffset.MinValue)
+            {
+                <span>Showing saved history@(_loading ? " · fetching live updates…" : "")</span>
+            }
+            else
+            {
+                <span>Updated <time datetime="@_result.FetchedAt.ToString("o")" title="@_result.FetchedAt.ToLocalTime().ToString("f")">@ContentUi.RelativeTime(_result.FetchedAt, DateTimeOffset.Now)</time></span>
+            }
+            @if (_loading && _result is not null)
+            {
+                <span class="news-live-dot" aria-hidden="true"></span>
+            }
+        </p>
+    </div>
+    <div class="news-head-actions">
+        @* Refresh/Mark-all-as-read are account actions, not browsing filters - a signed-out visitor sees just the display and filter controls. *@
         @if (_userId is not null)
         {
-            <button class="btn btn-primary" @onclick="() => Load(true)" disabled="@_loading">
-                @if (_loading)
-                {
-                    <span class="spinner"></span>
-                }
-                else
-                {
-                    <Icon Name="refresh" Size="15" />
-                }
-                @(_loading ? "Refreshing…" : "Refresh")
+            <button class="btn btn-outline-secondary news-btn" title="Mark every item in the current view as read" @onclick="MarkAllAsRead">
+                <Icon Name="check" Size="15" /> <span class="news-btn-label">Mark all read</span>
             </button>
-            <button class="btn btn-sm btn-outline-dark" title="Mark every item in the current view as read" @onclick="MarkAllAsRead">
-                <Icon Name="check" Size="14" /> Mark all as read
+            <button class="btn btn-primary news-btn" @onclick="() => Load(true)" disabled="@_loading">
+                @if (_loading) { <span class="spinner"></span> } else { <Icon Name="refresh" Size="15" /> }
+                <span class="news-btn-label">@(_loading ? "Refreshing…" : "Refresh")</span>
             </button>
         }
-        <button class="btn btn-sm btn-outline-dark" title="Keyboard shortcuts" @onclick="() => _showShortcutsHelp = !_showShortcutsHelp">?</button>
+        <button class="btn btn-outline-secondary news-btn news-btn--icon" title="Keyboard shortcuts" aria-label="Keyboard shortcuts" aria-expanded="@(_showShortcutsHelp ? "true" : "false")"
+                @onclick="() => _showShortcutsHelp = !_showShortcutsHelp">
+            <span aria-hidden="true">?</span>
+        </button>
     </div>
-</div>
+</header>
 
 @if (_showShortcutsHelp)
 {
-    <div class="alert alert-light border small mb-3">
-        <strong>Keyboard shortcuts</strong> (inactive while typing in a text field):
-        <code>j</code>/<code>k</code> move focus down/up ·
-        <code>o</code>/<code>Enter</code> open focused item ·
-        <code>m</code> toggle read ·
-        <code>b</code> toggle bookmark ·
-        <code>r</code> refresh ·
-        <code>?</code> toggle this help ·
-        <code>Esc</code> clear focus
+    <div class="news-shortcuts" role="note">
+        <strong>Keyboard shortcuts</strong> <span class="text-muted">(inactive while typing)</span>
+        <ul>
+            <li><kbd>j</kbd> <kbd>k</kbd> next / previous</li>
+            <li><kbd>o</kbd> <kbd>Enter</kbd> open</li>
+            <li><kbd>m</kbd> toggle read</li>
+            <li><kbd>b</kbd> toggle bookmark</li>
+            <li><kbd>r</kbd> refresh</li>
+            <li><kbd>?</kbd> this help</li>
+            <li><kbd>Esc</kbd> clear focus</li>
+        </ul>
     </div>
 }
 
-<input class="form-control mb-3" placeholder="Search the feed…" value="@_search" @oninput="e => { _search = (string)e.Value!; _page = 1; }" />
-
-<div class="d-flex flex-wrap align-items-center gap-2 mb-2">
-    <div class="btn-group flex-wrap" role="group">
-        @foreach (var f in _filters)
-        {
-            @* "Following" and "New" only mean something for a signed-in user - nothing to follow, and no remembered
-               last visit to be new since (so an anonymous visitor saw every single item as New), otherwise. *@
-            @if (f is not ("Following" or "New") || _userId is not null)
-            {
-                <button class="btn btn-sm @(_filter == f ? "btn-dark" : "btn-outline-dark")"
-                        @onclick="() => SetFilter(f)">
-                    @f
-                    @if (f == "New" && NewCount() is > 0 and var newCount)
+<div class="news-layout">
+<div class="news-main">
+    @{
+        var (pageItems, totalItems) = _result is null ? (new List<FeedItem>(), 0) : GetPage();
+        _lastTotal = totalItems;
+    }
+    <div class="news-toolbar">
+        <div class="nt-row">
+            <div class="nt-search">
+                <Icon Name="search" Size="16" CssClass="nt-search-icon" />
+                <input type="search" class="nt-search-input" placeholder="Search the feed…" aria-label="Search the feed"
+                       value="@_search" @oninput="e => { _search = (string)e.Value!; _page = 1; }" />
+                @if (!string.IsNullOrEmpty(_search))
+                {
+                    <button type="button" class="nt-search-clear" title="Clear search" aria-label="Clear search" @onclick="() => { _search = string.Empty; _page = 1; }">
+                        <span aria-hidden="true">✕</span>
+                    </button>
+                }
+            </div>
+            <button type="button" class="nt-filters-btn" aria-controls="news-side" aria-expanded="@(_showFilters ? "true" : "false")" @onclick="() => _showFilters = !_showFilters">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" aria-hidden="true"><path d="M4 6h16M7 12h10M10 18h4" /></svg>
+                <span class="nt-filters-label">Filters</span>
+                @if (PanelFilterCount() is > 0 and var panelCount)
+                {
+                    <span class="nt-badge">@panelCount</span>
+                }
+            </button>
+            <div class="nt-density" role="group" aria-label="Layout">
+                @foreach (var d in Enum.GetValues<FeedDensity>())
+                {
+                    <button type="button" class="nt-density-btn @(_density == d ? "is-active" : "")" aria-pressed="@(_density == d ? "true" : "false")"
+                            title="@DensityLabel(d)" aria-label="@DensityLabel(d)" @onclick="() => SetDensity(d)">
+                        @DensityIcon(d)
+                    </button>
+                }
+            </div>
+        </div>
+        <div class="nt-row nt-row--tabs">
+            <div class="nt-tabs" role="group" aria-label="Show">
+                @foreach (var f in _filters)
+                {
+                    @* "Following" and "New" only mean something for a signed-in user - nothing to follow, and no remembered
+                       last visit to be new since (so an anonymous visitor saw every single item as New), otherwise. *@
+                    @if (f is not ("Following" or "New") || _userId is not null)
                     {
-                        <span class="badge bg-info ms-1">@newCount.ToString("N0")</span>
+                        <button type="button" class="nt-tab @(_filter == f ? "is-active" : "")" aria-pressed="@(_filter == f ? "true" : "false")" @onclick="() => SetFilter(f)">
+                            @f
+                            @if (f == "New" && NewCount() is > 0 and var newCount)
+                            {
+                                <span class="nt-tab-count">@newCount.ToString("N0")</span>
+                            }
+                        </button>
                     }
-                </button>
+                }
+            </div>
+            @if (_result is not null)
+            {
+                <span class="nt-count" aria-live="polite">@_lastTotal.ToString("N0") @(_lastTotal == 1 ? "story" : "stories")</span>
             }
+        </div>
+        @{ var active = ActiveFilters(); }
+        @if (active.Count > 0)
+        {
+            <div class="nt-chips" aria-label="Active filters">
+                @foreach (var chip in active)
+                {
+                    <button type="button" class="nt-chip" title="Remove filter: @chip.Label" @onclick="chip.Clear">
+                        <span class="nt-chip-label">@chip.Label</span>
+                        <span class="nt-chip-x" aria-hidden="true">✕</span>
+                    </button>
+                }
+                <button type="button" class="nt-clear" @onclick="ClearAllFilters">Clear all</button>
+            </div>
+        }
+        @if (_pendingNewCount > 0)
+        {
+            <div class="nt-live" role="status">
+                <button type="button" class="nt-live-show" @onclick="ApplyPending">
+                    <Icon Name="arrow-up" Size="15" /> @_pendingNewCount.ToString("N0") new item@(_pendingNewCount == 1 ? "" : "s") ready, show
+                </button>
+                <button type="button" class="nt-live-dismiss" title="Dismiss" aria-label="Dismiss" @onclick="DismissPending">
+                    <span aria-hidden="true">✕</span>
+                </button>
+            </div>
         }
     </div>
-    @if (!string.IsNullOrEmpty(_category))
-    {
-        <button class="btn btn-sm btn-warning" @onclick='() => { _category = ""; SyncUrl(); }'>Category: @_category ✕</button>
-    }
-    @if (!string.IsNullOrEmpty(_tag))
-    {
-        <button class="btn btn-sm btn-warning" @onclick='() => SetTag("")'>Tag: @_tag ✕</button>
-    }
-    @if (_dateFrom is not null && _dateTo is not null)
-    {
-        <button class="btn btn-sm btn-warning" @onclick="ClearDate">
-            @(_dateFrom == _dateTo ? $"Day: {_dateFrom.Value:MMM d}" : $"{_dateFrom.Value:MMM d} – {_dateTo.Value:MMM d}") ✕
-        </button>
-    }
-    @if (_sources.Count > 0)
-    {
-        <button class="btn btn-sm btn-warning" @onclick="ClearSources">Sources (@_sources.Count) ✕</button>
-    }
-</div>
 
-@if (_loadError is not null)
-{
-    <div class="alert alert-warning d-flex flex-wrap justify-content-between align-items-center gap-2 py-2 mb-3" role="alert">
-        <span>@_loadError</span>
-        <button class="btn btn-sm btn-outline-dark" disabled="@_loading" @onclick="() => Load(true)">Try again</button>
-    </div>
-}
-
-@if (_pendingNewCount > 0)
-{
-    <div class="alert alert-info d-flex flex-wrap justify-content-between align-items-center gap-2 py-2 mb-3">
-        <span><Icon Name="rss" Size="14" /> @_pendingNewCount new item@(_pendingNewCount == 1 ? "" : "s") ready</span>
-        <span class="d-flex gap-2">
-            <button class="btn btn-sm btn-primary" @onclick="ApplyPending">Show</button>
-            <button class="btn btn-sm btn-outline-secondary" @onclick="DismissPending">Dismiss</button>
-        </span>
-    </div>
-}
-
-@if (_loading && _result is null)
-{
-    <p><em>Fetching the latest from across the AI world…</em></p>
-}
-else if (_result is null)
-{
-    <EmptyState Icon="rss" Title="No data yet" Body="Sources haven't returned anything on this first load." />
-}
-else
-{
-    var (items, totalItems) = GetPage();
-    _visibleItems = items;
-    RequestCommentCounts(items);
-
-    @if (_result.Errors.Count > 0)
+    @if (_loadError is not null)
     {
-        <details class="mb-3">
-            <summary class="text-warning">@_result.Errors.Count source(s) couldn't be reached</summary>
-            <ul class="small text-muted mt-2">
-                @foreach (var err in _result.Errors) { <li>@err</li> }
-            </ul>
-        </details>
+        <div class="news-callout news-callout--warn" role="alert">
+            <Icon Name="refresh" Size="18" />
+            <div class="news-callout-text">
+                <strong>Couldn't refresh just now.</strong>
+                <span>@_loadError</span>
+            </div>
+            <button class="btn btn-sm btn-outline-secondary" disabled="@_loading" @onclick="() => Load(true)">Try again</button>
+        </div>
     }
 
-    <p class="text-muted small">@totalItems.ToString("N0") items</p>
-
-    @if (_view == "Grid")
+    @if (_loading && _result is null)
     {
-        <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-3">
-            @foreach (var (item, idx) in items.Select((it, i) => (it, i)))
+        <div class="news-list news-list--@ContentUi.DensityKey(_density)" aria-busy="true" aria-label="Loading stories">
+            @for (var s = 0; s < 6; s++)
             {
-                <div class="col" id="news-item-@idx">
-                    <FeedItemCard Item="item" Layout="Grid"
-                                  IsNew="IsNewItem(item)"
-                                  WatchedKeyword='@Reading.MatchWatchlist(item.Title + " " + item.Summary)'
-                                  IsRead="Reading.IsRead(item.Link)"
-                                  IsBookmarked="Reading.IsBookmarked(item.Link)"
-                                  OnToggleRead="() => ToggleRead(item)"
-                                  OnToggleBookmark="() => Toggle(item)"
-                                  OnOpened="() => MarkAsRead(item)"
-                                  OnMuteSource="MuteSource"
-                                  IsFollowingSource="_followedSources.Contains(item.SourceName)"
-                                  OnFollowSource="_userId.HasValue ? EventCallback.Factory.Create<string>(this, ToggleFollowSource) : default"
-                                  ShowFullTextToggle="true"
-                                  Expanded="_expandedLinks.Contains(item.Link)"
-                                  OnToggleExpanded="() => ToggleExpanded(item.Link)"
-                                  CommentCount="GetCommentCount(item)"
-                                  CommentsExpanded="_expandedComments.Contains(item.Link)"
-                                  OnToggleComments="() => ToggleComments(item.Link)"
-                                  OnCommentCountChanged="c => _commentCounts[item.Link] = c"
-                                  OnSummarize="@(CanSummarize ? EventCallback.Factory.Create(this, () => SummarizeAsync(item)) : default)"
-                                  AiSummary="@GetSummaryText(item)"
-                                  AiSummaryIsError="IsSummaryError(item)"
-                                  AiSummaryBusy="_summarizing.Contains(item.Link)"
-                                  CssClass='@(idx == _focusedIndex ? "kb-focused" : "")' />
+                <div class="sk-card sk-card--@ContentUi.DensityKey(_density)" aria-hidden="true">
+                    @if (_density != FeedDensity.Compact) { <div class="sk-media"></div> }
+                    <div class="sk-body">
+                        <div class="sk-line sk-w-30"></div>
+                        <div class="sk-line sk-line--title sk-w-90"></div>
+                        <div class="sk-line sk-line--title sk-w-60"></div>
+                        @if (_density != FeedDensity.Compact) { <div class="sk-line sk-w-80"></div> }
+                    </div>
                 </div>
             }
         </div>
     }
+    else if (_result is null)
+    {
+        <div class="news-empty">
+            <EmptyState Icon="rss" Title="No stories yet" Body="The sources haven't returned anything on this first load. They're polled every few minutes; try again shortly." ActionText="Try again" OnAction="() => Load(true)" />
+        </div>
+    }
     else
     {
-        @foreach (var (item, idx) in items.Select((it, i) => (it, i)))
+        var items = pageItems;
+        _visibleItems = items;
+        RequestCommentCounts(items);
+
+        @if (_result.Errors.Count > 0)
         {
-            <div id="news-item-@idx" class="mb-2">
-                <FeedItemCard Item="item" Layout="List"
-                              IsNew="IsNewItem(item)"
-                              WatchedKeyword='@Reading.MatchWatchlist(item.Title + " " + item.Summary)'
-                              IsRead="Reading.IsRead(item.Link)"
-                              IsBookmarked="Reading.IsBookmarked(item.Link)"
-                              OnToggleRead="() => ToggleRead(item)"
-                              OnToggleBookmark="() => Toggle(item)"
-                              OnOpened="() => MarkAsRead(item)"
-                              OnMuteSource="MuteSource"
-                              IsFollowingSource="_followedSources.Contains(item.SourceName)"
-                              OnFollowSource="_userId.HasValue ? EventCallback.Factory.Create<string>(this, ToggleFollowSource) : default"
-                              ShowFullTextToggle="true"
-                              Expanded="_expandedLinks.Contains(item.Link)"
-                              OnToggleExpanded="() => ToggleExpanded(item.Link)"
-                              CommentCount="GetCommentCount(item)"
-                              CommentsExpanded="_expandedComments.Contains(item.Link)"
-                              OnToggleComments="() => ToggleComments(item.Link)"
-                              OnCommentCountChanged="c => _commentCounts[item.Link] = c"
-                              OnSummarize="@(CanSummarize ? EventCallback.Factory.Create(this, () => SummarizeAsync(item)) : default)"
-                              AiSummary="@GetSummaryText(item)"
-                              AiSummaryIsError="IsSummaryError(item)"
-                              AiSummaryBusy="_summarizing.Contains(item.Link)"
-                              CssClass='@(idx == _focusedIndex ? "kb-focused" : "")' />
+            <details class="news-errors">
+                <summary>@_result.Errors.Count source@(_result.Errors.Count == 1 ? "" : "s") couldn't be reached</summary>
+                <ul>
+                    @foreach (var err in _result.Errors) { <li>@err</li> }
+                </ul>
+            </details>
+        }
+
+        @if (totalItems == 0)
+        {
+            <div class="news-empty">
+                @if (_filter == "Unread" && ActiveFilters().Count == 0)
+                {
+                    <EmptyState Icon="check" Title="You're all caught up" Body="Every story in your feed has been read. New ones arrive as the sources are polled." ActionText="Show everything" OnAction='() => SetFilter("All")' />
+                }
+                else
+                {
+                    <EmptyState Icon="search" Title="Nothing matches these filters" Body="Try a broader search, another tab, or remove a filter." ActionText="Clear all filters" OnAction="ClearAllFilters" />
+                }
             </div>
         }
-    }
+        else
+        {
+            <div class="news-list news-list--@ContentUi.DensityKey(_density)">
+                @foreach (var (item, idx) in items.Select((it, i) => (it, i)))
+                {
+                    <div class="news-item" id="news-item-@idx" @key="item.Link">
+                        <FeedItemCard Item="item" Layout="@ContentUi.CardLayout(_density)"
+                                      IsNew="IsNewItem(item)"
+                                      WatchedKeyword='@Reading.MatchWatchlist(item.Title + " " + item.Summary)'
+                                      IsRead="Reading.IsRead(item.Link)"
+                                      IsBookmarked="Reading.IsBookmarked(item.Link)"
+                                      OnToggleRead="() => ToggleRead(item)"
+                                      OnToggleBookmark="() => Toggle(item)"
+                                      OnOpened="() => MarkAsRead(item)"
+                                      OnMuteSource="MuteSource"
+                                      IsFollowingSource="_followedSources.Contains(item.SourceName)"
+                                      OnFollowSource="_userId.HasValue ? EventCallback.Factory.Create<string>(this, ToggleFollowSource) : default"
+                                      ShowFullTextToggle="true"
+                                      Expanded="_expandedLinks.Contains(item.Link)"
+                                      OnToggleExpanded="() => ToggleExpanded(item.Link)"
+                                      CommentCount="GetCommentCount(item)"
+                                      CommentsExpanded="_expandedComments.Contains(item.Link)"
+                                      OnToggleComments="() => ToggleComments(item.Link)"
+                                      OnCommentCountChanged="c => _commentCounts[item.Link] = c"
+                                      OnSummarize="@(CanSummarize ? EventCallback.Factory.Create(this, () => SummarizeAsync(item)) : default)"
+                                      AiSummary="@GetSummaryText(item)"
+                                      AiSummaryIsError="IsSummaryError(item)"
+                                      AiSummaryBusy="_summarizing.Contains(item.Link)"
+                                      CssClass='@(idx == _focusedIndex ? "kb-focused" : "")' />
+                    </div>
+                }
+            </div>
 
-    @if (totalItems == 0)
-    {
-        <EmptyState Icon="search" Title="Nothing matches the current filter/search" ActionText="Clear filters" OnAction="ClearAllFilters" />
+            <Pager TotalItems="totalItems" @bind-CurrentPage="_page" PageSize="_pageSize" PageSizeChanged="OnPageSizeChanged" />
+        }
     }
-    else
-    {
-        <Pager TotalItems="totalItems" @bind-CurrentPage="_page" PageSize="_pageSize" PageSizeChanged="OnPageSizeChanged" />
-    }
-}
 </div>
 
-<div class="news-calendar-panel">
-    <h6 class="mb-2"><Icon Name="calendar" Size="16" /> Calendar</h6>
-    <MonthCalendar Items="_result?.Items ?? new()" RangeStart="_dateFrom" RangeEnd="_dateTo" OnRangeChanged="OnCalendarRangeChanged" />
+@if (_showFilters)
+{
+    <div class="news-side-backdrop" @onclick="() => _showFilters = false"></div>
+}
+<aside id="news-side" class="news-side @(_showFilters ? "is-open" : "")" aria-label="Filters">
+    <div class="news-side-head">
+        <h2 class="news-side-title">Filters</h2>
+        <button type="button" class="news-side-close" title="Close filters" aria-label="Close filters" @onclick="() => _showFilters = false">
+            <span aria-hidden="true">✕</span>
+        </button>
+    </div>
 
-    <hr class="my-3" />
+    <section class="news-side-section">
+        <h3 class="news-side-label"><Icon Name="calendar" Size="15" /> Calendar</h3>
+        <MonthCalendar Items="_result?.Items ?? new()" RangeStart="_dateFrom" RangeEnd="_dateTo" OnRangeChanged="OnCalendarRangeChanged" />
+    </section>
 
-    <h6 class="mb-2"><Icon Name="tool" Size="14" /> Filters</h6>
+    <section class="news-side-section">
+        <h3 class="news-side-label"><Icon Name="tool" Size="15" /> Refine</h3>
+        <div class="news-selects">
+            <label>
+                <span>Category</span>
+                <select class="form-select form-select-sm" @bind="_category" @bind:after="SyncUrl">
+                    <option value="">All</option>
+                    @foreach (var cat in _categories) { <option value="@cat">@cat</option> }
+                </select>
+            </label>
+            <label>
+                <span>Type</span>
+                <select class="form-select form-select-sm" @bind="_contentType" @bind:after="SyncUrl">
+                    <option value="">All</option>
+                    @foreach (var ct in _contentTypes) { <option value="@ct">@ct</option> }
+                </select>
+            </label>
+            <label>
+                <span>Level</span>
+                <select class="form-select form-select-sm" @bind="_level" @bind:after="SyncUrl">
+                    <option value="">All</option>
+                    @foreach (var lvl in _levels) { <option value="@lvl">@lvl</option> }
+                </select>
+            </label>
+            <label>
+                <span>Sort</span>
+                <select class="form-select form-select-sm" @bind="_sort" @bind:after="SyncUrl">
+                    <option value="newest">Newest first</option>
+                    <option value="oldest">Oldest first</option>
+                    <option value="source">Source A-Z</option>
+                    <option value="title">Title A-Z</option>
+                </select>
+            </label>
+        </div>
+    </section>
 
-    <FilterBar>
-        <ChildContent>
-            <select class="form-select form-select-sm" @bind="_category" @bind:after="SyncUrl">
-                <option value="">All categories</option>
-                @foreach (var cat in _categories)
+    @if (AvailableSources().Count > 0)
+    {
+        <section class="news-side-section">
+            <h3 class="news-side-label"><Icon Name="database" Size="15" /> Sources <span class="news-side-hint">select any number</span></h3>
+            <input type="search" class="form-control form-control-sm mb-2" placeholder="Find a source…" aria-label="Find a source"
+                   value="@_sourceSearch" @oninput="e => _sourceSearch = (string)e.Value!" />
+            <div class="news-chip-scroll">
+                @{ var filteredSources = FilteredSources(); }
+                @foreach (var src in filteredSources)
                 {
-                    <option value="@cat">@cat</option>
+                    <button type="button" class="news-pick @(_sources.Contains(src) ? "is-active" : "")" aria-pressed="@(_sources.Contains(src) ? "true" : "false")" @onclick="() => ToggleSource(src)">@src</button>
                 }
-            </select>
-            <select class="form-select form-select-sm" @bind="_contentType" @bind:after="SyncUrl">
-                <option value="">All content types</option>
-                @foreach (var ct in _contentTypes)
+                @if (filteredSources.Count == 0)
                 {
-                    <option value="@ct">@ct</option>
+                    <span class="text-muted small">No sources match "@_sourceSearch".</span>
                 }
-            </select>
-            <select class="form-select form-select-sm" @bind="_level" @bind:after="SyncUrl">
-                <option value="">All levels</option>
-                @foreach (var lvl in _levels)
+            </div>
+        </section>
+    }
+
+    @if (_result is not null && AvailableTags().Count > 0)
+    {
+        <section class="news-side-section">
+            <h3 class="news-side-label"><Icon Name="trending-up" Size="15" /> Tags</h3>
+            <div class="news-chip-scroll news-chip-scroll--short">
+                @foreach (var t in AvailableTags().Take(24))
                 {
-                    <option value="@lvl">@lvl</option>
+                    <button type="button" class="news-pick @(_tag == t ? "is-active" : "")" aria-pressed="@(_tag == t ? "true" : "false")" @onclick='() => SetTag(_tag == t ? "" : t)'>#@t</button>
                 }
-            </select>
-            <select class="form-select form-select-sm" @bind="_sort" @bind:after="SyncUrl">
-                <option value="newest">Newest first</option>
-                <option value="oldest">Oldest first</option>
-                <option value="source">Source A-Z</option>
-                <option value="title">Title A-Z</option>
-            </select>
-        </ChildContent>
-        <Chips>
-            @if (AvailableSources().Count > 0)
-            {
-                <div class="w-100">
-                    <div class="x-small text-muted text-uppercase mb-1">Sources (select any number)</div>
-                    <input class="form-control form-control-sm mb-1" placeholder="Search sources…"
-                           value="@_sourceSearch" @oninput="e => _sourceSearch = (string)e.Value!" />
-                    <div class="d-flex flex-wrap gap-1 source-chip-scroll">
-                        @foreach (var src in FilteredSources())
-                        {
-                            <button class="btn btn-sm tag-chip @(_sources.Contains(src) ? "active" : "")" @onclick="() => ToggleSource(src)">@src</button>
-                        }
-                        @if (FilteredSources().Count == 0)
-                        {
-                            <span class="text-muted x-small">No sources match "@_sourceSearch".</span>
-                        }
-                    </div>
-                </div>
-            }
-            @if (_result is not null && AvailableTags().Count > 0)
-            {
-                <div class="w-100 mt-2">
-                    <div class="x-small text-muted text-uppercase mb-1">Tags</div>
-                    <div class="d-flex flex-wrap gap-1">
-                        @foreach (var t in AvailableTags().Take(20))
-                        {
-                            <button class="btn btn-sm tag-chip @(_tag == t ? "active" : "")" @onclick='() => SetTag(_tag == t ? "" : t)'>@t</button>
-                        }
-                    </div>
-                </div>
-            }
-        </Chips>
-    </FilterBar>
+            </div>
+        </section>
+    }
 
     @* Meaningless for an anonymous, per-tab-only session (Phase 0's ReadingStateService in-memory
        state doesn't survive a refresh) - hidden entirely for signed-out visitors rather than shown
        and silently forgotten. *@
     <AuthorizeView>
         <Authorized>
-            <div class="mt-2">
-                <div class="x-small text-muted text-uppercase mb-1">Saved searches</div>
+            <section class="news-side-section">
+                <h3 class="news-side-label"><Icon Name="star" Size="15" /> Saved searches</h3>
                 <div class="d-flex flex-wrap gap-2 align-items-center">
                     @foreach (var saved in Reading.SavedSearches)
                     {
                         <div class="btn-group btn-group-sm">
-                            <button class="btn btn-outline-dark" title="@SavedSearchSummary(saved)" @onclick="() => ApplySavedSearch(saved)">@saved.Name</button>
-                            <button class="btn btn-outline-danger" title="Delete this saved search" @onclick="() => Reading.RemoveSavedSearch(saved.Id)"><Icon Name="trash" Size="12" /></button>
+                            <button class="btn btn-outline-secondary" title="@SavedSearchSummary(saved)" @onclick="() => ApplySavedSearch(saved)">@saved.Name</button>
+                            <button class="btn btn-outline-danger" title="Delete this saved search" aria-label="Delete saved search @saved.Name" @onclick="() => Reading.RemoveSavedSearch(saved.Id)"><Icon Name="trash" Size="12" /></button>
                         </div>
                     }
                     @if (_savingSearch)
                     {
-                        <input class="form-control form-control-sm" style="max-width:180px" placeholder="Name this search…"
+                        <input class="form-control form-control-sm" style="max-width:180px" placeholder="Name this search…" aria-label="Name this search"
                                value="@_savedSearchName" @oninput="e => _savedSearchName = (string)e.Value!"
                                @onkeydown="@(e => { if (e.Key == "Enter") SaveCurrentSearch(); })" />
                         <button class="btn btn-sm btn-success" @onclick="SaveCurrentSearch" disabled="@string.IsNullOrWhiteSpace(_savedSearchName)">Save</button>
@@ -338,11 +377,19 @@ else
                             <Icon Name="star" Size="12" /> Save current filters…
                         </button>
                     }
+                    else if (Reading.SavedSearches.Count == 0)
+                    {
+                        <span class="text-muted small">Set a search or filter, then save it here for one-click reuse.</span>
+                    }
                 </div>
-            </div>
+            </section>
         </Authorized>
     </AuthorizeView>
-</div>
+
+    <div class="news-side-foot">
+        <button type="button" class="btn btn-primary w-100" @onclick="() => _showFilters = false">Show @_lastTotal.ToString("N0") @(_lastTotal == 1 ? "story" : "stories")</button>
+    </div>
+</aside>
 </div>
 
 @code {
@@ -395,7 +442,10 @@ else
     private string _tag = "";
     private DateOnly? _dateFrom;
     private DateOnly? _dateTo;
-    private string _view = "Grid";
+    private FeedDensity _density = FeedDensity.Grid;
+    private bool _showFilters;
+    private int _lastTotal;
+    private IJSObjectReference? _prefs;
     private int _page = 1;
     // Starts small: rendering 100 cards cost 170-320 ms per interaction (vs 37-51 ms for 20) and shipped a
     // 468 KB document - fine on a desktop, a 46,000 px scroll and laggy typing on a phone. Grows to 100 on
@@ -452,7 +502,8 @@ else
             _dateTo = null;
         }
 
-        _view = ViewParam is "List" or "Grid" ? ViewParam : "Grid";
+        // ?view= is an override for shared/old links (List|Grid|comfortable|compact); otherwise the reader's saved density stands.
+        if (!string.IsNullOrWhiteSpace(ViewParam)) _density = ContentUi.ParseDensity(ViewParam, _density);
         _filter = !string.IsNullOrWhiteSpace(FilterParam) && _filters.Contains(FilterParam) ? FilterParam : "Unread";
         _contentType = !string.IsNullOrWhiteSpace(ContentTypeParam) && _contentTypes.Contains(ContentTypeParam) ? ContentTypeParam : "";
         _category = !string.IsNullOrWhiteSpace(CategoryParam) && _categories.Contains(CategoryParam) ? CategoryParam : "";
@@ -465,6 +516,14 @@ else
 
     protected override void OnInitialized()
     {
+        // The saved density, mirrored into a cookie by feed-prefs.js, so the prerendered page already has the right layout (no
+        // flash of the default grid before the browser's localStorage can be read).
+        try
+        {
+            if (HttpContextAccessor.HttpContext?.Request.Cookies[ContentUi.DensityStorageKey] is { Length: > 0 } saved)
+                _density = ContentUi.ParseDensity(saved);
+        }
+        catch { /* no request context on this pass - the browser-side copy is applied after first render */ }
 
         // Peek (don't mark yet) so prerender + the interactive circuit's own OnInitializedAsync - two
         // separate component instances, both hitting this - agree on the same cutoff. Marking the visit
@@ -599,7 +658,62 @@ else
         _pendingNewCount = 0;
     }
 
-    private void SetView(string view) { _view = view; SyncUrl(); }
+    private async Task SetDensity(FeedDensity density)
+    {
+        if (_density == density) return;
+        _density = density;
+        _focusedIndex = -1;
+        if (!string.IsNullOrWhiteSpace(ViewParam)) SyncUrl(resetPage: false); // drop a now-stale ?view= override from the address
+        try
+        {
+            if (_prefs is not null) await _prefs.InvokeVoidAsync("set", ContentUi.DensityStorageKey, ContentUi.DensityKey(density));
+        }
+        catch { /* storage blocked or circuit gone - the choice still applies for this visit */ }
+    }
+
+    private static string DensityLabel(FeedDensity d) => d switch
+    {
+        FeedDensity.Comfortable => "Comfortable list",
+        FeedDensity.Compact => "Compact headlines",
+        _ => "Grid of cards"
+    };
+
+    private static RenderFragment DensityIcon(FeedDensity d) => d switch
+    {
+        FeedDensity.Comfortable => @<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><rect x="3.5" y="4.5" width="6" height="6" rx="1.2" /><rect x="3.5" y="13.5" width="6" height="6" rx="1.2" /><path d="M13 6h7.5M13 9h5M13 15h7.5M13 18h5" /></svg>,
+        FeedDensity.Compact => @<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M4 5.5h16M4 10h16M4 14.5h16M4 19h16" /></svg>,
+        _ => @<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><rect x="3.5" y="3.5" width="7.5" height="7.5" rx="1.5" /><rect x="13" y="3.5" width="7.5" height="7.5" rx="1.5" /><rect x="3.5" y="13" width="7.5" height="7.5" rx="1.5" /><rect x="13" y="13" width="7.5" height="7.5" rx="1.5" /></svg>
+    };
+
+    private sealed record FilterChip(string Label, EventCallback Clear);
+
+    /// <summary>Everything narrowing the list beyond the Unread/New/... tab, as removable chips - so the sticky bar always says why the list looks the way it does.</summary>
+    private List<FilterChip> ActiveFilters()
+    {
+        var chips = new List<FilterChip>();
+        EventCallback Do(Action a) => EventCallback.Factory.Create(this, a);
+
+        if (!string.IsNullOrWhiteSpace(_search)) chips.Add(new($"“{_search.Trim()}”", Do(() => { _search = ""; _page = 1; })));
+        if (!string.IsNullOrEmpty(_tag)) chips.Add(new($"#{_tag}", Do(() => SetTag(""))));
+        if (_dateFrom is not null && _dateTo is not null)
+            chips.Add(new(_dateFrom == _dateTo ? $"{_dateFrom.Value:MMM d}" : $"{_dateFrom.Value:MMM d} – {_dateTo.Value:MMM d}", Do(ClearDate)));
+        if (!string.IsNullOrEmpty(_category)) chips.Add(new(_category, Do(() => { _category = ""; SyncUrl(); })));
+        if (!string.IsNullOrEmpty(_contentType)) chips.Add(new(_contentType, Do(() => { _contentType = ""; SyncUrl(); })));
+        if (!string.IsNullOrEmpty(_level)) chips.Add(new(_level, Do(() => { _level = ""; SyncUrl(); })));
+        if (_sources.Count is > 0 and <= 3)
+            foreach (var src in _sources.OrderBy(s => s, StringComparer.OrdinalIgnoreCase).ToList())
+                chips.Add(new(src, Do(() => ToggleSource(src))));
+        else if (_sources.Count > 3)
+            chips.Add(new($"{_sources.Count} sources", Do(ClearSources)));
+        if (_sort != "newest")
+            chips.Add(new(_sort switch { "oldest" => "Oldest first", "source" => "Source A-Z", _ => "Title A-Z" }, Do(() => { _sort = "newest"; SyncUrl(); })));
+        return chips;
+    }
+
+    /// <summary>How many filters set inside the (collapsible) filter panel are on - shown on the Filters button so a closed panel never hides an active filter.</summary>
+    private int PanelFilterCount() =>
+        (string.IsNullOrEmpty(_category) ? 0 : 1) + (string.IsNullOrEmpty(_contentType) ? 0 : 1) + (string.IsNullOrEmpty(_level) ? 0 : 1) +
+        (_sources.Count > 0 ? 1 : 0) + (string.IsNullOrEmpty(_tag) ? 0 : 1) + (_dateFrom is null ? 0 : 1) + (_sort != "newest" ? 1 : 0);
     private void SetFilter(string filter) { _filter = filter; SyncUrl(); }
     private void SetTag(string tag) { _tag = tag; SyncUrl(); }
     private void ClearDate() { _dateFrom = null; _dateTo = null; SyncUrl(); }
@@ -617,12 +731,14 @@ else
     private void ClearSources() { _sources.Clear(); SyncUrl(); }
 
     /// <summary>Reflects the current filter/view state into the URL so a refresh (or a shared link) lands back in the same place.</summary>
-    private void SyncUrl()
-    {
-        _page = 1; // any filter/sort/view change invalidates the current page
+    private void SyncUrl() => SyncUrl(resetPage: true);
 
+    private void SyncUrl(bool resetPage)
+    {
+        if (resetPage) _page = 1; // any filter/sort change invalidates the current page
+
+        // Density is a per-browser preference now (feed-prefs.js), not part of the address.
         var query = new List<string>();
-        if (_view != "Grid") query.Add($"view={_view}");
         if (_filter != "Unread") query.Add($"filter={Uri.EscapeDataString(_filter)}");
         if (!string.IsNullOrEmpty(_tag)) query.Add($"tag={Uri.EscapeDataString(_tag)}");
         if (_dateFrom is not null && _dateTo is not null)
@@ -915,6 +1031,7 @@ else
         _tag = "";
         _dateFrom = null;
         _dateTo = null;
+        _sort = "newest";
         SyncUrl();
     }
 
@@ -960,6 +1077,15 @@ else
         try
         {
             await JS.InvokeVoidAsync("aipulseKeyboard.register", _dotNetRef);
+
+            _prefs = await JS.InvokeAsync<IJSObjectReference>("import", "./js/feed-prefs.js");
+            await _prefs.InvokeVoidAsync("trackStickyOffset");
+            if (string.IsNullOrWhiteSpace(ViewParam) && await _prefs.InvokeAsync<string?>("get", ContentUi.DensityStorageKey) is { Length: > 0 } saved
+                && ContentUi.ParseDensity(saved, _density) != _density)
+            {
+                _density = ContentUi.ParseDensity(saved, _density);
+                StateHasChanged();
+            }
 
             if (!_pageSizeChosen && await JS.InvokeAsync<bool>("aipulseKeyboard.isWideViewport"))
             {
@@ -1017,6 +1143,7 @@ else
                 break;
             case "Escape":
                 _showShortcutsHelp = false;
+                _showFilters = false;
                 _focusedIndex = -1;
                 break;
         }
@@ -1027,6 +1154,10 @@ else
     {
         Feeds.PartialProgress -= OnPartialProgress;
         Feeds.CacheUpdated -= OnCacheUpdated;
+        if (_prefs is not null)
+        {
+            try { await _prefs.DisposeAsync(); } catch { /* circuit may already be gone */ }
+        }
         if (_dotNetRef is null) return;
         try { await JS.InvokeVoidAsync("aipulseKeyboard.unregister"); } catch { /* circuit may already be gone */ }
         _dotNetRef.Dispose();

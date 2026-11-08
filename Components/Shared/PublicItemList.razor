@@ -1,39 +1,36 @@
 @* Read-only list of headlines for the open pages (topics, releases). Plain server-rendered markup with no circuit behind it, so it
-   is light on phones and fully visible to crawlers. The signed-in News page keeps its own richer cards. *@
+   is light on phones and fully visible to crawlers. The signed-in News page keeps its own richer cards. With GroupByDay the list
+   becomes a timeline with Today / Yesterday / date headings. *@
 @using AiPulse.Models
+@inject KnowledgeBaseService Kb
 
 @if (Items.Count == 0)
 {
-    <div class="alert alert-light mb-0">@EmptyText</div>
+    <div class="pil-empty">
+        <Icon Name="inbox" Size="26" />
+        <p>@EmptyText</p>
+    </div>
+}
+else if (GroupByDay)
+{
+    var now = DateTimeOffset.Now;
+    <div class="pil-timeline">
+        @foreach (var group in ContentUi.GroupByDay(Items, now))
+        {
+            <section class="pil-day" aria-label="@group.Label">
+                <h2 class="pil-day-label"><span>@group.Label</span> <span class="pil-day-count">@group.Items.Count</span></h2>
+                <ul class="pil-list">
+                    @foreach (var item in group.Items) { @Row(item, now) }
+                </ul>
+            </section>
+        }
+    </div>
 }
 else
 {
-    <ul class="public-items list-unstyled mb-0">
-        @foreach (var item in Items)
-        {
-            <li class="public-item">
-                <a class="public-item__title" href="@item.Link" target="_blank" rel="noopener noreferrer">@item.Title</a>
-                <div class="public-item__meta">
-                    <span>@item.SourceName</span>
-                    <span aria-hidden="true">·</span>
-                    <time datetime="@item.Published.UtcDateTime.ToString("yyyy-MM-dd'T'HH:mm'Z'")">@item.Published.LocalDateTime.ToString("d MMM yyyy")</time>
-                    @if (item.AlsoSeenOn.Length > 0)
-                    {
-                        <span aria-hidden="true">·</span>
-                        <span>also on @string.Join(", ", item.AlsoSeenOn.Take(2))</span>
-                    }
-                </div>
-                @if (ShowTags && item.Tags.Length > 0)
-                {
-                    <div class="public-item__tags">
-                        @foreach (var tag in item.Tags.Take(5))
-                        {
-                            <a class="badge bg-secondary text-decoration-none" href="@PublicFeeds.TagPath(tag)">@tag</a>
-                        }
-                    </div>
-                }
-            </li>
-        }
+    var now = DateTimeOffset.Now;
+    <ul class="pil-list">
+        @foreach (var item in Items) { @Row(item, now) }
     </ul>
 }
 
@@ -41,4 +38,67 @@ else
     [Parameter, EditorRequired] public IReadOnlyList<FeedItem> Items { get; set; } = Array.Empty<FeedItem>();
     [Parameter] public bool ShowTags { get; set; } = true;
     [Parameter] public string EmptyText { get; set; } = "Nothing here yet.";
+    /// <summary>Group under day headings (newest first) instead of one flat list.</summary>
+    [Parameter] public bool GroupByDay { get; set; }
+    /// <summary>Release mode: split "project v1.2.3" titles into the project and a version pill.</summary>
+    [Parameter] public bool ReleaseStyle { get; set; }
+
+    private RenderFragment Row(FeedItem item, DateTimeOffset now) => __builder =>
+    {
+        var (project, version) = ReleaseStyle ? ContentUi.SplitRelease(item.Title) : (item.Title, (string?)null);
+        var host = Kb.SourceHostFor(item.SourceName);
+        <li class="pil-item">
+            <span class="pil-avatar" aria-hidden="true" style="--avatar-color: @AvatarColor(item.SourceName)">
+                <span>@Initial(item.SourceName)</span>
+                @if (host is not null)
+                {
+                    <img src="/favicon-proxy/@host" alt="" loading="lazy" decoding="async" onerror="this.style.display='none'" />
+                }
+            </span>
+            <div class="pil-main">
+                <a class="pil-title" href="@item.Link" target="_blank" rel="noopener noreferrer">
+                    @project
+                    @if (version is not null)
+                    {
+                        <span class="pil-version">@version</span>
+                    }
+                </a>
+                <div class="pil-meta">
+                    <span class="pil-source">@item.SourceName</span>
+                    <span aria-hidden="true">·</span>
+                    <time datetime="@item.Published.UtcDateTime.ToString("yyyy-MM-dd'T'HH:mm'Z'")" title="@item.Published.LocalDateTime.ToString("f")">@ContentUi.RelativeTime(item.Published, now)</time>
+                    @if (item.AlsoSeenOn.Length > 0)
+                    {
+                        <span aria-hidden="true">·</span>
+                        <span class="pil-also" title="Also covered by @string.Join(", ", item.AlsoSeenOn)">also on @string.Join(", ", item.AlsoSeenOn.Take(2))@(item.AlsoSeenOn.Length > 2 ? $" +{item.AlsoSeenOn.Length - 2}" : "")</span>
+                    }
+                </div>
+                @if (!ReleaseStyle && PublicFeeds.Excerpt(item.Summary, 220) is { Length: > 0 } excerpt && excerpt != item.Title)
+                {
+                    <p class="pil-summary">@excerpt</p>
+                }
+                @if (ShowTags && item.Tags.Length > 0)
+                {
+                    <div class="pil-tags">
+                        @foreach (var tag in item.Tags.Take(5))
+                        {
+                            <a class="pil-tag" href="@PublicFeeds.TagPath(tag)">#@tag</a>
+                        }
+                    </div>
+                }
+            </div>
+        </li>
+    };
+
+    private static string Initial(string name) =>
+        string.IsNullOrWhiteSpace(name) ? "?" : char.ToUpperInvariant(name.Trim()[0]).ToString();
+
+    /// <summary>Same deterministic per-source hue as FeedItemCard, so a source looks the same on the public pages.</summary>
+    private static string AvatarColor(string name)
+    {
+        var hash = 0;
+        foreach (var ch in name)
+            hash = (hash * 31 + ch) & 0x7fffffff;
+        return $"hsl({hash % 360}, 58%, 42%)";
+    }
 }

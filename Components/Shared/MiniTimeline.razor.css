@@ -1,0 +1,3 @@
+.mt-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: .25rem 1rem; margin-bottom: .75rem; }
+.mt-title { display: flex; align-items: center; gap: .5rem; margin: 0; font-size: 1.02rem; font-weight: 600; }
+.mt-note { font-size: .78rem; color: var(--ap-muted); }

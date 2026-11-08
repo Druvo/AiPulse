@@ -1,0 +1,52 @@
+.tg-crumbs { margin-bottom: .5rem; font-size: .875rem; }
+.tg-crumbs a { display: inline-flex; align-items: center; min-height: 36px; text-decoration: none; }
+.tg-crumbs a:hover { text-decoration: underline; }
+
+.tg-hero {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas: "text stats" "feed stats";
+    align-items: center;
+    gap: .5rem 2rem;
+    margin-bottom: 1.5rem;
+    padding: 1.4rem 1.5rem;
+    background: var(--ap-gradient-soft), var(--ap-surface);
+    border: 1px solid var(--ap-border);
+    border-radius: var(--ap-radius-lg);
+}
+.tg-hero-text { grid-area: text; min-width: 0; }
+.tg-h1 { margin: 0; font-size: clamp(1.6rem, 1.2rem + 1.6vw, 2.4rem); letter-spacing: -0.02em; overflow-wrap: anywhere; }
+.tg-hash { color: var(--ap-accent); margin-right: .1rem; }
+.tg-lead { margin: .35rem 0 0; color: var(--ap-text-secondary); }
+.tg-stats { grid-area: stats; display: flex; flex-direction: column; align-items: flex-end; gap: .25rem; }
+.tg-spark { width: 200px; height: 52px; overflow: visible; }
+.tg-spark-line { fill: none; stroke: var(--ap-accent); stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; vector-effect: non-scaling-stroke; }
+.tg-spark-fill { fill: color-mix(in oklab, var(--ap-accent) 18%, transparent); }
+.tg-stat-note { font-size: .75rem; color: var(--ap-text-secondary); }
+.tg-feed { grid-area: feed; display: inline-flex; align-items: center; gap: .35rem; justify-self: start; min-height: 40px; font-size: .875rem; }
+
+.tg-related { margin-bottom: 1.5rem; }
+.tg-related-title { margin: 0 0 .5rem; font-family: var(--ap-font-body); font-size: .74rem; font-weight: 600; letter-spacing: .05em; text-transform: uppercase; color: var(--ap-text-secondary); }
+.tg-related ul { display: flex; flex-wrap: wrap; gap: .4rem; margin: 0; padding: 0; list-style: none; }
+.tg-related a {
+    display: inline-flex;
+    align-items: center;
+    gap: .4rem;
+    min-height: 40px;
+    padding: 0 .85rem;
+    font-size: .875rem;
+    font-weight: 500;
+    color: var(--ap-text);
+    text-decoration: none;
+    background: var(--ap-surface);
+    border: 1px solid var(--ap-border-strong);
+    border-radius: 999px;
+}
+.tg-related a:hover { border-color: var(--ap-accent); }
+.tg-related a span { font-size: .72rem; color: var(--ap-muted); }
+
+@media (max-width: 767.98px) {
+    .tg-hero { grid-template-columns: minmax(0, 1fr); grid-template-areas: "text" "stats" "feed"; padding: 1.1rem; }
+    .tg-stats { align-items: stretch; }
+    .tg-spark { width: 100%; }
+}

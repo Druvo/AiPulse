@@ -1,49 +1,85 @@
-@* Global search across the Glossary, Tools, and Learning Hub. Trigger button + Ctrl+K (see App.razor). *@
+@* Global search (Ctrl+K, see App.razor) across recent headlines, topics, the Glossary, Tools and the Learning Hub. Results are grouped,
+   ranked (exact > prefix > word start > anywhere > description) with matches highlighted, and fully keyboard driven: arrows move,
+   Enter opens, Esc closes. Styles in GlobalSearch.razor.css. *@
 @rendermode InteractiveServer
+@implements IAsyncDisposable
 @inject KnowledgeBaseService Kb
+@inject FeedHistoryService History
 @inject NavigationManager Nav
+@inject IJSRuntime JS
 
-<button id="global-search-trigger" class="search-trigger" type="button" @onclick="Open" title="Search (Ctrl+K)">
+<button id="global-search-trigger" class="search-trigger gs-trigger" type="button" @onclick="Open" title="Search (Ctrl+K)" aria-haspopup="dialog">
     <Icon Name="search" Size="15" />
-    <span>Search…</span>
-    <span class="search-kbd">Ctrl K</span>
+    <span class="gs-trigger-label">Search…</span>
+    <kbd class="gs-kbd">Ctrl K</kbd>
 </button>
 
 @if (_open)
 {
-    <div class="search-overlay" @onclick="Close">
-        <div class="search-panel" @onclick:stopPropagation="true">
-            <div class="search-input-row">
-                <Icon Name="search" Size="16" />
-                <input class="search-input" placeholder="Search glossary, tools, learning modules…"
-                       @bind="_query" @bind:event="oninput" @ref="_inputRef"
-                       @onkeydown="@(e => { if (e.Key == "Escape") Close(); })" />
+    <div class="gs-overlay" @onclick="Close">
+        <div class="gs-panel" role="dialog" aria-modal="true" aria-label="Search AiPulse" @onclick:stopPropagation="true">
+            <div class="gs-input-row">
+                <Icon Name="search" Size="18" />
+                <input class="gs-input" placeholder="Search news, topics, glossary, tools…" autocomplete="off" spellcheck="false"
+                       role="combobox" aria-expanded="@(_results.Count > 0 ? "true" : "false")" aria-controls="gs-results" aria-autocomplete="list"
+                       aria-activedescendant="@(_active >= 0 && _active < _results.Count ? $"gs-opt-{_active}" : null)"
+                       value="@_query" @oninput="OnInput" @ref="_inputRef" @onkeydown="OnKey" />
+                <button type="button" class="gs-esc" @onclick="Close" aria-label="Close search">Esc</button>
             </div>
-            @{
-                var results = Results();
-            }
+
             @if (string.IsNullOrWhiteSpace(_query))
             {
-                <p class="search-hint">Type to search across the Glossary, Tools &amp; Tips, and Learning Hub.</p>
+                <div class="gs-hint">
+                    <p>Search recent headlines, topics, the Glossary, Tools &amp; Tips and the Learning Hub.</p>
+                    @if (_suggestions.Count > 0)
+                    {
+                        <div class="gs-suggest">
+                            <span>Try</span>
+                            @foreach (var s in _suggestions)
+                            {
+                                <button type="button" class="gs-suggest-btn" @onclick="() => SetQuery(s)">@s</button>
+                            }
+                        </div>
+                    }
+                </div>
             }
-            else if (results.Count == 0)
+            else if (_results.Count == 0)
             {
-                <p class="search-hint">No matches for "@_query".</p>
+                <div class="gs-hint">
+                    <p>No matches for <strong>“@_query.Trim()”</strong>.</p>
+                    <p class="gs-hint-sub">Check the spelling, try a shorter word, or browse <a href="topics" @onclick="Close">Topics</a>.</p>
+                </div>
             }
             else
             {
-                <div class="search-results">
-                    @foreach (var group in results.GroupBy(r => r.Category))
+                <div class="gs-results" id="gs-results" role="listbox" aria-label="Search results">
+                    @{ var index = 0; }
+                    @foreach (var group in _results.GroupBy(r => r.Category))
                     {
-                        <div class="search-group-label">@group.Key</div>
+                        <div class="gs-group" role="presentation">@group.Key</div>
                         @foreach (var r in group)
                         {
-                            <a class="search-result" href="@r.Url" @onclick="Close">
-                                <span class="search-result-title">@r.Title</span>
-                                <span class="search-result-sub">@r.Subtitle</span>
+                            var i = index++;
+                            <a class="gs-result @(i == _active ? "is-active" : "")" id="gs-opt-@i" role="option" aria-selected="@(i == _active ? "true" : "false")"
+                               href="@r.Url" target="@(r.External ? "_blank" : null)" rel="@(r.External ? "noopener" : null)"
+                               @onclick="Close" @onmousemove="() => _active = i">
+                                <span class="gs-icon" aria-hidden="true"><Icon Name="@r.Icon" Size="16" /></span>
+                                <span class="gs-text">
+                                    <span class="gs-title">@Highlighted(r.Title)</span>
+                                    @if (!string.IsNullOrWhiteSpace(r.Subtitle))
+                                    {
+                                        <span class="gs-sub">@Highlighted(r.Subtitle)</span>
+                                    }
+                                </span>
+                                @if (r.External) { <span class="gs-ext" aria-hidden="true"><Icon Name="external-link" Size="14" /></span> }
                             </a>
                         }
                     }
+                </div>
+                <div class="gs-foot" aria-hidden="true">
+                    <span><kbd>↑</kbd><kbd>↓</kbd> move</span>
+                    <span><kbd>Enter</kbd> open</span>
+                    <span><kbd>Esc</kbd> close</span>
                 </div>
             }
         </div>
@@ -54,40 +90,145 @@
     private bool _open;
     private bool _focusPending;
     private string _query = "";
+    private int _active = -1;
     private ElementReference _inputRef;
     private List<SearchItem>? _index;
+    private List<SearchItem> _results = new();
+    private List<string> _suggestions = new();
+    private IReadOnlyList<TopicCount> _topics = Array.Empty<TopicCount>();
+    private IJSObjectReference? _module;
 
-    private void Open() { _open = true; _focusPending = true; }
-    private void Close() { _open = false; _query = ""; }
-
-    protected override async Task OnAfterRenderAsync(bool firstRender)
+    private void Open()
     {
-        if (_focusPending)
+        _open = true;
+        _focusPending = true;
+        // Computed once per opening, not per keystroke: ranking topics walks the whole saved history.
+        _topics = PublicFeeds.Topics(History.Items, DateTimeOffset.UtcNow.AddDays(-30), take: 200);
+        _suggestions = PublicFeeds.Topics(History.Items, DateTimeOffset.UtcNow.AddDays(-7), take: 5).Select(t => t.Tag).ToList();
+    }
+
+    private void Close() { _open = false; _query = ""; _results = new(); _active = -1; }
+
+    private void SetQuery(string q)
+    {
+        _query = q;
+        Search();
+        _focusPending = true;
+    }
+
+    private void OnInput(ChangeEventArgs e)
+    {
+        _query = e.Value?.ToString() ?? "";
+        Search();
+    }
+
+    private async Task OnKey(KeyboardEventArgs e)
+    {
+        switch (e.Key)
         {
-            _focusPending = false;
-            await _inputRef.FocusAsync();
+            case "Escape":
+                Close();
+                break;
+            case "ArrowDown" when _results.Count > 0:
+                _active = (_active + 1) % _results.Count;
+                await ScrollActive();
+                break;
+            case "ArrowUp" when _results.Count > 0:
+                _active = _active <= 0 ? _results.Count - 1 : _active - 1;
+                await ScrollActive();
+                break;
+            case "Enter" when _active >= 0 && _active < _results.Count:
+                var r = _results[_active];
+                Close();
+                if (r.External) await JS.InvokeVoidAsync("aipulseKeyboard.openLink", r.Url);
+                else Nav.NavigateTo(r.Url);
+                break;
         }
     }
 
-    private List<SearchItem> Results()
+    private async Task ScrollActive()
+    {
+        try
+        {
+            StateHasChanged();
+            if (_module is not null) await _module.InvokeVoidAsync("scrollActiveIntoView", "gs-results");
+        }
+        catch { /* circuit gone */ }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!_focusPending) return;
+        _focusPending = false;
+        try
+        {
+            await _inputRef.FocusAsync();
+            _module ??= await JS.InvokeAsync<IJSObjectReference>("import", "./js/feed-prefs.js");
+            await _module.InvokeVoidAsync("preventArrowDefault", _inputRef);
+        }
+        catch { /* circuit gone or the panel already closed */ }
+    }
+
+    private void Search()
     {
         _index ??= BuildIndex();
         var q = _query.Trim();
-        if (q.Length == 0) return new();
-        return _index.Where(i => i.Title.Contains(q, StringComparison.OrdinalIgnoreCase)
-                               || i.Subtitle.Contains(q, StringComparison.OrdinalIgnoreCase))
-                      .Take(20)
-                      .ToList();
+        _active = -1;
+        if (q.Length == 0) { _results = new(); return; }
+
+        var terms = q.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries);
+        var results = new List<SearchItem>();
+
+        // Headlines: cheap contains-all-terms pass over the saved history, newest first - recency beats rank for news.
+        results.AddRange(History.Items
+            .Where(i => PublicFeeds.IsHeadline(i) && terms.All(t => i.Title.Contains(t, StringComparison.OrdinalIgnoreCase)))
+            .OrderByDescending(i => i.Published)
+            .Take(5)
+            .Select(i => new SearchItem(i.Title, $"{i.SourceName} · {ContentUi.RelativeTime(i.Published, DateTimeOffset.Now)}", "News", i.Link, "rss", External: true)));
+
+        results.AddRange(_topics
+            .Select(t => (t, score: ContentUi.MatchScore(t.Tag, null, q)))
+            .Where(x => x.score > 0)
+            .OrderByDescending(x => x.score).ThenByDescending(x => x.t.Count)
+            .Take(4)
+            .Select(x => new SearchItem(x.t.Tag, $"{x.t.Count:N0} stories in the last 30 days", "Topics", PublicFeeds.TagPath(x.t.Tag).TrimStart('/'), "trending-up")));
+
+        foreach (var category in new[] { "Glossary", "Tools & Tips", "Learning Hub" })
+        {
+            results.AddRange(_index.Where(i => i.Category == category)
+                .Select(i => (i, score: ContentUi.MatchScore(i.Title, i.Subtitle, q)))
+                .Where(x => x.score > 0)
+                .OrderByDescending(x => x.score).ThenBy(x => x.i.Title, StringComparer.OrdinalIgnoreCase)
+                .Take(5)
+                .Select(x => x.i));
+        }
+
+        _results = results;
+        if (_results.Count > 0) _active = 0;
     }
+
+    private RenderFragment Highlighted(string text) => __builder =>
+    {
+        foreach (var seg in ContentUi.Highlight(text, _query))
+        {
+            if (seg.Match) { <mark>@seg.Text</mark> } else { @seg.Text }
+        }
+    };
 
     private List<SearchItem> BuildIndex()
     {
         var items = new List<SearchItem>();
-        items.AddRange(Kb.Glossary.Select(t => new SearchItem(t.Term, t.ShortDef, "Glossary", $"glossary?q={Uri.EscapeDataString(t.Term)}")));
-        items.AddRange(Kb.Tools.Select(t => new SearchItem(t.Name, t.OneLiner, "Tools & Tips", "tools")));
-        items.AddRange(Kb.Learning.Select(m => new SearchItem(m.Title, m.Why, "Learning Hub", "learn")));
+        items.AddRange(Kb.Glossary.Select(t => new SearchItem(t.Term, t.ShortDef, "Glossary", $"glossary?q={Uri.EscapeDataString(t.Term)}", "book")));
+        items.AddRange(Kb.Tools.Select(t => new SearchItem(t.Name, t.OneLiner, "Tools & Tips", "tools", "tool")));
+        items.AddRange(Kb.Learning.Select(m => new SearchItem(m.Title, m.Why, "Learning Hub", "learn", "graduation-cap")));
         return items;
     }
 
-    private sealed record SearchItem(string Title, string Subtitle, string Category, string Url);
+    public async ValueTask DisposeAsync()
+    {
+        if (_module is null) return;
+        try { await _module.DisposeAsync(); } catch { /* circuit gone */ }
+    }
+
+    private sealed record SearchItem(string Title, string Subtitle, string Category, string Url, string Icon, bool External = false);
 }

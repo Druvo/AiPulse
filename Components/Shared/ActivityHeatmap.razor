@@ -1,4 +1,7 @@
-@* GitHub-style contribution heatmap over persisted feed history. Click a day to jump into News filtered to it. *@
+@* GitHub-style contribution heatmap over persisted feed history: weeks as columns (newest on the right, scrolled into view on load),
+   month labels on top, Mon/Wed/Fri row labels and a Less/More legend. Click a day to jump into News filtered to it. The cells are a
+   pointer shortcut only (out of the tab order: hundreds of tab stops would be a trap); the busiest-day link and the News calendar are
+   the keyboard route to the same filter. *@
 
 @{
     var counts = Items
@@ -7,49 +10,86 @@
 
     var today = DateOnly.FromDateTime(DateTime.Today);
     var oldest = counts.Count > 0 ? counts.Keys.Min() : today;
-    var spanDays = Math.Min(MaxDays, (today.DayNumber - oldest.DayNumber) + 1);
+    var spanDays = Math.Clamp((today.DayNumber - oldest.DayNumber) + 1, Math.Min(MinDays, MaxDays), MaxDays);
     var startDay = today.AddDays(-(spanDays - 1));
     // Align the grid so columns are full weeks (Sunday-start), like a GitHub contribution graph.
     startDay = startDay.AddDays(-(int)startDay.DayOfWeek);
 
     var totalDays = (today.DayNumber - startDay.DayNumber) + 1;
     var weeks = (int)Math.Ceiling(totalDays / 7.0);
-    var max = counts.Count > 0 ? counts.Values.Max() : 0;
+    var inRange = counts.Where(kv => kv.Key >= startDay && kv.Key <= today).ToList();
+    var max = inRange.Count > 0 ? inRange.Max(kv => kv.Value) : 0;
+    var total = inRange.Sum(kv => kv.Value);
+    var busiest = inRange.OrderByDescending(kv => kv.Value).ThenByDescending(kv => kv.Key).FirstOrDefault();
 }
 
 @if (Items.Count == 0)
 {
-    <p class="text-muted small mb-0">No history recorded yet — check back after the feed watcher's first poll.</p>
+    <div class="hm-empty">
+        <svg width="40" height="28" viewBox="0 0 40 28" aria-hidden="true">
+            @for (var x = 0; x < 5; x++) { for (var y = 0; y < 3; y++) { <rect x="@(x * 8)" y="@(y * 9)" width="6" height="7" rx="1.5" class="hm-empty-cell" /> } }
+        </svg>
+        <p>No history yet. Activity fills in here after the feed watcher's first polls.</p>
+    </div>
 }
 else
 {
-    <div class="heatmap-scroll flex-grow-1 d-flex flex-column">
-        <div class="heatmap-grid flex-grow-1" style="grid-template-columns: repeat(@weeks, 22px);">
-            @for (var w = 0; w < weeks; w++)
-            {
-                <div class="d-flex flex-column gap-1 heatmap-col">
-                    @for (var d = 0; d < 7; d++)
+    <div class="hm" style="--hm-weeks: @weeks">
+        <div class="hm-scroll">
+            <div class="hm-inner">
+                <div class="hm-months" aria-hidden="true">
+                    @for (var w = 0; w < weeks; w++)
                     {
-                        var day = startDay.AddDays(w * 7 + d);
-                        if (day > today)
-                        {
-                            <div class="heatmap-cell heatmap-empty"></div>
-                        }
-                        else
-                        {
-                            var count = counts.GetValueOrDefault(day);
-                            var level = Level(count, max);
-                            <a class="heatmap-cell heatmap-@level" href="@($"news?date={day:yyyy-MM-dd}")" title="@day.ToString("MMM d, yyyy"): @count item(s)"></a>
-                        }
+                        var first = startDay.AddDays(w * 7);
+                        var label = w == 0 || first.Day <= 7 ? first.ToString("MMM") : "";
+                        @if (w == 0 && first.Day > 21) { label = ""; } @* too close to the next month's label *@
+                        <span class="hm-month">@label</span>
                     }
                 </div>
+                <div class="hm-body">
+                    <div class="hm-days" aria-hidden="true">
+                        <span></span><span>Mon</span><span></span><span>Wed</span><span></span><span>Fri</span><span></span>
+                    </div>
+                    <div class="hm-grid" role="img" aria-label="@($"Stories per day since {startDay:MMM d}: {total:N0} in total, busiest {busiest.Key:MMM d} with {busiest.Value:N0}")">
+                        @for (var w = 0; w < weeks; w++)
+                        {
+                            @for (var d = 0; d < 7; d++)
+                            {
+                                var day = startDay.AddDays(w * 7 + d);
+                                if (day > today)
+                                {
+                                    <span class="hm-cell hm-future"></span>
+                                }
+                                else
+                                {
+                                    var count = counts.GetValueOrDefault(day);
+                                    <a class="hm-cell hm-l@(ContentUi.HeatLevel(count, max))" tabindex="-1" href="@($"news?date={day:yyyy-MM-dd}&filter=All")"
+                                       title="@($"{day:ddd, MMM d, yyyy}: {count:N0} stor{(count == 1 ? "y" : "ies")}")"></a>
+                                }
+                            }
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="hm-foot">
+            @if (ShowSummary)
+            {
+                <span class="hm-summary">
+                    <strong>@total.ToString("N0")</strong> stories
+                    @if (busiest.Value > 0)
+                    {
+                        <span> · busiest <a href="@($"news?date={busiest.Key:yyyy-MM-dd}&filter=All")">@busiest.Key.ToString("MMM d")</a> (@busiest.Value.ToString("N0"))</span>
+                    }
+                </span>
             }
+            <span class="hm-legend" aria-hidden="true">
+                Less
+                @for (var l = 0; l <= 4; l++) { <span class="hm-cell hm-l@(l)"></span> }
+                More
+            </span>
         </div>
     </div>
-    @if (ShowSummary)
-    {
-        <p class="text-muted small mb-0 mt-2">@Items.Count items tracked since @oldest.ToString("MMM d, yyyy").</p>
-    }
 }
 
 @code {
@@ -59,19 +99,10 @@ else
     [Parameter]
     public int MaxDays { get; set; } = 90;
 
+    /// <summary>Show at least this many days even when history is shorter, so a young install still gets a recognizable chart.</summary>
+    [Parameter]
+    public int MinDays { get; set; } = 84;
+
     [Parameter]
     public bool ShowSummary { get; set; } = true;
-
-    private static int Level(int count, int max)
-    {
-        if (count == 0 || max == 0) return 0;
-        var ratio = (double)count / max;
-        return ratio switch
-        {
-            <= 0.25 => 1,
-            <= 0.5 => 2,
-            <= 0.75 => 3,
-            _ => 4
-        };
-    }
 }

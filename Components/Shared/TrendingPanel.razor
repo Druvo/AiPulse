@@ -1,33 +1,51 @@
-@* Top tags and active sources over the last DaysWindow days, as clickable links into the News feed. *@
+@* Top tags and most active sources over the last DaysWindow days, as links into the News feed. Tags read as a small weighted
+   cloud; sources as bars, so "who's loudest" is visible at a glance. *@
 
-<div class="card h-100">
+<section class="card h-100 tp">
     <div class="card-body">
-        <h6 class="section-title mb-2"><Icon Name="trending-up" Size="16" /> Trending @WindowLabel</h6>
-        @if (TopTags.Count == 0)
+        <h2 class="tp-title"><Icon Name="trending-up" Size="18" /> Trending @WindowLabel</h2>
+        @{
+            var tags = TopTags;
+            var sources = TopSources;
+        }
+        @if (tags.Count == 0 && sources.Count == 0)
         {
-            <p class="text-muted small mb-0">Not enough data yet.</p>
+            <div class="tp-empty"><Icon Name="trending-up" Size="20" /> Not enough stories @WindowLabel to call a trend yet.</div>
         }
         else
         {
-            <div class="d-flex flex-wrap gap-1 mb-3">
-                @foreach (var (tag, count) in TopTags)
-                {
-                    <a class="tag-chip small" href="@($"news?tag={Uri.EscapeDataString(tag)}")">@tag <span class="text-muted">@count</span></a>
-                }
-            </div>
-            <h6 class="mb-2 x-small text-muted text-uppercase">Most active sources</h6>
-            <ul class="list-unstyled mb-0 small">
-                @foreach (var (source, count) in TopSources)
-                {
-                    <li class="d-flex justify-content-between border-bottom py-1">
-                        <span>@source</span>
-                        <span class="text-muted">@count</span>
-                    </li>
-                }
-            </ul>
+            @if (tags.Count > 0)
+            {
+                var top = tags[0].Count;
+                <div class="tp-tags">
+                    @foreach (var (tag, count) in tags)
+                    {
+                        <a class="tp-tag tp-tier-@ContentUi.TopicTier(count, top)" href="@($"news?tag={Uri.EscapeDataString(tag)}&filter=All")" title="@count stories tagged @tag">
+                            #@tag <span class="tp-tag-count">@count</span>
+                        </a>
+                    }
+                </div>
+            }
+            @if (sources.Count > 0)
+            {
+                var topSource = sources[0].Count;
+                <h3 class="tp-sub">Most active sources</h3>
+                <ol class="tp-sources">
+                    @foreach (var (source, count) in sources)
+                    {
+                        <li>
+                            <a href="@($"news?source={Uri.EscapeDataString(source)}&filter=All")">
+                                <span class="tp-source-name">@source</span>
+                                <span class="tp-source-count">@count</span>
+                                <span class="tp-bar" aria-hidden="true"><span style="width: @(Math.Max(4, count * 100 / topSource))%"></span></span>
+                            </a>
+                        </li>
+                    }
+                </ol>
+            }
         }
     </div>
-</div>
+</section>
 
 @code {
     [Parameter, EditorRequired]
@@ -49,7 +67,7 @@
         .SelectMany(i => i.Tags)
         .GroupBy(t => t, StringComparer.OrdinalIgnoreCase)
         .OrderByDescending(g => g.Count())
-        .Take(20)
+        .Take(16)
         .Select(g => (g.Key, g.Count()))
         .ToList();
 
@@ -57,7 +75,7 @@
         .Where(i => i.Published >= DateTimeOffset.Now.AddDays(-DaysWindow))
         .GroupBy(i => i.SourceName)
         .OrderByDescending(g => g.Count())
-        .Take(10)
+        .Take(6)
         .Select(g => (g.Key, g.Count()))
         .ToList();
 }

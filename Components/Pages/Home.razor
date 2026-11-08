@@ -1,4 +1,4 @@
-@page "/dashboard"
+﻿@page "/dashboard"
 @attribute [Authorize]
 @rendermode InteractiveServer
 @implements IDisposable
@@ -14,286 +14,285 @@
 
 <PageTitle>AiPulse · Dashboard</PageTitle>
 
-<div class="page-header">
-    <h1><Icon Name="zap" Size="22" /> Dashboard</h1>
-    <p class="lead">Your everyday station to read the AI world and level up as a developer — news, jargon, tools, and a learning roadmap. Runs standalone, no AI required.</p>
-</div>
+<section class="dash-hero" aria-labelledby="dash-title">
+    <div class="dash-hero-intro">
+        <p class="dash-eyebrow">@Greeting() · @DateTime.Now.ToString("dddd, MMMM d")</p>
+        <h1 id="dash-title" class="dash-title"><Icon Name="zap" Size="24" /> Dashboard</h1>
+        <p class="dash-lead">What moved in the AI world, what's waiting for you, and where to pick up learning.</p>
+    </div>
+    <div class="dash-stats">
+        <a class="dash-stat" href="@($"news?date={DateTime.Today:yyyy-MM-dd}&filter=All")">
+            <span class="dash-stat-icon"><Icon Name="rss" Size="18" /></span>
+            <span class="dash-stat-num">@_summary.NewToday.ToString("N0")</span>
+            <span class="dash-stat-label">New today</span>
+        </a>
+        <a class="dash-stat" href="news">
+            <span class="dash-stat-icon"><Icon Name="inbox" Size="18" /></span>
+            <span class="dash-stat-num">@_summary.UnreadThisWeek.ToString("N0")</span>
+            <span class="dash-stat-label">Unread, last 7 days</span>
+        </a>
+        <a class="dash-stat" href="reading-stats">
+            <span class="dash-stat-icon"><Icon Name="activity" Size="18" /></span>
+            <span class="dash-stat-num">@_summary.Streak<span class="dash-stat-unit">@(_summary.Streak == 1 ? "day" : "days")</span></span>
+            <span class="dash-stat-label">Reading streak</span>
+        </a>
+        <a class="dash-stat dash-stat--topic" href="@(_summary.TopTopic is null ? "topics" : PublicFeeds.TagPath(_summary.TopTopic).TrimStart('/'))">
+            <span class="dash-stat-icon"><Icon Name="trending-up" Size="18" /></span>
+            <span class="dash-stat-num dash-stat-text" title="@_summary.TopTopic">@(_summary.TopTopic is null ? "—" : "#" + _summary.TopTopic)</span>
+            <span class="dash-stat-label">Top topic@(_summary.TopTopicCount > 0 ? $" · {_summary.TopTopicCount:N0} stories" : "")</span>
+        </a>
+    </div>
+</section>
 
 @if (_pendingNew > 0)
 {
-    <div class="alert alert-info d-flex flex-wrap justify-content-between align-items-center gap-2 py-2 mb-3" role="status">
-        <span><Icon Name="rss" Size="14" /> @_pendingNew.ToString("N0") new item@(_pendingNew == 1 ? "" : "s") arrived since you opened this page</span>
+    <div class="dash-update" role="status">
+        <span><Icon Name="rss" Size="15" /> @_pendingNew.ToString("N0") new item@(_pendingNew == 1 ? "" : "s") arrived since you opened this page</span>
         <button class="btn btn-sm btn-primary" @onclick="ApplyNewItems">Update dashboard</button>
     </div>
 }
 
 <OnboardingChecklist />
 
-@if (!_welcomeDismissed)
-{
-    <div class="card mb-4 welcome-banner">
-        <div class="card-body">
-            <div class="d-flex justify-content-between align-items-start gap-3">
-                <div class="flex-grow-1">
-                    <h5 class="mb-1"><Icon Name="sparkle" Size="18" /> New here? Three things to try</h5>
-                    <p class="text-muted small mb-2">
-                        AiPulse aggregates @Stats.Current.ActiveSources AI news/research/tool sources into one feed, plus a glossary, a tools
-                        comparison, and a learning roadmap — all standalone, no AI required to run it.
-                    </p>
-                    <div class="d-flex flex-column gap-1 mb-2">
-                        <a href="news" class="checklist-item @(VisitedNews() ? "done" : "")">
-                            <Icon Name="@(VisitedNews() ? "check" : "rss")" Size="15" />
-                            <span>Browse the News Feed</span>
-                        </a>
-                        <a href="news" class="checklist-item @(ReadSomething() ? "done" : "")">
-                            <Icon Name="@(ReadSomething() ? "check" : "bookmark")" Size="15" />
-                            <span>Read or save an article</span>
-                        </a>
-                        <a href="learn" class="checklist-item @(StartedLearning() ? "done" : "")">
-                            <Icon Name="@(StartedLearning() ? "check" : "graduation-cap")" Size="15" />
-                            <span>Start a Learning Hub module</span>
+<div class="bento">
+    @if (!_welcomeDismissed)
+    {
+        <section class="card bento-wide welcome-tile">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start gap-3">
+                    <div class="flex-grow-1">
+                        <h2 class="tile-title"><Icon Name="sparkle" Size="18" /> New here? Three things to try</h2>
+                        <p class="text-muted small mb-2">
+                            AiPulse gathers @Stats.Current.ActiveSources AI news, research and tool sources into one feed, plus a glossary, a tools
+                            comparison and a learning roadmap. It all runs standalone, no AI required.
+                        </p>
+                        <div class="welcome-steps">
+                            <a href="news" class="welcome-step @(VisitedNews() ? "done" : "")">
+                                <Icon Name="@(VisitedNews() ? "check" : "rss")" Size="16" />
+                                <span>Browse the News Feed</span>
+                            </a>
+                            <a href="news" class="welcome-step @(ReadSomething() ? "done" : "")">
+                                <Icon Name="@(ReadSomething() ? "check" : "bookmark")" Size="16" />
+                                <span>Read or save an article</span>
+                            </a>
+                            <a href="learn" class="welcome-step @(StartedLearning() ? "done" : "")">
+                                <Icon Name="@(StartedLearning() ? "check" : "graduation-cap")" Size="16" />
+                                <span>Start a Learning Hub module</span>
+                            </a>
+                        </div>
+                        <a href="help" class="btn btn-sm btn-primary tile-btn">
+                            <Icon Name="help-circle" Size="14" /> Read the full guide
                         </a>
                     </div>
-                    <a href="help" class="btn btn-sm btn-primary">
-                        <Icon Name="help-circle" Size="14" /> Read the full guide
-                    </a>
+                    <button class="btn btn-sm btn-outline-secondary tile-btn text-nowrap" @onclick="DismissWelcome" title="Dismiss">
+                        <Icon Name="check" Size="16" /> Got it
+                    </button>
                 </div>
-                <button class="btn btn-sm btn-link text-muted" @onclick="DismissWelcome" title="Dismiss">
-                    <Icon Name="check" Size="16" /> Got it
-                </button>
             </div>
-        </div>
-    </div>
-}
+        </section>
+    }
 
-<div class="row g-3 mb-4 row-cols-2 row-cols-lg-5">
-    <div class="col">
-        <a class="stat-card" href="news?filter=New">
-            <div class="stat-num">@_newSinceVisit</div>
-            <div class="stat-label"><Icon Name="rss" Size="14" /> New since last visit</div>
-        </a>
-    </div>
-    <div class="col">
-        <a class="stat-card" href="news">
-            <div class="stat-num">@Kb.Sources.Count(s => s.Enabled)</div>
-            <div class="stat-label"><Icon Name="rss" Size="14" /> Live sources</div>
-        </a>
-    </div>
-    <div class="col">
-        <a class="stat-card" href="glossary">
-            <div class="stat-num">@Kb.Glossary.Count</div>
-            <div class="stat-label"><Icon Name="book" Size="14" /> Glossary terms</div>
-        </a>
-    </div>
-    <div class="col">
-        <a class="stat-card" href="learn">
-            <div class="stat-num">@Kb.Learning.Count</div>
-            <div class="stat-label"><Icon Name="graduation-cap" Size="14" /> Learning modules</div>
-        </a>
-    </div>
-    <div class="col">
-        <a class="stat-card" href="reading-stats">
-            <div class="stat-num">@Reading.Bookmarks.Count</div>
-            <div class="stat-label"><Icon Name="bookmark" Size="14" /> Saved to read</div>
-        </a>
-    </div>
-</div>
+    <section class="card bento-wide bento-tall digest-tile" aria-labelledby="digest-title">
+        <div class="card-body">
+            <div class="tile-head">
+                <h2 id="digest-title" class="tile-title"><Icon Name="calendar" Size="18" /> Digest</h2>
+                <div class="seg" role="group" aria-label="Digest range">
+                    <button class="seg-btn @(_range == "today" ? "is-active" : "")" aria-pressed="@(_range == "today" ? "true" : "false")" @onclick='() => SetRange("today")'>Today</button>
+                    <button class="seg-btn @(_range == "week" ? "is-active" : "")" aria-pressed="@(_range == "week" ? "true" : "false")" @onclick='() => SetRange("week")'>Week</button>
+                    <button class="seg-btn @(_range == "month" ? "is-active" : "")" aria-pressed="@(_range == "month" ? "true" : "false")" @onclick='() => SetRange("month")'>Month</button>
+                </div>
+            </div>
 
-<div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
-    <h4 class="section-title mb-0"><Icon Name="calendar" /> Digest</h4>
-    <div class="btn-group btn-group-sm" role="group">
-        <button class="btn @(_range == "today" ? "btn-dark" : "btn-outline-dark")" @onclick='() => SetRange("today")'>Today</button>
-        <button class="btn @(_range == "week" ? "btn-dark" : "btn-outline-dark")" @onclick='() => SetRange("week")'>This Week</button>
-        <button class="btn @(_range == "month" ? "btn-dark" : "btn-outline-dark")" @onclick='() => SetRange("month")'>This Month</button>
-    </div>
-</div>
+            <dl class="mini-stats">
+                <div><dt>Stories</dt><dd>@_rangeItems.Count.ToString("N0")</dd></div>
+                <div><dt>Active sources</dt><dd>@_activeSourceCount.ToString("N0")</dd></div>
+                <div><dt>Top category</dt><dd class="mini-text" title="@_topCategory">@(_topCategory ?? "—")</dd></div>
+                <div><dt>Multi-source</dt><dd>@_multiSourceStories.Count.ToString("N0")</dd></div>
+            </dl>
 
-<div class="row g-3 mb-4">
-    <div class="col-6 col-lg-3">
-        <div class="stat-card">
-            <div class="stat-num">@_rangeItems.Count</div>
-            <div class="stat-label"><Icon Name="rss" Size="14" /> Items @RangeLabel</div>
-        </div>
-    </div>
-    <div class="col-6 col-lg-3">
-        <div class="stat-card">
-            <div class="stat-num">@_activeSourceCount</div>
-            <div class="stat-label"><Icon Name="database" Size="14" /> Active sources</div>
-        </div>
-    </div>
-    <div class="col-6 col-lg-3">
-        <div class="stat-card">
-            <div class="stat-num stat-num-text">@(_topCategory ?? "—")</div>
-            <div class="stat-label"><Icon Name="trending-up" Size="14" /> Top category</div>
-        </div>
-    </div>
-    <div class="col-6 col-lg-3">
-        <div class="stat-card">
-            <div class="stat-num">@_multiSourceStories.Count</div>
-            <div class="stat-label"><Icon Name="star" Size="14" /> Multi-source stories</div>
-        </div>
-    </div>
-</div>
-
-<div class="row g-4 mb-4">
-    <div class="col-lg-4">
-        <TrendingPanel Items="_rangeItems" DaysWindow="_daysWindow" />
-    </div>
-    <div class="col-lg-4">
-        <MiniTimeline Items="_historyItems ?? Array.Empty<FeedItem>()" MaxDays="365" /> @* Always this year, independent of the Today/Week/Month digest range above. *@
-    </div>
-    <div class="col-lg-4">
-        <ExploreTrendingPanel Models="_trendingModels" Repos="_trendingRepos" Developers="_trendingDevelopers" Loading="_trendingLoading" OnRefresh="() => LoadTrendingAsync(force: true)" />
-    </div>
-</div>
-
-<div class="row g-4 mb-4">
-    <div class="col-md-6">
-        <h4 class="section-title"><Icon Name="star" /> Biggest stories @RangeLabel</h4>
-        <p class="text-muted small">Ranked by how many of your sources covered the same story — the more sources reporting it, the bigger the signal.</p>
-        @if (_biggestStories.Count == 0)
-        {
-            <p class="text-muted">Not enough data yet — check back after AiPulse has been running a few days.</p>
-        }
-        else
-        {
-            <div class="biggest-stories-scroll">
-                @foreach (var item in _biggestStories)
-                {
-                    <div class="mb-2">
+            <h3 class="tile-sub">Biggest stories @RangeLabel</h3>
+            <p class="tile-note">Ranked by how many of your sources covered the same story.</p>
+            @if (_biggestStories.Count == 0)
+            {
+                <div class="tile-empty"><Icon Name="inbox" Size="20" /> Not enough data yet. Check back once AiPulse has collected a few days of news.</div>
+            }
+            else
+            {
+                <div class="story-stack">
+                    @foreach (var item in _biggestStories)
+                    {
                         <FeedItemCard Item="item" Layout="Compact"
                                       IsRead="Reading.IsRead(item.Link)"
                                       IsBookmarked="Reading.IsBookmarked(item.Link)"
                                       OnToggleRead="() => ToggleRead(item)"
                                       OnToggleBookmark="() => ToggleBookmark(item)"
                                       OnOpened="() => MarkAsRead(item)" />
-                    </div>
+                    }
+                </div>
+            }
+        </div>
+    </section>
+
+    <div class="bento-cell">
+        <TrendingPanel Items="_rangeItems" DaysWindow="_daysWindow" />
+    </div>
+
+    <div class="bento-cell">
+        <ExploreTrendingPanel Models="_trendingModels" Repos="_trendingRepos" Developers="_trendingDevelopers" Loading="_trendingLoading" OnRefresh="() => LoadTrendingAsync(force: true)" />
+    </div>
+
+    <div class="bento-wide">
+        <MiniTimeline Items="_historyItems ?? Array.Empty<FeedItem>()" MaxDays="365" /> @* Always this year, independent of the Today/Week/Month digest range above. *@
+    </div>
+
+    <section class="card bento-cell" aria-labelledby="later-title">
+        <div class="card-body">
+            <div class="tile-head">
+                <h2 id="later-title" class="tile-title"><Icon Name="bookmark" Size="18" /> Read later</h2>
+                @if (Reading.Bookmarks.Count > 0)
+                {
+                    <span class="tile-count">@Reading.Bookmarks.Count.ToString("N0")</span>
                 }
             </div>
-        }
-    </div>
-    <div class="col-md-6">
-        @if (_range != "today")
-        {
-            <h4 class="section-title"><Icon Name="calendar" /> Day by day</h4>
+            @if (Reading.Bookmarks.Count == 0)
+            {
+                <div class="tile-empty"><Icon Name="bookmark" Size="20" /> <span>Nothing saved yet. Tap the bookmark on any story in the <a href="news">News Feed</a> to keep it here.</span></div>
+            }
+            else
+            {
+                <div class="story-stack">
+                    @foreach (var b in Reading.Bookmarks.Take(4))
+                    {
+                        var bItem = ToFeedItem(b);
+                        <FeedItemCard Item="bItem" Layout="Compact"
+                                      IsRead="Reading.IsRead(bItem.Link)"
+                                      IsBookmarked="true"
+                                      OnToggleRead="() => ToggleRead(bItem)"
+                                      OnToggleBookmark="() => Reading.RemoveBookmark(bItem.Link)"
+                                      OnOpened="() => MarkAsRead(bItem)" />
+                    }
+                </div>
+                <a href="reading-stats" class="btn btn-sm btn-outline-primary tile-btn mt-2">Open reading list →</a>
+            }
+        </div>
+    </section>
 
-            <div class="mb-2">
-                <input class="form-control form-control-sm" style="max-width:280px" placeholder="Search by category…"
-                       value="@_search" @oninput="e => { _search = (string)e.Value!; _dayPage = 1; }" />
+    <section class="card bento-cell" aria-labelledby="learn-title">
+        <div class="card-body">
+            @{
+                var next = Kb.Learning.Where(m => !Reading.IsModuleComplete(m.Title)).Take(4).ToList();
+                var pct = Kb.Learning.Count == 0 ? 0 : Reading.CompletedModuleCount * 100 / Kb.Learning.Count;
+            }
+            <div class="tile-head">
+                <h2 id="learn-title" class="tile-title"><Icon Name="graduation-cap" Size="18" /> Continue learning</h2>
+                <span class="tile-count">@Reading.CompletedModuleCount / @Kb.Learning.Count</span>
             </div>
+            <div class="learn-bar" role="progressbar" aria-label="Learning modules complete" aria-valuemin="0" aria-valuemax="100" aria-valuenow="@pct">
+                <span style="width: @(pct)%"></span>
+            </div>
+            @if (next.Count == 0)
+            {
+                <div class="tile-empty"><Icon Name="check" Size="20" /> All modules complete. Nicely done.</div>
+            }
+            else
+            {
+                <ul class="learn-list">
+                    @foreach (var m in next)
+                    {
+                        <li>
+                            <a href="learn">
+                                <span class="learn-name">@m.Title</span>
+                                <span class="badge level-@m.Level.ToLower()">@m.Level</span>
+                            </a>
+                        </li>
+                    }
+                </ul>
+            }
+            <a href="learn" class="btn btn-sm btn-outline-primary tile-btn mt-2">All @Kb.Learning.Count modules →</a>
+        </div>
+    </section>
 
-            var (pageDays, totalDays) = GetDayPage();
+    <section class="card bento-cell" aria-labelledby="glance-title">
+        <div class="card-body">
+            <h2 id="glance-title" class="tile-title"><Icon Name="database" Size="18" /> At a glance</h2>
+            <ul class="glance">
+                <li><a href="news?filter=New"><span>New since last visit</span><strong>@_newSinceVisit.ToString("N0")</strong></a></li>
+                <li><a href="coverage"><span>Live sources</span><strong>@Kb.Sources.Count(s => s.Enabled).ToString("N0")</strong></a></li>
+                <li><a href="glossary"><span>Glossary terms</span><strong>@Kb.Glossary.Count.ToString("N0")</strong></a></li>
+                <li><a href="learn"><span>Learning modules</span><strong>@Kb.Learning.Count.ToString("N0")</strong></a></li>
+            </ul>
+            <p class="ai-status @(Ai.Enabled ? "is-on" : "")">
+                <span class="ai-status-dot" aria-hidden="true"></span>
+                <span><strong>AI layer @(Ai.Enabled ? "on" : "off")</strong> ·
+                    @(Ai.Enabled ? "summaries, glossary explanations and Ask AiPulse use your configured model." : "standalone mode. Add a provider under Llm:Providers to enable summaries.")</span>
+            </p>
+        </div>
+    </section>
 
-            <div class="table-responsive">
-                <table class="table table-sm align-middle">
-                    <thead>
-                        <tr>
-                            <SortableHeader Column="date" Label="Day" SortColumn="@_sortColumn" SortAscending="@_sortAscending" OnSort="ToggleSort" />
-                            <SortableHeader Column="count" Label="Items" SortColumn="@_sortColumn" SortAscending="@_sortAscending" OnSort="ToggleSort" />
-                            <th>Top categories</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach (var day in pageDays)
-                        {
+    @if (_range != "today")
+    {
+        <section class="card bento-wide" aria-labelledby="days-title">
+            <div class="card-body">
+                <div class="tile-head">
+                    <h2 id="days-title" class="tile-title"><Icon Name="calendar" Size="18" /> Day by day</h2>
+                    <input class="form-control form-control-sm tile-search" placeholder="Filter by category…" aria-label="Filter days by category"
+                           value="@_search" @oninput="e => { _search = (string)e.Value!; _dayPage = 1; }" />
+                </div>
+                @{ var (pageDays, totalDays) = GetDayPage(); var dayMax = Math.Max(1, _byDay.Count == 0 ? 1 : _byDay.Max(d => d.Count)); }
+                <div class="table-responsive">
+                    <table class="table table-sm align-middle day-table">
+                        <thead>
                             <tr>
-                                <td>@day.Date.ToString("ddd, MMM d")</td>
-                                <td>@day.Count</td>
-                                <td>
-                                    @foreach (var (cat, count) in day.TopCategories)
-                                    {
-                                        <span class="badge bg-secondary me-1">@cat @count</span>
-                                    }
-                                </td>
+                                <SortableHeader Column="date" Label="Day" SortColumn="@_sortColumn" SortAscending="@_sortAscending" OnSort="ToggleSort" />
+                                <SortableHeader Column="count" Label="Items" SortColumn="@_sortColumn" SortAscending="@_sortAscending" OnSort="ToggleSort" />
+                                <th>Top categories</th>
                             </tr>
-                        }
-                    </tbody>
-                </table>
+                        </thead>
+                        <tbody>
+                            @foreach (var day in pageDays)
+                            {
+                                <tr>
+                                    <td class="text-nowrap"><a href="@($"news?date={day.Date:yyyy-MM-dd}&filter=All")">@day.Date.ToString("ddd, MMM d")</a></td>
+                                    <td class="day-count">
+                                        <span class="day-bar" aria-hidden="true"><span style="width: @(day.Count * 100 / dayMax)%"></span></span>
+                                        <span>@day.Count.ToString("N0")</span>
+                                    </td>
+                                    <td>
+                                        @foreach (var (cat, count) in day.TopCategories)
+                                        {
+                                            <span class="badge bg-secondary me-1">@cat @count</span>
+                                        }
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+                @if (totalDays == 0)
+                {
+                    <div class="tile-empty"><Icon Name="search" Size="20" /> No days match that category.</div>
+                }
+                <Pager TotalItems="totalDays" @bind-CurrentPage="_dayPage" @bind-PageSize="_dayPageSize" PageSizeOptions="new[] { 10, 14, 30 }" />
             </div>
+        </section>
+    }
 
-            <Pager TotalItems="totalDays" @bind-CurrentPage="_dayPage" @bind-PageSize="_dayPageSize" PageSizeOptions="new[] { 10, 14, 30 }" />
-        }
-    </div>
-</div>
-
-@if (Reading.DashboardWidgets.Count > 0)
-{
-    <div class="row g-4 mb-4">
-        @foreach (var w in Reading.DashboardWidgets)
-        {
-            <div class="col-lg-6">
-                <h4 class="section-title">@w.Title</h4>
+    @foreach (var w in Reading.DashboardWidgets)
+    {
+        <section class="card bento-cell bento-widget">
+            <div class="card-body">
+                <h2 class="tile-title">@w.Title</h2>
                 @if (w.Type == "Iframe")
                 {
-                    <div class="card">
-                        <iframe src="@w.Content" class="dashboard-widget-frame" sandbox="allow-scripts allow-same-origin allow-popups"></iframe>
-                    </div>
+                    <iframe src="@w.Content" class="dashboard-widget-frame" title="@w.Title" sandbox="allow-scripts allow-same-origin allow-popups"></iframe>
                 }
                 else
                 {
-                    <div class="card">
-                        <div class="card-body">@((MarkupString)w.Content)</div>
-                    </div>
+                    <div>@((MarkupString)w.Content)</div>
                 }
             </div>
-        }
-    </div>
-}
-
-<div class="row g-4">
-    <div class="col-lg-7">
-        <h4 class="section-title"><Icon Name="graduation-cap" /> Continue learning</h4>
-        <p class="text-muted">@Reading.CompletedModuleCount of @Kb.Learning.Count modules complete. Pick up where you left off.</p>
-        @{
-            var next = Kb.Learning.Where(m => !Reading.IsModuleComplete(m.Title)).Take(4).ToList();
-        }
-        @if (next.Count == 0)
-        {
-            <p class="text-success">All modules complete.</p>
-        }
-        else
-        {
-            @foreach (var m in next)
-            {
-                <a class="card mb-2 text-decoration-none" href="learn">
-                    <div class="card-body py-2 d-flex justify-content-between align-items-center">
-                        <span>@m.Title</span>
-                        <span class="badge level-@m.Level.ToLower()">@m.Level</span>
-                    </div>
-                </a>
-            }
-        }
-        <a href="learn" class="btn btn-sm btn-outline-primary mt-1">See all @Kb.Learning.Count modules →</a>
-    </div>
-
-    <div class="col-lg-5">
-        <h4 class="section-title"><Icon Name="bookmark" /> Read later</h4>
-        @if (Reading.Bookmarks.Count == 0)
-        {
-            <p class="text-muted">Nothing saved yet. On the <a href="news">News Feed</a>, click the tag icon on any article to save it here.</p>
-        }
-        else
-        {
-            @foreach (var b in Reading.Bookmarks.Take(4))
-            {
-                var bItem = ToFeedItem(b);
-                <div class="mb-2">
-                    <FeedItemCard Item="bItem" Layout="Compact"
-                                  IsRead="Reading.IsRead(bItem.Link)"
-                                  IsBookmarked="true"
-                                  OnToggleRead="() => ToggleRead(bItem)"
-                                  OnToggleBookmark="() => Reading.RemoveBookmark(bItem.Link)"
-                                  OnOpened="() => MarkAsRead(bItem)" />
-                </div>
-            }
-            <a href="reading-stats" class="btn btn-sm btn-outline-primary mt-1">Open reading list →</a>
-        }
-
-        <div class="alert @(Ai.Enabled ? "alert-success" : "alert-secondary") mt-3 small">
-            <strong>AI layer:</strong>
-            @(Ai.Enabled ? "Enabled: summaries, glossary explanations and Ask AiPulse use your configured language model." : "Off (standalone). Add a provider under Llm:Providers to enable summaries and explanations.")
-        </div>
-    </div>
+        </section>
+    }
 </div>
 
 @code {
@@ -309,6 +308,7 @@
     private List<TrendingDeveloper> _trendingDevelopers = new();
     private bool _trendingLoading = true;
     private int _newSinceVisit;
+    private DashboardSummary _summary = new(0, 0, 0, null, 0);
 
     private string _range = "week";
     private List<FeedItem> _rangeItems = new();
@@ -355,7 +355,7 @@
     /// </summary>
     private void OnHistoryChanged() => _ = InvokeAsync(() =>
     {
-        _snapshotLinks ??= _historyItems.Select(i => i.Link).ToHashSet();
+        _snapshotLinks ??= (_historyItems ?? Array.Empty<FeedItem>()).Select(i => i.Link).ToHashSet();
         _pendingNew = History.Items.Count(i => !_snapshotLinks.Contains(i.Link));
         StateHasChanged();
     });
@@ -449,7 +449,17 @@
                     .ToList()
             })
             .ToList();
+
+        _summary = ContentUi.Summarize(_historyItems, Reading.IsRead, Reading.ReadHistory.Select(h => h.At), DateTimeOffset.Now);
     }
+
+    private static string Greeting() => DateTime.Now.Hour switch
+    {
+        < 5 => "Working late",
+        < 12 => "Good morning",
+        < 18 => "Good afternoon",
+        _ => "Good evening"
+    };
 
     private void ToggleSort(string column)
     {

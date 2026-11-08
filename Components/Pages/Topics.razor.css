@@ -1,0 +1,91 @@
+.tp-hero { margin-bottom: 1.75rem; padding-bottom: 1.25rem; border-bottom: 1px solid var(--ap-border); }
+.tp-eyebrow { margin: 0 0 .3rem; font-family: var(--ap-font-mono); font-size: .72rem; letter-spacing: .06em; text-transform: uppercase; color: var(--ap-text-secondary); }
+.tp-h1 { display: flex; align-items: center; gap: .55rem; margin: 0; font-size: clamp(1.6rem, 1.25rem + 1.4vw, 2.25rem); letter-spacing: -0.02em; }
+.tp-lead { margin: .4rem 0 0; max-width: 40rem; color: var(--ap-text-secondary); font-size: 1rem; }
+
+.tp-section { margin-bottom: 2rem; }
+.tp-h2 { display: flex; align-items: center; gap: .5rem; margin: 0 0 .85rem; font-size: 1.1rem; }
+.tp-h2-count { padding: .05rem .5rem; font-size: .75rem; font-family: var(--ap-font-body); font-weight: 600; color: var(--ap-text-secondary); background: var(--ap-surface-2); border-radius: 999px; }
+
+.tp-featured {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 250px), 1fr));
+    gap: .85rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+.tp-card {
+    position: relative;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas: "name rank" "count count" "spark spark" "latest latest";
+    gap: .25rem .5rem;
+    height: 100%;
+    padding: 1rem 1.1rem 1.05rem;
+    color: var(--ap-text);
+    text-decoration: none;
+    background: var(--ap-surface);
+    border: 1px solid var(--ap-border);
+    border-radius: var(--ap-radius-lg);
+    box-shadow: var(--ap-shadow-sm);
+    transition: transform var(--ap-dur-base) var(--ap-ease-out), box-shadow var(--ap-dur-base) var(--ap-ease-out), border-color var(--ap-dur-base) var(--ap-ease-out);
+}
+.tp-card:hover { color: var(--ap-text); border-color: color-mix(in oklab, var(--ap-accent) 45%, var(--ap-border)); box-shadow: var(--ap-shadow-md); }
+@media (hover: hover) and (prefers-reduced-motion: no-preference) { .tp-card:hover { transform: translateY(-2px); } }
+.tp-rank { grid-area: rank; font-family: var(--ap-font-mono); font-size: .75rem; color: var(--ap-muted); }
+.tp-card-name { grid-area: name; font-family: var(--ap-font-display); font-size: 1.2rem; font-weight: 700; letter-spacing: -0.01em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tp-card-count { grid-area: count; font-size: .82rem; color: var(--ap-text-secondary); }
+.tp-card-count strong { color: var(--ap-text); font-variant-numeric: tabular-nums; }
+.tp-spark { grid-area: spark; width: 100%; height: 36px; margin: .35rem 0 .25rem; overflow: visible; }
+.tp-spark-line { fill: none; stroke: var(--ap-accent); stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; vector-effect: non-scaling-stroke; }
+.tp-spark-fill { fill: color-mix(in oklab, var(--ap-accent) 16%, transparent); stroke: none; }
+.tp-card-latest {
+    grid-area: latest;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    overflow: hidden;
+    padding-top: .5rem;
+    border-top: 1px solid var(--ap-border);
+    font-size: .82rem;
+    line-height: 1.4;
+    color: var(--ap-text-secondary);
+    overflow-wrap: anywhere;
+}
+
+.tp-cloud { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; margin: 0; padding: 0; list-style: none; }
+.tp-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: .45rem;
+    min-height: 44px;
+    max-width: 100%;
+    padding: 0 1rem;
+    color: var(--ap-text);
+    text-decoration: none;
+    background: var(--ap-surface);
+    border: 1px solid var(--ap-border-strong);
+    border-radius: 999px;
+    transition: border-color var(--ap-dur-fast) var(--ap-ease-out), background var(--ap-dur-fast) var(--ap-ease-out);
+}
+.tp-chip:hover { color: var(--ap-text); border-color: var(--ap-accent); background: var(--ap-surface-2); }
+.tp-chip-name { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tp-chip-count { font-size: .75rem; color: var(--ap-muted); font-variant-numeric: tabular-nums; }
+.tp-tier-1 { font-size: .85rem; }
+.tp-tier-2 { font-size: .92rem; }
+.tp-tier-3 { font-size: 1rem; }
+.tp-tier-4 { font-size: 1.1rem; background: var(--ap-accent-soft); border-color: color-mix(in oklab, var(--ap-accent) 30%, transparent); }
+.tp-tier-5 { font-size: 1.22rem; background: var(--ap-accent-soft); border-color: color-mix(in oklab, var(--ap-accent) 50%, transparent); }
+.tp-tier-4 .tp-chip-name, .tp-tier-5 .tp-chip-name { color: var(--ap-accent-soft-text); }
+.tp-tier-4 .tp-chip-count, .tp-tier-5 .tp-chip-count { color: var(--ap-accent-soft-text); }
+
+.tp-empty { display: flex; flex-direction: column; align-items: center; gap: .5rem; padding: 2.5rem 1rem; text-align: center; color: var(--ap-text-secondary); background: var(--ap-surface); border: 1px dashed var(--ap-border-strong); border-radius: var(--ap-radius-lg); }
+.tp-empty h2 { margin: 0; font-size: 1.15rem; color: var(--ap-text); }
+.tp-empty p { margin: 0 0 .5rem; max-width: 30rem; }
+.tp-empty .btn { min-height: 44px; display: inline-flex; align-items: center; }
+
+.tp-foot { margin-top: 2rem; font-size: .85rem; color: var(--ap-muted); }
+.tp-foot a { display: inline-flex; align-items: center; gap: .25rem; min-height: 32px; }
+
+@media (prefers-reduced-motion: reduce) { .tp-card, .tp-chip { transition: none; } }

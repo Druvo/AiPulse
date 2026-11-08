@@ -1,70 +1,79 @@
 @* Top Hugging Face models + GitHub repos/developers, mirrored from the Explore page, for an at-a-glance Dashboard view. *@
 @using AiPulse.Models
 
-<div class="card h-100">
+<section class="card h-100 etp">
     <div class="card-body">
-        <div class="d-flex align-items-center justify-content-between mb-2">
-            <h6 class="section-title mb-0"><Icon Name="sparkle" Size="16" /> Trending models &amp; repos</h6>
+        <div class="etp-head">
+            <h2 class="etp-title"><Icon Name="sparkle" Size="18" /> Trending models &amp; repos</h2>
             @if (OnRefresh.HasDelegate)
             {
-                <button class="btn btn-sm btn-outline-secondary" disabled="@Loading" @onclick="OnRefresh" title="Refresh live data">
-                    @if (Loading) { <span class="spinner"></span> } else { <Icon Name="refresh" Size="13" /> }
+                <button class="etp-refresh" disabled="@Loading" @onclick="OnRefresh" title="Refresh live data" aria-label="Refresh live data">
+                    @if (Loading) { <span class="etp-spin" aria-hidden="true"></span> } else { <Icon Name="refresh" Size="16" /> }
                 </button>
             }
         </div>
-        @if (Loading)
+        @if (Loading && Models.Count == 0 && Repos.Count == 0)
         {
-            <p class="text-muted small mb-0"><span class="spinner"></span> Loading…</p>
+            <div class="etp-skeleton" aria-busy="true" aria-label="Loading trending models and repositories">
+                @for (var i = 0; i < 6; i++)
+                {
+                    <div class="etp-sk-row" aria-hidden="true"><span class="etp-sk etp-sk-w@(i % 3)"></span><span class="etp-sk etp-sk-n"></span></div>
+                }
+            </div>
         }
         else if (Models.Count == 0 && Repos.Count == 0 && Developers.Count == 0)
         {
-            <p class="text-muted small mb-0">Couldn't reach Hugging Face/GitHub right now.</p>
+            <div class="etp-empty"><Icon Name="refresh" Size="20" /> <span>Couldn't reach Hugging Face or GitHub right now. Try refresh in a moment.</span></div>
         }
         else
         {
             @if (Models.Count > 0)
             {
-                <h6 class="mb-1 x-small text-muted text-uppercase">Hugging Face</h6>
-                <ul class="list-unstyled mb-2 small">
-                    @foreach (var m in Models.Take(5))
+                <h3 class="etp-sub">Hugging Face</h3>
+                <ol class="etp-list">
+                    @foreach (var m in Models.Take(4))
                     {
-                        <li class="d-flex justify-content-between align-items-center border-bottom py-1 gap-2">
-                            <a href="@m.Url" target="_blank" rel="noopener" class="text-truncate">@m.Id</a>
-                            <span class="text-muted text-nowrap">@m.Downloads.ToString("N0")↓</span>
+                        <li>
+                            <a href="@m.Url" target="_blank" rel="noopener">
+                                <span class="etp-name" title="@m.Id">@m.Id</span>
+                                <span class="etp-metric">@Compact(m.Downloads) <span class="etp-unit">dl</span></span>
+                            </a>
                         </li>
                     }
-                </ul>
+                </ol>
             }
             @if (Repos.Count > 0)
             {
-                <h6 class="mb-1 x-small text-muted text-uppercase">GitHub repos</h6>
-                <ul class="list-unstyled mb-2 small">
-                    @foreach (var r in Repos.Take(5))
+                <h3 class="etp-sub">GitHub repos</h3>
+                <ol class="etp-list">
+                    @foreach (var r in Repos.Take(4))
                     {
-                        <li class="d-flex justify-content-between align-items-center border-bottom py-1 gap-2">
-                            <a href="@r.Url" target="_blank" rel="noopener" class="text-truncate">@r.FullName</a>
-                            <span class="text-muted text-nowrap">★ @r.Stars.ToString("N0")</span>
+                        <li>
+                            <a href="@r.Url" target="_blank" rel="noopener">
+                                <span class="etp-name" title="@r.FullName">@r.FullName</span>
+                                <span class="etp-metric">★ @Compact(r.Stars)</span>
+                            </a>
                         </li>
                     }
-                </ul>
+                </ol>
             }
             @if (Developers.Count > 0)
             {
-                <h6 class="mb-1 x-small text-muted text-uppercase">GitHub developers</h6>
-                <ul class="list-unstyled mb-2 small">
-                    @foreach (var d in Developers.Take(5))
+                <h3 class="etp-sub">GitHub developers</h3>
+                <div class="etp-devs">
+                    @foreach (var d in Developers.Take(6))
                     {
-                        <li class="d-flex align-items-center gap-2 border-bottom py-1">
-                            <img src="@d.AvatarUrl" alt="@d.Username" class="dev-avatar-sm" />
-                            <a href="@d.ProfileUrl" target="_blank" rel="noopener" class="text-truncate">@d.Username</a>
-                        </li>
+                        <a href="@d.ProfileUrl" target="_blank" rel="noopener" class="etp-dev" title="@d.Username">
+                            <img src="@d.AvatarUrl" alt="" loading="lazy" width="28" height="28" />
+                            <span>@d.Username</span>
+                        </a>
                     }
-                </ul>
+                </div>
             }
-            <a href="explore?tab=github" class="btn btn-sm btn-outline-primary mt-1">See more on Explore →</a>
+            <a href="explore?tab=github" class="btn btn-sm btn-outline-primary etp-more">See more on Explore →</a>
         }
     </div>
-</div>
+</section>
 
 @code {
     [Parameter, EditorRequired]
@@ -82,4 +91,12 @@
     /// <summary>Manual "Refresh" button, only shown when the caller wires this up.</summary>
     [Parameter]
     public EventCallback OnRefresh { get; set; }
+
+    private static string Compact(long n) => n switch
+    {
+        >= 1_000_000 => (n / 1_000_000d).ToString("0.#") + "M",
+        >= 10_000 => (n / 1_000d).ToString("0") + "k",
+        >= 1_000 => (n / 1_000d).ToString("0.#") + "k",
+        _ => n.ToString("N0")
+    };
 }
