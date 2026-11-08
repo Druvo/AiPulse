@@ -72,17 +72,19 @@ if (!window.__aipulseProductivity) {
     };
 }
 
-export function registerPalette(ref, goMap) {
+// Tokens (not the references) identify a registration: each interop call wraps a .NET reference in a fresh JS object.
+export function registerPalette(ref, goMap, token) {
     state.palette = ref;
+    state.paletteToken = token;
     state.go = goMap || {};
 }
 
-export function unregisterPalette(ref) {
-    if (state.palette === ref) state.palette = null;
+export function unregisterPalette(token) {
+    if (state.paletteToken === token) { state.palette = null; state.go = {}; }
 }
 
-export function registerShortcuts(ref) { state.shortcuts = ref; }
-export function unregisterShortcuts(ref) { if (state.shortcuts === ref) state.shortcuts = null; }
+export function registerShortcuts(ref, token) { state.shortcuts = ref; state.shortcutsToken = token; }
+export function unregisterShortcuts(token) { if (state.shortcutsToken === token) state.shortcuts = null; }
 export function showShortcuts() { call(state.shortcuts, 'Open'); }
 
 // Arrow keys and Enter drive the listbox; stop them moving the caret or submitting anything.
@@ -90,7 +92,7 @@ export function bindCombobox(input) {
     if (!input || input.__cpBound) return;
     input.__cpBound = true;
     input.addEventListener('keydown', (e) => {
-        if (e.key === 'ArrowDown' || e.key === 'ArrowUp' || e.key === 'Enter' || e.key === 'PageDown' || e.key === 'PageUp') e.preventDefault();
+        if (['ArrowDown', 'ArrowUp', 'Enter', 'PageDown', 'PageUp', 'Tab'].includes(e.key)) e.preventDefault();
     });
 }
 
