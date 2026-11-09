@@ -111,7 +111,7 @@ async def run(a):
                 ov = await ev(OVERFLOW)
                 ct = await ev(AUDIT)
                 errs = [e["params"]["entry"]["text"][:140] for e in events if e.get("method") == "Log.entryAdded" and e["params"]["entry"]["level"] == "error"]
-                errs += [e["params"]["exceptionDetails"]["text"][:140] for e in events if e.get("method") == "Runtime.exceptionThrown"]
+                errs += [((e["params"]["exceptionDetails"].get("exception") or {}).get("description") or e["params"]["exceptionDetails"]["text"])[:300] for e in events if e.get("method") == "Runtime.exceptionThrown"]
                 title = await ev("document.title")
                 shot = await send("Page.captureScreenshot", {"format": "png", "captureBeyondViewport": bool(a.full)})
                 name = re.sub(r"[^A-Za-z0-9]+", "_", path).strip("_") or "home"
