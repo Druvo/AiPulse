@@ -2,6 +2,7 @@
 @using AiPulse.Services.Security
 @inject NavigationManager Nav
 @inject IHttpContextAccessor Http
+@inject AppDownloads Downloads
 
 @* Static server-rendered (no @rendermode): light, crawlable and shareable. The Install button, the "already installed" state and
    Share/Copy are wired by wwwroot/js/install-app.js, which also catches the browser's install prompt on every page. *@
@@ -16,13 +17,14 @@
     var pageUrl = AppInstall.PageUrl(Nav.BaseUri);
     var secure = AppInstall.CanInstallFrom(Nav.BaseUri);
     var qr = QrCode.EncodeText(pageUrl).ToSvg(title: "QR code that opens this page on your phone");
+    var android = Downloads.Android();
 }
 
 <header class="ia-hero">
     <img class="ia-icon" src="icons/icon-192.png" width="96" height="96" alt="" />
     <div class="ia-hero-text">
         <h1 class="ia-h1">Get AiPulse on your phone</h1>
-        <p class="ia-lead">Install it straight from this site. No app store and no separate download: it lands on your home screen like any other app, opens full screen, and is the same AiPulse you use in the browser.</p>
+        <p class="ia-lead">@if (android is not null){<text>Download the Android app below, or install the web app: either way it lands on your home screen like any other app, and it is the same AiPulse as the website.</text>}else{<text>Install it straight from this site. No app store and no separate download: it lands on your home screen like any other app, opens full screen, and is the same AiPulse you use in the browser.</text>}</p>
         <div class="ia-actions">
             <button type="button" class="btn btn-primary ia-install" data-install-button hidden><Icon Name="download" Size="18" /> Install AiPulse</button>
             <button type="button" class="btn btn-outline-secondary" data-share-button><Icon Name="share" Size="17" /> Send the link to my phone</button>
@@ -30,6 +32,27 @@
         <p class="ia-status" data-install-status role="status" aria-live="polite">@if (!secure){<span>This address is not secure (https), so browsers will only offer a shortcut here. Open the https address of this site to install the full app.</span>}</p>
     </div>
 </header>
+
+@if (android is not null)
+{
+    <section class="ia-card ia-apk" aria-labelledby="ia-apk-h">
+        <div class="ia-apk-main">
+            <h2 id="ia-apk-h" class="ia-h2"><Icon Name="download" Size="20" /> AiPulse for Android</h2>
+            <p class="ia-muted mb-2">The native app: sign in once and read the news, mark items read and keep a reading list that is shared with the website. Version @android.Version · @AppDownloads.FormatSize(android.Size) · Android 7 or newer.</p>
+            <p class="mb-2"><a class="btn btn-primary ia-apk-btn" href="download/android" download><Icon Name="download" Size="18" /> Download the Android app (APK)</a></p>
+            <details class="ia-apk-steps">
+                <summary>How to install an APK</summary>
+                <ol>
+                    <li>Open the downloaded file (from the notification or your Downloads folder).</li>
+                    <li>If Android asks, allow installs from this source: tap <strong>Settings</strong>, switch on <strong>Allow from this source</strong>, then go back.</li>
+                    <li>Tap <strong>Install</strong>, then <strong>Open</strong>. Sign in with your AiPulse account.</li>
+                </ol>
+                <p class="ia-muted mb-1">Updates: download the newest file and install it over the old one; your sign-in and reading list stay.</p>
+                <p class="ia-muted mb-0">Check the file: SHA-256 <code class="ia-sha">@android.Sha256</code></p>
+            </details>
+        </div>
+    </section>
+}
 
 <div class="ia-grid">
     <section class="ia-card ia-qr" aria-labelledby="ia-qr-h">
@@ -88,6 +111,6 @@
         <li>Use the real browser (Chrome or Safari), not the one built into another app. Tap <strong>Open in browser</strong> first.</li>
         <li>Installing needs a secure (<strong>https</strong>) address.</li>
         <li>Already installed? Open it from your home screen; this page then says so.</li>
-        <li>This is a web app installed from the site, so there is no Google Play or App Store listing to search for.</li>
+        <li>There is no Google Play or App Store listing to search for: the Android app is downloaded from this page, and the web app is installed from the site (also the way to get it on an iPhone).</li>
     </ul>
 </section>

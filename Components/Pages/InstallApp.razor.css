@@ -32,3 +32,10 @@
     .ia-hero { flex-direction: column; align-items: flex-start; }
     .ia-grid { grid-template-columns: minmax(0, 1fr); }
 }
+
+.ia-apk { border-color: var(--ap-accent); background: var(--ap-gradient-soft); }
+.ia-apk-btn { min-height: 48px; display: inline-flex; align-items: center; gap: .4rem; }
+.ia-apk-steps { margin-top: .5rem; }
+.ia-apk-steps summary { cursor: pointer; min-height: 44px; display: flex; align-items: center; font-weight: 600; }
+.ia-apk-steps ol { color: var(--ap-text-secondary); padding-left: 1.3rem; }
+.ia-sha { overflow-wrap: anywhere; font-size: .8rem; }

@@ -101,6 +101,7 @@ builder.Services.AddSingleton<FollowService>();
 builder.Services.AddSingleton<CommentService>();
 builder.Services.AddSingleton<ProfileService>();
 builder.Services.AddSingleton<MobileReadingStore>();
+builder.Services.AddSingleton<AppDownloads>(); // the Android APK offered on /app (files live in App_Data/downloads)
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddOpsConsole();
 
@@ -537,6 +538,21 @@ app.MapMethods("/fever/", new[] { "GET", "POST" }, async (HttpRequest request, F
 app.MapPublicApi(); // read-only JSON API under /api/v1 (Services/Api, docs at /developers)
 AiPulse.Services.Productivity.ProductivityExtensions.MapProductivityEndpoints(app);
 app.MapControllers(); // JSON API for the Android/iOS app (Controllers/Api, under /api/mobile/v1)
+
+// The Android app, served straight from this site. Public on purpose (it is how a visitor gets the app); the file is only offered
+// when the build's checksum matches (AppDownloads), and Range support lets a flaky phone connection resume the download.
+app.MapGet("/download/android", (AppDownloads downloads, HttpContext http) =>
+{
+    var info = downloads.Android();
+    if (info is null) return Results.NotFound();
+    http.Response.Headers.CacheControl = "public, max-age=300";
+    http.Response.Headers["X-Content-Type-Options"] = "nosniff";
+    return Results.File(info.FilePath, "application/vnd.android.package-archive", $"AiPulse-{info.Version}.apk", enableRangeProcessing: true);
+});
+app.MapGet("/download/android.json", (AppDownloads downloads) =>
+    downloads.Android() is { } info
+        ? Results.Json(new { version = info.Version, versionCode = info.VersionCode, size = info.Size, sha256 = info.Sha256, url = "/download/android" })
+        : Results.NotFound());
 
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();

@@ -21,6 +21,7 @@ public static class SecurityRateLimits
     public static readonly RateLimitRule AccountPages = new("account-pages", 20, Minute);
     public static readonly RateLimitRule SignOutEverywhere = new("sign-out-everywhere", 10, Minute);
     public static readonly RateLimitRule CspReport = new("csp-report", 60, Minute);
+    public static readonly RateLimitRule AppDownload = new("app-download", 20, Minute);
 
     public static RateLimitRule? Match(string method, PathString path)
     {
@@ -30,6 +31,7 @@ public static class SecurityRateLimits
         if (post && path.Equals("/auth/clerk/session", StringComparison.OrdinalIgnoreCase)) return ClerkSession;
         if (post && path.Equals("/account/sign-out-everywhere", StringComparison.OrdinalIgnoreCase)) return SignOutEverywhere;
         if (post && path.Equals(SecurityHeaderPolicy.CspReportPath, StringComparison.OrdinalIgnoreCase)) return CspReport;
+        if (path.Equals("/download/android", StringComparison.OrdinalIgnoreCase)) return AppDownload;
         if (path.StartsWithSegments("/auth/external", StringComparison.OrdinalIgnoreCase)) return ExternalSignIn;
         if (path.Equals("/register", StringComparison.OrdinalIgnoreCase) || path.Equals("/forgot-password", StringComparison.OrdinalIgnoreCase)
             || path.Equals("/reset-password", StringComparison.OrdinalIgnoreCase)) return AccountPages;
