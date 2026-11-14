@@ -41,6 +41,8 @@ public sealed class JwtSigningKey
         var key = RandomNumberGenerator.GetBytes(48);
         Directory.CreateDirectory(Path.GetDirectoryName(keyFilePath)!);
         File.WriteAllText(keyFilePath, Convert.ToBase64String(key));
+        // Owner-only on Linux/macOS: other accounts on the machine must not be able to read the signing key.
+        if (!OperatingSystem.IsWindows()) File.SetUnixFileMode(keyFilePath, UnixFileMode.UserRead | UnixFileMode.UserWrite);
         return new JwtSigningKey(key);
     }
 
