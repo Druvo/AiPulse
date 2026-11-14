@@ -9,15 +9,21 @@ using AspNet.Security.OAuth.GitHub;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.Google;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
+
+// JSON REST API for the Android/iOS app (Controllers/Api/*) - separate from the server-rendered Razor
+// pages above, which the app can't use (no SignalR circuit on a phone).
+builder.Services.AddControllers();
 
 // HttpClient used for feed fetching. A real User-Agent stops some hosts (Reddit etc.) from blocking us.
 builder.Services.AddHttpClient("feeds", c =>
@@ -88,6 +94,7 @@ builder.Services.AddSingleton<FaviconService>();
 builder.Services.AddSingleton<FollowService>();
 builder.Services.AddSingleton<CommentService>();
 builder.Services.AddSingleton<ProfileService>();
+builder.Services.AddSingleton<MobileReadingStore>();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddOpsConsole();
 
@@ -119,6 +126,15 @@ else
 
 // --- Authentication (cookie based, single configured user) ---
 builder.Services.Configure<AuthOptions>(builder.Configuration.GetSection("Auth"));
+
+// Bearer tokens for the Android/iOS app - it has no browser to hold AiPulse's cookie, so it logs in once
+// (Controllers/Api/AuthController) and attaches the resulting JWT as "Authorization: Bearer <token>" on
+// every later request instead.
+builder.Services.Configure<JwtOptions>(builder.Configuration.GetSection("Jwt"));
+// The signing key is never taken from a value in the repository: a configured real secret wins, otherwise a random key is created once
+// in App_Data/jwt.key (see JwtSigningKey).
+var jwtSigningKey = JwtSigningKey.Resolve(builder.Configuration["Jwt:Secret"], Path.Combine(builder.Environment.ContentRootPath, "App_Data", "jwt.key"));
+builder.Services.AddSingleton(jwtSigningKey);
 
 // Google/GitHub sign-in: credentials are admin-configurable at runtime (Settings.razor), stored in the
 // DB rather than appsettings.json - see OAuthSettingsService for why the handlers below are always
@@ -198,6 +214,38 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
         options.CallbackPath = "/signin-github";
         options.Scope.Add("user:email"); // GitHub omits email from the base profile unless requested
         options.Events.OnTicketReceived = ctx => HandleExternalTicketReceivedAsync(ctx, OAuthProviders.GitHub);
+    })
+    .AddJwtBearer(JwtBearerDefaults.AuthenticationScheme, options =>
+    {
+        // Registered as an additional scheme (the default stays Cookie, for the Razor pages above) - API
+        // controllers opt into it explicitly via [Authorize(AuthenticationSchemes = "Bearer")], so a
+        // missing/expired mobile token never gets redirected to /login like a browser session would.
+        var jwt = builder.Configuration.GetSection("Jwt").Get<JwtOptions>() ?? new JwtOptions();
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuer = true,
+            ValidIssuer = jwt.Issuer,
+            ValidateAudience = true,
+            ValidAudience = jwt.Issuer,
+            ValidateIssuerSigningKey = true,
+            IssuerSigningKey = new SymmetricSecurityKey(jwtSigningKey.Bytes),
+            ValidateLifetime = true,
+            ClockSkew = TimeSpan.FromMinutes(2)
+        };
+        // A bearer token outlives a password change, "sign out everywhere" and an admin disabling the account unless it is checked
+        // against the account on every use: same rule the browser cookie follows (see OnValidatePrincipal above).
+        options.Events = new JwtBearerEvents
+        {
+            OnTokenValidated = async context =>
+            {
+                var idClaim = context.Principal?.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+                var stampClaim = context.Principal?.FindFirst("security_stamp")?.Value;
+                var users = context.HttpContext.RequestServices.GetRequiredService<UserService>();
+                var user = int.TryParse(idClaim, out var userId) ? await users.GetByIdAsync(userId) : null;
+                if (user is null || user.Status != AiPulse.Models.UserStatuses.Approved || user.SecurityStamp != stampClaim)
+                    context.Fail("The account changed or was disabled; sign in again.");
+            }
+        };
     });
 builder.Services.AddAuthorization();
 builder.Services.AddSecurityHardening(builder.Configuration); // 2FA sign-in guard, security headers + report-only CSP, rate limits (Services/Security)
@@ -482,6 +530,7 @@ app.MapMethods("/fever/", new[] { "GET", "POST" }, async (HttpRequest request, F
 
 app.MapPublicApi(); // read-only JSON API under /api/v1 (Services/Api, docs at /developers)
 AiPulse.Services.Productivity.ProductivityExtensions.MapProductivityEndpoints(app);
+app.MapControllers(); // JSON API for the Android/iOS app (Controllers/Api, under /api/mobile/v1)
 
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();

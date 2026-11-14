@@ -25,7 +25,7 @@ public static class SecurityRateLimits
     public static RateLimitRule? Match(string method, PathString path)
     {
         var post = HttpMethods.IsPost(method);
-        if (post && path.Equals("/login", StringComparison.OrdinalIgnoreCase)) return Login;
+        if (post && (path.Equals("/login", StringComparison.OrdinalIgnoreCase) || path.Equals("/api/mobile/v1/auth/login", StringComparison.OrdinalIgnoreCase))) return Login;
         if (post && path.Equals(TwoFactorLoginFlow.PagePath, StringComparison.OrdinalIgnoreCase)) return TwoFactor;
         if (post && path.Equals("/auth/clerk/session", StringComparison.OrdinalIgnoreCase)) return ClerkSession;
         if (post && path.Equals("/account/sign-out-everywhere", StringComparison.OrdinalIgnoreCase)) return SignOutEverywhere;
