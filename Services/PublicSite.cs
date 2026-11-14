@@ -28,6 +28,7 @@ public static class PublicSite
     /// <summary>Entry points that are public but are not menu items.</summary>
     public static readonly IReadOnlyList<PublicPage> Entry = new[]
     {
+        new PublicPage("/app", "Get the app", "monthly", 0.6),
         new PublicPage("/coverage", "Sources we follow", "weekly", 0.5),
         new PublicPage("/developers", "Developers", "monthly", 0.4),
         new PublicPage("/this-week", "This week in AI", "daily", 0.7),

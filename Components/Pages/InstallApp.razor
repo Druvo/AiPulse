@@ -1,0 +1,93 @@
+@page "/app"
+@using AiPulse.Services.Security
+@inject NavigationManager Nav
+@inject IHttpContextAccessor Http
+
+@* Static server-rendered (no @rendermode): light, crawlable and shareable. The Install button, the "already installed" state and
+   Share/Copy are wired by wwwroot/js/install-app.js, which also catches the browser's install prompt on every page. *@
+
+<PageTitle>AiPulse · Get the app</PageTitle>
+<HeadContent>
+    <meta name="description" content="Install AiPulse on your phone, tablet or computer straight from this site: no app store, one tap, opens full screen from your home screen." />
+</HeadContent>
+
+@{
+    var device = AppInstall.Classify(Http.HttpContext?.Request.Headers.UserAgent.ToString());
+    var pageUrl = AppInstall.PageUrl(Nav.BaseUri);
+    var secure = AppInstall.CanInstallFrom(Nav.BaseUri);
+    var qr = QrCode.EncodeText(pageUrl).ToSvg(title: "QR code that opens this page on your phone");
+}
+
+<header class="ia-hero">
+    <img class="ia-icon" src="icons/icon-192.png" width="96" height="96" alt="" />
+    <div class="ia-hero-text">
+        <h1 class="ia-h1">Get AiPulse on your phone</h1>
+        <p class="ia-lead">Install it straight from this site. No app store and no separate download: it lands on your home screen like any other app, opens full screen, and is the same AiPulse you use in the browser.</p>
+        <div class="ia-actions">
+            <button type="button" class="btn btn-primary ia-install" data-install-button hidden><Icon Name="download" Size="18" /> Install AiPulse</button>
+            <button type="button" class="btn btn-outline-secondary" data-share-button><Icon Name="share" Size="17" /> Send the link to my phone</button>
+        </div>
+        <p class="ia-status" data-install-status role="status" aria-live="polite">@if (!secure){<span>This address is not secure (https), so browsers will only offer a shortcut here. Open the https address of this site to install the full app.</span>}</p>
+    </div>
+</header>
+
+<div class="ia-grid">
+    <section class="ia-card ia-qr" aria-labelledby="ia-qr-h">
+        <h2 id="ia-qr-h" class="ia-h2">Scan with your phone</h2>
+        <div class="ia-qr-box">@((MarkupString)qr)</div>
+        <p class="ia-muted">Point your camera at the code, open the link, then follow the steps for your phone.</p>
+        <p class="ia-link"><span class="ia-url" data-page-url>@pageUrl</span> <button type="button" class="btn btn-sm btn-outline-secondary" data-copy-link>Copy link</button></p>
+    </section>
+
+    <section class="ia-card ia-steps" aria-labelledby="ia-steps-h">
+        <h2 id="ia-steps-h" class="ia-h2">Install in three taps</h2>
+
+        <details class="ia-platform" id="android" open="@(device is DeviceKind.Android or DeviceKind.Other)">
+            <summary><Icon Name="grid" Size="18" /> Android (Chrome, Edge, Samsung Internet)@(device == DeviceKind.Android ? " · your device" : "")</summary>
+            <ol>
+                <li>Open this page in Chrome.</li>
+                <li>Tap <strong>Install AiPulse</strong> above, or the browser menu (<strong>⋮</strong>) then <strong>Install app</strong> or <strong>Add to Home screen</strong>.</li>
+                <li>Confirm. AiPulse appears with your other apps.</li>
+            </ol>
+        </details>
+
+        <details class="ia-platform" id="ios" open="@(device == DeviceKind.Ios)">
+            <summary><Icon Name="grid" Size="18" /> iPhone and iPad (Safari)@(device == DeviceKind.Ios ? " · your device" : "")</summary>
+            <ol>
+                <li>Open this page in <strong>Safari</strong> (other iOS browsers can add it too, from their share menu).</li>
+                <li>Tap the <strong>Share</strong> button (the square with an arrow).</li>
+                <li>Choose <strong>Add to Home Screen</strong>, then <strong>Add</strong>.</li>
+            </ol>
+        </details>
+
+        <details class="ia-platform" id="desktop" open="@(device == DeviceKind.Desktop)">
+            <summary><Icon Name="grid" Size="18" /> Computer (Chrome, Edge)@(device == DeviceKind.Desktop ? " · your device" : "")</summary>
+            <ol>
+                <li>Click <strong>Install AiPulse</strong> above, or the install icon at the right end of the address bar.</li>
+                <li>AiPulse opens in its own window and gets a shortcut in your Start menu or Dock.</li>
+            </ol>
+        </details>
+    </section>
+</div>
+
+<section class="ia-card" aria-labelledby="ia-get-h">
+    <h2 id="ia-get-h" class="ia-h2">What you get</h2>
+    <ul class="ia-list">
+        <li><strong>One-tap launch</strong> from the home screen, full screen with no browser bars.</li>
+        <li><strong>Always current.</strong> It updates itself whenever the site does; there is nothing to download again.</li>
+        <li><strong>Shortcuts</strong> straight to News and Ask (long-press the icon on Android).</li>
+        <li><strong>Light and dark</strong> follow your phone's setting.</li>
+        <li><strong>A friendly offline page</strong> when you have no signal. The news itself needs a connection.</li>
+        <li><strong>Private.</strong> It is the same site, so your data stays on the server it came from.</li>
+    </ul>
+</section>
+
+<section class="ia-card" aria-labelledby="ia-help-h">
+    <h2 id="ia-help-h" class="ia-h2">No Install button?</h2>
+    <ul class="ia-list">
+        <li>Use the real browser (Chrome or Safari), not the one built into another app. Tap <strong>Open in browser</strong> first.</li>
+        <li>Installing needs a secure (<strong>https</strong>) address.</li>
+        <li>Already installed? Open it from your home screen; this page then says so.</li>
+        <li>This is a web app installed from the site, so there is no Google Play or App Store listing to search for.</li>
+    </ul>
+</section>
