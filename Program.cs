@@ -101,6 +101,7 @@ builder.Services.AddSingleton<FollowService>();
 builder.Services.AddSingleton<CommentService>();
 builder.Services.AddSingleton<ProfileService>();
 builder.Services.AddSingleton<MobileReadingStore>();
+builder.Services.AddSingleton<SiteProfileService>(); // the site's name, tagline and topic (admin-editable in Settings)
 builder.Services.AddSingleton<AppDownloads>(); // the Android APK offered on /app (files live in App_Data/downloads)
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddOpsConsole();
@@ -324,6 +325,29 @@ app.UseHttpsRedirection();
 // development (or after a self-hoster pulls an update) can silently keep serving stale JS/CSS from the
 // browser's disk cache indefinitely, since ASP.NET Core's static file middleware sends no Cache-Control
 // header by default. Revalidation is cheap (a 304 when unchanged) and guarantees correctness.
+// The install manifest carries the site's name, so it is generated from the static template (wwwroot/manifest.webmanifest) at request time.
+app.Use(async (context, next) =>
+{
+    if (HttpMethods.IsGet(context.Request.Method) && context.Request.Path.Equals("/manifest.webmanifest", StringComparison.OrdinalIgnoreCase))
+    {
+        var site = context.RequestServices.GetRequiredService<SiteProfileService>();
+        var template = app.Environment.WebRootFileProvider.GetFileInfo("manifest.webmanifest");
+        if (template.Exists)
+        {
+            using var reader = new StreamReader(template.CreateReadStream());
+            var manifest = System.Text.Json.Nodes.JsonNode.Parse(await reader.ReadToEndAsync())!.AsObject();
+            manifest["name"] = site.Name;
+            manifest["short_name"] = site.Name.Length <= 12 ? site.Name : site.Name[..12].TrimEnd();
+            manifest["description"] = site.Tagline;
+            context.Response.ContentType = "application/manifest+json";
+            context.Response.Headers.CacheControl = "no-cache";
+            await context.Response.WriteAsync(manifest.ToJsonString());
+            return;
+        }
+    }
+    await next();
+});
+
 app.UseStaticFiles(new StaticFileOptions
 {
     OnPrepareResponse = ctx => ctx.Context.Response.Headers.CacheControl = "no-cache"
@@ -404,14 +428,14 @@ app.MapGet("/sitemap.xml", (HttpRequest request, FeedHistoryService history) =>
 
 // Public Atom feed of the latest deduplicated headlines (optionally one topic: /feed.xml?tag=agents), so the news can be followed from
 // any feed reader without an account. Release notes stay out; they have their own page.
-app.MapGet("/feed.xml", (HttpRequest request, FeedHistoryService history, string? tag) =>
+app.MapGet("/feed.xml", (HttpRequest request, FeedHistoryService history, SiteProfileService site, string? tag) =>
 {
     var now = DateTimeOffset.UtcNow;
     var origin = $"{request.Scheme}://{request.Host}";
     var wanted = string.IsNullOrWhiteSpace(tag) ? null : tag.Trim();
     var items = wanted is null ? history.Items.Where(PublicFeeds.IsHeadline).Take(PublicFeeds.FeedLimit).ToList() : PublicFeeds.ForTag(history.Items, wanted, PublicFeeds.FeedLimit).ToList();
     var self = wanted is null ? "/feed.xml" : "/feed.xml?tag=" + Uri.EscapeDataString(wanted);
-    var title = wanted is null ? "AiPulse - latest AI news" : $"AiPulse - {wanted}";
+    var title = wanted is null ? site.FeedTitle : $"{site.Name} - {wanted}";
     return Results.Text(PublicFeeds.Atom(items, origin, title, self, now), "application/atom+xml; charset=utf-8");
 });
 

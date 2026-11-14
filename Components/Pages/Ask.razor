@@ -15,13 +15,13 @@
 @inject IOptions<AiPulse.Services.Ai.AiOptions> AiOptions
 @inject IJSRuntime JS
 
-<PageTitle>AiPulse · Ask</PageTitle>
+<PageTitle>@Site.Name · Ask</PageTitle>
 
 <div class="ask-page">
     <div class="page-header ask-header">
-        <h1><Icon Name="sparkle" Size="22" /> Ask AiPulse</h1>
+        <h1><Icon Name="sparkle" Size="22" /> Ask @Site.Name</h1>
         <p class="lead">
-            Answers come only from AiPulse's own glossary, tools, learning guides and recent news. Every sentence cites the source
+            Answers come only from @Site.Name's own glossary, tools, learning guides and recent news. Every sentence cites the source
             behind it, and anything that can't be checked against a source is left out.
         </p>
     </div>
@@ -77,9 +77,9 @@
                             {
                                 case AskStatus.NotFound:
                                     <div class="state state-notfound">
-                                        <p class="state-title"><Icon Name="search" Size="16" /> Not in AiPulse's sources</p>
+                                        <p class="state-title"><Icon Name="search" Size="16" /> Not in @Site.Name's sources</p>
                                         <p class="state-text">
-                                            Nothing in the glossary, tools, learning guides or recent news backs up an answer to this, so AiPulse won't guess.
+                                            Nothing in the glossary, tools, learning guides or recent news backs up an answer to this, so @Site.Name won't guess.
                                             Try rephrasing with a specific term, or look it up directly:
                                         </p>
                                         <div class="state-actions">

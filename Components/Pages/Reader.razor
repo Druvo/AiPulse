@@ -34,8 +34,8 @@
     else if (_article is null)
     {
         <div class="rd-missing">
-            <h1 class="rd-title">This story is not in AiPulse</h1>
-            <p>The reading view only opens stories AiPulse has collected. It may have aged out of the history.</p>
+            <h1 class="rd-title">This story is not in @Site.Name</h1>
+            <p>The reading view only opens stories @Site.Name has collected. It may have aged out of the history.</p>
             @if (SafeExternal(Url) is { } original)
             {
                 <p><a href="@original" target="_blank" rel="noopener noreferrer nofollow">Open the link in a new tab</a></p>

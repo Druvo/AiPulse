@@ -9,7 +9,7 @@
 @inject AuthenticationStateProvider Auth
 @inject ToastService Toasts
 
-<PageTitle>AiPulse · Saved searches</PageTitle>
+<PageTitle>@Site.Name · Saved searches</PageTitle>
 
 <div class="page-header">
     <h1><Icon Name="search" Size="22" /> Saved searches</h1>
@@ -88,7 +88,7 @@ else
                     <legend class="visually-hidden">Alerts</legend>
                     <div class="form-check form-switch">
                         <input class="form-check-input" type="checkbox" role="switch" id="ss-alert" @bind="_draft.AlertEnabled" />
-                        <label class="form-check-label" for="ss-alert">Alert me in AiPulse when new stories match</label>
+                        <label class="form-check-label" for="ss-alert">Alert me in @Site.Name when new stories match</label>
                     </div>
                     <div class="form-check form-switch">
                         <input class="form-check-input" type="checkbox" role="switch" id="ss-webhook" @bind="_draft.WebhookEnabled" disabled="@(!_hasWebhook || !_draft.AlertEnabled)" aria-describedby="ss-webhook-help" />
@@ -121,7 +121,7 @@ else
         <div class="ss-empty card">
             <div class="card-body">
                 <h2 class="h5">No saved searches yet</h2>
-                <p class="text-muted mb-2">Save a query like <code>agent "tool use"</code> or the tag <code>MCP</code>, and AiPulse counts the matches and can tell you when a new one arrives.</p>
+                <p class="text-muted mb-2">Save a query like <code>agent "tool use"</code> or the tag <code>MCP</code>, and @Site.Name counts the matches and can tell you when a new one arrives.</p>
                 <button type="button" class="btn btn-primary btn-sm" @onclick="StartNew">Create your first one</button>
             </div>
         </div>

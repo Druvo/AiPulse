@@ -5,7 +5,7 @@
 @inject CommentService CommentsSvc
 @inject FollowService Follow
 
-<PageTitle>AiPulse · @(_user?.Username ?? "Profile")</PageTitle>
+<PageTitle>@Site.Name · @(_user?.Username ?? "Profile")</PageTitle>
 
 @* Hard privacy boundary: this page only ever calls UserService/ProfileService/CommentService/FollowService,
    never ReadingStateService - bookmarks, read history, watchlist, muted sources, saved searches, webhook

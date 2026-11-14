@@ -4,24 +4,24 @@
 @inject NavigationManager Nav
 @inject SiteStatsService StatsService
 
-<PageTitle>AiPulse — Self-hosted AI news, tools &amp; learning dashboard</PageTitle>
+<PageTitle>@Site.Name — @Site.Tagline</PageTitle>
 <HeadContent>
     <meta name="robots" content="index, follow" />
-    <meta name="description" content="AiPulse aggregates @_sources AI news, research and tool sources into one feed, plus a glossary, a tools comparison, and a @_modules-module learning path. Self-hosted, standalone, no AI required to run it." />
+    <meta name="description" content="@Site.Name aggregates @_sources @Site.Topic news, research and tool sources into one feed, plus a glossary, a tools comparison, and a @_modules-module learning path. Self-hosted, standalone, no AI required to run it." />
     <link rel="canonical" href="/" />
     <meta property="og:type" content="website" />
-    <meta property="og:title" content="AiPulse — Self-hosted AI news, tools &amp; learning dashboard" />
-    <meta property="og:description" content="@_sources sources, one feed, zero API keys. A self-hosted dashboard to keep developers current on the AI world." />
+    <meta property="og:title" content="@Site.Name — @Site.Tagline" />
+    <meta property="og:description" content="@_sources sources, one feed, zero API keys. A self-hosted dashboard to keep developers current on the @Site.Topic world." />
     <meta property="og:image" content="/favicon.png" />
     <meta property="og:url" content="/" />
     <meta name="twitter:card" content="summary" />
-    <meta name="twitter:title" content="AiPulse — Self-hosted AI news, tools &amp; learning dashboard" />
+    <meta name="twitter:title" content="@Site.Name — @Site.Tagline" />
     <meta name="twitter:description" content="@_sources sources, one feed, zero API keys. Self-hosted, standalone, no AI required to run it." />
     <script type="application/ld+json">
         {
             "@@context": "https://schema.org",
             "@@type": "SoftwareApplication",
-            "name": "AiPulse",
+            "name": @((MarkupString)System.Text.Json.JsonSerializer.Serialize(Site.Name)),
             "applicationCategory": "DeveloperApplication",
             "operatingSystem": "Self-hosted (.NET 8, cross-platform)",
             "description": "A standalone, self-hosted dashboard that aggregates AI news and research, a glossary, a tools comparison, and a structured learning roadmap into one feed. Runs with zero AI and no API keys.",
@@ -47,9 +47,9 @@
 
     <header class="landing-nav">
         <div class="landing-nav__inner">
-            <a class="landing-nav__brand" href="/" aria-label="AiPulse home">
+            <a class="landing-nav__brand" href="/" aria-label="@Site.Name home">
                 <img src="/img/logo-v1.png" alt="" class="app-logo" width="30" height="30" />
-                <span>AiPulse</span>
+                <span>@Site.Name</span>
             </a>
             <nav class="landing-nav__center" aria-label="Public">
                 @foreach (var item in PublicSite.Menu)
@@ -101,7 +101,7 @@
                 }
                 <h1 id="hero-title" class="landing-hero__headline reveal" style="--i:1">@_sources sources. One feed. <span class="text-gradient">Zero API keys.</span></h1>
                 <p class="landing-hero__sub reveal" style="--i:2">
-                    AiPulse aggregates AI news, research and tools into a single dashboard, plus a glossary,
+                    @Site.Name aggregates @Site.Topic news, research and tools into a single dashboard, plus a glossary,
                     a tools comparison, and a @_modules-module learning path. Self-hosted. No AI required to run it.
                 </p>
                 <div class="landing-hero__ctas reveal" style="--i:3">
@@ -144,7 +144,7 @@
             </div>
         </section>
 
-        <section class="landing-numbers" aria-label="AiPulse in numbers">
+        <section class="landing-numbers" aria-label="@Site.Name in numbers">
             <div class="landing-numbers__inner">
                 <div class="number reveal-on-scroll"><span class="number__value">@_sources</span><span class="number__label">sources tracked</span></div>
                 @if (_stats.ItemsLast24Hours > 0)
@@ -161,7 +161,7 @@
         </section>
 
         <section class="landing-sources" aria-labelledby="sources-title">
-            <p id="sources-title" class="landing-sources__title">Pulling from the places the AI world actually talks</p>
+            <p id="sources-title" class="landing-sources__title">Pulling from the places the @Site.Topic world actually talks</p>
             <ul class="landing-sources__list">
                 @foreach (var s in SourceKinds)
                 {
@@ -180,7 +180,7 @@
             <div class="landing-bento">
                 <article class="bento-cell bento-cell--lead bento-span-2x2 reveal-on-scroll">
                     <span class="bento-icon"><Icon Name="rss" Size="22" /></span>
-                    <h3>Every AI headline, one feed</h3>
+                    <h3>Every @Site.Topic headline, one feed</h3>
                     <p>News, research and tool sources (arXiv, Hacker News, GitHub, Reddit, YouTube, RSS). Cross-source dedup means the same story from twelve outlets shows once, not twelve times.</p>
                     <div class="bento-chips" aria-hidden="true"><span>News</span><span>Research</span><span>Releases</span><span>Tutorials</span><span>Video</span></div>
                     <a class="bento-link" href="/news">Open the feed <Icon Name="arrow-right" Size="15" /></a>
@@ -203,7 +203,7 @@
                 <article class="bento-cell reveal-on-scroll">
                     <span class="bento-icon"><Icon Name="tool" Size="20" /></span>
                     <h3>Tools &amp; Tips</h3>
-                    <p>The right AI dev tool for the task, side by side.</p>
+                    <p>The right @Site.Topic dev tool for the task, side by side.</p>
                     <a class="bento-link" href="/tools">Compare tools <Icon Name="arrow-right" Size="15" /></a>
                 </article>
 
@@ -216,8 +216,8 @@
 
                 <article class="bento-cell reveal-on-scroll">
                     <span class="bento-icon"><Icon Name="sparkle" Size="20" /></span>
-                    <h3>Ask AiPulse <span class="bento-badge">Members</span></h3>
-                    <p>Answers built only from AiPulse's own sources, every sentence cited.</p>
+                    <h3>Ask @Site.Name <span class="bento-badge">Members</span></h3>
+                    <p>Answers built only from @Site.Name's own sources, every sentence cited.</p>
                     <a class="bento-link" href="/login?ReturnUrl=%2Fask">Sign in to ask <Icon Name="arrow-right" Size="15" /></a>
                 </article>
 
@@ -269,12 +269,12 @@ cd AiPulse &amp;&amp; dotnet run</code></pre>
             </div>
             <div class="faq">
                 <details class="faq__item" open>
-                    <summary>Is AiPulse free?</summary>
+                    <summary>Is @Site.Name free?</summary>
                     <p>Yes. It is open source under the MIT licence: run it, change it, host it for your team. There is no paid tier.</p>
                 </details>
                 <details class="faq__item">
                     <summary>Do I need an OpenAI or other AI API key?</summary>
-                    <p>No. The feed, glossary, tools matrix and learning path all work with zero AI. Ask AiPulse and card summaries are optional extras an admin can switch on by connecting a provider (for example a local Ollama).</p>
+                    <p>No. The feed, glossary, tools matrix and learning path all work with zero AI. Ask @Site.Name and card summaries are optional extras an admin can switch on by connecting a provider (for example a local Ollama).</p>
                 </details>
                 <details class="faq__item">
                     <summary>Where is my data stored?</summary>
@@ -298,7 +298,7 @@ cd AiPulse &amp;&amp; dotnet run</code></pre>
         <section class="landing-cta" aria-labelledby="cta-title">
             <div class="landing-cta__card reveal-on-scroll">
                 <div class="landing-cta__glow" aria-hidden="true"></div>
-                <h2 id="cta-title">Stay current on AI without the tab sprawl.</h2>
+                <h2 id="cta-title">Stay current on @Site.Topic without the tab sprawl.</h2>
                 <p>Free forever. MIT licensed. Yours to run.</p>
                 <div class="landing-hero__ctas">
                     <a class="landing-btn landing-btn--light landing-btn--lg" href="/register">Get started free <Icon Name="arrow-right" Size="18" /></a>
@@ -313,9 +313,9 @@ cd AiPulse &amp;&amp; dotnet run</code></pre>
             <div class="landing-footer__brand">
                 <a class="landing-nav__brand" href="/">
                     <img src="/img/logo-v1.png" alt="" class="app-logo" width="28" height="28" />
-                    <span>AiPulse</span>
+                    <span>@Site.Name</span>
                 </a>
-                <p>Your AI reading &amp; learning station. Self-hosted, standalone, no API keys.</p>
+                <p>Your @Site.Topic reading &amp; learning station. Self-hosted, standalone, no API keys.</p>
             </div>
             <nav class="landing-footer__col" aria-label="Explore">
                 <p class="landing-footer__head">Explore</p>

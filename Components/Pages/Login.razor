@@ -9,12 +9,12 @@
 @inject IHttpContextAccessor Http
 @inject NavigationManager Nav
 
-<PageTitle>AiPulse · Sign in</PageTitle>
+<PageTitle>@Site.Name · Sign in</PageTitle>
 <HeadContent>
     <meta name="robots" content="index, follow" />
-    <meta name="description" content="Sign in to AiPulse - a standalone, self-hosted dashboard to keep developers current on the AI world." />
+    <meta name="description" content="Sign in to @Site.Name - @Site.Tagline." />
     <link rel="canonical" href="/login" />
-    <meta property="og:title" content="AiPulse - Sign in" />
+    <meta property="og:title" content="@Site.Name - Sign in" />
     <meta property="og:description" content="A standalone, self-hosted AI news &amp; learning dashboard. No API keys required." />
 </HeadContent>
 
@@ -22,7 +22,7 @@
 <div class="login-card">
     <div class="auth-icon" aria-hidden="true"><Icon Name="lock" Size="22" /></div>
     <h1 class="auth-title">Welcome back</h1>
-    <p class="auth-sub">Sign in to your AiPulse dashboard.</p>
+    <p class="auth-sub">Sign in to your @Site.Name dashboard.</p>
 
     <EditForm Model="Input" OnValidSubmit="SignIn" FormName="login" method="post" class="auth-form">
         <DataAnnotationsValidator />
@@ -82,7 +82,7 @@
         <div id="clerk-signin" data-host="@clerk.Host" data-key="@clerk.PublishableKey" data-return-url="@(ReturnUrl ?? "/dashboard")" data-remember="@(Input.Remember ? "true" : "false")"></div>
     }
 
-    <p class="auth-alt">New to AiPulse? <a href="/register">Create an account</a></p>
+    <p class="auth-alt">New to @Site.Name? <a href="/register">Create an account</a></p>
 </div>
 <p class="login-signature"><a href="/">Back to the home page</a> · <a href="/news">Browse the news without an account</a></p>
 </div>

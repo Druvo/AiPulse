@@ -4,11 +4,11 @@
 @* Sign in, register, password recovery: a split screen on desktop (brand panel with live numbers on the left, the form on the right)
    and a single clean card on phones, where the brand panel is dropped and a slim top bar keeps the logo and the theme switch. *@
 <main class="auth-shell login-shell">
-    <aside class="auth-aside" aria-label="About AiPulse">
+    <aside class="auth-aside" aria-label="About @Site.Name">
         <div class="aurora" aria-hidden="true"><span></span><span></span><span></span></div>
         <a class="auth-aside__brand" href="/">
             <img src="/img/logo-v1.png" alt="" class="app-logo" width="36" height="36" />
-            <span>AiPulse</span>
+            <span>@Site.Name</span>
         </a>
         <div class="auth-aside__pitch">
             <p class="auth-eyebrow"><Icon Name="shield" Size="15" /> Self-hosted · open source · no API keys</p>
@@ -34,7 +34,7 @@
         <div class="auth-topbar">
             <a class="auth-brand-mobile" href="/">
                 <img src="/img/logo-v1.png" alt="" class="app-logo" width="30" height="30" />
-                <span>AiPulse</span>
+                <span>@Site.Name</span>
             </a>
             <div class="auth-topbar__right">
                 <ThemeToggle />

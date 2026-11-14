@@ -7,14 +7,14 @@
    readable by crawlers. Everything about the endpoints is generated from ApiCatalog, the same list that builds the routes and
    /api/v1/openapi.json, so this page cannot describe an endpoint that does not exist or miss one that does. *@
 
-<PageTitle>AiPulse · Developers</PageTitle>
+<PageTitle>@Site.Name · Developers</PageTitle>
 <HeadContent>
-    <meta name="description" content="AiPulse's free read-only JSON API: AI news, topics, releases, sources, glossary and tools. Endpoints, authentication, rate limits and examples." />
+    <meta name="description" content="@Site.Name's free read-only JSON API: @Site.Topic news, topics, releases, sources, glossary and tools. Endpoints, authentication, rate limits and examples." />
 </HeadContent>
 
 <div class="page-header">
     <h1><Icon Name="code" Size="22" /> Developers</h1>
-    <p class="lead">Everything on AiPulse's public pages is also available as JSON. No key is needed for public data; a personal token unlocks your own bookmarks and unread items.</p>
+    <p class="lead">Everything on @Site.Name's public pages is also available as JSON. No key is needed for public data; a personal token unlocks your own bookmarks and unread items.</p>
 </div>
 
 <nav class="dev-toc" aria-label="On this page">
@@ -45,12 +45,12 @@
 
 <section class="dev-section" id="authentication" aria-labelledby="authentication-h">
     <h2 id="authentication-h" class="h4 section-title">Authentication</h2>
-    <p>Public endpoints (news, topics, releases, sources, glossary, tools, search, stats, status) need nothing. They return exactly what AiPulse's public pages show.</p>
+    <p>Public endpoints (news, topics, releases, sources, glossary, tools, search, stats, status) need nothing. They return exactly what @Site.Name's public pages show.</p>
     <p>Endpoints under <code>/me</code> return your own data and need a <strong>personal API token</strong>:</p>
     <ol class="dev-steps">
         <li>Sign in and open <a href="settings#api-tokens">Settings → API tokens</a>.</li>
         <li>Name the token (e.g. "reading-list script"), pick an expiry, and create it.</li>
-        <li>Copy it straight away: it starts with <code>aip_</code> and is shown only once. AiPulse keeps only a SHA-256 hash of it.</li>
+        <li>Copy it straight away: it starts with <code>aip_</code> and is shown only once. @Site.Name keeps only a SHA-256 hash of it.</li>
         <li>Send it on each request: <code>Authorization: Bearer aip_…</code></li>
     </ol>
     <p class="mb-0">Tokens are read-only (scope <code>read</code>), can expire, and can be revoked at any time from the same screen; Settings also shows when each was last used. A token stops working if its account is disabled. Never put a token in client-side code that other people can see.</p>
@@ -179,6 +179,6 @@
     <ul class="dev-facts mb-0">
         <li><a href="@(ApiBase)/openapi.json">OpenAPI 3 document</a>: import it into Postman, Insomnia or a client generator.</li>
         <li><a href="feed.xml">Atom feed</a> of the latest headlines, for any feed reader. One topic only: <code>/feed.xml?tag=agents</code>.</li>
-        <li>Want to see the sources first? <a href="coverage">Everything AiPulse follows</a>.</li>
+        <li>Want to see the sources first? <a href="coverage">Everything @Site.Name follows</a>.</li>
     </ul>
 </section>

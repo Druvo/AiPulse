@@ -1,7 +1,7 @@
 @page "/coverage"
 @inject KnowledgeBaseService Kb
 
-<PageTitle>AiPulse · Coverage</PageTitle>
+<PageTitle>@Site.Name · Coverage</PageTitle>
 
 @{
     var sources = Kb.Sources.Where(s => s.Enabled).ToList();
@@ -9,7 +9,7 @@
 }
 
 <header class="cv-hero">
-    <h1 class="cv-h1"><Icon Name="database" Size="24" /> What AiPulse follows</h1>
+    <h1 class="cv-h1"><Icon Name="database" Size="24" /> What @Site.Name follows</h1>
     <p class="cv-lead">Every source behind the news feed, grouped by kind. Nothing is hidden: if a story shows up, it came from one of these.</p>
     @if (sources.Count > 0)
     {

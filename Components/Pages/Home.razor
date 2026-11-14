@@ -12,7 +12,7 @@
 @inject NavigationManager Nav
 @inject SiteStatsService Stats
 
-<PageTitle>AiPulse · Dashboard</PageTitle>
+<PageTitle>@Site.Name · Dashboard</PageTitle>
 
 <section class="dash-hero" aria-labelledby="dash-title">
     <div class="dash-hero-intro">
@@ -63,7 +63,7 @@
                     <div class="flex-grow-1">
                         <h2 class="tile-title"><Icon Name="sparkle" Size="18" /> New here? Three things to try</h2>
                         <p class="text-muted small mb-2">
-                            AiPulse gathers @Stats.Current.ActiveSources AI news, research and tool sources into one feed, plus a glossary, a tools
+                            @Site.Name gathers @Stats.Current.ActiveSources @Site.Topic news, research and tool sources into one feed, plus a glossary, a tools
                             comparison and a learning roadmap. It all runs standalone, no AI required.
                         </p>
                         <div class="welcome-steps">
@@ -114,7 +114,7 @@
             <p class="tile-note">Ranked by how many of your sources covered the same story.</p>
             @if (_biggestStories.Count == 0)
             {
-                <div class="tile-empty"><Icon Name="inbox" Size="20" /> Not enough data yet. Check back once AiPulse has collected a few days of news.</div>
+                <div class="tile-empty"><Icon Name="inbox" Size="20" /> Not enough data yet. Check back once @Site.Name has collected a few days of news.</div>
             }
             else
             {

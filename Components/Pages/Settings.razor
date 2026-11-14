@@ -15,11 +15,11 @@
 @inject FollowService Follow
 @inject ProfileService Profile
 
-<PageTitle>AiPulse · Settings</PageTitle>
+<PageTitle>@Site.Name · Settings</PageTitle>
 
 <div class="page-header">
     <h1><Icon Name="settings" Size="22" /> Settings</h1>
-    <p class="lead">Your profile, feed filters, appearance, notifications and integrations. New to AiPulse? See the <a href="help">Help page</a> first.</p>
+    <p class="lead">Your profile, feed filters, appearance, notifications and integrations. New to @Site.Name? See the <a href="help">Help page</a> first.</p>
 </div>
 
 @*
@@ -59,7 +59,7 @@
         <section class="settings-section" id="profile" aria-labelledby="profile-h">
             <header class="section-head">
                 <h2 id="profile-h"><Icon Name="user" Size="20" /> Profile</h2>
-                <p>How you appear to others on AiPulse.</p>
+                <p>How you appear to others on @Site.Name.</p>
             </header>
 
             <div class="set-card">
@@ -320,7 +320,7 @@
 
             <div class="set-card">
                 <h3 class="set-title"><Icon Name="bell" Size="16" /> Desktop notifications</h3>
-                <p class="set-help">New tool/model releases and watchlist hits, while an AiPulse tab is open.</p>
+                <p class="set-help">New tool/model releases and watchlist hits, while an @Site.Name tab is open.</p>
                 <p class="perm-line">Browser permission:
                     <span class="status-chip @(_permission switch { "granted" => "chip-ok", "denied" => "chip-bad", _ => "chip-muted" })">@_permission</span>
                 </p>
@@ -399,7 +399,7 @@
         <section class="settings-section" id="integrations" aria-labelledby="integrations-h">
             <header class="section-head">
                 <h2 id="integrations-h"><Icon Name="webhook" Size="20" /> Integrations</h2>
-                <p>Read AiPulse from other apps and export what you save.</p>
+                <p>Read @Site.Name from other apps and export what you save.</p>
             </header>
 
             <ApiTokensSettings />
@@ -486,6 +486,40 @@
                     </header>
 
                     <div class="set-card">
+                        <h3 class="set-title"><Icon Name="sparkle" Size="16" /> Site identity</h3>
+                        <p class="set-help">
+                            What this site calls itself and what it is about. It appears in page titles, the home page, feeds, the install name and
+                            sharing previews. Changes apply immediately.
+                        </p>
+                        <div class="form-grid">
+                            <div>
+                                <label class="set-label" for="site-name">Name</label>
+                                <input id="site-name" class="form-control" maxlength="@SiteSettings.MaxName" @bind="_siteName" />
+                            </div>
+                            <div>
+                                <label class="set-label" for="site-topic">Topic (one or two words)</label>
+                                <input id="site-topic" class="form-control" maxlength="@SiteSettings.MaxTopic" placeholder="AI, .NET, DevOps..." @bind="_siteTopic" />
+                            </div>
+                            <div class="span-2">
+                                <label class="set-label" for="site-tagline">Tagline</label>
+                                <input id="site-tagline" class="form-control" maxlength="@SiteSettings.MaxTagline" @bind="_siteTagline" />
+                            </div>
+                            <div class="span-2">
+                                <label class="set-label" for="site-desc">Description</label>
+                                <textarea id="site-desc" class="form-control" rows="3" maxlength="@SiteSettings.MaxDescription" @bind="_siteDescription"></textarea>
+                            </div>
+                        </div>
+                        @if (_siteError is not null)
+                        {
+                            <div class="alert alert-warning py-2 small mt-2 mb-0" role="alert">@_siteError</div>
+                        }
+                        <div class="set-actions">
+                            <button class="btn btn-primary" @onclick="SaveSite">Save</button>
+                            <button class="btn btn-outline-secondary" @onclick="ResetSite">Reset to defaults</button>
+                        </div>
+                    </div>
+
+                    <div class="set-card">
                         <h3 class="set-title"><Icon Name="key" Size="16" /> OAuth sign-in</h3>
                         <p class="set-help">
                             Let people sign in with Google or GitHub instead of a password. Off by default: fill in the provider's Client ID and secret
@@ -550,7 +584,7 @@
                             <ol class="mt-2 small">
                                 <li>In the Clerk dashboard create an application and copy its Publishable key here.</li>
                                 <li>
-                                    Under <em>Sessions &rarr; Customize session token</em> add these claims so AiPulse can link an existing account by <em>verified</em> email:
+                                    Under <em>Sessions &rarr; Customize session token</em> add these claims so @Site.Name can link an existing account by <em>verified</em> email:
                                     <pre class="mb-0"><code>{ "email": "{{user.primary_email_address}}", "email_verified": "{{user.email_verified}}", "name": "{{user.full_name}}" }</code></pre>
                                     Without them people still sign in, but get a new account instead of being matched to an existing one.
                                 </li>
@@ -575,11 +609,11 @@
                                 <input id="restore-file" type="file" name="file" accept=".zip" class="form-control" required />
                                 <button type="submit" class="btn btn-warning">Restore</button>
                             </div>
-                            <p class="set-help mt-1 mb-0">Replaces all current data. Restart AiPulse after restoring so every page picks up the restored data.</p>
+                            <p class="set-help mt-1 mb-0">Replaces all current data. Restart @Site.Name after restoring so every page picks up the restored data.</p>
                         </form>
                         @if (RestoredParam == "true")
                         {
-                            <div class="alert alert-success mt-2 py-2 small mb-0" role="status">Backup restored. Please restart AiPulse now.</div>
+                            <div class="alert alert-success mt-2 py-2 small mb-0" role="status">Backup restored. Please restart @Site.Name now.</div>
                         }
                     </div>
                     @* ANCHOR: admin-extra - add further admin-only settings here *@
@@ -714,6 +748,7 @@
         if (_isAdmin)
         {
             var rows = await OAuthSettings.GetAllAsync();
+            LoadSite();
             var clerk = rows.FirstOrDefault(r => r.Provider == ClerkAuthService.Provider);
             _clerkEnabled = clerk?.Enabled ?? false;
             _clerkKey = clerk?.ClientId ?? "";
@@ -723,6 +758,29 @@
 
     private bool _clerkEnabled;
     private string _clerkKey = "";
+
+    private string _siteName = "", _siteTagline = "", _siteDescription = "", _siteTopic = "";
+    private string? _siteError;
+
+    private void LoadSite()
+    {
+        var s = Site.Current;
+        (_siteName, _siteTagline, _siteDescription, _siteTopic) = (s.Name, s.Tagline, s.Description, s.Topic);
+    }
+
+    private void SaveSite()
+    {
+        _siteError = Site.Save(_siteName, _siteTagline, _siteDescription, _siteTopic);
+        if (_siteError is null) { LoadSite(); Toasts.Show("Site identity saved."); }
+    }
+
+    private void ResetSite()
+    {
+        Site.Reset();
+        _siteError = null;
+        LoadSite();
+        Toasts.Show("Site identity reset to the defaults.");
+    }
 
     private async Task SaveClerk()
     {

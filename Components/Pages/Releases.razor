@@ -2,7 +2,7 @@
 @using AiPulse.Services
 @inject FeedHistoryService History
 
-<PageTitle>AiPulse · Releases</PageTitle>
+<PageTitle>@Site.Name · Releases</PageTitle>
 
 @{
     var projects = _items.Select(i => i.SourceName).Distinct(StringComparer.OrdinalIgnoreCase).Count();
@@ -12,7 +12,7 @@
 <header class="rl-hero">
     <div>
         <h1 class="rl-h1"><Icon Name="zap" Size="24" /> Releases</h1>
-        <p class="rl-lead">New versions of the AI libraries, models and tools AiPulse follows, as they are published.</p>
+        <p class="rl-lead">New versions of the @Site.Topic libraries, models and tools @Site.Name follows, as they are published.</p>
     </div>
     @if (_items.Count > 0)
     {

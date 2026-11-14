@@ -4,11 +4,11 @@
 @* Static server rendering. The POST is handled by SignOutEverywhereMiddleware (Services/Security/TwoFactorSignIn.cs), which
    checks the antiforgery token rendered here, rotates the security stamp and clears this browser's cookie. *@
 
-<PageTitle>AiPulse · Sign out everywhere</PageTitle>
+<PageTitle>@Site.Name · Sign out everywhere</PageTitle>
 
 <div class="page-header">
     <h1>Sign out everywhere</h1>
-    <p class="lead">Ends every AiPulse session for your account - other browsers, phones, and this one. Use it if you signed in on a shared computer or think someone else has your password.</p>
+    <p class="lead">Ends every @Site.Name session for your account - other browsers, phones, and this one. Use it if you signed in on a shared computer or think someone else has your password.</p>
 </div>
 
 <div class="security-panel">

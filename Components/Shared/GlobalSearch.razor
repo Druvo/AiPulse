@@ -16,7 +16,7 @@
 @if (_open)
 {
     <div class="gs-overlay" @onclick="Close">
-        <div class="gs-panel" role="dialog" aria-modal="true" aria-label="Search AiPulse" @onclick:stopPropagation="true">
+        <div class="gs-panel" role="dialog" aria-modal="true" aria-label="Search @Site.Name" @onclick:stopPropagation="true">
             <div class="gs-input-row">
                 <Icon Name="search" Size="18" />
                 <input class="gs-input" placeholder="Search news, topics, glossary, tools…" autocomplete="off" spellcheck="false"

@@ -1,14 +1,14 @@
 ﻿@page "/Error"
 @using System.Diagnostics
 
-<PageTitle>AiPulse · Something went wrong</PageTitle>
+<PageTitle>@Site.Name · Something went wrong</PageTitle>
 
 <div class="status-screen">
     <div class="status-screen__card">
         <div class="empty-state__icon" aria-hidden="true"><Icon Name="alert-triangle" Size="28" /></div>
         <div class="status-screen__code">500 · Error</div>
         <h1>Something went wrong</h1>
-        <p>An error occurred while processing your request. Try again in a moment; if it keeps happening, the details below help whoever runs this AiPulse find the cause.</p>
+        <p>An error occurred while processing your request. Try again in a moment; if it keeps happening, the details below help whoever runs this @Site.Name find the cause.</p>
         <div class="status-screen__actions">
             <a href="" class="btn btn-primary"><Icon Name="refresh" Size="17" /> Try again</a>
             <a href="/" class="btn btn-outline-secondary"><Icon Name="home" Size="17" /> Home</a>
