@@ -2210,3 +2210,17 @@ a.heatmap-cell:hover { outline: 2px solid var(--ap-accent-hover); }
     h1, h2, h3 { break-after: avoid; }
     img { max-width: 100% !important; }
 }
+
+/* ---------- Connection banner (wwwroot/js/reconnect.js) ---------- */
+.connection-banner {
+    position: fixed; z-index: 2000; left: 50%; bottom: calc(env(safe-area-inset-bottom, 0px) + 5rem); transform: translateX(-50%);
+    display: flex; align-items: center; gap: .65rem; max-width: calc(100vw - 2rem);
+    padding: .65rem .9rem; border: 1px solid var(--ap-border-strong); border-radius: 999px;
+    background: var(--ap-surface); color: var(--ap-text); box-shadow: var(--ap-shadow-lg); font-size: .92rem;
+}
+.connection-banner[hidden] { display: none; }
+.connection-banner__dot { flex: none; width: .6rem; height: .6rem; border-radius: 50%; background: var(--ap-warning); animation: connection-pulse 1.2s ease-in-out infinite; }
+.connection-banner .btn { min-height: 36px; }
+@keyframes connection-pulse { 50% { opacity: .35; } }
+@media (prefers-reduced-motion: reduce) { .connection-banner__dot { animation: none; } }
+@media (min-width: 62rem) { .connection-banner { bottom: 1.5rem; } }

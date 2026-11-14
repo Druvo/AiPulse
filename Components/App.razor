@@ -190,6 +190,12 @@
 
 <body>
     <div id="nav-progress"></div>
+    @* Blazor looks for an element with this exact id and uses it instead of its stock "Reconnection failed" dialog; wwwroot/js/reconnect.js drives it. *@
+    <div id="components-reconnect-modal" class="connection-banner" role="status" aria-live="polite" hidden>
+        <span class="connection-banner__dot" aria-hidden="true"></span>
+        <span data-conn-text>Connection lost. Reconnecting…</span>
+        <button type="button" class="btn btn-sm btn-primary" data-conn-reload hidden>Reload</button>
+    </div>
     <Routes />
     <script src="_framework/blazor.web.js"></script>
     <script>
@@ -255,6 +261,7 @@
     <script src="js/scrollTop.js"></script>
     <script src="js/clerk-login.js"></script>
     <script src="js/install-app.js"></script>
+    <script src="js/reconnect.js"></script>
     <script>
         // Makes the site installable ("Add to home screen") and gives a friendly page when offline. Needs https or localhost.
         if ('serviceWorker' in navigator) {

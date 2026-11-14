@@ -19,7 +19,13 @@ var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 builder.Services.AddRazorComponents()
-    .AddInteractiveServerComponents();
+    .AddInteractiveServerComponents(options =>
+    {
+        // A phone that sleeps for a few minutes or switches from Wi-Fi to mobile data loses its connection; keeping the page's
+        // server-side state for ten minutes (default: three) lets it pick up exactly where it was instead of needing a reload.
+        options.DisconnectedCircuitRetentionPeriod = TimeSpan.FromMinutes(10);
+        options.DisconnectedCircuitMaxRetained = 200;
+    });
 
 // JSON REST API for the Android/iOS app (Controllers/Api/*) - separate from the server-rendered Razor
 // pages above, which the app can't use (no SignalR circuit on a phone).
