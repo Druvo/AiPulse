@@ -705,8 +705,9 @@ public sealed class KnowledgeBaseService
     }
 
     /// <summary>
-    /// Adds one admin-approved entry to the file of the pack it belongs in (the AI pack's Data file while that pack is on, otherwise the
-    /// first enabled pack's), reading only that file so entries from other packs are never copied into it.
+    /// Adds one admin-approved entry to the add-on file (App_Data/content/{pack}/) of the pack it belongs in (the AI pack while that pack is
+    /// on, otherwise the first enabled pack), reading only that file so entries from other packs are never copied into it. App_Data, not
+    /// Data/, so a deploy cannot discard the entry.
     /// </summary>
     private void AppendToDataFile<T>(string file, T entry)
     {

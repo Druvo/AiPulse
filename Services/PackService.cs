@@ -45,6 +45,15 @@ public sealed class PackService
     }
 
     public string DataDirectory => _dataDir;
+
+    /// <summary>
+    /// Where entries an admin approves are kept: <c>App_Data/content/{pack}/</c>. They used to be appended to the shipped
+    /// <c>Data/*.json</c> files, but a deploy replaces <c>Data/</c> with the release's copy and quietly discarded them; App_Data is
+    /// never touched by a deploy and is included in backups. These files are read after the pack's own, in the same formats.
+    /// </summary>
+    public string ContentDirectory => Path.Combine(Path.GetDirectoryName(_statePath)!, "content");
+
+    private string LocalFile(string packId, string file) => Path.Combine(ContentDirectory, packId, file);
     private string PacksDirectory => Path.Combine(_dataDir, "packs");
 
     public bool AiEnabled => IsEnabled(AiPackId);
@@ -92,7 +101,7 @@ public sealed class PackService
         return Directory.Exists(dir) ? dir : null;
     }
 
-    /// <summary>The files for one kind of content, from every enabled pack, built-in AI pack first.</summary>
+    /// <summary>The files for one kind of content, from every enabled pack, built-in AI pack first; each pack's shipped file, then the entries admins added to it.</summary>
     public IReadOnlyList<string> FilesFor(string file)
     {
         var result = new List<string>();
@@ -102,16 +111,18 @@ public sealed class PackService
             if (dir is null) continue;
             var path = Path.Combine(dir, file);
             if (File.Exists(path)) result.Add(path);
+            var local = LocalFile(id, file);
+            if (File.Exists(local)) result.Add(local);
         }
         return result;
     }
 
-    /// <summary>Where an entry approved by an admin is written: the AI pack's file while that pack is on, otherwise the first enabled pack's.</summary>
+    /// <summary>Where an entry approved by an admin is written: the AI pack's add-on file while that pack is on, otherwise the first enabled pack's. Always under App_Data (see <see cref="ContentDirectory"/>).</summary>
     public string WriteTargetFor(string file)
     {
         var first = EnabledIds.OrderBy(i => i.Equals(AiPackId, StringComparison.OrdinalIgnoreCase) ? 0 : 1).ThenBy(i => i, StringComparer.OrdinalIgnoreCase)
-            .Select(DirectoryOf).FirstOrDefault(d => d is not null) ?? _dataDir;
-        return Path.Combine(first, file);
+            .FirstOrDefault(i => DirectoryOf(i) is not null) ?? AiPackId;
+        return LocalFile(first, file);
     }
 
     /// <summary>Turns a pack on or off. Returns an error text, or null on success. At least one pack must stay on.</summary>

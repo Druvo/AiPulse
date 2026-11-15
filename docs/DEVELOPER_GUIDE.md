@@ -336,7 +336,7 @@ Environment variables for the service (systemd `Environment=` lines) are the rig
 - Adding a public page: register it in `PublicSite` (menu, entry or unlisted). A test enforces it.
 - New table or column: this project uses hand-written schema bootstrap (see `UserService.EnsureSchemaAsync`, `KnowledgeBaseService`),
   not EF migrations. Add a guarded `CREATE TABLE`/`ALTER TABLE` so existing databases upgrade in place.
-- Data the app writes to `Data/*.json` (admin-approved glossary, tools and learning entries) lives in the install folder, not
-  `App_Data`. A deploy that overwrites `Data/` loses them; copy it back or exclude it from the upload.
+- `Data/` is shipped content and is replaced by every deploy; never write runtime data there. Entries admins approve are written to
+  `App_Data/content/<pack>/` and merged on read (see `PackService.ContentDirectory`).
 - The mobile and public APIs share the prefix family `/api` but must not share routes: public is `/api/v1`, mobile `/api/mobile/v1`.
 - Commit messages explain the why; keep tests green; never commit `App_Data`, keystores or provider secrets.

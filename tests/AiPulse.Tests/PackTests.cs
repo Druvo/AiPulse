@@ -214,13 +214,28 @@ public class PackServiceTests : IDisposable
     }
 
     [Fact]
-    public void Approved_entries_go_to_the_AI_files_while_AI_is_on_otherwise_to_the_first_enabled_pack()
+    public void Approved_entries_go_to_App_Data_for_the_AI_pack_while_it_is_on_otherwise_for_the_first_enabled_pack()
     {
         var packs = Make();
-        Assert.Equal(Path.Combine(Data, "glossary.json"), packs.WriteTargetFor("glossary.json"));
+        Assert.Equal(Path.Combine(_root, "App_Data", "content", "ai", "glossary.json"), packs.WriteTargetFor("glossary.json"));
         packs.SetEnabled("extra", true);
         packs.SetEnabled("ai", false);
-        Assert.Equal(Path.Combine(Data, "packs", "extra", "glossary.json"), packs.WriteTargetFor("glossary.json"));
+        Assert.Equal(Path.Combine(_root, "App_Data", "content", "extra", "glossary.json"), packs.WriteTargetFor("glossary.json"));
+        Assert.StartsWith(packs.ContentDirectory, packs.WriteTargetFor("tools.json"));
+        Assert.False(packs.WriteTargetFor("glossary.json").StartsWith(Data));   // never inside the folder a deploy replaces
+    }
+
+    [Fact]
+    public void Entries_admins_added_are_read_after_the_packs_own_file()
+    {
+        var packs = Make();
+        packs.SetEnabled("demo", true);
+        Directory.CreateDirectory(Path.Combine(_root, "App_Data", "content", "demo"));
+        File.WriteAllText(Path.Combine(_root, "App_Data", "content", "demo", "glossary.json"), "[]");
+
+        var files = packs.FilesFor("glossary.json").Select(f => f.Replace(_root, "").Replace('\\', '/')).ToList();
+
+        Assert.Equal(new[] { "/Data/glossary.json", "/Data/packs/demo/glossary.json", "/App_Data/content/demo/glossary.json" }, files);
     }
 
     [Fact]
@@ -326,14 +341,51 @@ public class PackKnowledgeTests : IDisposable
         append.Invoke(kb, new object[] { "glossary.json", new GlossaryTerm { Term = "Gamma", Category = "c", ShortDef = "s" } });
         await Task.CompletedTask;
 
-        var aiFile = File.ReadAllText(Path.Combine(Data, "glossary.json"));
-        Assert.Contains("Gamma", aiFile);
-        Assert.DoesNotContain("Alpha", aiFile);            // the demo pack's term was not copied into the AI file
+        var aiAdditions = File.ReadAllText(Path.Combine(_env.ContentRootPath, "App_Data", "content", "ai", "glossary.json"));
+        Assert.Contains("Gamma", aiAdditions);
+        Assert.DoesNotContain("Alpha", aiAdditions);       // the demo pack's term was not copied into the AI add-on file
+        Assert.DoesNotContain("Gamma", File.ReadAllText(Path.Combine(Data, "glossary.json")));   // the shipped file is left alone
 
         packs.SetEnabled("ai", false);
         append.Invoke(kb, new object[] { "glossary.json", new GlossaryTerm { Term = "Delta", Category = "c", ShortDef = "s" } });
-        Assert.Contains("Delta", File.ReadAllText(Path.Combine(Data, "packs", "demo", "glossary.json")));
-        Assert.DoesNotContain("Delta", File.ReadAllText(Path.Combine(Data, "glossary.json")));
+        Assert.Contains("Delta", File.ReadAllText(Path.Combine(_env.ContentRootPath, "App_Data", "content", "demo", "glossary.json")));
+        Assert.DoesNotContain("Delta", File.ReadAllText(Path.Combine(_env.ContentRootPath, "App_Data", "content", "ai", "glossary.json")));
+    }
+}
+
+public class ApprovedContentSurvivesDeploysTests : IDisposable
+{
+    private readonly TempEnvironment _env = new();
+    private string Data => Path.Combine(_env.ContentRootPath, "Data");
+
+    public ApprovedContentSurvivesDeploysTests()
+    {
+        Directory.CreateDirectory(Data);
+        File.WriteAllText(Path.Combine(Data, "glossary.json"), """[{"Term":"RAG","Category":"c","ShortDef":"s"}]""");
+    }
+
+    public void Dispose() => _env.Dispose();
+
+    private KnowledgeBaseService NewService()
+    {
+        var packs = new PackService(Data, Path.Combine(_env.ContentRootPath, "App_Data", "packs.json"));
+        return new KnowledgeBaseService(_env, null!, packs);
+    }
+
+    [Fact]
+    public void An_approved_term_is_still_there_after_a_deploy_replaces_the_Data_folder_and_the_app_restarts()
+    {
+        var kb = NewService();
+        var append = kb.GetType().GetMethod("AppendToDataFile", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!
+            .MakeGenericMethod(typeof(GlossaryTerm));
+        append.Invoke(kb, new object[] { "glossary.json", new GlossaryTerm { Term = "Mine", Category = "c", ShortDef = "approved by an admin" } });
+        Assert.Contains(NewService().Glossary, t => t.Term == "Mine");
+
+        // A deploy: the release's own copy of Data/ replaces whatever was there.
+        File.WriteAllText(Path.Combine(Data, "glossary.json"), """[{"Term":"RAG","Category":"c","ShortDef":"s"},{"Term":"New in release","Category":"c","ShortDef":"s"}]""");
+
+        var terms = NewService().Glossary.Select(t => t.Term).ToList();
+        Assert.Equal(new[] { "RAG", "New in release", "Mine" }, terms);
     }
 }
 

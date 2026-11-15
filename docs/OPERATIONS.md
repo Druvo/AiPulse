@@ -134,11 +134,12 @@ The automated pipeline (`Jenkinsfile`) runs these steps. Done by hand:
 Schema changes are applied automatically at startup (missing tables and columns are created). There are no
 migrations to run, and no downgrade path other than restoring a backup.
 
-**Caveat: curated content in `Data/`.** Approving a Glossary, Tools or Learning candidate appends to
-`Data/glossary.json`, `Data/tools.json` or `Data/learning.json` in the install folder, not to App_Data. An upgrade
-that copies a fresh `Data/` over the install therefore discards those approvals, and App_Data backups do not
-contain them. Until that moves into the database, copy those three files aside before an upgrade and merge them
-back afterwards (or keep the approved entries in the repository's `Data/` files).
+**Curated content.** Entries an admin approves (Glossary, Tools, Learning) are stored in
+`App_Data/content/<pack>/` (for example `App_Data/content/ai/glossary.json`) and read after the pack's own files in
+`Data/`. `Data/` is part of the release and is replaced on every upgrade; `App_Data/content/` is never touched by one
+and is included in backups, so approvals survive upgrades. (Releases before 2026-11-15 appended them to `Data/*.json`,
+where an upgrade discarded them. If you still have such a file from an older install, copy its extra entries into
+`App_Data/content/<pack>/<same name>.json`.)
 
 ## 6. Backups and restore
 
