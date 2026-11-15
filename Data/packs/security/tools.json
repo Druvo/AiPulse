@@ -1,0 +1,89 @@
+[
+  {
+    "Name": "OWASP ZAP",
+    "Category": "Scanner",
+    "OneLiner": "Free web application security scanner and proxy.",
+    "BestFor": [
+      "Finding common web vulnerabilities in staging",
+      "Learning how attacks look"
+    ],
+    "NotIdealFor": [
+      "Replacing a manual review or a pentest"
+    ],
+    "TokenTips": [
+      "Scan authenticated areas too",
+      "Run baseline scans in CI"
+    ],
+    "Url": "https://www.zaproxy.org/"
+  },
+  {
+    "Name": "Burp Suite",
+    "Category": "Proxy",
+    "OneLiner": "The standard toolkit for manual web security testing.",
+    "BestFor": [
+      "Intercepting and modifying requests",
+      "Hands-on testing"
+    ],
+    "NotIdealFor": [],
+    "TokenTips": [
+      "Learn with the free PortSwigger Web Security Academy"
+    ],
+    "Url": "https://portswigger.net/burp"
+  },
+  {
+    "Name": "Trivy",
+    "Category": "Scanner",
+    "OneLiner": "Scans container images, filesystems and infrastructure code for vulnerabilities and misconfigurations.",
+    "BestFor": [
+      "CI checks on images and dependencies",
+      "Finding exposed secrets"
+    ],
+    "NotIdealFor": [],
+    "TokenTips": [
+      "Fail builds only on fixable high severity at first",
+      "Re-scan regularly: new CVEs appear daily"
+    ],
+    "Url": "https://trivy.dev/"
+  },
+  {
+    "Name": "Dependabot",
+    "Category": "Dependencies",
+    "OneLiner": "Opens pull requests to update vulnerable or outdated dependencies.",
+    "BestFor": [
+      "Staying on patched versions"
+    ],
+    "NotIdealFor": [],
+    "TokenTips": [
+      "Group updates to reduce noise",
+      "Have tests that make merging safe"
+    ],
+    "Url": "https://docs.github.com/code-security/dependabot"
+  },
+  {
+    "Name": "Have I Been Pwned",
+    "Category": "Breaches",
+    "OneLiner": "Checks whether an email or password has appeared in known data breaches.",
+    "BestFor": [
+      "Checking accounts",
+      "Rejecting breached passwords at sign-up"
+    ],
+    "NotIdealFor": [],
+    "TokenTips": [
+      "Use the k-anonymity password API so passwords never leave your server in full"
+    ],
+    "Url": "https://haveibeenpwned.com/"
+  },
+  {
+    "Name": "Semgrep",
+    "Category": "Static Analysis",
+    "OneLiner": "Fast, rule-based code scanning for bugs and security issues.",
+    "BestFor": [
+      "Catching known bad patterns in pull requests"
+    ],
+    "NotIdealFor": [],
+    "TokenTips": [
+      "Write a custom rule for your own recurring mistake"
+    ],
+    "Url": "https://semgrep.dev/"
+  }
+]

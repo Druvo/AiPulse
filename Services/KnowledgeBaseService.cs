@@ -24,19 +24,29 @@ public sealed class KnowledgeBaseService
     private Dictionary<string, string> _sourceHostByName = new(StringComparer.OrdinalIgnoreCase);
     private HashSet<string> _sourceHosts = new(StringComparer.OrdinalIgnoreCase);
 
-    public KnowledgeBaseService(IWebHostEnvironment env, IDbContextFactory<AiPulseDbContext> dbFactory)
+    private readonly PackService _packs;
+
+    public KnowledgeBaseService(IWebHostEnvironment env, IDbContextFactory<AiPulseDbContext> dbFactory, PackService? packs = null)
     {
         _dataDir = Path.Combine(env.ContentRootPath, "Data");
         _dbFactory = dbFactory;
+        _packs = packs ?? new PackService(_dataDir, Path.Combine(env.ContentRootPath, "App_Data", "packs.json"));
     }
 
-    public IReadOnlyList<GlossaryTerm> Glossary => _glossary ??= Load<GlossaryTerm>("glossary.json");
-    public IReadOnlyList<ToolEntry> Tools => _tools ??= Load<ToolEntry>("tools.json");
-    public IReadOnlyList<PracticeTip> Practices => _practices ??= Load<PracticeTip>("practices.json");
-    public IReadOnlyList<LearningModule> Learning => _learning ??= Load<LearningModule>("learning.json");
-    public IReadOnlyList<BenchmarkEntry> Benchmarks => _benchmarks ??= Load<BenchmarkEntry>("benchmarks.json");
-    public IReadOnlyList<ModelDirectoryEntry> ModelDirectory => _modelDirectory ??= Load<ModelDirectoryEntry>("model-directory.json");
-    public IReadOnlyList<CourseEntry> Courses => _courses ??= Load<CourseEntry>("courses.json");
+    public PackService Packs => _packs;
+
+    /// <summary>Raised after an admin turns a content pack on or off (tag vocabulary and cached lists must be rebuilt).</summary>
+    public event Action? PacksChanged;
+
+    // Glossary, tools, tips and learning modules come from every enabled pack (the built-in AI pack is the original Data/*.json files).
+    // Benchmarks, the model directory and courses are AI-specific and only exist while the AI pack is on.
+    public IReadOnlyList<GlossaryTerm> Glossary => _glossary ??= LoadMerged<GlossaryTerm>("glossary.json", t => t.Term);
+    public IReadOnlyList<ToolEntry> Tools => _tools ??= LoadMerged<ToolEntry>("tools.json", t => t.Name);
+    public IReadOnlyList<PracticeTip> Practices => _practices ??= LoadMerged<PracticeTip>("practices.json", t => t.Title);
+    public IReadOnlyList<LearningModule> Learning => _learning ??= LoadMerged<LearningModule>("learning.json", m => m.Title);
+    public IReadOnlyList<BenchmarkEntry> Benchmarks => _benchmarks ??= _packs.AiEnabled ? Load<BenchmarkEntry>("benchmarks.json") : new List<BenchmarkEntry>();
+    public IReadOnlyList<ModelDirectoryEntry> ModelDirectory => _modelDirectory ??= _packs.AiEnabled ? Load<ModelDirectoryEntry>("model-directory.json") : new List<ModelDirectoryEntry>();
+    public IReadOnlyList<CourseEntry> Courses => _courses ??= _packs.AiEnabled ? Load<CourseEntry>("courses.json") : new List<CourseEntry>();
 
     private List<GlossaryTerm>? _glossary;
     private List<ToolEntry>? _tools;
@@ -114,7 +124,67 @@ public sealed class KnowledgeBaseService
             await ReconcileSeedUpdatesAsync(db);
         }
 
+        _packs.MarkApplied(PackService.AiPackId); // the built-in pack's feeds are the seed above
+        foreach (var id in _packs.EnabledIds.Where(i => !i.Equals(PackService.AiPackId, StringComparison.OrdinalIgnoreCase) && !_packs.WasApplied(i)))
+            await ApplyPackSourcesAsync(db, id, enabled: true);
+
         await RefreshSourcesAsync(db);
+    }
+
+    /// <summary>
+    /// Switches a content pack on or off: its glossary, tools, tips and learning path appear or disappear, and its feeds are added to
+    /// (or switched off in) the Sources list. Feeds are never deleted. Returns an error text, or null.
+    /// </summary>
+    public async Task<string?> SetPackEnabledAsync(string id, bool enabled)
+    {
+        var error = _packs.SetEnabled(id, enabled);
+        if (error is not null) return error;
+
+        await using var db = await _dbFactory.CreateDbContextAsync();
+        await ApplyPackSourcesAsync(db, _packs.Find(id)!.Id, enabled);
+        await RefreshSourcesAsync(db);
+        ResetKnowledgeCaches();
+        PacksChanged?.Invoke();
+        return null;
+    }
+
+    private void ResetKnowledgeCaches()
+    {
+        _glossary = null; _tools = null; _practices = null; _learning = null;
+        _benchmarks = null; _modelDirectory = null; _courses = null;
+    }
+
+    /// <summary>Adds a pack's feeds that are missing (when enabling) and turns them on or off to match. Matched by URL.</summary>
+    private async Task ApplyPackSourcesAsync(AiPulseDbContext db, string packId, bool enabled)
+    {
+        var dir = _packs.DirectoryOf(packId);
+        var path = dir is null ? null : Path.Combine(dir, "sources.json");
+        if (path is null || !File.Exists(path)) { _packs.MarkApplied(packId); return; }
+
+        var seed = LoadFile<FeedSource>(path);
+        var existing = await db.Sources.ToListAsync();
+        var byUrl = new Dictionary<string, SourceRecord>(StringComparer.OrdinalIgnoreCase);
+        foreach (var record in existing) byUrl.TryAdd(record.Url, record);
+
+        foreach (var s in seed)
+        {
+            if (byUrl.TryGetValue(s.Url, out var record))
+            {
+                record.Enabled = enabled && s.Enabled;
+            }
+            else if (enabled)
+            {
+                db.Sources.Add(new SourceRecord
+                {
+                    Name = s.Name, Url = s.Url, Category = s.Category, Enabled = s.Enabled, Note = s.Note,
+                    ContentType = s.ContentType, Level = s.Level, Tags = s.Tags, FullTextFetch = s.FullTextFetch,
+                    IsScrape = s.IsScrape, ScrapeItemXPath = s.ScrapeItemXPath, ScrapeTitleXPath = s.ScrapeTitleXPath,
+                    ScrapeLinkXPath = s.ScrapeLinkXPath, ScrapeDateXPath = s.ScrapeDateXPath
+                });
+            }
+        }
+        await db.SaveChangesAsync();
+        _packs.MarkApplied(packId);
     }
 
     /// <summary>
@@ -615,43 +685,62 @@ public sealed class KnowledgeBaseService
     /// </summary>
     public async Task ApproveGlossaryCandidateAsync(int candidateId, GlossaryTerm term)
     {
-        var list = Glossary.ToList();
-        list.Add(term);
-        SaveJson("glossary.json", list);
-        _glossary = list;
+        AppendToDataFile("glossary.json", term);
+        _glossary = null;
         await MarkContentCandidateApprovedAsync(candidateId);
     }
 
     public async Task ApproveToolCandidateAsync(int candidateId, ToolEntry entry)
     {
-        var list = Tools.ToList();
-        list.Add(entry);
-        SaveJson("tools.json", list);
-        _tools = list;
+        AppendToDataFile("tools.json", entry);
+        _tools = null;
         await MarkContentCandidateApprovedAsync(candidateId);
     }
 
     public async Task ApproveLearningCandidateAsync(int candidateId, LearningModule module)
     {
-        var list = Learning.ToList();
-        list.Add(module);
-        SaveJson("learning.json", list);
-        _learning = list;
+        AppendToDataFile("learning.json", module);
+        _learning = null;
         await MarkContentCandidateApprovedAsync(candidateId);
     }
 
-    private void SaveJson<T>(string file, List<T> items)
+    /// <summary>
+    /// Adds one admin-approved entry to the file of the pack it belongs in (the AI pack's Data file while that pack is on, otherwise the
+    /// first enabled pack's), reading only that file so entries from other packs are never copied into it.
+    /// </summary>
+    private void AppendToDataFile<T>(string file, T entry)
     {
-        var path = Path.Combine(_dataDir, file);
-        File.WriteAllText(path, JsonSerializer.Serialize(items, new JsonSerializerOptions { WriteIndented = true }));
+        var path = _packs.WriteTargetFor(file);
+        var list = LoadFile<T>(path);
+        list.Add(entry);
+        Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+        File.WriteAllText(path, JsonSerializer.Serialize(list, new JsonSerializerOptions { WriteIndented = true }));
     }
 
-    private List<T> Load<T>(string file)
+    /// <summary>One kind of content from every enabled pack, the same key never twice (the first pack to define it wins).</summary>
+    private List<T> LoadMerged<T>(string file, Func<T, string> key)
     {
-        var path = Path.Combine(_dataDir, file);
+        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var result = new List<T>();
+        foreach (var path in _packs.FilesFor(file))
+            foreach (var item in LoadFile<T>(path))
+                if (seen.Add(key(item))) result.Add(item);
+        return result;
+    }
+
+    private static List<T> LoadFile<T>(string path)
+    {
         if (!File.Exists(path))
             return new List<T>();
-        var json = File.ReadAllText(path);
-        return JsonSerializer.Deserialize<List<T>>(json, JsonOpts) ?? new List<T>();
+        try
+        {
+            return JsonSerializer.Deserialize<List<T>>(File.ReadAllText(path), JsonOpts) ?? new List<T>();
+        }
+        catch (JsonException)
+        {
+            return new List<T>(); // a malformed pack file must not take the site down; the pack tests catch it before release
+        }
     }
+
+    private List<T> Load<T>(string file) => LoadFile<T>(Path.Combine(_dataDir, file));
 }

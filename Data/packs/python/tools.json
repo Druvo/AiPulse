@@ -1,0 +1,95 @@
+[
+  {
+    "Name": "uv",
+    "Category": "Package Manager",
+    "OneLiner": "Fast project, environment and dependency manager.",
+    "BestFor": [
+      "Starting projects and locking dependencies",
+      "Speeding up CI installs"
+    ],
+    "NotIdealFor": [
+      "Projects that must stay on a legacy toolchain"
+    ],
+    "TokenTips": [
+      "Commit uv.lock",
+      "Use `uv run` instead of activating environments by hand"
+    ],
+    "Url": "https://docs.astral.sh/uv/"
+  },
+  {
+    "Name": "Ruff",
+    "Category": "Linter",
+    "OneLiner": "Linter and formatter in one, very fast.",
+    "BestFor": [
+      "Replacing flake8, isort and Black",
+      "Pre-commit and CI checks"
+    ],
+    "NotIdealFor": [],
+    "TokenTips": [
+      "Enable the rule sets you need rather than everything",
+      "Run `ruff format` on save"
+    ],
+    "Url": "https://docs.astral.sh/ruff/"
+  },
+  {
+    "Name": "pytest",
+    "Category": "Testing",
+    "OneLiner": "Test runner with fixtures and plugins.",
+    "BestFor": [
+      "Unit, integration and parametrised tests"
+    ],
+    "NotIdealFor": [],
+    "TokenTips": [
+      "Use fixtures for setup, not inheritance",
+      "Run with `-x -q` while developing"
+    ],
+    "Url": "https://docs.pytest.org/"
+  },
+  {
+    "Name": "FastAPI",
+    "Category": "Framework",
+    "OneLiner": "Type-hint driven web API framework.",
+    "BestFor": [
+      "JSON APIs with validation and docs"
+    ],
+    "NotIdealFor": [
+      "Server-rendered sites with admin screens (consider Django)"
+    ],
+    "TokenTips": [
+      "Keep route handlers thin",
+      "Declare response models"
+    ],
+    "Url": "https://fastapi.tiangolo.com/"
+  },
+  {
+    "Name": "Jupyter",
+    "Category": "Notebook",
+    "OneLiner": "Interactive notebooks mixing code, output and text.",
+    "BestFor": [
+      "Exploring data and prototyping",
+      "Teaching and sharing analyses"
+    ],
+    "NotIdealFor": [
+      "Production code and long-lived modules"
+    ],
+    "TokenTips": [
+      "Move reusable code out of the notebook into modules",
+      "Restart and run all before sharing"
+    ],
+    "Url": "https://jupyter.org/"
+  },
+  {
+    "Name": "mypy / pyright",
+    "Category": "Type Checker",
+    "OneLiner": "Static type checkers that read your hints.",
+    "BestFor": [
+      "Catching bugs without running code"
+    ],
+    "NotIdealFor": [],
+    "TokenTips": [
+      "Adopt gradually: start strict on new modules",
+      "Run in CI"
+    ],
+    "Url": "https://mypy.readthedocs.io/"
+  }
+]

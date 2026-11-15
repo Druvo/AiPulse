@@ -1,0 +1,168 @@
+[
+  {
+    "Name": "Krebs on Security",
+    "Url": "https://krebsonsecurity.com/feed/",
+    "Category": "News",
+    "Note": "Investigative reporting on cybercrime.",
+    "ContentType": "News",
+    "Level": "Beginner",
+    "Tags": [
+      "Security"
+    ]
+  },
+  {
+    "Name": "Schneier on Security",
+    "Url": "https://www.schneier.com/feed/atom/",
+    "Category": "Community",
+    "Note": "Bruce Schneier on security and society.",
+    "ContentType": "News",
+    "Level": "Intermediate",
+    "Tags": [
+      "Security"
+    ]
+  },
+  {
+    "Name": "The Hacker News",
+    "Url": "https://feeds.feedburner.com/TheHackersNews",
+    "Category": "News",
+    "Note": "Daily cybersecurity news.",
+    "ContentType": "News",
+    "Level": "Beginner",
+    "Tags": [
+      "Security"
+    ]
+  },
+  {
+    "Name": "BleepingComputer",
+    "Url": "https://www.bleepingcomputer.com/feed/",
+    "Category": "News",
+    "Note": "Security news and malware coverage.",
+    "ContentType": "News",
+    "Level": "Beginner",
+    "Tags": [
+      "Security"
+    ]
+  },
+  {
+    "Name": "Dark Reading",
+    "Url": "https://www.darkreading.com/rss.xml",
+    "Category": "News",
+    "Note": "Enterprise security news.",
+    "ContentType": "News",
+    "Level": "Intermediate",
+    "Tags": [
+      "Security"
+    ]
+  },
+  {
+    "Name": "Troy Hunt",
+    "Url": "https://www.troyhunt.com/rss/",
+    "Category": "Community",
+    "Note": "Have I Been Pwned's creator on breaches and the web.",
+    "ContentType": "News",
+    "Level": "Beginner",
+    "Tags": [
+      "Security",
+      "Breaches"
+    ]
+  },
+  {
+    "Name": "PortSwigger Research",
+    "Url": "https://portswigger.net/research/rss",
+    "Category": "News",
+    "Note": "New web attack techniques from the Burp Suite makers.",
+    "ContentType": "Tutorial",
+    "Level": "Advanced",
+    "Tags": [
+      "Web Security"
+    ]
+  },
+  {
+    "Name": "Google Project Zero",
+    "Url": "https://googleprojectzero.blogspot.com/feeds/posts/default",
+    "Category": "News",
+    "Note": "In-depth vulnerability research.",
+    "ContentType": "Tutorial",
+    "Level": "Advanced",
+    "Tags": [
+      "Vulnerabilities"
+    ]
+  },
+  {
+    "Name": "Trail of Bits blog",
+    "Url": "https://blog.trailofbits.com/feed/",
+    "Category": "News",
+    "Note": "Security engineering and research.",
+    "ContentType": "Tutorial",
+    "Level": "Advanced",
+    "Tags": [
+      "Security"
+    ]
+  },
+  {
+    "Name": "CISA advisories",
+    "Url": "https://www.cisa.gov/cybersecurity-advisories/all.xml",
+    "Category": "News",
+    "Note": "US government security advisories and alerts.",
+    "ContentType": "News",
+    "Level": "Intermediate",
+    "Tags": [
+      "Advisories"
+    ]
+  },
+  {
+    "Name": "Rapid7 blog",
+    "Url": "https://blog.rapid7.com/rss/",
+    "Category": "News",
+    "Note": "Threat research and security guidance.",
+    "ContentType": "News",
+    "Level": "Intermediate",
+    "Tags": [
+      "Security"
+    ]
+  },
+  {
+    "Name": "Dev.to · security",
+    "Url": "https://dev.to/feed/tag/security",
+    "Category": "Community",
+    "Note": "Community posts tagged security.",
+    "ContentType": "News",
+    "Level": "Beginner",
+    "Tags": [
+      "Security"
+    ]
+  },
+  {
+    "Name": "Trivy releases",
+    "Url": "https://github.com/aquasecurity/trivy/releases.atom",
+    "Category": "Tools",
+    "Note": "New Trivy versions.",
+    "ContentType": "Release",
+    "Level": "Intermediate",
+    "Tags": [
+      "Scanning"
+    ]
+  },
+  {
+    "Name": "OpenSSL releases",
+    "Url": "https://github.com/openssl/openssl/releases.atom",
+    "Category": "Tools",
+    "Note": "New OpenSSL versions.",
+    "ContentType": "Release",
+    "Level": "Advanced",
+    "Tags": [
+      "Cryptography"
+    ]
+  },
+  {
+    "Name": "ZAP releases",
+    "Url": "https://github.com/zaproxy/zaproxy/releases.atom",
+    "Category": "Tools",
+    "Note": "New OWASP ZAP versions.",
+    "ContentType": "Release",
+    "Level": "Intermediate",
+    "Tags": [
+      "Web Security"
+    ]
+  }
+]

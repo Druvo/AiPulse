@@ -1,0 +1,78 @@
+[
+  {
+    "Title": "Security fundamentals",
+    "Level": "Beginner",
+    "Why": "The risks behind most real breaches, in plain terms.",
+    "Steps": [
+      {
+        "Text": "Read the OWASP Top 10 and note which items apply to your app.",
+        "Url": "https://owasp.org/www-project-top-ten/"
+      },
+      {
+        "Text": "Learn how SQL injection and XSS work, then see how your framework prevents them.",
+        "Url": "https://portswigger.net/web-security"
+      },
+      {
+        "Text": "Set up a password manager and two-factor authentication everywhere you can.",
+        "Url": "https://www.cisa.gov/secure-our-world/use-strong-passwords"
+      }
+    ],
+    "RelatedTerms": [
+      "OWASP Top 10",
+      "Injection",
+      "XSS",
+      "Authentication"
+    ]
+  },
+  {
+    "Title": "Secure web application development",
+    "Level": "Intermediate",
+    "Why": "Authentication, sessions, access control and secrets done properly.",
+    "Steps": [
+      {
+        "Text": "Work through the OWASP cheat sheets for authentication and session management.",
+        "Url": "https://cheatsheetseries.owasp.org/"
+      },
+      {
+        "Text": "Test your own app for broken access control by changing IDs.",
+        "Url": "https://portswigger.net/web-security/access-control"
+      },
+      {
+        "Text": "Scan a project's dependencies and fix what is found.",
+        "Url": "https://trivy.dev/latest/getting-started/"
+      }
+    ],
+    "RelatedTerms": [
+      "Session Management",
+      "Broken Access Control",
+      "Password Hashing",
+      "Dependency Vulnerabilities",
+      "Secrets Management"
+    ]
+  },
+  {
+    "Title": "Defence in depth and threat thinking",
+    "Level": "Advanced",
+    "Why": "Design for attack: model threats, limit privileges and watch the supply chain.",
+    "Steps": [
+      {
+        "Text": "Threat-model one feature using STRIDE.",
+        "Url": "https://owasp.org/www-community/Threat_Modeling"
+      },
+      {
+        "Text": "Apply least privilege to your cloud roles and tokens.",
+        "Url": "https://csrc.nist.gov/glossary/term/least_privilege"
+      },
+      {
+        "Text": "Read about supply chain attacks and SLSA.",
+        "Url": "https://slsa.dev/"
+      }
+    ],
+    "RelatedTerms": [
+      "Threat Modeling",
+      "Least Privilege",
+      "Supply Chain Attack",
+      "Rate Limiting"
+    ]
+  }
+]

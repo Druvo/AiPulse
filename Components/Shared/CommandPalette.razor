@@ -106,7 +106,7 @@
         var user = (await Auth.GetAuthenticationStateAsync()).User;
         _signedIn = user.Identity?.IsAuthenticated == true;
         var roles = user.FindAll(ClaimTypes.Role).Select(c => c.Value).ToList();
-        _commands = CommandCatalog.For(_signedIn, roles);
+        _commands = CommandCatalog.For(_signedIn, roles, Kb.Packs.AiEnabled);
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)

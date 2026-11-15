@@ -1,0 +1,77 @@
+[
+  {
+    "Title": "Foundations: how the web page loads",
+    "Level": "Beginner",
+    "Why": "Understanding the path from URL to pixels explains most performance and debugging work.",
+    "Steps": [
+      {
+        "Text": "Read how browsers turn HTML, CSS and JavaScript into a rendered page.",
+        "Url": "https://developer.mozilla.org/en-US/docs/Web/Performance/How_browsers_work"
+      },
+      {
+        "Text": "Open DevTools' Network panel on a site you use and read the waterfall.",
+        "Url": "https://developer.chrome.com/docs/devtools/network/"
+      },
+      {
+        "Text": "Learn what the DOM is and change a page from the console.",
+        "Url": "https://developer.mozilla.org/en-US/docs/Web/API/Document_Object_Model/Introduction"
+      }
+    ],
+    "RelatedTerms": [
+      "DOM",
+      "Event Loop",
+      "CDN"
+    ]
+  },
+  {
+    "Title": "Modern JavaScript and TypeScript",
+    "Level": "Intermediate",
+    "Why": "Promises, modules and types are the everyday tools of front-end work.",
+    "Steps": [
+      {
+        "Text": "Work through promises and async/await until error handling feels natural.",
+        "Url": "https://developer.mozilla.org/en-US/docs/Learn_web_development/Extensions/Async_JS"
+      },
+      {
+        "Text": "Learn ES modules, then see how a bundler uses them.",
+        "Url": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Modules"
+      },
+      {
+        "Text": "Add TypeScript to a small project with `strict` on.",
+        "Url": "https://www.typescriptlang.org/docs/handbook/intro.html"
+      }
+    ],
+    "RelatedTerms": [
+      "Promise",
+      "TypeScript",
+      "Bundler",
+      "Tree Shaking"
+    ]
+  },
+  {
+    "Title": "Fast, safe, accessible sites",
+    "Level": "Advanced",
+    "Why": "Performance and security are features: measure them, then keep them from regressing.",
+    "Steps": [
+      {
+        "Text": "Learn Core Web Vitals and test one of your pages.",
+        "Url": "https://web.dev/articles/vitals"
+      },
+      {
+        "Text": "Add a Content Security Policy in report-only mode and read what it reports.",
+        "Url": "https://developer.mozilla.org/en-US/docs/Web/HTTP/CSP"
+      },
+      {
+        "Text": "Understand CORS well enough to debug any error message.",
+        "Url": "https://developer.mozilla.org/en-US/docs/Web/HTTP/CORS"
+      }
+    ],
+    "RelatedTerms": [
+      "Core Web Vitals",
+      "CSP",
+      "CORS",
+      "XSS",
+      "Code Splitting"
+    ]
+  }
+]

@@ -103,7 +103,17 @@ public sealed class AiPulseAppFactory : WebApplicationFactory<Program>, IAsyncLi
     }
 
     /// <summary>A client that keeps cookies and does not follow redirects, so tests can see where the app sends them.</summary>
-    public HttpClient Anonymous() => CreateClient(new WebApplicationFactoryClientOptions { AllowAutoRedirect = false, HandleCookies = true });
+    private static int _clientCounter;
+
+    public HttpClient Anonymous()
+    {
+        var client = CreateClient(new WebApplicationFactoryClientOptions { AllowAutoRedirect = false, HandleCookies = true });
+        // Each test client claims its own address (the rate limiter keys on the last X-Forwarded-For hop, as it does behind nginx), so the
+        // per-IP sign-in limit - which is real and stays on - is never tripped by the dozens of sign-ins the suite makes from one machine.
+        var n = Interlocked.Increment(ref _clientCounter);
+        client.DefaultRequestHeaders.Add("X-Forwarded-For", $"10.{(n >> 16) & 255}.{(n >> 8) & 255}.{n & 255}");
+        return client;
+    }
 
     private readonly ConcurrentDictionary<string, Task<HttpClient>> _signedIn = new();
 

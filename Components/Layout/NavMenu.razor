@@ -2,6 +2,7 @@
 @implements IDisposable
 @inject FeedAggregatorService Feeds
 @inject ReadingStateService Reading
+@inject KnowledgeBaseService Kb
 
 @* The signed-in sidebar. One component, three presentations (all CSS, driven by attributes the early script in App.razor sets on <html>):
    - wide screens: a full sidebar with grouped sections;
@@ -21,7 +22,7 @@
 
 <AuthorizeView>
     <nav class="sidebar-nav nav-scrollable" aria-label="Main">
-        @foreach (var section in ShellNav.VisibleTo(context.User.IsInRole("Admin")))
+        @foreach (var section in ShellNav.VisibleTo(context.User.IsInRole("Admin"), Kb.Packs.AiEnabled))
         {
             <div class="nav-section" role="group" aria-labelledby="@($"nav-sec-{section.Title.ToLowerInvariant()}")">
                 <div class="nav-section-label" id="@($"nav-sec-{section.Title.ToLowerInvariant()}")"><span class="sidebar-label">@section.Title</span></div>

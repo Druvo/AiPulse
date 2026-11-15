@@ -11,6 +11,7 @@
 @inject NavigationManager Nav
 @inject IJSRuntime JS
 @inject ToastService Toasts
+@inject KnowledgeBaseService Kb
 @inject OAuthSettingsService OAuthSettings
 @inject FollowService Follow
 @inject ProfileService Profile
@@ -486,6 +487,35 @@
                     </header>
 
                     <div class="set-card">
+                        <h3 class="set-title"><Icon Name="database" Size="16" /> Content packs</h3>
+                        <p class="set-help">
+                            A pack is a topic bundle: feeds to follow plus the glossary, tools, tips and learning path that go with them. Turn on
+                            the ones that match what this site is for. Turning a pack off hides its glossary, tools and learning path and switches its
+                            feeds off in Sources; nothing is deleted, and turning it on again restores it.
+                        </p>
+                        <ul class="list-unstyled mb-0">
+                            @foreach (var pack in _packs)
+                            {
+                                <li class="d-flex align-items-start gap-3 py-2 border-top">
+                                    <div class="form-check mt-1">
+                                        <input type="checkbox" class="form-check-input" id="@($"pack-{pack.Id}")" checked="@pack.Enabled"
+                                               disabled="@_packBusy" @onchange="e => TogglePack(pack.Id, (bool)(e.Value ?? false))" />
+                                    </div>
+                                    <label class="flex-grow-1" for="@($"pack-{pack.Id}")">
+                                        <strong>@pack.Name</strong>
+                                        <span class="d-block small text-muted">@pack.Description</span>
+                                        <span class="d-block small text-muted">@pack.Sources feeds · @pack.GlossaryTerms glossary terms · @pack.Tools tools · @pack.LearningModules learning modules</span>
+                                    </label>
+                                </li>
+                            }
+                        </ul>
+                        @if (_packError is not null)
+                        {
+                            <div class="alert alert-warning py-2 small mt-2 mb-0" role="alert">@_packError</div>
+                        }
+                    </div>
+
+                    <div class="set-card">
                         <h3 class="set-title"><Icon Name="sparkle" Size="16" /> Site identity</h3>
                         <p class="set-help">
                             What this site calls itself and what it is about. It appears in page titles, the home page, feeds, the install name and
@@ -749,6 +779,7 @@
         {
             var rows = await OAuthSettings.GetAllAsync();
             LoadSite();
+            _packs = Kb.Packs.All();
             var clerk = rows.FirstOrDefault(r => r.Provider == ClerkAuthService.Provider);
             _clerkEnabled = clerk?.Enabled ?? false;
             _clerkKey = clerk?.ClientId ?? "";
@@ -758,6 +789,19 @@
 
     private bool _clerkEnabled;
     private string _clerkKey = "";
+
+    private IReadOnlyList<PackInfo> _packs = Array.Empty<PackInfo>();
+    private bool _packBusy;
+    private string? _packError;
+
+    private async Task TogglePack(string id, bool enabled)
+    {
+        _packBusy = true;
+        _packError = await Kb.SetPackEnabledAsync(id, enabled);
+        _packs = Kb.Packs.All();
+        _packBusy = false;
+        if (_packError is null) Toasts.Show(enabled ? "Pack turned on. Its feeds are in Sources." : "Pack turned off.");
+    }
 
     private string _siteName = "", _siteTagline = "", _siteDescription = "", _siteTopic = "";
     private string? _siteError;

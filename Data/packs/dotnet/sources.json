@@ -1,0 +1,191 @@
+[
+  {
+    "Name": ".NET Blog",
+    "Url": "https://devblogs.microsoft.com/dotnet/feed/",
+    "Category": "News",
+    "Note": "Official .NET announcements and release notes.",
+    "ContentType": "News",
+    "Level": "Intermediate",
+    "Tags": [
+      ".NET"
+    ]
+  },
+  {
+    "Name": "Visual Studio Blog",
+    "Url": "https://devblogs.microsoft.com/visualstudio/feed/",
+    "Category": "News",
+    "Note": "Visual Studio and tooling news.",
+    "ContentType": "News",
+    "Level": "Intermediate",
+    "Tags": [
+      "Visual Studio"
+    ]
+  },
+  {
+    "Name": "JetBrains .NET Tools Blog",
+    "Url": "https://blog.jetbrains.com/dotnet/feed/",
+    "Category": "News",
+    "Note": "Rider, ReSharper and .NET community posts.",
+    "ContentType": "News",
+    "Level": "Intermediate",
+    "Tags": [
+      ".NET"
+    ]
+  },
+  {
+    "Name": "Andrew Lock",
+    "Url": "https://andrewlock.net/rss.xml",
+    "Category": "Community",
+    "Note": "Deep dives into ASP.NET Core internals.",
+    "ContentType": "Tutorial",
+    "Level": "Advanced",
+    "Tags": [
+      "ASP.NET Core"
+    ]
+  },
+  {
+    "Name": "Scott Hanselman",
+    "Url": "https://feeds.hanselman.com/ScottHanselman",
+    "Category": "Community",
+    "Note": "Tips, tools and stories from a .NET veteran.",
+    "ContentType": "News",
+    "Level": "Beginner",
+    "Tags": [
+      ".NET"
+    ]
+  },
+  {
+    "Name": "Steve Gordon",
+    "Url": "https://www.stevejgordon.co.uk/feed",
+    "Category": "Community",
+    "Note": "Performance and ASP.NET Core articles.",
+    "ContentType": "Tutorial",
+    "Level": "Advanced",
+    "Tags": [
+      ".NET",
+      "Performance"
+    ]
+  },
+  {
+    "Name": "Khalid Abuhakmeh",
+    "Url": "https://khalidabuhakmeh.com/feed.xml",
+    "Category": "Community",
+    "Note": "Practical .NET tips and experiments.",
+    "ContentType": "Tutorial",
+    "Level": "Intermediate",
+    "Tags": [
+      ".NET"
+    ]
+  },
+  {
+    "Name": "Code Maze",
+    "Url": "https://code-maze.com/feed/",
+    "Category": "Community",
+    "Note": "Step-by-step C# and ASP.NET Core tutorials.",
+    "ContentType": "Tutorial",
+    "Level": "Beginner",
+    "Tags": [
+      "C#",
+      "ASP.NET Core"
+    ]
+  },
+  {
+    "Name": "Dev.to · dotnet",
+    "Url": "https://dev.to/feed/tag/dotnet",
+    "Category": "Community",
+    "Note": "Community posts tagged dotnet.",
+    "ContentType": "News",
+    "Level": "Beginner",
+    "Tags": [
+      ".NET"
+    ]
+  },
+  {
+    "Name": "Dev.to · csharp",
+    "Url": "https://dev.to/feed/tag/csharp",
+    "Category": "Community",
+    "Note": "Community posts tagged csharp.",
+    "ContentType": "News",
+    "Level": "Beginner",
+    "Tags": [
+      "C#"
+    ]
+  },
+  {
+    "Name": ".NET runtime releases",
+    "Url": "https://github.com/dotnet/runtime/releases.atom",
+    "Category": "Tools",
+    "Note": "New .NET runtime versions.",
+    "ContentType": "Release",
+    "Level": "Intermediate",
+    "Tags": [
+      ".NET"
+    ]
+  },
+  {
+    "Name": "ASP.NET Core releases",
+    "Url": "https://github.com/dotnet/aspnetcore/releases.atom",
+    "Category": "Tools",
+    "Note": "New ASP.NET Core versions.",
+    "ContentType": "Release",
+    "Level": "Intermediate",
+    "Tags": [
+      "ASP.NET Core"
+    ]
+  },
+  {
+    "Name": "EF Core releases",
+    "Url": "https://github.com/dotnet/efcore/releases.atom",
+    "Category": "Tools",
+    "Note": "New Entity Framework Core versions.",
+    "ContentType": "Release",
+    "Level": "Intermediate",
+    "Tags": [
+      "EF Core"
+    ]
+  },
+  {
+    "Name": ".NET SDK releases",
+    "Url": "https://github.com/dotnet/sdk/releases.atom",
+    "Category": "Tools",
+    "Note": "New .NET SDK versions.",
+    "ContentType": "Release",
+    "Level": "Intermediate",
+    "Tags": [
+      ".NET"
+    ]
+  },
+  {
+    "Name": ".NET MAUI releases",
+    "Url": "https://github.com/dotnet/maui/releases.atom",
+    "Category": "Tools",
+    "Note": "New .NET MAUI versions.",
+    "ContentType": "Release",
+    "Level": "Intermediate",
+    "Tags": [
+      ".NET MAUI"
+    ]
+  },
+  {
+    "Name": "Serilog releases",
+    "Url": "https://github.com/serilog/serilog/releases.atom",
+    "Category": "Tools",
+    "Note": "New Serilog versions.",
+    "ContentType": "Release",
+    "Level": "Intermediate",
+    "Tags": [
+      "Logging"
+    ]
+  },
+  {
+    "Name": "xUnit releases",
+    "Url": "https://github.com/xunit/xunit/releases.atom",
+    "Category": "Tools",
+    "Note": "New xUnit versions.",
+    "ContentType": "Release",
+    "Level": "Intermediate",
+    "Tags": [
+      "Testing"
+    ]
+  }
+]

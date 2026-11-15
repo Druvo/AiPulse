@@ -101,6 +101,7 @@ builder.Services.AddSingleton<FollowService>();
 builder.Services.AddSingleton<CommentService>();
 builder.Services.AddSingleton<ProfileService>();
 builder.Services.AddSingleton<MobileReadingStore>();
+builder.Services.AddSingleton<PackService>(); // content packs: which topic bundles (feeds, glossary, tools, learning path) are on
 builder.Services.AddSingleton<SiteProfileService>(); // the site's name, tagline and topic (admin-editable in Settings)
 builder.Services.AddSingleton<AppDownloads>(); // the Android APK offered on /app (files live in App_Data/downloads)
 builder.Services.AddHttpContextAccessor();

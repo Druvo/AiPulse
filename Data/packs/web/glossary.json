@@ -1,0 +1,290 @@
+[
+  {
+    "Term": "DOM",
+    "Aliases": [
+      "Document Object Model"
+    ],
+    "Category": "Concept",
+    "ShortDef": "The browser's live tree of objects representing the page, which JavaScript reads and changes.",
+    "Details": "When the browser parses HTML it builds a tree of nodes. Scripts use the DOM API to find elements, change text and attributes, and react to events. Updating the DOM is the expensive part of most UI work.",
+    "WhenToUse": "Whenever you need to understand why a page changes, or why changing many nodes at once feels slow.",
+    "Related": [
+      "Event Loop",
+      "Virtual DOM",
+      "Hydration"
+    ],
+    "LearnMoreUrl": "https://developer.mozilla.org/en-US/docs/Web/API/Document_Object_Model"
+  },
+  {
+    "Term": "Event Loop",
+    "Aliases": [
+      "JavaScript event loop"
+    ],
+    "Category": "Concept",
+    "ShortDef": "How single-threaded JavaScript handles many things at once: run a task, then process queued callbacks and promises.",
+    "Details": "JavaScript runs one piece of code at a time. Finished async work (timers, network, promises) queues callbacks; the loop picks them up when the call stack is empty. Microtasks (promises) run before the next task.",
+    "WhenToUse": "When code runs in a surprising order, or a long task freezes the page.",
+    "Related": [
+      "Promise",
+      "Web Worker",
+      "DOM"
+    ],
+    "LearnMoreUrl": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Event_loop"
+  },
+  {
+    "Term": "Promise",
+    "Aliases": [
+      "async/await"
+    ],
+    "Category": "Concept",
+    "ShortDef": "An object for a value that will arrive later; async/await is the readable syntax for working with them.",
+    "Details": "A promise is pending, fulfilled or rejected. `await` pauses an async function until a promise settles, without blocking the page. Always handle rejections, or errors vanish silently.",
+    "WhenToUse": "Any network call, file read or timer-driven work.",
+    "Related": [
+      "Event Loop",
+      "Fetch API"
+    ],
+    "LearnMoreUrl": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Using_promises"
+  },
+  {
+    "Term": "TypeScript",
+    "Aliases": [
+      "TS"
+    ],
+    "Category": "Tooling",
+    "ShortDef": "JavaScript plus a type system that catches mistakes before the code runs.",
+    "Details": "TypeScript compiles to plain JavaScript. Types describe the shape of data and function signatures; the compiler and editor use them for errors, autocomplete and safe refactoring.",
+    "WhenToUse": "Any codebase that will live more than a few weeks or has more than one contributor.",
+    "Related": [
+      "Bundler",
+      "Linting"
+    ],
+    "LearnMoreUrl": "https://www.typescriptlang.org/docs/"
+  },
+  {
+    "Term": "Bundler",
+    "Aliases": [
+      "Vite",
+      "webpack",
+      "esbuild"
+    ],
+    "Category": "Tooling",
+    "ShortDef": "A build tool that turns many source files and packages into the few optimised files the browser downloads.",
+    "Details": "Bundlers resolve imports, transform TypeScript/JSX, remove unused code (tree shaking), split code into chunks and add content hashes for caching. Vite uses native ES modules in development for instant start.",
+    "WhenToUse": "Almost every modern front-end project; choose a framework starter that already configures one.",
+    "Related": [
+      "Tree Shaking",
+      "Code Splitting",
+      "TypeScript"
+    ],
+    "LearnMoreUrl": "https://vite.dev/guide/"
+  },
+  {
+    "Term": "Tree Shaking",
+    "Aliases": [],
+    "Category": "Technique",
+    "ShortDef": "Dropping code nobody imports from the final bundle.",
+    "Details": "Works because ES module imports are static, so a bundler can see which exports are used. Libraries must avoid side effects at import time for it to work well.",
+    "WhenToUse": "When bundle size is growing; prefer libraries that publish ES modules.",
+    "Related": [
+      "Bundler",
+      "Code Splitting"
+    ]
+  },
+  {
+    "Term": "Code Splitting",
+    "Aliases": [],
+    "Category": "Technique",
+    "ShortDef": "Shipping a page only the JavaScript it needs, and loading the rest when asked.",
+    "Details": "Dynamic `import()` creates separate chunks loaded on demand, typically per route or heavy component. It lowers the first load cost.",
+    "WhenToUse": "When the first page load is slow because one big bundle carries every feature.",
+    "Related": [
+      "Bundler",
+      "Core Web Vitals"
+    ],
+    "LearnMoreUrl": "https://web.dev/articles/reduce-javascript-payloads-with-code-splitting"
+  },
+  {
+    "Term": "Core Web Vitals",
+    "Aliases": [
+      "LCP",
+      "INP",
+      "CLS"
+    ],
+    "Category": "Concept",
+    "ShortDef": "Google's three user-experience measurements: loading (LCP), responsiveness (INP) and visual stability (CLS).",
+    "Details": "Largest Contentful Paint measures how fast the main content appears, Interaction to Next Paint how quickly the page reacts to input, and Cumulative Layout Shift how much things jump around. They influence search ranking.",
+    "WhenToUse": "When you want a measurable target for page speed and polish.",
+    "Related": [
+      "Code Splitting",
+      "Lazy loading",
+      "CDN"
+    ],
+    "LearnMoreUrl": "https://web.dev/articles/vitals"
+  },
+  {
+    "Term": "Lazy loading",
+    "Aliases": [
+      "loading=lazy"
+    ],
+    "Category": "Technique",
+    "ShortDef": "Not fetching images, frames or code until they are about to be seen.",
+    "Details": "The `loading=\"lazy\"` attribute on images and iframes defers them until near the viewport; dynamic imports do the same for code. Do not lazy-load the main hero image: it hurts LCP.",
+    "WhenToUse": "Long pages with many images below the fold.",
+    "Related": [
+      "Core Web Vitals",
+      "Code Splitting"
+    ],
+    "LearnMoreUrl": "https://developer.mozilla.org/en-US/docs/Web/Performance/Lazy_loading"
+  },
+  {
+    "Term": "Hydration",
+    "Aliases": [
+      "SSR",
+      "Server-side rendering"
+    ],
+    "Category": "Architecture",
+    "ShortDef": "Server-rendered HTML that the browser's JavaScript then makes interactive.",
+    "Details": "The server sends ready-made HTML (fast to show, good for SEO); the framework then attaches event handlers in the browser. Mismatches between server and client output cause errors, and hydrating a big page costs CPU.",
+    "WhenToUse": "Content sites and apps where first paint and search visibility matter.",
+    "Related": [
+      "DOM",
+      "Virtual DOM",
+      "Core Web Vitals"
+    ],
+    "LearnMoreUrl": "https://react.dev/reference/react-dom/client/hydrateRoot"
+  },
+  {
+    "Term": "Virtual DOM",
+    "Aliases": [],
+    "Category": "Concept",
+    "ShortDef": "A cheap in-memory copy of the UI that a framework compares to work out the smallest real DOM changes.",
+    "Details": "React and Vue render to a lightweight tree, diff it against the previous one, then patch only what changed. Newer frameworks (Svelte, Solid) skip this by compiling updates directly.",
+    "WhenToUse": "To understand why frameworks ask you to keep rendering pure and use stable keys in lists.",
+    "Related": [
+      "DOM",
+      "Hydration"
+    ]
+  },
+  {
+    "Term": "CORS",
+    "Aliases": [
+      "Cross-Origin Resource Sharing"
+    ],
+    "Category": "Security",
+    "ShortDef": "The browser rule that lets one website call another site's API only if that site agrees.",
+    "Details": "Browsers block cross-origin requests unless the server answers with `Access-Control-Allow-*` headers. Preflight `OPTIONS` requests check non-simple calls first. CORS protects users' browsers, not your server: it does not authenticate anyone.",
+    "WhenToUse": "When a frontend on one origin calls an API on another and the console shows a CORS error.",
+    "Related": [
+      "Fetch API",
+      "CSP"
+    ],
+    "LearnMoreUrl": "https://developer.mozilla.org/en-US/docs/Web/HTTP/CORS"
+  },
+  {
+    "Term": "CSP",
+    "Aliases": [
+      "Content Security Policy"
+    ],
+    "Category": "Security",
+    "ShortDef": "A response header listing where a page may load scripts, styles and other content from, limiting the damage of injected code.",
+    "Details": "A strict policy blocks inline scripts and unknown origins, so an XSS bug cannot easily run attacker code. Roll it out in report-only mode first to see what would break.",
+    "WhenToUse": "Any site that renders user content or loads third-party scripts.",
+    "Related": [
+      "CORS",
+      "XSS"
+    ],
+    "LearnMoreUrl": "https://developer.mozilla.org/en-US/docs/Web/HTTP/CSP"
+  },
+  {
+    "Term": "XSS",
+    "Aliases": [
+      "Cross-site scripting"
+    ],
+    "Category": "Security",
+    "ShortDef": "Getting a page to run an attacker's JavaScript, usually through unescaped user input.",
+    "Details": "If untrusted text is inserted into HTML without escaping, a script in it runs with the visitor's privileges. Frameworks escape by default; the risk returns with `innerHTML`, `dangerouslySetInnerHTML` and unsafe URLs.",
+    "WhenToUse": "Reviewing any code that builds HTML from user-provided data.",
+    "Related": [
+      "CSP",
+      "DOM"
+    ],
+    "LearnMoreUrl": "https://owasp.org/www-community/attacks/xss/"
+  },
+  {
+    "Term": "Web Worker",
+    "Aliases": [
+      "Service Worker"
+    ],
+    "Category": "Concept",
+    "ShortDef": "A script that runs on a separate thread so heavy work does not freeze the page.",
+    "Details": "Workers cannot touch the DOM; they exchange messages with the page. Service workers are a special kind that sit between page and network, enabling offline support and push notifications.",
+    "WhenToUse": "CPU-heavy tasks (parsing, image work) or offline-capable apps.",
+    "Related": [
+      "Event Loop",
+      "PWA"
+    ],
+    "LearnMoreUrl": "https://developer.mozilla.org/en-US/docs/Web/API/Web_Workers_API"
+  },
+  {
+    "Term": "PWA",
+    "Aliases": [
+      "Progressive Web App"
+    ],
+    "Category": "Architecture",
+    "ShortDef": "A website that can be installed and works like an app, with an icon, offline support and push messages.",
+    "Details": "Needs HTTPS, a web app manifest and a service worker. Installed PWAs open in their own window without browser chrome.",
+    "WhenToUse": "When you want an app-like experience without app-store distribution.",
+    "Related": [
+      "Web Worker",
+      "Core Web Vitals"
+    ],
+    "LearnMoreUrl": "https://web.dev/learn/pwa"
+  },
+  {
+    "Term": "Fetch API",
+    "Aliases": [
+      "fetch"
+    ],
+    "Category": "Concept",
+    "ShortDef": "The built-in browser function for making HTTP requests, returning promises.",
+    "Details": "`fetch(url, options)` resolves even on HTTP errors; you must check `response.ok`. It does not send cookies cross-origin unless `credentials` is set.",
+    "WhenToUse": "Replacing XMLHttpRequest and most small HTTP clients in the browser.",
+    "Related": [
+      "Promise",
+      "CORS"
+    ],
+    "LearnMoreUrl": "https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API"
+  },
+  {
+    "Term": "CDN",
+    "Aliases": [
+      "Content Delivery Network"
+    ],
+    "Category": "Infrastructure",
+    "ShortDef": "A network of servers around the world that serves your static files from the one closest to the visitor.",
+    "Details": "Caches images, scripts and pages at the edge, cutting latency and load on your origin. Content-hashed file names allow very long cache lifetimes.",
+    "WhenToUse": "Any public site with visitors in more than one region.",
+    "Related": [
+      "Core Web Vitals",
+      "Bundler"
+    ],
+    "LearnMoreUrl": "https://developer.mozilla.org/en-US/docs/Glossary/CDN"
+  },
+  {
+    "Term": "Linting",
+    "Aliases": [
+      "ESLint",
+      "Prettier"
+    ],
+    "Category": "Tooling",
+    "ShortDef": "Automatic checks and formatting that catch bugs and keep code style consistent.",
+    "Details": "ESLint finds likely mistakes and bad patterns; Prettier formats code so reviews are about substance. Run both in the editor and in CI.",
+    "WhenToUse": "From the first commit of a project.",
+    "Related": [
+      "TypeScript",
+      "Bundler"
+    ],
+    "LearnMoreUrl": "https://eslint.org/docs/latest/"
+  }
+]

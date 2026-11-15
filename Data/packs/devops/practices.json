@@ -1,0 +1,27 @@
+[
+  {
+    "Title": "Automate everything you do twice",
+    "Category": "Workflow",
+    "Body": "Build, test, deploy, backup and restore should be scripts or pipelines, not memory. Test the restore: an untested backup is a hope."
+  },
+  {
+    "Title": "Keep environments the same",
+    "Category": "Architecture",
+    "Body": "Use the same image and the same configuration shape in development, staging and production. Differences belong in configuration, not code."
+  },
+  {
+    "Title": "Make deploys small and reversible",
+    "Category": "Release",
+    "Body": "Small frequent releases with a quick rollback beat large rare ones. Know how to go back before you go forward."
+  },
+  {
+    "Title": "Alert on what users feel",
+    "Category": "Observability",
+    "Body": "Page for symptoms (errors, latency, saturation) rather than every internal cause. Too many alerts teach people to ignore them."
+  },
+  {
+    "Title": "Treat secrets as secrets",
+    "Category": "Security",
+    "Body": "Never bake secrets into images or commit them. Inject at runtime from a secret store, rotate them, and scan history for leaks."
+  }
+]

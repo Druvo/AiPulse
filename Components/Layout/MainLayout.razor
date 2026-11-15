@@ -1,6 +1,7 @@
 ﻿@inherits LayoutComponentBase
 @inject SiteStatsService Stats
 @inject NavigationManager Nav
+@inject KnowledgeBaseService Kb
 
 @* Most pages using this layout are still [Authorize]-gated and would just redirect a crawler - noindex
    by default. A handful of routes (News/Explore/Glossary/Tools) are public browsing now and should be
@@ -105,7 +106,14 @@
                 </header>
 
                 <main id="main-content" class="app-content content" tabindex="-1">
-                    @Body
+                    @if (!Kb.Packs.AiEnabled && PackService.IsAiOnlyPath(new Uri(Nav.Uri).AbsolutePath))
+                    {
+                        <AiPackNotice />
+                    }
+                    else
+                    {
+                        @Body
+                    }
                 </main>
             </div>
 

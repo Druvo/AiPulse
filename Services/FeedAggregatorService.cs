@@ -39,6 +39,8 @@ public sealed class FeedAggregatorService
         _extractor = extractor;
         _webSub = webSub;
         _log = log;
+        // New packs bring new glossary terms; the matcher that tags items with them is rebuilt on the next fetch.
+        _kb.PacksChanged += () => _tagVocab = null;
     }
 
     private Dictionary<string, string>? _tagVocab; // matched word/phrase (lowercase) -> canonical tag

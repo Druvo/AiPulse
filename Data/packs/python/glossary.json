@@ -1,0 +1,248 @@
+[
+  {
+    "Term": "Virtual Environment",
+    "Aliases": [
+      "venv",
+      "virtualenv"
+    ],
+    "Category": "Tooling",
+    "ShortDef": "A private folder of Python packages for one project, so projects do not clash.",
+    "Details": "`python -m venv .venv` creates one; activating it points `python` and `pip` at it. Every project should have its own, and the dependency list should be committed.",
+    "WhenToUse": "From the first line of any project that has dependencies.",
+    "Related": [
+      "pip",
+      "pyproject.toml",
+      "uv"
+    ],
+    "LearnMoreUrl": "https://docs.python.org/3/tutorial/venv.html"
+  },
+  {
+    "Term": "pip",
+    "Aliases": [
+      "PyPI"
+    ],
+    "Category": "Tooling",
+    "ShortDef": "Python's standard package installer; PyPI is the public index it downloads from.",
+    "Details": "`pip install name` fetches a package and its dependencies. Pin versions in a requirements or lock file so builds are repeatable.",
+    "WhenToUse": "Installing any third-party library.",
+    "Related": [
+      "Virtual Environment",
+      "pyproject.toml",
+      "uv"
+    ],
+    "LearnMoreUrl": "https://pip.pypa.io/en/stable/"
+  },
+  {
+    "Term": "pyproject.toml",
+    "Aliases": [],
+    "Category": "Tooling",
+    "ShortDef": "The single configuration file for a modern Python project: metadata, dependencies and tool settings.",
+    "Details": "Replaces setup.py and scattered config files. Build tools, linters and formatters read their settings from it too.",
+    "WhenToUse": "Starting or modernising a project or a library.",
+    "Related": [
+      "pip",
+      "uv",
+      "Ruff"
+    ],
+    "LearnMoreUrl": "https://packaging.python.org/en/latest/guides/writing-pyproject-toml/"
+  },
+  {
+    "Term": "uv",
+    "Aliases": [],
+    "Category": "Tooling",
+    "ShortDef": "A very fast Python package and project manager written in Rust, replacing pip, venv and more.",
+    "Details": "`uv add`, `uv run` and `uv sync` manage environments and a lock file in one tool, often an order of magnitude faster than pip.",
+    "WhenToUse": "New projects, CI speed-ups, and anywhere pip feels slow.",
+    "Related": [
+      "pip",
+      "Virtual Environment",
+      "pyproject.toml"
+    ],
+    "LearnMoreUrl": "https://docs.astral.sh/uv/"
+  },
+  {
+    "Term": "Type Hints",
+    "Aliases": [
+      "typing",
+      "mypy"
+    ],
+    "Category": "Language",
+    "ShortDef": "Optional annotations that describe what types a function expects and returns.",
+    "Details": "Python ignores them at runtime; editors and checkers (mypy, pyright) use them to find bugs and power autocomplete. Libraries like Pydantic and FastAPI use them to validate data.",
+    "WhenToUse": "Any code that will be read by someone else, or any API boundary.",
+    "Related": [
+      "Pydantic",
+      "FastAPI",
+      "Dataclass"
+    ],
+    "LearnMoreUrl": "https://docs.python.org/3/library/typing.html"
+  },
+  {
+    "Term": "Dataclass",
+    "Aliases": [
+      "dataclasses"
+    ],
+    "Category": "Language",
+    "ShortDef": "A decorator that writes the boilerplate (init, repr, equality) for classes that mostly hold data.",
+    "Details": "`@dataclass class Point: x: int; y: int` is a complete class. Options give immutability (`frozen=True`) and ordering.",
+    "WhenToUse": "Simple data containers where Pydantic's validation is not needed.",
+    "Related": [
+      "Type Hints",
+      "Pydantic"
+    ],
+    "LearnMoreUrl": "https://docs.python.org/3/library/dataclasses.html"
+  },
+  {
+    "Term": "GIL",
+    "Aliases": [
+      "Global Interpreter Lock"
+    ],
+    "Category": "Concept",
+    "ShortDef": "A lock in CPython that lets only one thread run Python code at a time.",
+    "Details": "Threads still help for waiting on I/O, but CPU-bound work needs multiple processes. Recent Python versions offer an experimental free-threaded build that removes the lock.",
+    "WhenToUse": "Choosing between threads, processes and asyncio.",
+    "Related": [
+      "asyncio",
+      "Generator"
+    ],
+    "LearnMoreUrl": "https://docs.python.org/3/glossary.html#term-global-interpreter-lock"
+  },
+  {
+    "Term": "asyncio",
+    "Aliases": [
+      "async",
+      "await"
+    ],
+    "Category": "Concept",
+    "ShortDef": "Python's built-in way to run many I/O-bound tasks concurrently on one thread.",
+    "Details": "`async def` functions are coroutines; `await` yields control while waiting. Great for many network calls; blocking calls inside a coroutine stall everything.",
+    "WhenToUse": "Web servers, scrapers and clients making lots of concurrent requests.",
+    "Related": [
+      "GIL",
+      "FastAPI"
+    ],
+    "LearnMoreUrl": "https://docs.python.org/3/library/asyncio.html"
+  },
+  {
+    "Term": "Generator",
+    "Aliases": [
+      "yield"
+    ],
+    "Category": "Language",
+    "ShortDef": "A function that produces values one at a time, pausing between them, instead of building a whole list.",
+    "Details": "`yield` returns a value and remembers where it stopped. Generators process huge or endless data with constant memory.",
+    "WhenToUse": "Reading big files, streaming results or pipelines of transformations.",
+    "Related": [
+      "Context Manager",
+      "asyncio"
+    ],
+    "LearnMoreUrl": "https://docs.python.org/3/howto/functional.html#generators"
+  },
+  {
+    "Term": "Context Manager",
+    "Aliases": [
+      "with statement"
+    ],
+    "Category": "Language",
+    "ShortDef": "An object that sets something up and always cleans up afterwards, used with `with`.",
+    "Details": "Files, locks, database connections and transactions use it so cleanup happens even when errors occur. Write your own with `contextlib.contextmanager`.",
+    "WhenToUse": "Any resource that must be released.",
+    "Related": [
+      "Generator",
+      "Decorator"
+    ],
+    "LearnMoreUrl": "https://docs.python.org/3/reference/datamodel.html#context-managers"
+  },
+  {
+    "Term": "Decorator",
+    "Aliases": [
+      "@decorator"
+    ],
+    "Category": "Language",
+    "ShortDef": "A function that wraps another function to add behaviour, applied with the @ syntax.",
+    "Details": "Used for routing in web frameworks, caching (`functools.cache`), timing, permissions and retries.",
+    "WhenToUse": "Adding the same behaviour to many functions without repeating it.",
+    "Related": [
+      "Context Manager",
+      "FastAPI"
+    ],
+    "LearnMoreUrl": "https://docs.python.org/3/glossary.html#term-decorator"
+  },
+  {
+    "Term": "Pydantic",
+    "Aliases": [
+      "BaseModel"
+    ],
+    "Category": "Library",
+    "ShortDef": "Define a data shape with type hints and get automatic validation and conversion.",
+    "Details": "Invalid input raises a clear error listing every problem. Version 2 is written in Rust and much faster. It powers FastAPI's request and response handling.",
+    "WhenToUse": "Validating API input, configuration files and anything that crosses a trust boundary.",
+    "Related": [
+      "Type Hints",
+      "FastAPI",
+      "Dataclass"
+    ],
+    "LearnMoreUrl": "https://docs.pydantic.dev/"
+  },
+  {
+    "Term": "FastAPI",
+    "Aliases": [],
+    "Category": "Framework",
+    "ShortDef": "A modern web framework for building APIs with type hints, automatic validation and generated docs.",
+    "Details": "Define endpoints as functions with typed parameters; FastAPI validates input, serialises output and serves interactive OpenAPI documentation. Supports async.",
+    "WhenToUse": "New JSON APIs and microservices.",
+    "Related": [
+      "Pydantic",
+      "asyncio",
+      "Type Hints"
+    ],
+    "LearnMoreUrl": "https://fastapi.tiangolo.com/"
+  },
+  {
+    "Term": "Django",
+    "Aliases": [
+      "Django ORM"
+    ],
+    "Category": "Framework",
+    "ShortDef": "A batteries-included web framework: ORM, admin, authentication, forms and templates.",
+    "Details": "Models define tables; migrations evolve them; the admin gives you a data editor for free. Opinionated structure helps large teams stay consistent.",
+    "WhenToUse": "Content-heavy sites and apps that need a database and admin quickly.",
+    "Related": [
+      "pytest",
+      "pip"
+    ],
+    "LearnMoreUrl": "https://docs.djangoproject.com/"
+  },
+  {
+    "Term": "pytest",
+    "Aliases": [
+      "unittest"
+    ],
+    "Category": "Testing",
+    "ShortDef": "The most popular Python testing framework: plain functions, simple asserts and powerful fixtures.",
+    "Details": "Tests are functions named `test_*`; `assert` is enough. Fixtures provide setup, and parametrization runs one test across many inputs.",
+    "WhenToUse": "Testing nearly any Python project.",
+    "Related": [
+      "Virtual Environment",
+      "Type Hints"
+    ],
+    "LearnMoreUrl": "https://docs.pytest.org/"
+  },
+  {
+    "Term": "Ruff",
+    "Aliases": [
+      "Black",
+      "flake8"
+    ],
+    "Category": "Tooling",
+    "ShortDef": "An extremely fast linter and formatter that replaces flake8, isort, Black and more.",
+    "Details": "Configured in pyproject.toml; run `ruff check --fix` and `ruff format`. Catches bugs, unused imports and style issues in milliseconds.",
+    "WhenToUse": "Every project, locally and in CI.",
+    "Related": [
+      "pyproject.toml",
+      "uv",
+      "Type Hints"
+    ],
+    "LearnMoreUrl": "https://docs.astral.sh/ruff/"
+  }
+]

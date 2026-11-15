@@ -1,0 +1,279 @@
+[
+  {
+    "Name": "CSS-Tricks",
+    "Url": "https://css-tricks.com/feed/",
+    "Category": "News",
+    "Note": "Tips and deep dives on CSS and front-end craft.",
+    "ContentType": "Tutorial",
+    "Level": "Intermediate",
+    "Tags": [
+      "CSS"
+    ]
+  },
+  {
+    "Name": "Smashing Magazine",
+    "Url": "https://www.smashingmagazine.com/feed/",
+    "Category": "News",
+    "Note": "Long-form articles on design, UX and front-end engineering.",
+    "ContentType": "Tutorial",
+    "Level": "Intermediate",
+    "Tags": [
+      "Web"
+    ]
+  },
+  {
+    "Name": "web.dev",
+    "Url": "https://web.dev/feed.xml",
+    "Category": "News",
+    "Note": "Google's guidance on modern web platform features and performance.",
+    "ContentType": "Tutorial",
+    "Level": "Intermediate",
+    "Tags": [
+      "Web",
+      "Performance"
+    ]
+  },
+  {
+    "Name": "Chrome for Developers",
+    "Url": "https://developer.chrome.com/static/blog/feed.xml",
+    "Category": "News",
+    "Note": "What is new in Chrome and the web platform.",
+    "ContentType": "News",
+    "Level": "Intermediate",
+    "Tags": [
+      "Web"
+    ]
+  },
+  {
+    "Name": "MDN Blog",
+    "Url": "https://developer.mozilla.org/en-US/blog/rss.xml",
+    "Category": "News",
+    "Note": "Updates from the MDN Web Docs team.",
+    "ContentType": "News",
+    "Level": "Intermediate",
+    "Tags": [
+      "Web"
+    ]
+  },
+  {
+    "Name": "A List Apart",
+    "Url": "https://alistapart.com/main/feed/",
+    "Category": "News",
+    "Note": "Articles on web standards and design.",
+    "ContentType": "Tutorial",
+    "Level": "Intermediate",
+    "Tags": [
+      "Web"
+    ]
+  },
+  {
+    "Name": "JavaScript Weekly",
+    "Url": "https://javascriptweekly.com/rss/",
+    "Category": "News",
+    "Note": "A weekly roundup of JavaScript news and tutorials.",
+    "ContentType": "News",
+    "Level": "Intermediate",
+    "Tags": [
+      "JavaScript"
+    ]
+  },
+  {
+    "Name": "Node Weekly",
+    "Url": "https://nodeweekly.com/rss/",
+    "Category": "News",
+    "Note": "A weekly roundup for Node.js developers.",
+    "ContentType": "News",
+    "Level": "Intermediate",
+    "Tags": [
+      "Node.js"
+    ]
+  },
+  {
+    "Name": "Frontend Focus",
+    "Url": "https://frontendfoc.us/rss",
+    "Category": "News",
+    "Note": "A weekly front-end newsletter.",
+    "ContentType": "News",
+    "Level": "Intermediate",
+    "Tags": [
+      "Web"
+    ]
+  },
+  {
+    "Name": "TypeScript blog",
+    "Url": "https://devblogs.microsoft.com/typescript/feed/",
+    "Category": "News",
+    "Note": "Release notes and design notes from the TypeScript team.",
+    "ContentType": "News",
+    "Level": "Intermediate",
+    "Tags": [
+      "TypeScript"
+    ]
+  },
+  {
+    "Name": "Node.js blog",
+    "Url": "https://nodejs.org/en/feed/blog.xml",
+    "Category": "News",
+    "Note": "Official Node.js announcements and security releases.",
+    "ContentType": "News",
+    "Level": "Intermediate",
+    "Tags": [
+      "Node.js"
+    ]
+  },
+  {
+    "Name": "React blog",
+    "Url": "https://react.dev/rss.xml",
+    "Category": "News",
+    "Note": "Official React announcements.",
+    "ContentType": "News",
+    "Level": "Intermediate",
+    "Tags": [
+      "React"
+    ]
+  },
+  {
+    "Name": "Vue blog",
+    "Url": "https://blog.vuejs.org/feed.rss",
+    "Category": "News",
+    "Note": "Official Vue.js announcements.",
+    "ContentType": "News",
+    "Level": "Intermediate",
+    "Tags": [
+      "Vue"
+    ]
+  },
+  {
+    "Name": "Svelte blog",
+    "Url": "https://svelte.dev/blog/rss.xml",
+    "Category": "News",
+    "Note": "Official Svelte announcements.",
+    "ContentType": "News",
+    "Level": "Intermediate",
+    "Tags": [
+      "Svelte"
+    ]
+  },
+  {
+    "Name": "Overreacted",
+    "Url": "https://overreacted.io/rss.xml",
+    "Category": "Community",
+    "Note": "Dan Abramov on how React and modern JavaScript really work.",
+    "ContentType": "Tutorial",
+    "Level": "Advanced",
+    "Tags": [
+      "React"
+    ]
+  },
+  {
+    "Name": "Josh Comeau",
+    "Url": "https://www.joshwcomeau.com/rss.xml",
+    "Category": "Community",
+    "Note": "Interactive, beautifully explained front-end tutorials.",
+    "ContentType": "Tutorial",
+    "Level": "Intermediate",
+    "Tags": [
+      "CSS",
+      "React"
+    ]
+  },
+  {
+    "Name": "Dev.to · JavaScript",
+    "Url": "https://dev.to/feed/tag/javascript",
+    "Category": "Community",
+    "Note": "Community posts tagged JavaScript.",
+    "ContentType": "News",
+    "Level": "Beginner",
+    "Tags": [
+      "JavaScript"
+    ]
+  },
+  {
+    "Name": "Dev.to · webdev",
+    "Url": "https://dev.to/feed/tag/webdev",
+    "Category": "Community",
+    "Note": "Community posts tagged webdev.",
+    "ContentType": "News",
+    "Level": "Beginner",
+    "Tags": [
+      "Web"
+    ]
+  },
+  {
+    "Name": "Next.js releases",
+    "Url": "https://github.com/vercel/next.js/releases.atom",
+    "Category": "Tools",
+    "Note": "New Next.js versions.",
+    "ContentType": "Release",
+    "Level": "Intermediate",
+    "Tags": [
+      "React"
+    ]
+  },
+  {
+    "Name": "Vite releases",
+    "Url": "https://github.com/vitejs/vite/releases.atom",
+    "Category": "Tools",
+    "Note": "New Vite versions.",
+    "ContentType": "Release",
+    "Level": "Intermediate",
+    "Tags": [
+      "Vite"
+    ]
+  },
+  {
+    "Name": "TypeScript releases",
+    "Url": "https://github.com/microsoft/TypeScript/releases.atom",
+    "Category": "Tools",
+    "Note": "New TypeScript versions.",
+    "ContentType": "Release",
+    "Level": "Intermediate",
+    "Tags": [
+      "TypeScript"
+    ]
+  },
+  {
+    "Name": "React releases",
+    "Url": "https://github.com/facebook/react/releases.atom",
+    "Category": "Tools",
+    "Note": "New React versions.",
+    "ContentType": "Release",
+    "Level": "Intermediate",
+    "Tags": [
+      "React"
+    ]
+  },
+  {
+    "Name": "Node.js releases",
+    "Url": "https://github.com/nodejs/node/releases.atom",
+    "Category": "Tools",
+    "Note": "New Node.js versions.",
+    "ContentType": "Release",
+    "Level": "Intermediate",
+    "Tags": [
+      "Node.js"
+    ]
+  },
+  {
+    "Name": "Deno releases",
+    "Url": "https://github.com/denoland/deno/releases.atom",
+    "Category": "Tools",
+    "Note": "New Deno versions.",
+    "ContentType": "Release",
+    "Level": "Intermediate",
+    "Tags": [
+      "Deno"
+    ]
+  },
+  {
+    "Name": "Astro blog",
+    "Url": "https://astro.build/rss.xml",
+    "Category": "News",
+    "Note": "Official Astro announcements.",
+    "ContentType": "News",
+    "Level": "Intermediate",
+    "Tags": [
+      "Astro"
+    ]
+  }
+]

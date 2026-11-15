@@ -16,11 +16,11 @@
 
 <header class="ex-hero">
     <h1 class="ex-h1"><Icon Name="trending-up" Size="24" /> Explore</h1>
-    <p class="ex-lead">What's trending across models, datasets, benchmarks and the open-source AI ecosystem right now.</p>
+    <p class="ex-lead">@(Kb.Packs.AiEnabled ? "What's trending across models, datasets, benchmarks and the open-source AI ecosystem right now." : "What's trending across open source right now.")</p>
 </header>
 
 <nav class="ex-tabs" role="tablist" aria-label="Explore sections">
-    @foreach (var (key, label, icon) in Sections)
+    @foreach (var (key, label, icon) in VisibleSections)
     {
         <button type="button" role="tab" class="ex-tab @(_section == key ? "is-active" : "")" aria-selected="@(_section == key ? "true" : "false")"
                 @onclick="() => SetSection(key)">
@@ -646,6 +646,9 @@ else if (_section == "try")
         ("benchmarks", "Benchmarks", "activity"),
     };
 
+    private IEnumerable<(string Key, string Label, string Icon)> VisibleSections =>
+        Kb.Packs.AiEnabled ? Sections : Sections.Where(s => s.Key == "github");
+
     private string _section = "github";
     private bool _modelsLoading = true;
     private bool _reposLoading = true;
@@ -701,7 +704,7 @@ else if (_section == "try")
 
     protected override void OnInitialized()
     {
-        if (TabParam is not null && ValidSections.Contains(TabParam))
+        if (TabParam is not null && ValidSections.Contains(TabParam) && (Kb.Packs.AiEnabled || TabParam == "github"))
             _section = TabParam;
 
         (_ramGb, _vramGb, _gpuName) = SystemInfo.Detect();

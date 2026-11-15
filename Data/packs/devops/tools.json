@@ -1,0 +1,97 @@
+[
+  {
+    "Name": "Docker",
+    "Category": "Containers",
+    "OneLiner": "Build and run containers.",
+    "BestFor": [
+      "Reproducible builds and local environments",
+      "Packaging services for deployment"
+    ],
+    "NotIdealFor": [
+      "Anything that needs a full virtual machine"
+    ],
+    "TokenTips": [
+      "Use multi-stage builds and a .dockerignore",
+      "Pin base image versions"
+    ],
+    "Url": "https://www.docker.com/"
+  },
+  {
+    "Name": "Kubernetes",
+    "Category": "Orchestration",
+    "OneLiner": "Runs and scales containers across a cluster.",
+    "BestFor": [
+      "Many services with high availability",
+      "Autoscaling workloads"
+    ],
+    "NotIdealFor": [
+      "A few services on one server (Docker Compose is simpler)"
+    ],
+    "TokenTips": [
+      "Set resource requests and limits",
+      "Use readiness and liveness probes"
+    ],
+    "Url": "https://kubernetes.io/"
+  },
+  {
+    "Name": "Terraform / OpenTofu",
+    "Category": "Infrastructure as Code",
+    "OneLiner": "Declare cloud infrastructure in files and apply it.",
+    "BestFor": [
+      "Reproducible cloud environments",
+      "Reviewing infrastructure changes as pull requests"
+    ],
+    "NotIdealFor": [],
+    "TokenTips": [
+      "Store state remotely with locking",
+      "Keep modules small and versioned"
+    ],
+    "Url": "https://opentofu.org/"
+  },
+  {
+    "Name": "GitHub Actions",
+    "Category": "CI/CD",
+    "OneLiner": "Build, test and deploy from your repository.",
+    "BestFor": [
+      "Pipelines tied to pull requests",
+      "Scheduled jobs"
+    ],
+    "NotIdealFor": [],
+    "TokenTips": [
+      "Cache dependencies",
+      "Pin actions to a commit or version"
+    ],
+    "Url": "https://docs.github.com/actions"
+  },
+  {
+    "Name": "Prometheus + Grafana",
+    "Category": "Observability",
+    "OneLiner": "Metrics, alerts and dashboards.",
+    "BestFor": [
+      "Service and infrastructure monitoring"
+    ],
+    "NotIdealFor": [],
+    "TokenTips": [
+      "Alert on symptoms users feel, not every cause",
+      "Use recording rules for expensive queries"
+    ],
+    "Url": "https://prometheus.io/"
+  },
+  {
+    "Name": "Ansible",
+    "Category": "Configuration",
+    "OneLiner": "Agentless automation of servers over SSH.",
+    "BestFor": [
+      "Configuring and updating fleets of servers",
+      "Repeatable server setup"
+    ],
+    "NotIdealFor": [
+      "Container-only platforms"
+    ],
+    "TokenTips": [
+      "Write idempotent tasks",
+      "Keep secrets in a vault"
+    ],
+    "Url": "https://docs.ansible.com/"
+  }
+]

@@ -1,0 +1,250 @@
+[
+  {
+    "Term": "CLR",
+    "Aliases": [
+      "Common Language Runtime"
+    ],
+    "Category": "Concept",
+    "ShortDef": "The .NET runtime that runs your compiled code: memory management, type safety and just-in-time compilation.",
+    "Details": "C# compiles to intermediate language (IL). The CLR's JIT turns IL into machine code as the program runs, and its garbage collector frees memory you no longer use.",
+    "WhenToUse": "Understanding startup time, memory use and why the same assembly runs on Windows, Linux and macOS.",
+    "Related": [
+      "JIT",
+      "Garbage Collection",
+      "NuGet"
+    ],
+    "LearnMoreUrl": "https://learn.microsoft.com/dotnet/standard/clr"
+  },
+  {
+    "Term": "JIT",
+    "Aliases": [
+      "Just-in-time compilation",
+      "Native AOT"
+    ],
+    "Category": "Concept",
+    "ShortDef": "Turning intermediate language into machine code while the program runs; Native AOT does it ahead of time instead.",
+    "Details": "JIT gives fast steady-state speed after warm-up. Native AOT produces a self-contained native executable with fast startup and small memory use, at the cost of some reflection-heavy features.",
+    "WhenToUse": "Choosing between normal publish and Native AOT for containers, serverless and command-line tools.",
+    "Related": [
+      "CLR",
+      "Garbage Collection"
+    ],
+    "LearnMoreUrl": "https://learn.microsoft.com/dotnet/core/deploying/native-aot/"
+  },
+  {
+    "Term": "Garbage Collection",
+    "Aliases": [
+      "GC"
+    ],
+    "Category": "Concept",
+    "ShortDef": "Automatic memory cleanup: the runtime finds objects nothing refers to and frees them.",
+    "Details": "The GC is generational: short-lived objects are collected cheaply. Allocating less (pooling, Span<T>, avoiding needless strings) is the main way to reduce GC pauses.",
+    "WhenToUse": "Diagnosing high memory use or latency spikes.",
+    "Related": [
+      "CLR",
+      "Span<T>"
+    ],
+    "LearnMoreUrl": "https://learn.microsoft.com/dotnet/standard/garbage-collection/fundamentals"
+  },
+  {
+    "Term": "NuGet",
+    "Aliases": [
+      "Package manager"
+    ],
+    "Category": "Tooling",
+    "ShortDef": "The package manager for .NET: libraries are downloaded from nuget.org into your project.",
+    "Details": "Packages are referenced in the project file with exact versions. Central package management keeps versions consistent across many projects.",
+    "WhenToUse": "Adding any third-party library, or publishing your own.",
+    "Related": [
+      "CLR",
+      "Dependency Injection"
+    ],
+    "LearnMoreUrl": "https://learn.microsoft.com/nuget/what-is-nuget"
+  },
+  {
+    "Term": "Dependency Injection",
+    "Aliases": [
+      "DI",
+      "IoC"
+    ],
+    "Category": "Architecture",
+    "ShortDef": "Giving a class the things it needs through its constructor instead of letting it create them.",
+    "Details": "ASP.NET Core has a built-in container: you register services with a lifetime (singleton, scoped, transient) and the framework supplies them. It makes code testable and swappable.",
+    "WhenToUse": "Almost every ASP.NET Core application; it is how the framework itself is composed.",
+    "Related": [
+      "Middleware",
+      "Minimal API",
+      "NuGet"
+    ],
+    "LearnMoreUrl": "https://learn.microsoft.com/aspnet/core/fundamentals/dependency-injection"
+  },
+  {
+    "Term": "Middleware",
+    "Aliases": [
+      "Request pipeline"
+    ],
+    "Category": "Architecture",
+    "ShortDef": "A chain of small components that each handle part of an HTTP request, in order.",
+    "Details": "Authentication, routing, CORS, compression and error handling are all middleware. Order matters: a component can short-circuit the rest.",
+    "WhenToUse": "Cross-cutting behaviour such as logging, headers or rate limiting.",
+    "Related": [
+      "Dependency Injection",
+      "Minimal API"
+    ],
+    "LearnMoreUrl": "https://learn.microsoft.com/aspnet/core/fundamentals/middleware/"
+  },
+  {
+    "Term": "Minimal API",
+    "Aliases": [
+      "Minimal APIs"
+    ],
+    "Category": "Architecture",
+    "ShortDef": "A concise way to define HTTP endpoints in ASP.NET Core with lambdas instead of controller classes.",
+    "Details": "`app.MapGet(\"/items\", () => ...)` is a complete endpoint. Route groups, filters and typed results keep larger APIs organised.",
+    "WhenToUse": "Small services, microservices and APIs that do not need MVC conventions.",
+    "Related": [
+      "Middleware",
+      "Dependency Injection",
+      "Blazor"
+    ],
+    "LearnMoreUrl": "https://learn.microsoft.com/aspnet/core/fundamentals/minimal-apis"
+  },
+  {
+    "Term": "Blazor",
+    "Aliases": [
+      "Blazor Server",
+      "Blazor WebAssembly"
+    ],
+    "Category": "Framework",
+    "ShortDef": "Build interactive web UI in C# and Razor instead of JavaScript.",
+    "Details": "Blazor Server runs components on the server and updates the browser over a live connection; WebAssembly runs them in the browser. .NET 8 can mix both per component.",
+    "WhenToUse": "Teams that want one language across server and UI.",
+    "Related": [
+      "Minimal API",
+      "SignalR"
+    ],
+    "LearnMoreUrl": "https://learn.microsoft.com/aspnet/core/blazor/"
+  },
+  {
+    "Term": "SignalR",
+    "Aliases": [],
+    "Category": "Framework",
+    "ShortDef": "A library for real-time communication between server and clients, using WebSockets when available.",
+    "Details": "Hubs let the server push messages to connected clients. Blazor Server uses it under the hood for UI updates.",
+    "WhenToUse": "Live dashboards, chat and notifications.",
+    "Related": [
+      "Blazor",
+      "Middleware"
+    ],
+    "LearnMoreUrl": "https://learn.microsoft.com/aspnet/core/signalr/introduction"
+  },
+  {
+    "Term": "Entity Framework Core",
+    "Aliases": [
+      "EF Core",
+      "ORM"
+    ],
+    "Category": "Framework",
+    "ShortDef": "An object-relational mapper: work with database rows as C# objects and write queries in LINQ.",
+    "Details": "A DbContext tracks changes and saves them in one unit. Migrations evolve the schema. Watch for N+1 queries and over-fetching; use `AsNoTracking` for read-only queries.",
+    "WhenToUse": "Most line-of-business apps that use a relational database.",
+    "Related": [
+      "LINQ",
+      "Migrations",
+      "Async/Await"
+    ],
+    "LearnMoreUrl": "https://learn.microsoft.com/ef/core/"
+  },
+  {
+    "Term": "Migrations",
+    "Aliases": [
+      "EF migrations"
+    ],
+    "Category": "Tooling",
+    "ShortDef": "Versioned scripts that change a database schema in step with your code.",
+    "Details": "`dotnet ef migrations add` compares your model to the last snapshot and writes the change. Apply them at deploy time, and review the SQL for destructive changes.",
+    "WhenToUse": "Any time the shape of your data changes.",
+    "Related": [
+      "Entity Framework Core"
+    ],
+    "LearnMoreUrl": "https://learn.microsoft.com/ef/core/managing-schemas/migrations/"
+  },
+  {
+    "Term": "LINQ",
+    "Aliases": [
+      "Language Integrated Query"
+    ],
+    "Category": "Language",
+    "ShortDef": "Query collections, XML or databases with the same readable C# syntax.",
+    "Details": "`Where`, `Select`, `GroupBy` and friends describe what you want. With EF Core the expression becomes SQL; with in-memory lists it runs in your process. Deferred execution means a query runs when enumerated.",
+    "WhenToUse": "Filtering, projecting and aggregating data anywhere in C#.",
+    "Related": [
+      "Entity Framework Core",
+      "Async/Await"
+    ],
+    "LearnMoreUrl": "https://learn.microsoft.com/dotnet/csharp/linq/"
+  },
+  {
+    "Term": "Async/Await",
+    "Aliases": [
+      "Task",
+      "async"
+    ],
+    "Category": "Language",
+    "ShortDef": "Write code that waits for slow work (network, disk, database) without blocking a thread.",
+    "Details": "An `async` method returns a `Task`; `await` hands the thread back until the work finishes. In web servers this lets a few threads serve many requests. Avoid `.Result` and `.Wait()`, which can deadlock.",
+    "WhenToUse": "Every I/O call in server code.",
+    "Related": [
+      "LINQ",
+      "Entity Framework Core",
+      "Span<T>"
+    ],
+    "LearnMoreUrl": "https://learn.microsoft.com/dotnet/csharp/asynchronous-programming/"
+  },
+  {
+    "Term": "Span<T>",
+    "Aliases": [
+      "Memory<T>"
+    ],
+    "Category": "Language",
+    "ShortDef": "A view over a stretch of memory (array, string, stack) that avoids copying and allocating.",
+    "Details": "A ref struct that lives on the stack. Slicing a Span creates no new array. Used heavily in parsing and high-throughput code.",
+    "WhenToUse": "Performance-critical parsing and buffer handling.",
+    "Related": [
+      "Garbage Collection",
+      "Async/Await"
+    ],
+    "LearnMoreUrl": "https://learn.microsoft.com/dotnet/standard/memory-and-spans/"
+  },
+  {
+    "Term": "Records",
+    "Aliases": [
+      "record types"
+    ],
+    "Category": "Language",
+    "ShortDef": "Concise immutable data types with value equality and non-destructive copying.",
+    "Details": "`record Person(string Name, int Age);` gives equality by value, a readable `ToString` and `with` expressions to copy with changes. Good for DTOs and messages.",
+    "WhenToUse": "Data carriers where identity does not matter.",
+    "Related": [
+      "LINQ",
+      "Minimal API"
+    ],
+    "LearnMoreUrl": "https://learn.microsoft.com/dotnet/csharp/language-reference/builtin-types/record"
+  },
+  {
+    "Term": "Nullable Reference Types",
+    "Aliases": [
+      "NRT",
+      "nullable"
+    ],
+    "Category": "Language",
+    "ShortDef": "Compiler warnings that tell you where a reference might be null, so NullReferenceException becomes a build-time problem.",
+    "Details": "Enable `<Nullable>enable</Nullable>`. Types without `?` promise to be non-null; the compiler flags risky dereferences.",
+    "WhenToUse": "New projects, and gradually in old ones.",
+    "Related": [
+      "Records",
+      "LINQ"
+    ],
+    "LearnMoreUrl": "https://learn.microsoft.com/dotnet/csharp/nullable-references"
+  }
+]

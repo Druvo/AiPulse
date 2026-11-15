@@ -16,7 +16,8 @@ public sealed record PaletteCommand(
     char? GoKey = null,
     bool SignedInOnly = false,
     bool SignedOutOnly = false,
-    string[]? Roles = null);
+    string[]? Roles = null,
+    bool RequiresAi = false);
 
 /// <summary>Everything the palette and the global shortcuts can reach, filtered by who is asking. Pure, so access rules are testable.</summary>
 public static class CommandCatalog
@@ -34,13 +35,13 @@ public static class CommandCatalog
         new PaletteCommand("page-dashboard", "Dashboard", PaletteKind.Page, "/dashboard", "home overview start", "home", 'h', SignedInOnly: true),
         new PaletteCommand("page-home", "Home", PaletteKind.Page, "/", "landing start", "home", 'h', SignedOutOnly: true),
         new PaletteCommand("page-news", "News Feed", PaletteKind.Page, "/news", "headlines articles feed unread", "rss", 'n'),
-        new PaletteCommand("page-this-week", "This week in AI", PaletteKind.Page, "/this-week", "weekly digest summary roundup", "calendar", 'w'),
+        new PaletteCommand("page-this-week", "This week", PaletteKind.Page, "/this-week", "weekly digest summary roundup", "calendar", 'w'),
         new PaletteCommand("page-topics", "Topics", PaletteKind.Page, "/topics", "tags subjects", "trending-up", 't'),
         new PaletteCommand("page-explore", "Explore", PaletteKind.Page, "/explore", "trending models repos github hugging face", "trending-up", 'e'),
         new PaletteCommand("page-releases", "Releases", PaletteKind.Page, "/releases", "versions changelog", "download", 'r'),
         new PaletteCommand("page-glossary", "Glossary", PaletteKind.Page, "/glossary", "terms jargon definitions", "book", 'g'),
         new PaletteCommand("page-tools", "Tools & Tips", PaletteKind.Page, "/tools", "tools matrix tips", "tool", 'o'),
-        new PaletteCommand("page-free-apis", "Free AI APIs", PaletteKind.Page, "/free-apis", "api keys providers", "webhook", SignedInOnly: true),
+        new PaletteCommand("page-free-apis", "Free AI APIs", PaletteKind.Page, "/free-apis", "api keys providers", "webhook", SignedInOnly: true, RequiresAi: true),
         new PaletteCommand("page-ask", "Ask AiPulse", PaletteKind.Page, "/ask", "chat question assistant", "sparkle", 'a', SignedInOnly: true),
         new PaletteCommand("page-learn", "Learning Hub", PaletteKind.Page, "/learn", "courses modules roadmap", "graduation-cap", 'l', SignedInOnly: true),
         new PaletteCommand("page-reading-stats", "Reading Stats", PaletteKind.Page, "/reading-stats", "history streak bookmarks reading list", "activity", SignedInOnly: true),
@@ -51,7 +52,7 @@ public static class CommandCatalog
         new PaletteCommand("page-coverage", "Sources we follow", PaletteKind.Page, "/coverage", "coverage sources list", "database"),
         new PaletteCommand("page-login", "Sign in", PaletteKind.Page, "/login", "login account", "user", SignedOutOnly: true),
         new PaletteCommand("page-register", "Get started (create account)", PaletteKind.Page, "/register", "register sign up", "user", SignedOutOnly: true),
-        new PaletteCommand("page-playground", "Playground", PaletteKind.Page, "/playground", "admin prompt test", "message", Roles: Admin),
+        new PaletteCommand("page-playground", "Playground", PaletteKind.Page, "/playground", "admin prompt test", "message", Roles: Admin, RequiresAi: true),
         new PaletteCommand("page-sources", "Sources", PaletteKind.Page, "/sources", "admin feeds opml", "database", Roles: Admin),
         new PaletteCommand("page-ai-settings", "AI Settings", PaletteKind.Page, "/ai-settings", "admin providers models keys", "zap", Roles: Admin),
         new PaletteCommand("page-source-health", "Source Health", PaletteKind.Page, "/source-health", "admin errors failing feeds", "activity", Roles: Admin),
@@ -65,12 +66,13 @@ public static class CommandCatalog
     };
 
     /// <summary>The entries this visitor may use: signed-out visitors get public pages; role-gated pages need one of their roles.</summary>
-    public static IReadOnlyList<PaletteCommand> For(bool signedIn, IEnumerable<string>? roles = null)
+    public static IReadOnlyList<PaletteCommand> For(bool signedIn, IEnumerable<string>? roles = null, bool aiEnabled = true)
     {
         var roleSet = new HashSet<string>(roles ?? Array.Empty<string>(), StringComparer.OrdinalIgnoreCase);
         return All.Where(c =>
         {
             if (c.SignedOutOnly && signedIn) return false;
+            if (c.RequiresAi && !aiEnabled) return false;
             if ((c.SignedInOnly || c.Roles is not null) && !signedIn) return false;
             if (c.Roles is not null && !c.Roles.Any(roleSet.Contains)) return false;
             return true;

@@ -1,0 +1,80 @@
+[
+  {
+    "Title": "Containers and delivery basics",
+    "Level": "Beginner",
+    "Why": "Containers and automated pipelines are the base of modern operations.",
+    "Steps": [
+      {
+        "Text": "Install Docker and run, then build, your first container.",
+        "Url": "https://docs.docker.com/get-started/"
+      },
+      {
+        "Text": "Write a Dockerfile for a small app and read about layer caching.",
+        "Url": "https://docs.docker.com/build/building/best-practices/"
+      },
+      {
+        "Text": "Create a GitHub Actions workflow that builds and tests on every push.",
+        "Url": "https://docs.github.com/actions/quickstart"
+      }
+    ],
+    "RelatedTerms": [
+      "Container",
+      "Image",
+      "CI/CD",
+      "Registry"
+    ]
+  },
+  {
+    "Title": "Running services for real",
+    "Level": "Intermediate",
+    "Why": "Compose, reverse proxies and TLS cover most small-to-medium production setups.",
+    "Steps": [
+      {
+        "Text": "Describe an app and its database with Docker Compose.",
+        "Url": "https://docs.docker.com/compose/gettingstarted/"
+      },
+      {
+        "Text": "Put nginx or Caddy in front with automatic HTTPS.",
+        "Url": "https://caddyserver.com/docs/quick-starts/reverse-proxy"
+      },
+      {
+        "Text": "Add metrics with Prometheus and a Grafana dashboard.",
+        "Url": "https://prometheus.io/docs/introduction/first_steps/"
+      }
+    ],
+    "RelatedTerms": [
+      "Docker Compose",
+      "Reverse Proxy",
+      "TLS",
+      "Prometheus",
+      "Volume"
+    ]
+  },
+  {
+    "Title": "Kubernetes and infrastructure as code",
+    "Level": "Advanced",
+    "Why": "Cluster operations and reproducible infrastructure at scale.",
+    "Steps": [
+      {
+        "Text": "Run a local cluster and deploy an app with a Deployment and Service.",
+        "Url": "https://kubernetes.io/docs/tutorials/kubernetes-basics/"
+      },
+      {
+        "Text": "Describe cloud resources with OpenTofu or Terraform.",
+        "Url": "https://developer.hashicorp.com/terraform/tutorials"
+      },
+      {
+        "Text": "Define SLOs for a service and alert on error-budget burn.",
+        "Url": "https://sre.google/workbook/alerting-on-slos/"
+      }
+    ],
+    "RelatedTerms": [
+      "Kubernetes",
+      "Pod",
+      "Helm",
+      "Infrastructure as Code",
+      "SLO",
+      "GitOps"
+    ]
+  }
+]

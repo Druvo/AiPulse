@@ -2,6 +2,7 @@
 @layout AiPulse.Components.Layout.LandingLayout
 @inject AuthenticationStateProvider AuthState
 @inject NavigationManager Nav
+@inject KnowledgeBaseService Kb
 @inject SiteStatsService StatsService
 
 <PageTitle>@Site.Name — @Site.Tagline</PageTitle>
@@ -221,12 +222,15 @@
                     <a class="bento-link" href="/login?ReturnUrl=%2Fask">Sign in to ask <Icon Name="arrow-right" Size="15" /></a>
                 </article>
 
-                <article class="bento-cell reveal-on-scroll">
-                    <span class="bento-icon"><Icon Name="key" Size="20" /></span>
-                    <h3>Free AI APIs <span class="bento-badge">Members</span></h3>
-                    <p>A maintained directory of free-tier LLM APIs: limits, models, sign-up links.</p>
-                    <a class="bento-link" href="/login?ReturnUrl=%2Ffree-apis">Sign in to open <Icon Name="arrow-right" Size="15" /></a>
-                </article>
+                @if (Kb.Packs.AiEnabled)
+                {
+                    <article class="bento-cell reveal-on-scroll">
+                        <span class="bento-icon"><Icon Name="key" Size="20" /></span>
+                        <h3>Free AI APIs <span class="bento-badge">Members</span></h3>
+                        <p>A maintained directory of free-tier LLM APIs: limits, models, sign-up links.</p>
+                        <a class="bento-link" href="/login?ReturnUrl=%2Ffree-apis">Sign in to open <Icon Name="arrow-right" Size="15" /></a>
+                    </article>
+                }
 
                 <article class="bento-cell bento-cell--dark bento-span-2x1 reveal-on-scroll" id="self-hosted">
                     <span class="bento-icon"><Icon Name="shield" Size="20" /></span>

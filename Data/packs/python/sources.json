@@ -1,0 +1,202 @@
+[
+  {
+    "Name": "Python Insider",
+    "Url": "https://pythoninsider.blogspot.com/feeds/posts/default",
+    "Category": "News",
+    "Note": "Official Python release announcements.",
+    "ContentType": "News",
+    "Level": "Intermediate",
+    "Tags": [
+      "Python"
+    ]
+  },
+  {
+    "Name": "Real Python",
+    "Url": "https://realpython.com/atom.xml",
+    "Category": "News",
+    "Note": "Tutorials from beginner to advanced.",
+    "ContentType": "Tutorial",
+    "Level": "Beginner",
+    "Tags": [
+      "Python"
+    ]
+  },
+  {
+    "Name": "Planet Python",
+    "Url": "https://planetpython.org/rss20.xml",
+    "Category": "Community",
+    "Note": "An aggregate of Python community blogs.",
+    "ContentType": "News",
+    "Level": "Intermediate",
+    "Tags": [
+      "Python"
+    ]
+  },
+  {
+    "Name": "PyCoder's Weekly",
+    "Url": "https://pycoders.com/feed",
+    "Category": "News",
+    "Note": "A weekly roundup of Python news and articles.",
+    "ContentType": "News",
+    "Level": "Intermediate",
+    "Tags": [
+      "Python"
+    ]
+  },
+  {
+    "Name": "Python Bytes",
+    "Url": "https://pythonbytes.fm/episodes/rss",
+    "Category": "Community",
+    "Note": "Short weekly podcast on Python news.",
+    "ContentType": "News",
+    "Level": "Beginner",
+    "Tags": [
+      "Python"
+    ]
+  },
+  {
+    "Name": "Talk Python To Me",
+    "Url": "https://talkpython.fm/episodes/rss",
+    "Category": "Community",
+    "Note": "Podcast interviews across the Python world.",
+    "ContentType": "News",
+    "Level": "Intermediate",
+    "Tags": [
+      "Python"
+    ]
+  },
+  {
+    "Name": "Ned Batchelder",
+    "Url": "https://nedbatchelder.com/blog/rss.xml",
+    "Category": "Community",
+    "Note": "Thoughtful posts on Python, testing and coverage.",
+    "ContentType": "Tutorial",
+    "Level": "Advanced",
+    "Tags": [
+      "Python",
+      "Testing"
+    ]
+  },
+  {
+    "Name": "Trey Hunner",
+    "Url": "https://treyhunner.com/atom.xml",
+    "Category": "Community",
+    "Note": "Idiomatic Python explained clearly.",
+    "ContentType": "Tutorial",
+    "Level": "Intermediate",
+    "Tags": [
+      "Python"
+    ]
+  },
+  {
+    "Name": "Python Speed",
+    "Url": "https://pythonspeed.com/atom.xml",
+    "Category": "Community",
+    "Note": "Making Python faster, and packaging it for production.",
+    "ContentType": "Tutorial",
+    "Level": "Advanced",
+    "Tags": [
+      "Python",
+      "Performance"
+    ]
+  },
+  {
+    "Name": "Django weblog",
+    "Url": "https://www.djangoproject.com/rss/weblog/",
+    "Category": "News",
+    "Note": "Official Django announcements and security releases.",
+    "ContentType": "News",
+    "Level": "Intermediate",
+    "Tags": [
+      "Django"
+    ]
+  },
+  {
+    "Name": "Dev.to · python",
+    "Url": "https://dev.to/feed/tag/python",
+    "Category": "Community",
+    "Note": "Community posts tagged python.",
+    "ContentType": "News",
+    "Level": "Beginner",
+    "Tags": [
+      "Python"
+    ]
+  },
+  {
+    "Name": "uv releases",
+    "Url": "https://github.com/astral-sh/uv/releases.atom",
+    "Category": "Tools",
+    "Note": "New uv versions.",
+    "ContentType": "Release",
+    "Level": "Intermediate",
+    "Tags": [
+      "Packaging"
+    ]
+  },
+  {
+    "Name": "Ruff releases",
+    "Url": "https://github.com/astral-sh/ruff/releases.atom",
+    "Category": "Tools",
+    "Note": "New Ruff versions.",
+    "ContentType": "Release",
+    "Level": "Intermediate",
+    "Tags": [
+      "Linting"
+    ]
+  },
+  {
+    "Name": "FastAPI releases",
+    "Url": "https://github.com/fastapi/fastapi/releases.atom",
+    "Category": "Tools",
+    "Note": "New FastAPI versions.",
+    "ContentType": "Release",
+    "Level": "Intermediate",
+    "Tags": [
+      "FastAPI"
+    ]
+  },
+  {
+    "Name": "Pydantic releases",
+    "Url": "https://github.com/pydantic/pydantic/releases.atom",
+    "Category": "Tools",
+    "Note": "New Pydantic versions.",
+    "ContentType": "Release",
+    "Level": "Intermediate",
+    "Tags": [
+      "Pydantic"
+    ]
+  },
+  {
+    "Name": "Flask releases",
+    "Url": "https://github.com/pallets/flask/releases.atom",
+    "Category": "Tools",
+    "Note": "New Flask versions.",
+    "ContentType": "Release",
+    "Level": "Intermediate",
+    "Tags": [
+      "Flask"
+    ]
+  },
+  {
+    "Name": "pytest releases",
+    "Url": "https://github.com/pytest-dev/pytest/releases.atom",
+    "Category": "Tools",
+    "Note": "New pytest versions.",
+    "ContentType": "Release",
+    "Level": "Intermediate",
+    "Tags": [
+      "Testing"
+    ]
+  },
+  {
+    "Name": "pandas releases",
+    "Url": "https://github.com/pandas-dev/pandas/releases.atom",
+    "Category": "Tools",
+    "Note": "New pandas versions.",
+    "ContentType": "Release",
+    "Level": "Intermediate",
+    "Tags": [
+      "Data"
+    ]
+  }
+]

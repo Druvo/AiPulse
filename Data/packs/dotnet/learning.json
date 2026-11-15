@@ -1,0 +1,78 @@
+[
+  {
+    "Title": "C# and .NET foundations",
+    "Level": "Beginner",
+    "Why": "A grounded start: the language, the runtime and the tooling you will use every day.",
+    "Steps": [
+      {
+        "Text": "Install the .NET SDK and build a console app with the dotnet CLI.",
+        "Url": "https://learn.microsoft.com/dotnet/core/tutorials/with-visual-studio-code"
+      },
+      {
+        "Text": "Work through the C# tour: types, control flow, classes and records.",
+        "Url": "https://learn.microsoft.com/dotnet/csharp/tour-of-csharp/"
+      },
+      {
+        "Text": "Learn LINQ by rewriting loops as queries.",
+        "Url": "https://learn.microsoft.com/dotnet/csharp/linq/"
+      }
+    ],
+    "RelatedTerms": [
+      "CLR",
+      "LINQ",
+      "Records",
+      "NuGet"
+    ]
+  },
+  {
+    "Title": "Build a web API with ASP.NET Core",
+    "Level": "Intermediate",
+    "Why": "Minimal APIs, dependency injection and middleware are the backbone of every ASP.NET Core service.",
+    "Steps": [
+      {
+        "Text": "Build a minimal API with a few endpoints.",
+        "Url": "https://learn.microsoft.com/aspnet/core/tutorials/min-web-api"
+      },
+      {
+        "Text": "Understand the request pipeline and write a small middleware.",
+        "Url": "https://learn.microsoft.com/aspnet/core/fundamentals/middleware/write"
+      },
+      {
+        "Text": "Add EF Core with migrations and a real database.",
+        "Url": "https://learn.microsoft.com/aspnet/core/data/ef-rp/intro"
+      }
+    ],
+    "RelatedTerms": [
+      "Minimal API",
+      "Middleware",
+      "Dependency Injection",
+      "Entity Framework Core",
+      "Migrations"
+    ]
+  },
+  {
+    "Title": "Fast, correct, production-ready",
+    "Level": "Advanced",
+    "Why": "Async, memory and measurement separate code that works from code that holds up under load.",
+    "Steps": [
+      {
+        "Text": "Learn async/await properly, including cancellation.",
+        "Url": "https://learn.microsoft.com/dotnet/csharp/asynchronous-programming/"
+      },
+      {
+        "Text": "Understand garbage collection and how to allocate less.",
+        "Url": "https://learn.microsoft.com/dotnet/standard/garbage-collection/fundamentals"
+      },
+      {
+        "Text": "Benchmark a hot path with BenchmarkDotNet.",
+        "Url": "https://benchmarkdotnet.org/articles/overview.html"
+      }
+    ],
+    "RelatedTerms": [
+      "Async/Await",
+      "Garbage Collection",
+      "Span<T>",
+      "JIT"
+    ]
+  }
+]

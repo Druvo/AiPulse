@@ -1,0 +1,277 @@
+[
+  {
+    "Term": "Container",
+    "Aliases": [
+      "Docker container"
+    ],
+    "Category": "Concept",
+    "ShortDef": "A packaged app plus everything it needs, run in isolation from other apps on the same machine.",
+    "Details": "Containers share the host's kernel, so they start in seconds and use far less than virtual machines. An image is the read-only template; a container is a running instance of it.",
+    "WhenToUse": "Making 'it works on my machine' true everywhere, and packing many services on one host.",
+    "Related": [
+      "Image",
+      "Kubernetes",
+      "Docker Compose"
+    ],
+    "LearnMoreUrl": "https://docs.docker.com/get-started/docker-overview/"
+  },
+  {
+    "Term": "Image",
+    "Aliases": [
+      "Docker image",
+      "Dockerfile"
+    ],
+    "Category": "Concept",
+    "ShortDef": "The built, layered, read-only package a container starts from; a Dockerfile is the recipe.",
+    "Details": "Each instruction in a Dockerfile adds a cached layer. Order them so rarely-changing steps come first. Multi-stage builds keep build tools out of the final image.",
+    "WhenToUse": "Whenever you build or ship software in containers.",
+    "Related": [
+      "Container",
+      "Registry",
+      "CI/CD"
+    ],
+    "LearnMoreUrl": "https://docs.docker.com/build/building/best-practices/"
+  },
+  {
+    "Term": "Registry",
+    "Aliases": [
+      "Container registry"
+    ],
+    "Category": "Infrastructure",
+    "ShortDef": "A server that stores and serves container images (Docker Hub, GHCR, ECR, ACR).",
+    "Details": "CI builds an image, tags it with a version, and pushes it; clusters pull it. Scan images in the registry for known vulnerabilities.",
+    "WhenToUse": "Distributing images between build and runtime systems.",
+    "Related": [
+      "Image",
+      "CI/CD",
+      "Kubernetes"
+    ]
+  },
+  {
+    "Term": "Docker Compose",
+    "Aliases": [
+      "compose"
+    ],
+    "Category": "Tooling",
+    "ShortDef": "Describe and run several containers together from one YAML file.",
+    "Details": "`docker compose up` starts the app, its database and anything else, with networks and volumes defined in `compose.yaml`. Ideal for local development and small deployments.",
+    "WhenToUse": "A single host running a few related services.",
+    "Related": [
+      "Container",
+      "Volume"
+    ],
+    "LearnMoreUrl": "https://docs.docker.com/compose/"
+  },
+  {
+    "Term": "Volume",
+    "Aliases": [
+      "Persistent volume",
+      "PersistentVolume"
+    ],
+    "Category": "Concept",
+    "ShortDef": "Storage that outlives a container, so data survives restarts and upgrades.",
+    "Details": "Container file systems are disposable. Databases and uploads belong on volumes (or managed services), and volumes need backups.",
+    "WhenToUse": "Any container that holds data you care about.",
+    "Related": [
+      "Container",
+      "Docker Compose",
+      "Kubernetes"
+    ],
+    "LearnMoreUrl": "https://docs.docker.com/engine/storage/volumes/"
+  },
+  {
+    "Term": "Kubernetes",
+    "Aliases": [
+      "K8s"
+    ],
+    "Category": "Platform",
+    "ShortDef": "A system that runs containers across many machines, restarts failures and scales on demand.",
+    "Details": "You declare the desired state (this image, three copies, this config) and controllers make it true. Powerful, but heavy: many teams are better served by a simpler platform until they outgrow it.",
+    "WhenToUse": "Running many services with high availability across a cluster.",
+    "Related": [
+      "Container",
+      "Pod",
+      "Helm",
+      "Observability"
+    ],
+    "LearnMoreUrl": "https://kubernetes.io/docs/concepts/overview/"
+  },
+  {
+    "Term": "Pod",
+    "Aliases": [
+      "Deployment",
+      "Service"
+    ],
+    "Category": "Concept",
+    "ShortDef": "Kubernetes' smallest deployable unit: one or more containers that share network and storage.",
+    "Details": "You rarely create pods directly: a Deployment keeps the desired number running and rolls out updates, and a Service gives them a stable address.",
+    "WhenToUse": "Understanding how Kubernetes runs and exposes your app.",
+    "Related": [
+      "Kubernetes",
+      "Container"
+    ],
+    "LearnMoreUrl": "https://kubernetes.io/docs/concepts/workloads/pods/"
+  },
+  {
+    "Term": "Helm",
+    "Aliases": [
+      "Chart"
+    ],
+    "Category": "Tooling",
+    "ShortDef": "The package manager for Kubernetes: install an app, with configurable values, in one command.",
+    "Details": "A chart is a templated bundle of manifests. `helm install` and `helm upgrade` track releases so you can roll back.",
+    "WhenToUse": "Installing third-party software or templating your own deployments.",
+    "Related": [
+      "Kubernetes",
+      "Infrastructure as Code"
+    ],
+    "LearnMoreUrl": "https://helm.sh/docs/"
+  },
+  {
+    "Term": "Infrastructure as Code",
+    "Aliases": [
+      "IaC",
+      "Terraform",
+      "OpenTofu"
+    ],
+    "Category": "Practice",
+    "ShortDef": "Define servers, networks and cloud services in files, reviewed and versioned like software.",
+    "Details": "Tools like Terraform and OpenTofu compare your files to reality and apply the difference. Everything is reproducible, reviewable and recoverable.",
+    "WhenToUse": "Any infrastructure you expect to rebuild, copy or audit.",
+    "Related": [
+      "CI/CD",
+      "GitOps",
+      "Helm"
+    ],
+    "LearnMoreUrl": "https://developer.hashicorp.com/terraform/intro"
+  },
+  {
+    "Term": "CI/CD",
+    "Aliases": [
+      "Continuous integration",
+      "Continuous delivery",
+      "pipeline"
+    ],
+    "Category": "Practice",
+    "ShortDef": "Automatically build and test every change (CI), then release it safely (CD).",
+    "Details": "A pipeline runs on each commit: build, test, scan, package, deploy. Small frequent releases are safer than big rare ones.",
+    "WhenToUse": "Any project with more than one contributor or more than one environment.",
+    "Related": [
+      "Image",
+      "GitOps",
+      "Infrastructure as Code"
+    ],
+    "LearnMoreUrl": "https://docs.github.com/actions/about-github-actions/understanding-github-actions"
+  },
+  {
+    "Term": "GitOps",
+    "Aliases": [],
+    "Category": "Practice",
+    "ShortDef": "Git is the source of truth for what should run; an agent keeps the live system matching it.",
+    "Details": "To change production you merge a pull request. Tools such as Argo CD and Flux watch the repository and reconcile the cluster, and drift is corrected automatically.",
+    "WhenToUse": "Teams that want audited, reversible deployments.",
+    "Related": [
+      "CI/CD",
+      "Infrastructure as Code",
+      "Kubernetes"
+    ],
+    "LearnMoreUrl": "https://opengitops.dev/"
+  },
+  {
+    "Term": "Observability",
+    "Aliases": [
+      "Monitoring",
+      "Metrics",
+      "Tracing"
+    ],
+    "Category": "Practice",
+    "ShortDef": "Understanding what a system is doing from its logs, metrics and traces.",
+    "Details": "Logs say what happened, metrics show trends (rate, errors, latency), traces follow one request across services. OpenTelemetry standardises collecting all three.",
+    "WhenToUse": "Debugging production and knowing a problem exists before users tell you.",
+    "Related": [
+      "SLO",
+      "Prometheus"
+    ],
+    "LearnMoreUrl": "https://opentelemetry.io/docs/concepts/observability-primer/"
+  },
+  {
+    "Term": "Prometheus",
+    "Aliases": [
+      "Grafana"
+    ],
+    "Category": "Tooling",
+    "ShortDef": "An open-source system that collects numeric metrics over time; Grafana draws them as dashboards.",
+    "Details": "Prometheus scrapes endpoints on a schedule and stores time series; PromQL queries them and alert rules fire on thresholds.",
+    "WhenToUse": "Metrics and alerting for services, containers and clusters.",
+    "Related": [
+      "Observability",
+      "SLO"
+    ],
+    "LearnMoreUrl": "https://prometheus.io/docs/introduction/overview/"
+  },
+  {
+    "Term": "SLO",
+    "Aliases": [
+      "SLI",
+      "SLA",
+      "error budget"
+    ],
+    "Category": "Practice",
+    "ShortDef": "A target for how reliable a service should be, measured so you know when to slow down and fix things.",
+    "Details": "An SLI is the measurement (say, share of requests under 300 ms), the SLO is the goal (99.9%), and the error budget is how much failure you may spend. An SLA is the contract with customers.",
+    "WhenToUse": "Deciding how much reliability work is enough.",
+    "Related": [
+      "Observability",
+      "Prometheus"
+    ],
+    "LearnMoreUrl": "https://sre.google/sre-book/service-level-objectives/"
+  },
+  {
+    "Term": "Reverse Proxy",
+    "Aliases": [
+      "nginx",
+      "Traefik",
+      "Caddy"
+    ],
+    "Category": "Infrastructure",
+    "ShortDef": "A server in front of your apps that handles HTTPS, routing, caching and compression.",
+    "Details": "Terminates TLS, forwards requests to the right backend and can add rate limits and headers. Forward the client's address with `X-Forwarded-*` headers and make the app trust them.",
+    "WhenToUse": "Exposing one or many internal services to the internet.",
+    "Related": [
+      "Container",
+      "TLS"
+    ],
+    "LearnMoreUrl": "https://nginx.org/en/docs/beginners_guide.html"
+  },
+  {
+    "Term": "TLS",
+    "Aliases": [
+      "HTTPS",
+      "Let's Encrypt"
+    ],
+    "Category": "Security",
+    "ShortDef": "The encryption behind HTTPS; certificates prove which site you are talking to.",
+    "Details": "Let's Encrypt issues free certificates automatically. Renewal must be automated and monitored: expired certificates cause outages.",
+    "WhenToUse": "Every public service.",
+    "Related": [
+      "Reverse Proxy"
+    ],
+    "LearnMoreUrl": "https://letsencrypt.org/how-it-works/"
+  },
+  {
+    "Term": "Blue-Green Deployment",
+    "Aliases": [
+      "Canary",
+      "Rolling update"
+    ],
+    "Category": "Practice",
+    "ShortDef": "Release by running the new version beside the old one and switching traffic when it is healthy.",
+    "Details": "Blue-green flips all traffic at once and can flip back; canary sends a small share first; rolling updates replace instances gradually. All avoid downtime and allow fast rollback.",
+    "WhenToUse": "Releasing without a maintenance window.",
+    "Related": [
+      "CI/CD",
+      "Kubernetes"
+    ],
+    "LearnMoreUrl": "https://martinfowler.com/bliki/BlueGreenDeployment.html"
+  }
+]

@@ -1,0 +1,95 @@
+[
+  {
+    "Name": "dotnet CLI",
+    "Category": "Tooling",
+    "OneLiner": "The command-line tool to create, build, test, run and publish .NET projects.",
+    "BestFor": [
+      "Scripting builds and CI",
+      "Creating projects from templates"
+    ],
+    "NotIdealFor": [],
+    "TokenTips": [
+      "`dotnet watch` reloads on save",
+      "`dotnet publish -c Release` for deployable output"
+    ],
+    "Url": "https://learn.microsoft.com/dotnet/core/tools/"
+  },
+  {
+    "Name": "Visual Studio",
+    "Category": "IDE",
+    "OneLiner": "Full-featured Windows IDE with the best debugger and profiling tools for .NET.",
+    "BestFor": [
+      "Large solutions and WPF/WinForms",
+      "Debugging and profiling"
+    ],
+    "NotIdealFor": [
+      "Quick edits on a low-power machine"
+    ],
+    "TokenTips": [
+      "Use the Diagnostic Tools window to spot memory growth",
+      "Enable analyzers to catch issues while typing"
+    ],
+    "Url": "https://visualstudio.microsoft.com/"
+  },
+  {
+    "Name": "JetBrains Rider",
+    "Category": "IDE",
+    "OneLiner": "Cross-platform .NET IDE with strong refactoring and code analysis.",
+    "BestFor": [
+      "Mac and Linux development",
+      "Heavy refactoring"
+    ],
+    "NotIdealFor": [],
+    "TokenTips": [
+      "Use the dotTrace integration for performance work"
+    ],
+    "Url": "https://www.jetbrains.com/rider/"
+  },
+  {
+    "Name": "xUnit",
+    "Category": "Testing",
+    "OneLiner": "The most widely used unit-testing framework for .NET.",
+    "BestFor": [
+      "Unit and integration tests",
+      "Parallel test runs"
+    ],
+    "NotIdealFor": [],
+    "TokenTips": [
+      "Use `WebApplicationFactory` for end-to-end ASP.NET Core tests",
+      "Keep tests independent so they can run in parallel"
+    ],
+    "Url": "https://xunit.net/"
+  },
+  {
+    "Name": "BenchmarkDotNet",
+    "Category": "Performance",
+    "OneLiner": "Reliable micro-benchmarking: measures time and allocations of small pieces of code.",
+    "BestFor": [
+      "Comparing two implementations",
+      "Finding hidden allocations"
+    ],
+    "NotIdealFor": [
+      "Whole-application load testing"
+    ],
+    "TokenTips": [
+      "Always run in Release",
+      "Look at allocations, not only time"
+    ],
+    "Url": "https://benchmarkdotnet.org/"
+  },
+  {
+    "Name": "Serilog",
+    "Category": "Logging",
+    "OneLiner": "Structured logging with many sinks (files, Seq, Elasticsearch, console).",
+    "BestFor": [
+      "Searchable, structured logs",
+      "Shipping logs to a central system"
+    ],
+    "NotIdealFor": [],
+    "TokenTips": [
+      "Log properties, not formatted strings",
+      "Set minimum levels per namespace"
+    ],
+    "Url": "https://serilog.net/"
+  }
+]

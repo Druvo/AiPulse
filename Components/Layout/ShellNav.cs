@@ -6,7 +6,7 @@
 /// <param name="Icon">An <c>Icon</c> component name.</param>
 /// <param name="TabLabel">Short label for the phone bottom tab bar; null keeps the item out of the tab bar.</param>
 /// <param name="ExactMatch">Highlight only on this exact route (the Dashboard), not on every route that starts with it.</param>
-public sealed record ShellNavItem(string Path, string Label, string Icon, string? TabLabel = null, bool ExactMatch = false);
+public sealed record ShellNavItem(string Path, string Label, string Icon, string? TabLabel = null, bool ExactMatch = false, bool RequiresAi = false);
 
 /// <summary>A titled group of links in the sidebar ("Overview", "Learning", "Admin").</summary>
 public sealed record ShellNavSection(string Title, bool AdminOnly, IReadOnlyList<ShellNavItem> Items);
@@ -28,7 +28,7 @@ public static class ShellNav
             new ShellNavItem("this-week", "This Week", "calendar"),
             new ShellNavItem("saved", "Saved Searches", "search"),
             new ShellNavItem("collections", "Collections", "bookmark"),
-            new ShellNavItem("free-apis", "Free AI APIs", "webhook"),
+            new ShellNavItem("free-apis", "Free AI APIs", "webhook", RequiresAi: true),
         }),
         new ShellNavSection("Learning", AdminOnly: false, new[]
         {
@@ -39,7 +39,7 @@ public static class ShellNav
         }),
         new ShellNavSection("Admin", AdminOnly: true, new[]
         {
-            new ShellNavItem("playground", "Playground", "message"),
+            new ShellNavItem("playground", "Playground", "message", RequiresAi: true),
             new ShellNavItem("sources", "Sources", "database"),
             new ShellNavItem("ai-settings", "AI Settings", "zap"),
             new ShellNavItem("source-health", "Source Health", "activity"),
@@ -49,7 +49,10 @@ public static class ShellNav
     };
 
     /// <summary>Sections a person may see: admin-only groups are dropped for everyone else.</summary>
-    public static IEnumerable<ShellNavSection> VisibleTo(bool isAdmin) => Sections.Where(s => isAdmin || !s.AdminOnly);
+    public static IEnumerable<ShellNavSection> VisibleTo(bool isAdmin, bool aiEnabled = true) =>
+        Sections.Where(s => isAdmin || !s.AdminOnly)
+                .Select(s => aiEnabled ? s : s with { Items = s.Items.Where(i => !i.RequiresAi).ToList() })
+                .Where(s => s.Items.Count > 0);
 
     /// <summary>
     /// The phone bottom tab bar: the main signed-in destinations, in sidebar order. A fifth "Menu" button (rendered by the layout, not

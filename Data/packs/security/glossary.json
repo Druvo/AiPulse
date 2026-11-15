@@ -1,0 +1,277 @@
+[
+  {
+    "Term": "OWASP Top 10",
+    "Aliases": [
+      "OWASP"
+    ],
+    "Category": "Concept",
+    "ShortDef": "A regularly updated list of the ten most critical web application security risks.",
+    "Details": "Covers broken access control, cryptographic failures, injection, insecure design, misconfiguration, vulnerable components and more. A common baseline for reviews and training.",
+    "WhenToUse": "A starting checklist for any web application review.",
+    "Related": [
+      "Injection",
+      "Broken Access Control",
+      "Threat Modeling"
+    ],
+    "LearnMoreUrl": "https://owasp.org/www-project-top-ten/"
+  },
+  {
+    "Term": "Injection",
+    "Aliases": [
+      "SQL injection",
+      "SQLi",
+      "Command injection"
+    ],
+    "Category": "Vulnerability",
+    "ShortDef": "Untrusted input is treated as code (SQL, shell, template) and executed.",
+    "Details": "The fix is to keep data and commands apart: parameterised queries, safe APIs instead of shell strings, and strict validation. Escaping by hand is fragile.",
+    "WhenToUse": "Anywhere user input reaches a database, a shell, an LDAP query or a template.",
+    "Related": [
+      "OWASP Top 10",
+      "Input Validation",
+      "XSS"
+    ],
+    "LearnMoreUrl": "https://owasp.org/www-community/attacks/SQL_Injection"
+  },
+  {
+    "Term": "XSS",
+    "Aliases": [
+      "Cross-site scripting"
+    ],
+    "Category": "Vulnerability",
+    "ShortDef": "An attacker's script runs in another user's browser because the site printed untrusted input unescaped.",
+    "Details": "Stored, reflected and DOM-based variants. Defend with output encoding, framework auto-escaping, a Content Security Policy and HttpOnly cookies.",
+    "WhenToUse": "Any page that shows user-provided content.",
+    "Related": [
+      "Injection",
+      "CSRF",
+      "CORS"
+    ],
+    "LearnMoreUrl": "https://owasp.org/www-community/attacks/xss/"
+  },
+  {
+    "Term": "CSRF",
+    "Aliases": [
+      "Cross-site request forgery"
+    ],
+    "Category": "Vulnerability",
+    "ShortDef": "A malicious page makes your browser send a request to a site you are logged in to.",
+    "Details": "Because browsers attach cookies automatically, the site cannot tell the request was not intended. Use anti-forgery tokens and SameSite cookies.",
+    "WhenToUse": "Any state-changing request authenticated by cookies.",
+    "Related": [
+      "XSS",
+      "Session Management",
+      "CORS"
+    ],
+    "LearnMoreUrl": "https://owasp.org/www-community/attacks/csrf"
+  },
+  {
+    "Term": "CORS",
+    "Aliases": [
+      "Cross-Origin Resource Sharing"
+    ],
+    "Category": "Concept",
+    "ShortDef": "Browser rules about which other websites may call your API from JavaScript.",
+    "Details": "A misconfigured policy (reflecting any origin with credentials) lets hostile sites read your users' data. CORS is not authentication.",
+    "WhenToUse": "Reviewing APIs called from browsers.",
+    "Related": [
+      "CSRF",
+      "XSS"
+    ],
+    "LearnMoreUrl": "https://developer.mozilla.org/en-US/docs/Web/HTTP/CORS"
+  },
+  {
+    "Term": "Broken Access Control",
+    "Aliases": [
+      "IDOR",
+      "Authorization"
+    ],
+    "Category": "Vulnerability",
+    "ShortDef": "Users can do or see things their role should not allow, such as changing an ID in a URL to read someone else's data.",
+    "Details": "The top item in the OWASP list. Check permissions on the server for every request and every object; never rely on hiding buttons.",
+    "WhenToUse": "Every endpoint that returns or changes data.",
+    "Related": [
+      "OWASP Top 10",
+      "Least Privilege",
+      "Authentication"
+    ],
+    "LearnMoreUrl": "https://owasp.org/Top10/A01_2021-Broken_Access_Control/"
+  },
+  {
+    "Term": "Authentication",
+    "Aliases": [
+      "MFA",
+      "2FA",
+      "Passkey"
+    ],
+    "Category": "Concept",
+    "ShortDef": "Proving who you are: passwords, one-time codes, security keys and passkeys.",
+    "Details": "Store passwords only as salted slow hashes (Argon2, bcrypt, PBKDF2). Add multi-factor authentication; passkeys resist phishing. Lock out and rate-limit repeated failures.",
+    "WhenToUse": "Any system with accounts.",
+    "Related": [
+      "Session Management",
+      "Password Hashing",
+      "Broken Access Control"
+    ],
+    "LearnMoreUrl": "https://cheatsheetseries.owasp.org/cheatsheets/Authentication_Cheat_Sheet.html"
+  },
+  {
+    "Term": "Password Hashing",
+    "Aliases": [
+      "Argon2",
+      "bcrypt",
+      "salt"
+    ],
+    "Category": "Cryptography",
+    "ShortDef": "Storing a deliberately slow, salted fingerprint of a password instead of the password.",
+    "Details": "Fast hashes like MD5 or SHA-256 let attackers try billions of guesses per second. Argon2id, bcrypt and PBKDF2 are slow on purpose, and a unique salt defeats precomputed tables.",
+    "WhenToUse": "Whenever you store credentials.",
+    "Related": [
+      "Authentication",
+      "Encryption"
+    ],
+    "LearnMoreUrl": "https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html"
+  },
+  {
+    "Term": "Session Management",
+    "Aliases": [
+      "cookie",
+      "JWT"
+    ],
+    "Category": "Concept",
+    "ShortDef": "How a site remembers you after login: session cookies or tokens.",
+    "Details": "Cookies should be HttpOnly, Secure and SameSite. Rotate on login, expire sensibly, and make logout and 'sign out everywhere' actually invalidate sessions. JWTs need short lifetimes and a revocation plan.",
+    "WhenToUse": "Designing or reviewing login flows.",
+    "Related": [
+      "Authentication",
+      "CSRF"
+    ],
+    "LearnMoreUrl": "https://cheatsheetseries.owasp.org/cheatsheets/Session_Management_Cheat_Sheet.html"
+  },
+  {
+    "Term": "Encryption",
+    "Aliases": [
+      "TLS",
+      "AES"
+    ],
+    "Category": "Cryptography",
+    "ShortDef": "Scrambling data so only holders of a key can read it, in transit (TLS) and at rest.",
+    "Details": "Use well-reviewed libraries and modern defaults; never invent your own algorithm. Protect keys more carefully than the data, and rotate them.",
+    "WhenToUse": "Any sensitive data crossing a network or sitting on disk.",
+    "Related": [
+      "Password Hashing",
+      "Secrets Management"
+    ],
+    "LearnMoreUrl": "https://cheatsheetseries.owasp.org/cheatsheets/Cryptographic_Storage_Cheat_Sheet.html"
+  },
+  {
+    "Term": "Secrets Management",
+    "Aliases": [
+      "API key",
+      "secret"
+    ],
+    "Category": "Practice",
+    "ShortDef": "Keeping passwords, tokens and keys out of code and delivering them safely at runtime.",
+    "Details": "Never commit secrets; scan history for leaks and rotate anything exposed. Use a vault or the platform's secret store, inject via environment, and give each secret the least access.",
+    "WhenToUse": "Every application with credentials to other systems.",
+    "Related": [
+      "Encryption",
+      "Least Privilege"
+    ],
+    "LearnMoreUrl": "https://cheatsheetseries.owasp.org/cheatsheets/Secrets_Management_Cheat_Sheet.html"
+  },
+  {
+    "Term": "Least Privilege",
+    "Aliases": [
+      "Principle of least privilege"
+    ],
+    "Category": "Practice",
+    "ShortDef": "Give every person, service and token only the access it needs, no more.",
+    "Details": "Limits what a stolen credential or a bug can do. Applies to database users, cloud roles, API scopes and file permissions.",
+    "WhenToUse": "Designing roles, service accounts and tokens.",
+    "Related": [
+      "Broken Access Control",
+      "Secrets Management",
+      "Threat Modeling"
+    ],
+    "LearnMoreUrl": "https://csrc.nist.gov/glossary/term/least_privilege"
+  },
+  {
+    "Term": "Input Validation",
+    "Aliases": [
+      "sanitisation"
+    ],
+    "Category": "Practice",
+    "ShortDef": "Checking that data has the expected type, length and format before using it.",
+    "Details": "Validate on the server, allow-list what is acceptable, and still encode output for its context. Validation reduces risk but does not replace parameterised queries or escaping.",
+    "WhenToUse": "At every trust boundary: forms, APIs, files, headers.",
+    "Related": [
+      "Injection",
+      "XSS"
+    ],
+    "LearnMoreUrl": "https://cheatsheetseries.owasp.org/cheatsheets/Input_Validation_Cheat_Sheet.html"
+  },
+  {
+    "Term": "Dependency Vulnerabilities",
+    "Aliases": [
+      "CVE",
+      "SCA",
+      "Dependabot"
+    ],
+    "Category": "Practice",
+    "ShortDef": "Known security holes in the libraries you use, tracked as CVEs.",
+    "Details": "Most code in an app is someone else's. Keep a software bill of materials, scan with tools such as Dependabot or Trivy, and patch quickly, prioritising what is actually reachable.",
+    "WhenToUse": "A routine part of every release.",
+    "Related": [
+      "Supply Chain Attack",
+      "OWASP Top 10"
+    ],
+    "LearnMoreUrl": "https://owasp.org/www-project-dependency-check/"
+  },
+  {
+    "Term": "Supply Chain Attack",
+    "Aliases": [
+      "typosquatting"
+    ],
+    "Category": "Threat",
+    "ShortDef": "Compromising software through something it depends on: a package, a build tool or an update channel.",
+    "Details": "Examples: malicious look-alike packages, hijacked maintainer accounts, poisoned CI. Pin and verify dependencies, use lockfiles, review new packages and limit CI permissions.",
+    "WhenToUse": "Assessing how you consume third-party code.",
+    "Related": [
+      "Dependency Vulnerabilities",
+      "Least Privilege"
+    ],
+    "LearnMoreUrl": "https://slsa.dev/"
+  },
+  {
+    "Term": "Threat Modeling",
+    "Aliases": [
+      "STRIDE"
+    ],
+    "Category": "Practice",
+    "ShortDef": "Thinking through what could go wrong with a design before building it.",
+    "Details": "Draw the data flows, mark trust boundaries, and ask what an attacker could spoof, tamper with, leak or break (STRIDE). Cheap to do early, expensive to fix late.",
+    "WhenToUse": "Designing any feature that handles sensitive data or new entry points.",
+    "Related": [
+      "OWASP Top 10",
+      "Least Privilege"
+    ],
+    "LearnMoreUrl": "https://owasp.org/www-community/Threat_Modeling"
+  },
+  {
+    "Term": "Rate Limiting",
+    "Aliases": [
+      "throttling",
+      "brute force"
+    ],
+    "Category": "Practice",
+    "ShortDef": "Capping how often a client can try something, to slow abuse and guessing.",
+    "Details": "Apply to login, password reset, search and expensive endpoints, by IP and by account. Combine with lockouts and alerting.",
+    "WhenToUse": "Any public endpoint an attacker could hammer.",
+    "Related": [
+      "Authentication",
+      "Injection"
+    ],
+    "LearnMoreUrl": "https://cheatsheetseries.owasp.org/cheatsheets/Denial_of_Service_Cheat_Sheet.html"
+  }
+]

@@ -1,0 +1,78 @@
+[
+  {
+    "Title": "Python foundations",
+    "Level": "Beginner",
+    "Why": "The language basics and a clean project setup you will reuse forever.",
+    "Steps": [
+      {
+        "Text": "Work through the official tutorial up to modules and classes.",
+        "Url": "https://docs.python.org/3/tutorial/"
+      },
+      {
+        "Text": "Create a virtual environment and install a package into it.",
+        "Url": "https://docs.python.org/3/tutorial/venv.html"
+      },
+      {
+        "Text": "Learn to read tracebacks and use the debugger.",
+        "Url": "https://docs.python.org/3/library/pdb.html"
+      }
+    ],
+    "RelatedTerms": [
+      "Virtual Environment",
+      "pip",
+      "Generator",
+      "Context Manager"
+    ]
+  },
+  {
+    "Title": "Modern project tooling",
+    "Level": "Intermediate",
+    "Why": "Packaging, typing, linting and tests: the habits that make Python projects maintainable.",
+    "Steps": [
+      {
+        "Text": "Set up pyproject.toml, uv and Ruff in a small project.",
+        "Url": "https://docs.astral.sh/uv/getting-started/"
+      },
+      {
+        "Text": "Add type hints and run a type checker.",
+        "Url": "https://docs.python.org/3/library/typing.html"
+      },
+      {
+        "Text": "Write tests with pytest, including fixtures and parametrization.",
+        "Url": "https://docs.pytest.org/en/stable/getting-started.html"
+      }
+    ],
+    "RelatedTerms": [
+      "pyproject.toml",
+      "uv",
+      "Ruff",
+      "Type Hints",
+      "pytest"
+    ]
+  },
+  {
+    "Title": "Build APIs and handle concurrency",
+    "Level": "Advanced",
+    "Why": "Validate data at the edges and pick the right concurrency model.",
+    "Steps": [
+      {
+        "Text": "Build a small FastAPI service with Pydantic models.",
+        "Url": "https://fastapi.tiangolo.com/tutorial/"
+      },
+      {
+        "Text": "Learn asyncio and when it helps.",
+        "Url": "https://docs.python.org/3/library/asyncio.html"
+      },
+      {
+        "Text": "Understand the GIL and when to use processes.",
+        "Url": "https://docs.python.org/3/library/concurrent.futures.html"
+      }
+    ],
+    "RelatedTerms": [
+      "FastAPI",
+      "Pydantic",
+      "asyncio",
+      "GIL"
+    ]
+  }
+]

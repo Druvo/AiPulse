@@ -1,0 +1,104 @@
+[
+  {
+    "Name": "Vite",
+    "Category": "Build Tool",
+    "OneLiner": "Fast dev server and production bundler for modern front-end projects.",
+    "BestFor": [
+      "New React, Vue, Svelte or vanilla projects",
+      "Instant hot reload on large codebases"
+    ],
+    "NotIdealFor": [
+      "Heavy webpack-specific plugin ecosystems you cannot replace"
+    ],
+    "TokenTips": [
+      "Use `vite build --report` style analysers to find heavy dependencies",
+      "Split vendor code with manual chunks only when measurements show a gain"
+    ],
+    "Url": "https://vite.dev/"
+  },
+  {
+    "Name": "Next.js",
+    "Category": "Framework",
+    "OneLiner": "React framework with routing, server rendering and API routes built in.",
+    "BestFor": [
+      "Content or e-commerce sites needing SEO",
+      "Full-stack React apps with one deployment"
+    ],
+    "NotIdealFor": [
+      "Pure static sites that need no React",
+      "Teams that do not want server rendering complexity"
+    ],
+    "TokenTips": [
+      "Prefer server components for data fetching",
+      "Use the image component and font optimisation for Core Web Vitals"
+    ],
+    "Url": "https://nextjs.org/docs"
+  },
+  {
+    "Name": "Playwright",
+    "Category": "Testing",
+    "OneLiner": "Reliable end-to-end browser testing for Chromium, Firefox and WebKit.",
+    "BestFor": [
+      "Testing real user flows across browsers",
+      "Screenshot and trace debugging of flaky tests"
+    ],
+    "NotIdealFor": [
+      "Unit-testing pure functions",
+      "Very fast feedback loops (use unit tests)"
+    ],
+    "TokenTips": [
+      "Test user-visible behaviour, not implementation details",
+      "Run in CI with traces enabled on retry"
+    ],
+    "Url": "https://playwright.dev/"
+  },
+  {
+    "Name": "Lighthouse",
+    "Category": "Performance",
+    "OneLiner": "Audits a page's performance, accessibility, best practices and SEO.",
+    "BestFor": [
+      "Quick health checks of a page",
+      "Tracking Core Web Vitals regressions in CI"
+    ],
+    "NotIdealFor": [
+      "Measuring real users (use field data such as CrUX)"
+    ],
+    "TokenTips": [
+      "Test on throttled mobile settings, not your fast laptop",
+      "Fix the biggest opportunity first rather than chasing a perfect score"
+    ],
+    "Url": "https://developer.chrome.com/docs/lighthouse/"
+  },
+  {
+    "Name": "TypeScript",
+    "Category": "Language",
+    "OneLiner": "Typed superset of JavaScript.",
+    "BestFor": [
+      "Shared codebases and libraries",
+      "Refactoring with confidence"
+    ],
+    "NotIdealFor": [
+      "Throwaway scripts"
+    ],
+    "TokenTips": [
+      "Turn on `strict` from the start",
+      "Prefer inferred types; annotate function boundaries"
+    ],
+    "Url": "https://www.typescriptlang.org/"
+  },
+  {
+    "Name": "Chrome DevTools",
+    "Category": "Debugging",
+    "OneLiner": "Built-in browser tools for inspecting the DOM, network, performance and memory.",
+    "BestFor": [
+      "Finding slow requests and long tasks",
+      "Debugging layout and CSS"
+    ],
+    "NotIdealFor": [],
+    "TokenTips": [
+      "Use the Performance panel's recording instead of guessing",
+      "Throttle CPU and network to feel what users feel"
+    ],
+    "Url": "https://developer.chrome.com/docs/devtools/"
+  }
+]

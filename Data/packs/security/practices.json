@@ -1,0 +1,27 @@
+[
+  {
+    "Title": "Validate on the server, encode on output",
+    "Category": "Input",
+    "Body": "Client-side checks are for convenience only. Validate every input on the server, and encode output for the context (HTML, URL, SQL) it lands in."
+  },
+  {
+    "Title": "Use parameterised queries, always",
+    "Category": "Injection",
+    "Body": "Never build SQL by joining strings. Parameters keep data from ever being read as commands, in every language and ORM."
+  },
+  {
+    "Title": "Patch on a schedule",
+    "Category": "Dependencies",
+    "Body": "Update dependencies weekly with automation and tests. Most breaches use vulnerabilities that already had fixes."
+  },
+  {
+    "Title": "Log security events, not secrets",
+    "Category": "Detection",
+    "Body": "Record logins, failures, permission changes and resets with who and when, so incidents can be investigated. Never log passwords, tokens or full card numbers."
+  },
+  {
+    "Title": "Practise your response",
+    "Category": "Incident",
+    "Body": "Decide who does what when something goes wrong, and rehearse restoring from backup and rotating keys before you need to."
+  }
+]

@@ -1,0 +1,27 @@
+[
+  {
+    "Title": "One environment per project",
+    "Category": "Workflow",
+    "Body": "Create a virtual environment for every project and commit the dependency list or lock file. Shared global installs cause the dreaded 'works on my machine'."
+  },
+  {
+    "Title": "Use type hints at the boundaries",
+    "Category": "Quality",
+    "Body": "Annotate public functions and data models. You get editor help and a checker that finds bugs, and tools like Pydantic can validate real input."
+  },
+  {
+    "Title": "Format and lint automatically",
+    "Category": "Workflow",
+    "Body": "Let Ruff format and lint on save and in CI so reviews never debate style."
+  },
+  {
+    "Title": "Do not put work in import time",
+    "Category": "Architecture",
+    "Body": "Importing a module should define things, not connect to databases or read files. Put side effects in functions called from `main`."
+  },
+  {
+    "Title": "Prefer pathlib and context managers",
+    "Category": "Quality",
+    "Body": "Use `pathlib.Path` for paths and `with` for files and connections so cleanup is guaranteed."
+  }
+]

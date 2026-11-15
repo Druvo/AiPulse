@@ -1,0 +1,245 @@
+[
+  {
+    "Name": "Kubernetes blog",
+    "Url": "https://kubernetes.io/feed.xml",
+    "Category": "News",
+    "Note": "Official Kubernetes announcements.",
+    "ContentType": "News",
+    "Level": "Intermediate",
+    "Tags": [
+      "Kubernetes"
+    ]
+  },
+  {
+    "Name": "Docker blog",
+    "Url": "https://www.docker.com/blog/feed/",
+    "Category": "News",
+    "Note": "Docker product news and guides.",
+    "ContentType": "News",
+    "Level": "Intermediate",
+    "Tags": [
+      "Docker"
+    ]
+  },
+  {
+    "Name": "HashiCorp blog",
+    "Url": "https://www.hashicorp.com/blog/feed.xml",
+    "Category": "News",
+    "Note": "Terraform, Vault, Consul and Nomad news.",
+    "ContentType": "News",
+    "Level": "Intermediate",
+    "Tags": [
+      "Terraform"
+    ]
+  },
+  {
+    "Name": "CNCF blog",
+    "Url": "https://www.cncf.io/feed/",
+    "Category": "News",
+    "Note": "Cloud Native Computing Foundation news.",
+    "ContentType": "News",
+    "Level": "Intermediate",
+    "Tags": [
+      "Cloud Native"
+    ]
+  },
+  {
+    "Name": "AWS News Blog",
+    "Url": "https://aws.amazon.com/blogs/aws/feed/",
+    "Category": "News",
+    "Note": "Launches and updates from AWS.",
+    "ContentType": "News",
+    "Level": "Intermediate",
+    "Tags": [
+      "AWS"
+    ]
+  },
+  {
+    "Name": "Google Cloud blog",
+    "Url": "https://cloudblog.withgoogle.com/rss/",
+    "Category": "News",
+    "Note": "Google Cloud announcements and how-tos.",
+    "ContentType": "News",
+    "Level": "Intermediate",
+    "Tags": [
+      "Google Cloud"
+    ]
+  },
+  {
+    "Name": "Azure blog",
+    "Url": "https://azure.microsoft.com/en-us/blog/feed/",
+    "Category": "News",
+    "Note": "Microsoft Azure announcements.",
+    "ContentType": "News",
+    "Level": "Intermediate",
+    "Tags": [
+      "Azure"
+    ]
+  },
+  {
+    "Name": "The New Stack",
+    "Url": "https://thenewstack.io/feed/",
+    "Category": "News",
+    "Note": "News and analysis on cloud native and DevOps.",
+    "ContentType": "News",
+    "Level": "Intermediate",
+    "Tags": [
+      "DevOps"
+    ]
+  },
+  {
+    "Name": "Cloudflare blog",
+    "Url": "https://blog.cloudflare.com/rss/",
+    "Category": "News",
+    "Note": "Engineering posts from Cloudflare.",
+    "ContentType": "News",
+    "Level": "Advanced",
+    "Tags": [
+      "Networking"
+    ]
+  },
+  {
+    "Name": "GitHub blog",
+    "Url": "https://github.blog/feed/",
+    "Category": "News",
+    "Note": "GitHub product and engineering news.",
+    "ContentType": "News",
+    "Level": "Intermediate",
+    "Tags": [
+      "GitHub"
+    ]
+  },
+  {
+    "Name": "GitLab blog",
+    "Url": "https://about.gitlab.com/atom.xml",
+    "Category": "News",
+    "Note": "GitLab DevSecOps news.",
+    "ContentType": "News",
+    "Level": "Intermediate",
+    "Tags": [
+      "CI/CD"
+    ]
+  },
+  {
+    "Name": "Julia Evans",
+    "Url": "https://jvns.ca/atom.xml",
+    "Category": "Community",
+    "Note": "Wonderfully clear explanations of systems topics.",
+    "ContentType": "Tutorial",
+    "Level": "Beginner",
+    "Tags": [
+      "Linux",
+      "Networking"
+    ]
+  },
+  {
+    "Name": "Brendan Gregg",
+    "Url": "https://www.brendangregg.com/blog/rss.xml",
+    "Category": "Community",
+    "Note": "Systems performance and observability.",
+    "ContentType": "Tutorial",
+    "Level": "Advanced",
+    "Tags": [
+      "Performance"
+    ]
+  },
+  {
+    "Name": "Netflix Tech Blog",
+    "Url": "https://netflixtechblog.com/feed",
+    "Category": "Community",
+    "Note": "Engineering at scale.",
+    "ContentType": "News",
+    "Level": "Advanced",
+    "Tags": [
+      "Architecture"
+    ]
+  },
+  {
+    "Name": "SRE Weekly",
+    "Url": "https://sreweekly.com/feed/",
+    "Category": "Community",
+    "Note": "A weekly digest of reliability and incident articles.",
+    "ContentType": "News",
+    "Level": "Intermediate",
+    "Tags": [
+      "SRE"
+    ]
+  },
+  {
+    "Name": "Kubernetes releases",
+    "Url": "https://github.com/kubernetes/kubernetes/releases.atom",
+    "Category": "Tools",
+    "Note": "New Kubernetes versions.",
+    "ContentType": "Release",
+    "Level": "Intermediate",
+    "Tags": [
+      "Kubernetes"
+    ]
+  },
+  {
+    "Name": "Terraform releases",
+    "Url": "https://github.com/hashicorp/terraform/releases.atom",
+    "Category": "Tools",
+    "Note": "New Terraform versions.",
+    "ContentType": "Release",
+    "Level": "Intermediate",
+    "Tags": [
+      "Terraform"
+    ]
+  },
+  {
+    "Name": "OpenTofu releases",
+    "Url": "https://github.com/opentofu/opentofu/releases.atom",
+    "Category": "Tools",
+    "Note": "New OpenTofu versions.",
+    "ContentType": "Release",
+    "Level": "Intermediate",
+    "Tags": [
+      "Terraform"
+    ]
+  },
+  {
+    "Name": "Helm releases",
+    "Url": "https://github.com/helm/helm/releases.atom",
+    "Category": "Tools",
+    "Note": "New Helm versions.",
+    "ContentType": "Release",
+    "Level": "Intermediate",
+    "Tags": [
+      "Kubernetes"
+    ]
+  },
+  {
+    "Name": "Docker Compose releases",
+    "Url": "https://github.com/docker/compose/releases.atom",
+    "Category": "Tools",
+    "Note": "New Docker Compose versions.",
+    "ContentType": "Release",
+    "Level": "Intermediate",
+    "Tags": [
+      "Docker"
+    ]
+  },
+  {
+    "Name": "Prometheus releases",
+    "Url": "https://github.com/prometheus/prometheus/releases.atom",
+    "Category": "Tools",
+    "Note": "New Prometheus versions.",
+    "ContentType": "Release",
+    "Level": "Intermediate",
+    "Tags": [
+      "Observability"
+    ]
+  },
+  {
+    "Name": "Grafana releases",
+    "Url": "https://github.com/grafana/grafana/releases.atom",
+    "Category": "Tools",
+    "Note": "New Grafana versions.",
+    "ContentType": "Release",
+    "Level": "Intermediate",
+    "Tags": [
+      "Observability"
+    ]
+  }
+]

@@ -18,18 +18,7 @@ public class MobileApiTests(AiPulseAppFactory app)
 
     private static StringContent Json(object body) => new(JsonSerializer.Serialize(body), System.Text.Encoding.UTF8, "application/json");
 
-    private static int _nextClient;
-
-    /// <summary>
-    /// Each client claims its own address through X-Forwarded-For (the rate limiter keys on the last hop, as it does behind nginx), so the
-    /// per-IP sign-in limit - which does apply to the app's login - never trips over the many sign-ins the other end-to-end tests make.
-    /// </summary>
-    private HttpClient Fresh()
-    {
-        var client = app.Anonymous();
-        client.DefaultRequestHeaders.Add("X-Forwarded-For", $"10.77.{Interlocked.Increment(ref _nextClient) % 250}.{Environment.CurrentManagedThreadId % 250 + 1}");
-        return client;
-    }
+    private HttpClient Fresh() => app.Anonymous();   // already has its own address (see AiPulseAppFactory.Anonymous)
 
     private async Task<string> TokenAsync(string user, string password)
     {

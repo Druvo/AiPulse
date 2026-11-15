@@ -1,0 +1,27 @@
+[
+  {
+    "Title": "Measure before you optimise",
+    "Category": "Performance",
+    "Body": "Record a performance profile or run Lighthouse first. The slow part is rarely where you expect, and a measured baseline proves the fix worked."
+  },
+  {
+    "Title": "Ship less JavaScript",
+    "Category": "Performance",
+    "Body": "Every kilobyte must be downloaded, parsed and run. Audit dependencies, split by route, and prefer platform features (dialog, details, CSS) over libraries."
+  },
+  {
+    "Title": "Make it work without JavaScript first",
+    "Category": "Architecture",
+    "Body": "Server-rendered HTML with progressive enhancement is faster, more robust and more accessible. Add JavaScript for what genuinely needs it."
+  },
+  {
+    "Title": "Escape by default, sanitise on purpose",
+    "Category": "Security",
+    "Body": "Let your framework escape output. If you must insert HTML, sanitise it with a vetted library and add a Content Security Policy as a second line of defence."
+  },
+  {
+    "Title": "Pin and review dependencies",
+    "Category": "Workflow",
+    "Body": "Commit the lockfile, update on a schedule, and look at what a new package pulls in. Most front-end supply-chain trouble arrives through transitive dependencies."
+  }
+]

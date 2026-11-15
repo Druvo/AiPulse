@@ -1,0 +1,27 @@
+[
+  {
+    "Title": "Await all the way down",
+    "Category": "Async",
+    "Body": "Make the whole call chain async and `await` it. Mixing blocking calls (`.Result`) into async code is the classic source of thread-pool starvation and deadlocks."
+  },
+  {
+    "Title": "Turn on nullable reference types",
+    "Category": "Quality",
+    "Body": "Enable `<Nullable>enable</Nullable>` and treat warnings seriously. It finds a whole class of bugs at compile time."
+  },
+  {
+    "Title": "Use AsNoTracking for read-only queries",
+    "Category": "Data",
+    "Body": "EF Core tracks every entity it loads. For queries that only display data, `AsNoTracking()` cuts memory and CPU noticeably."
+  },
+  {
+    "Title": "Register services with the right lifetime",
+    "Category": "Architecture",
+    "Body": "Scoped for per-request state (DbContext), singleton only for thread-safe shared state, transient for light stateless helpers. A singleton holding a scoped service is a bug."
+  },
+  {
+    "Title": "Keep secrets out of source control",
+    "Category": "Security",
+    "Body": "Use user secrets in development and environment variables or a vault in production. Never commit connection strings or API keys."
+  }
+]
