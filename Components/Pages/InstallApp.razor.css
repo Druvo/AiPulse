@@ -39,3 +39,20 @@
 .ia-apk-steps summary { cursor: pointer; min-height: 44px; display: flex; align-items: center; font-weight: 600; }
 .ia-apk-steps ol { color: var(--ap-text-secondary); padding-left: 1.3rem; }
 .ia-sha { overflow-wrap: anywhere; font-size: .8rem; }
+
+.ia-why { margin: 0 0 1.25rem; }
+.ia-features { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 15rem), 1fr)); gap: 1rem; }
+.ia-feature { padding: 1.1rem; border: 1px solid var(--ap-border); border-radius: var(--ap-radius-lg); background: var(--ap-surface); box-shadow: var(--ap-shadow-sm); }
+.ia-feature h3 { font-size: 1.02rem; margin: .65rem 0 .3rem; }
+.ia-feature p { margin: 0; color: var(--ap-text-secondary); font-size: .93rem; }
+.ia-feature-icon { display: inline-flex; align-items: center; justify-content: center; width: 2.4rem; height: 2.4rem; border-radius: var(--ap-radius-md); background: var(--ap-accent-soft); color: var(--ap-accent-soft-text); }
+
+.ia-shots { margin: 0 0 1.25rem; }
+.ia-shot-row { display: flex; gap: 1rem; align-items: flex-end; flex-wrap: wrap; }
+.ia-shot { display: block; border: 1px solid var(--ap-border); border-radius: var(--ap-radius-lg); box-shadow: var(--ap-shadow-md); height: auto; max-width: 100%; }
+.ia-shot--phone { width: min(100%, 15rem); }
+.ia-shot--wide { width: min(100%, 38rem); flex: 1 1 18rem; }
+
+.ia-faq { border-top: 1px solid var(--ap-border); }
+.ia-faq summary { cursor: pointer; min-height: 44px; display: flex; align-items: center; font-weight: 600; }
+.ia-faq p { margin: 0 0 .8rem; color: var(--ap-text-secondary); }

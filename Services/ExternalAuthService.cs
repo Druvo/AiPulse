@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using AiPulse.Models;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 
 namespace AiPulse.Services;
 
@@ -16,11 +17,13 @@ public sealed class ExternalAuthService
 {
     private readonly IDbContextFactory<AiPulseDbContext> _dbFactory;
     private readonly UserService _users;
+    private readonly AuthOptions _auth;
 
-    public ExternalAuthService(IDbContextFactory<AiPulseDbContext> dbFactory, UserService users)
+    public ExternalAuthService(IDbContextFactory<AiPulseDbContext> dbFactory, UserService users, IOptions<AuthOptions>? auth = null)
     {
         _dbFactory = dbFactory;
         _users = users;
+        _auth = auth?.Value ?? new AuthOptions();
     }
 
     /// <param name="emailVerified">
@@ -73,6 +76,16 @@ public sealed class ExternalAuthService
         }
 
         await LogAuditAsync(db, isNewUser ? "User.RegisteredViaOAuth" : "Login.SuccessViaOAuth", user, detail: provider);
+
+        // The owner's own address (Auth:AdminEmails) makes the account an administrator, but only when the provider verified it.
+        var addressVerified = emailVerified ?? provider == OAuthProviders.Google;
+        if (addressVerified && _auth.IsAdminEmail(email) && user.Role != UserRoles.Admin && user.Status != UserStatuses.Disabled)
+        {
+            user.Role = UserRoles.Admin;
+            user.Status = UserStatuses.Approved;
+            await db.SaveChangesAsync();
+            await LogAuditAsync(db, "Role.PromotedByConfig", user, detail: $"Auth:AdminEmails via {provider}");
+        }
 
         if (user.Status == UserStatuses.Pending) return (ExternalLoginResult.PendingApproval, null);
         if (user.Status == UserStatuses.Disabled) return (ExternalLoginResult.Disabled, null);

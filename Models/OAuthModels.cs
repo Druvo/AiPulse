@@ -4,6 +4,10 @@ public static class OAuthProviders
 {
     public const string Google = "Google";
     public const string GitHub = "GitHub";
+    public const string Facebook = "Facebook";
+
+    /// <summary>Every provider an admin can configure, in the order Settings and the sign-in page list them.</summary>
+    public static readonly string[] All = { Google, GitHub, Facebook };
 }
 
 /// <summary>Admin-configurable per-provider OAuth credentials (Settings.razor's "OAuth Sign-in" admin

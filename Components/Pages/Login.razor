@@ -61,7 +61,7 @@
         <button type="submit" class="btn btn-primary">Sign in <Icon Name="arrow-right" Size="17" /></button>
     </EditForm>
 
-    @if (_googleUsable || _githubUsable)
+    @if (_googleUsable || _githubUsable || _facebookUsable)
     {
         <div class="auth-divider">or continue with</div>
         <div class="auth-social">
@@ -72,6 +72,10 @@
             @if (_githubUsable)
             {
                 <a class="btn btn-outline-secondary" href="@($"/auth/external/github?returnUrl={Uri.EscapeDataString(ReturnUrl ?? "/dashboard")}")"><Icon Name="github" Size="17" /> Sign in with GitHub</a>
+            }
+            @if (_facebookUsable)
+            {
+                <a class="btn btn-outline-secondary" href="@($"/auth/external/facebook?returnUrl={Uri.EscapeDataString(ReturnUrl ?? "/dashboard")}")"><Icon Name="user" Size="17" /> Sign in with Facebook</a>
             }
         </div>
     }
@@ -94,12 +98,14 @@
     private string? _error;
     private bool _googleUsable;
     private bool _githubUsable;
+    private bool _facebookUsable;
     private (string PublishableKey, string Host)? _clerk;
 
     protected override async Task OnInitializedAsync()
     {
         _googleUsable = await OAuthSettings.IsUsableAsync(OAuthProviders.Google);
         _githubUsable = await OAuthSettings.IsUsableAsync(OAuthProviders.GitHub);
+        _facebookUsable = await OAuthSettings.IsUsableAsync(OAuthProviders.Facebook);
         _clerk = await Clerk.GetActiveAsync();
     }
 

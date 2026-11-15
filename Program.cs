@@ -8,6 +8,7 @@ using AiPulse.Services.Ai;
 using AspNet.Security.OAuth.GitHub;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Authentication.Facebook;
 using Microsoft.AspNetCore.Authentication.Google;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.DataProtection;
@@ -164,6 +165,7 @@ builder.Services.AddSingleton<ClerkAuthService>();
 // surfaces it there and the configurator silently never runs.
 builder.Services.AddSingleton<Microsoft.Extensions.Options.IConfigureOptions<GoogleOptions>, GoogleOptionsConfigurator>();
 builder.Services.AddSingleton<Microsoft.Extensions.Options.IConfigureOptions<GitHubAuthenticationOptions>, GitHubOptionsConfigurator>();
+builder.Services.AddSingleton<Microsoft.Extensions.Options.IConfigureOptions<FacebookOptions>, FacebookOptionsConfigurator>();
 
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
     .AddCookie(options =>
@@ -224,6 +226,14 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
         options.Scope.Add("user:email"); // GitHub omits email from the base profile unless requested
         options.Events.OnTicketReceived = ctx => HandleExternalTicketReceivedAsync(ctx, OAuthProviders.GitHub);
     })
+    .AddFacebook(options =>
+    {
+        // AppId/AppSecret come from FacebookOptionsConfigurator (DB-backed), not set here.
+        options.CallbackPath = "/signin-facebook";
+        options.Scope.Add("email");
+        options.Fields.Add("email");
+        options.Events.OnTicketReceived = ctx => HandleExternalTicketReceivedAsync(ctx, OAuthProviders.Facebook);
+    })
     .AddJwtBearer(JwtBearerDefaults.AuthenticationScheme, options =>
     {
         // Registered as an additional scheme (the default stays Cookie, for the Razor pages above) - API
@@ -266,7 +276,9 @@ builder.Services.AddSecurityHardening(builder.Configuration); // 2FA sign-in gua
 async Task HandleExternalTicketReceivedAsync(TicketReceivedContext ctx, string provider)
 {
     var externalAuth = ctx.HttpContext.RequestServices.GetRequiredService<ExternalAuthService>();
-    var (result, user) = await externalAuth.CompleteAsync(provider, ctx.Principal!);
+    // Facebook may hand back an address the person never confirmed to us, so it is never used to attach a sign-in to an existing account
+    // or to grant a role (emailVerified: false). Google's addresses are verified; GitHub keeps its long-standing behaviour.
+    var (result, user) = await externalAuth.CompleteAsync(provider, ctx.Principal!, provider == OAuthProviders.Facebook ? false : null);
 
     if (result != ExternalLoginResult.Success || user is null)
     {
@@ -377,6 +389,7 @@ app.MapGet("/auth/external/{provider}", async (string provider, OAuthSettingsSer
     {
         "google" => OAuthProviders.Google,
         "github" => OAuthProviders.GitHub,
+        "facebook" => OAuthProviders.Facebook,
         _ => null
     };
     if (scheme is null) return Results.NotFound();

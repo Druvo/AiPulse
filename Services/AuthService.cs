@@ -24,4 +24,15 @@ public sealed class AuthOptions
     /// without a rebuild.
     /// </summary>
     public bool RequireApproval { get; set; }
+
+    /// <summary>
+    /// Email addresses that are always administrators. When someone signs in through a provider that VERIFIES the address (Google, or
+    /// Clerk with the email_verified claim) and it is on this list, their account is made an Admin. Set it in configuration or the
+    /// environment (<c>Auth__AdminEmails__0=you@example.com</c>); it is how the owner becomes admin on a site whose only account so far
+    /// is the bootstrap one. Addresses a provider does not verify never grant a role.
+    /// </summary>
+    public string[] AdminEmails { get; set; } = Array.Empty<string>();
+
+    public bool IsAdminEmail(string? email) =>
+        !string.IsNullOrWhiteSpace(email) && AdminEmails.Any(a => string.Equals(a?.Trim(), email.Trim(), StringComparison.OrdinalIgnoreCase));
 }

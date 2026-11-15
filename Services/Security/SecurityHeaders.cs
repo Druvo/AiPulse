@@ -16,7 +16,7 @@ public sealed class SecurityHardeningOptions
     public int HstsMaxAgeDays { get; set; } = 180;
     public bool RateLimitingEnabled { get; set; } = true;
     /// <summary>Sign-in endpoints of external providers, which bring their own second factor and never get the TOTP step.</summary>
-    public string[] TwoFactorExemptSignInPaths { get; set; } = { "/auth/clerk/session", "/signin-google", "/signin-github" };
+    public string[] TwoFactorExemptSignInPaths { get; set; } = { "/auth/clerk/session", "/signin-google", "/signin-github", "/signin-facebook" };
 }
 
 /// <summary>Builds the header values - pure functions so the tests can pin them down.</summary>

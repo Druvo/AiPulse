@@ -1,6 +1,7 @@
 using System.Security.Cryptography;
 using AiPulse.Models;
 using AspNet.Security.OAuth.GitHub;
+using Microsoft.AspNetCore.Authentication.Facebook;
 using Microsoft.AspNetCore.Authentication.Google;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.EntityFrameworkCore;
@@ -25,14 +26,17 @@ public sealed class OAuthSettingsService
     private readonly IDbContextFactory<AiPulseDbContext> _dbFactory;
     private readonly IOptionsMonitorCache<GoogleOptions> _googleCache;
     private readonly IOptionsMonitorCache<GitHubAuthenticationOptions> _githubCache;
+    private readonly IOptionsMonitorCache<FacebookOptions>? _facebookCache;
     private readonly IDataProtector _protector;
 
     public OAuthSettingsService(
         IDbContextFactory<AiPulseDbContext> dbFactory,
         IOptionsMonitorCache<GoogleOptions> googleCache,
         IOptionsMonitorCache<GitHubAuthenticationOptions> githubCache,
-        IDataProtectionProvider dataProtection)
+        IDataProtectionProvider dataProtection,
+        IOptionsMonitorCache<FacebookOptions>? facebookCache = null)
     {
+        _facebookCache = facebookCache;
         _dbFactory = dbFactory;
         _googleCache = googleCache;
         _githubCache = githubCache;
@@ -44,7 +48,10 @@ public sealed class OAuthSettingsService
         await using var db = await _dbFactory.CreateDbContextAsync();
         var rows = await db.OAuthProviderSettings.OrderBy(s => s.Id).ToListAsync();
         foreach (var row in rows) row.ClientSecret = OAuthSecretProtection.Unprotect(_protector, row.ClientSecret);
-        return rows;
+        // Settings shows a form for every provider, including ones nobody has saved yet (a provider added in a later release has no row).
+        foreach (var provider in OAuthProviders.All.Where(p => rows.All(r => r.Provider != p)))
+            rows.Add(new OAuthProviderSettings { Provider = provider });
+        return rows.OrderBy(r => Array.IndexOf(OAuthProviders.All, r.Provider) is var i && i < 0 ? int.MaxValue : i).ToList();
     }
 
     public async Task<OAuthProviderSettings?> GetAsync(string provider)
@@ -81,6 +88,8 @@ public sealed class OAuthSettingsService
             _googleCache.TryRemove(GoogleDefaults.AuthenticationScheme);
         else if (provider == OAuthProviders.GitHub)
             _githubCache.TryRemove(GitHubAuthenticationDefaults.AuthenticationScheme);
+        else if (provider == OAuthProviders.Facebook)
+            _facebookCache?.TryRemove(FacebookDefaults.AuthenticationScheme);
     }
 }
 
@@ -149,4 +158,22 @@ internal sealed class GitHubOptionsConfigurator(IDbContextFactory<AiPulseDbConte
     }
 
     public void Configure(GitHubAuthenticationOptions options) => Configure(Options.DefaultName, options);
+}
+
+/// <summary>Facebook counterpart to <see cref="GoogleOptionsConfigurator"/>: Facebook calls the client id "App ID" and the secret "App Secret". Same placeholder reasoning.</summary>
+internal sealed class FacebookOptionsConfigurator(IDbContextFactory<AiPulseDbContext> dbFactory, IDataProtectionProvider dataProtection) : IConfigureNamedOptions<FacebookOptions>
+{
+    private readonly IDataProtector _protector = dataProtection.CreateProtector(OAuthSecretProtection.Purpose);
+
+    public void Configure(string? name, FacebookOptions options)
+    {
+        if (name != FacebookDefaults.AuthenticationScheme) return;
+        using var db = dbFactory.CreateDbContext();
+        var row = db.OAuthProviderSettings.FirstOrDefault(s => s.Provider == OAuthProviders.Facebook);
+        options.AppId = string.IsNullOrWhiteSpace(row?.ClientId) ? "not-configured" : row.ClientId;
+        var secret = row is null ? "" : OAuthSecretProtection.Unprotect(_protector, row.ClientSecret);
+        options.AppSecret = string.IsNullOrWhiteSpace(secret) ? "not-configured" : secret;
+    }
+
+    public void Configure(FacebookOptions options) => Configure(Options.DefaultName, options);
 }

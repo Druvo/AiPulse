@@ -3,6 +3,7 @@
 @inject NavigationManager Nav
 @inject IHttpContextAccessor Http
 @inject AppDownloads Downloads
+@inject SiteStatsService Stats
 
 @* Static server-rendered (no @rendermode): light, crawlable and shareable. The Install button, the "already installed" state and
    Share/Copy are wired by wwwroot/js/install-app.js, which also catches the browser's install prompt on every page. *@
@@ -92,6 +93,59 @@
         </details>
     </section>
 </div>
+
+<section class="ia-why" aria-labelledby="ia-why-h">
+    <h2 id="ia-why-h" class="ia-h2">Why keep @Site.Name in your pocket</h2>
+    <div class="ia-features">
+        <article class="ia-feature">
+            <span class="ia-feature-icon"><Icon Name="rss" Size="20" /></span>
+            <h3>One feed, not forty tabs</h3>
+            <p>@Stats.Current.ActiveSources.ToString("N0") sources merged into a single stream, with the same story from many sites shown once.</p>
+        </article>
+        <article class="ia-feature">
+            <span class="ia-feature-icon"><Icon Name="bookmark" Size="20" /></span>
+            <h3>Pick up where you left off</h3>
+            <p>Your reading list and what you have read are the same on your phone and on the website.</p>
+        </article>
+        <article class="ia-feature">
+            <span class="ia-feature-icon"><Icon Name="bell" Size="20" /></span>
+            <h3>Quiet by design</h3>
+            <p>No ads, no engagement tricks. You see what the sources publish, newest first, and you decide what is worth a read.</p>
+        </article>
+        <article class="ia-feature">
+            <span class="ia-feature-icon"><Icon Name="shield" Size="20" /></span>
+            <h3>Private and yours</h3>
+            <p>It talks only to this site. Your account and reading history live on the server that runs it, not with an advertiser.</p>
+        </article>
+        <article class="ia-feature">
+            <span class="ia-feature-icon"><Icon Name="key" Size="20" /></span>
+            <h3>Sign in your way</h3>
+            <p>Username and password with optional two-step codes, or Google, GitHub or Facebook where the site has turned them on.</p>
+        </article>
+        <article class="ia-feature">
+            <span class="ia-feature-icon"><Icon Name="sun" Size="20" /></span>
+            <h3>Light, dark, and fast</h3>
+            <p>Follows your phone's theme, loads quickly on mobile data and keeps working through a flaky connection.</p>
+        </article>
+    </div>
+</section>
+
+<section class="ia-shots" aria-labelledby="ia-shots-h">
+    <h2 id="ia-shots-h" class="ia-h2">A look inside</h2>
+    <div class="ia-shot-row">
+        <img class="ia-shot ia-shot--phone" src="img/screenshots/phone-home.png" width="390" height="844" loading="lazy" alt="The app on a phone: the home page with the latest news" />
+        <img class="ia-shot ia-shot--wide" src="img/screenshots/desktop-home.png" width="1280" height="800" loading="lazy" alt="The same site on a computer" />
+    </div>
+</section>
+
+<section class="ia-card" aria-labelledby="ia-faq-h">
+    <h2 id="ia-faq-h" class="ia-h2">Questions</h2>
+    <details class="ia-faq"><summary>Is it free?</summary><p>Yes. There is nothing to buy and no subscription; the site is run by whoever hosts it.</p></details>
+    <details class="ia-faq"><summary>Which phones does it run on?</summary><p>The Android app needs Android 7 or newer. Any phone, tablet or computer with a modern browser can install the web app instead, including iPhone and iPad.</p></details>
+    <details class="ia-faq"><summary>Does it work offline?</summary><p>You need a connection to load the latest news. Without one you get a friendly offline screen, and the app reconnects by itself when the signal returns.</p></details>
+    <details class="ia-faq"><summary>Is my data safe?</summary><p>Passwords are stored as slow salted hashes, you can turn on two-step sign-in, and every session can be ended from your account page. The app only talks to this site.</p></details>
+    <details class="ia-faq"><summary>How do I update it?</summary><p>The web app updates itself. For the Android file, download the newest one from this page and install it over the old one; you stay signed in.</p></details>
+</section>
 
 <section class="ia-card" aria-labelledby="ia-get-h">
     <h2 id="ia-get-h" class="ia-h2">What you get</h2>

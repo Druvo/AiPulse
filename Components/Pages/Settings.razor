@@ -552,8 +552,9 @@
                     <div class="set-card">
                         <h3 class="set-title"><Icon Name="key" Size="16" /> OAuth sign-in</h3>
                         <p class="set-help">
-                            Let people sign in with Google or GitHub instead of a password. Off by default: fill in the provider's Client ID and secret
-                            from its developer console and tick Enabled. Takes effect immediately.
+                            Let people sign in with Google, GitHub or Facebook instead of a password. Off by default: create an app in the provider's
+                            developer console, paste its Client ID (Facebook calls it <em>App ID</em>) and secret here, and tick Enabled. A provider's
+                            button appears on the sign-in page as soon as it is enabled and filled in. Takes effect immediately, no restart.
                         </p>
                         @foreach (var p in _oauthForms)
                         {
@@ -574,10 +575,23 @@
                                 <button class="btn btn-outline-primary" @onclick="() => SaveOAuthProvider(p)">Save</button>
                             </div>
                         }
-                        <p class="set-help mt-2 mb-0">
-                            Callback URL to register with the provider: <code>https://your-domain/signin-google</code> (Google)
-                            or <code>https://your-domain/signin-github</code> (GitHub).
+                        <p class="set-help mt-2">
+                            Register exactly these redirect (callback) addresses with each provider:
                         </p>
+                        <ul class="small mb-2">
+                            <li>Google: <code>@Nav.BaseUri.TrimEnd('/')/signin-google</code></li>
+                            <li>GitHub: <code>@Nav.BaseUri.TrimEnd('/')/signin-github</code></li>
+                            <li>Facebook: <code>@Nav.BaseUri.TrimEnd('/')/signin-facebook</code></li>
+                        </ul>
+                        <details class="small text-muted">
+                            <summary>Step by step for each provider</summary>
+                            <ol class="mt-2">
+                                <li><strong>Google:</strong> <a href="https://console.cloud.google.com/apis/credentials" target="_blank" rel="noopener">Google Cloud Console</a> &rarr; configure the OAuth consent screen &rarr; Credentials &rarr; Create credentials &rarr; OAuth client ID &rarr; Web application &rarr; add the Google redirect address above under <em>Authorized redirect URIs</em> &rarr; copy the Client ID and Client secret here.</li>
+                                <li><strong>GitHub:</strong> <a href="https://github.com/settings/developers" target="_blank" rel="noopener">Developer settings</a> &rarr; OAuth Apps &rarr; New OAuth App &rarr; Homepage URL is this site, Authorization callback URL is the GitHub address above &rarr; Generate a client secret &rarr; copy both here.</li>
+                                <li><strong>Facebook:</strong> <a href="https://developers.facebook.com/apps/" target="_blank" rel="noopener">Meta for Developers</a> &rarr; Create app &rarr; add the <em>Facebook Login</em> product &rarr; Settings &rarr; Valid OAuth Redirect URIs: the Facebook address above &rarr; Settings &rarr; Basic: copy App ID and App Secret here. While the app is in Development mode only people you add as testers can sign in; switch it to Live (needs a privacy policy URL) to open it to everyone.</li>
+                            </ol>
+                            <p class="mb-0">Accounts created this way follow the same approval setting as every other sign-up. Facebook addresses are never used to join an existing account or to grant admin rights, because Facebook does not promise the address is verified.</p>
+                        </details>
                     </div>
 
                     <div class="set-card">
